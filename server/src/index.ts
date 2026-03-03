@@ -1,0 +1,51 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import healthRouter from './routes/health.js';
+import { errorHandler } from './middleware/errorHandler.js';
+
+const app = express();
+const PORT = Number(process.env.PORT) || 3001;
+
+// ---------------------------------------------------------------------------
+// CORS
+// ---------------------------------------------------------------------------
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  }),
+);
+
+// ---------------------------------------------------------------------------
+// Body parsing (Express v5 built-in)
+// ---------------------------------------------------------------------------
+app.use(express.json());
+
+// ---------------------------------------------------------------------------
+// Audit logging middleware
+// ---------------------------------------------------------------------------
+app.use((req, _res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[AUDIT] ${timestamp} | ${req.method} ${req.path}`);
+  next();
+});
+
+// ---------------------------------------------------------------------------
+// Routes
+// ---------------------------------------------------------------------------
+app.use('/api/v1/health', healthRouter);
+
+// ---------------------------------------------------------------------------
+// Centralized error handling (must be registered last)
+// ---------------------------------------------------------------------------
+app.use(errorHandler);
+
+// ---------------------------------------------------------------------------
+// Start server
+// ---------------------------------------------------------------------------
+app.listen(PORT, () => {
+  console.log(`[SERVER] NeoSolar CRM Backend laeuft auf Port ${PORT}`);
+});
+
+export default app;

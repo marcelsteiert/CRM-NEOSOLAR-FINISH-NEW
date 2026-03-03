@@ -1,0 +1,206 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+/* ── NeoSolar Design System Tokens ── */
+
+@theme {
+  /* Backgrounds */
+  --color-bg: #06080C;
+  --color-bg-sub: #0B0F15;
+  --color-surface: rgba(255, 255, 255, 0.03);
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-glass: rgba(255, 255, 255, 0.04);
+  --color-glass-border: rgba(255, 255, 255, 0.07);
+  --color-glass-hover: rgba(255, 255, 255, 0.08);
+  --color-card: rgba(255, 255, 255, 0.025);
+
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-focus: rgba(255, 255, 255, 0.12);
+
+  /* Text */
+  --color-text: #F0F2F5;
+  --color-text-sec: #8B95A5;
+  --color-text-dim: #4A5568;
+
+  /* Accent: Solar Amber */
+  --color-amber: #F59E0B;
+  --color-amber-soft: rgba(245, 158, 11, 0.10);
+  --color-amber-glow: rgba(245, 158, 11, 0.25);
+
+  /* Semantic Colors */
+  --color-green: #34D399;
+  --color-green-soft: rgba(52, 211, 153, 0.10);
+  --color-red: #F87171;
+  --color-red-soft: rgba(248, 113, 113, 0.10);
+  --color-blue: #60A5FA;
+  --color-blue-soft: rgba(96, 165, 250, 0.10);
+  --color-violet: #A78BFA;
+  --color-violet-soft: rgba(167, 139, 250, 0.10);
+  --color-cyan: #22D3EE;
+  --color-cyan-soft: rgba(34, 211, 238, 0.10);
+
+  /* Border Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-pill: 20px;
+
+  /* Font */
+  --font-sans: 'Outfit', sans-serif;
+}
+
+/* ── Base Styles ── */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-feature-settings: 'tnum';
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Glass Components ── */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card-md {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  color: var(--color-text);
+  font-family: 'Outfit', sans-serif;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.glass-input::placeholder {
+  color: var(--color-text-dim);
+}
+
+/* ── Buttons ── */
+
+.btn-primary {
+  background: linear-gradient(135deg, #F59E0B, #F97316);
+  color: #06080C;
+  border-radius: 20px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  color: var(--color-text-sec);
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+}
+
+/* ── Ambient Background ── */
+
+.ambient-bg::before,
+.ambient-bg::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-bg::before {
+  top: -20%;
+  left: 30%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+}
+
+.ambient-bg::after {
+  bottom: -10%;
+  right: -10%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.04) 0%, transparent 70%);
+}
+
+/* ── Transitions ── */
+
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tabular-nums {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
