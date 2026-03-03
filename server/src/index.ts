@@ -5,6 +5,10 @@ import healthRouter from './routes/health.js';
 import leadsRouter from './routes/leads.js';
 import pipelinesRouter from './routes/pipelines.js';
 import tagsRouter from './routes/tags.js';
+import usersRouter from './routes/users.js';
+import activitiesRouter from './routes/activities.js';
+import remindersRouter from './routes/reminders.js';
+import emailTemplatesRouter from './routes/emailTemplates.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -41,6 +45,10 @@ app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/leads', leadsRouter);
 app.use('/api/v1/pipelines', pipelinesRouter);
 app.use('/api/v1/tags', tagsRouter);
+app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/activities', activitiesRouter);
+app.use('/api/v1/reminders', remindersRouter);
+app.use('/api/v1/emails', emailTemplatesRouter);
 
 // ---------------------------------------------------------------------------
 // Centralized error handling (must be registered last)

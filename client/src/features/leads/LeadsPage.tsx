@@ -6,361 +6,263 @@ import {
   Columns3,
   Search,
   ChevronDown,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
-import SlidePanel from '@/components/ui/SlidePanel'
+import {
+  useLeads,
+  usePipelines,
+  useTags,
+  useMoveLead,
+  type Lead,
+  type LeadSource,
+  type LeadStatus,
+  sourceLabels,
+  statusLabels,
+} from '@/hooks/useLeads'
 import LeadTable from './components/LeadTable'
 import LeadKanban from './components/LeadKanban'
-import LeadDetailPanel from './components/LeadDetailPanel'
+import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
-
-/* ── Types ── */
-
-export type LeadSource =
-  | 'HOMEPAGE'
-  | 'EMPFEHLUNG'
-  | 'MESSE'
-  | 'TELEFON'
-  | 'PARTNER'
-  | 'SOCIAL_MEDIA'
-  | 'INSERAT'
-
-export type LeadStatus = 'ACTIVE' | 'CONVERTED' | 'LOST' | 'ARCHIVED'
-
-export type KanbanBucket = 'neu' | 'kontaktiert' | 'qualifiziert' | 'angebot' | 'verhandlung'
-
-export interface Lead {
-  id: string
-  firstName: string
-  lastName: string
-  company: string
-  address: string
-  phone: string
-  email: string
-  source: LeadSource
-  status: LeadStatus
-  pipelineId: string
-  bucketId: KanbanBucket
-  tags: string[]
-  value: number
-  assignedTo: string
-  createdAt: string
-  notes?: string
-}
-
-/* ── Mock Data ── */
-
-export const mockLeads: Lead[] = [
-  {
-    id: '1',
-    firstName: 'Thomas',
-    lastName: 'Mueller',
-    company: 'Mueller Immobilien AG',
-    address: 'Bahnhofstrasse 42, 8001 Zuerich',
-    phone: '+41 79 234 56 78',
-    email: 't.mueller@mueller-immo.ch',
-    source: 'HOMEPAGE',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'qualifiziert',
-    tags: ['VIP', 'Dringend'],
-    value: 85000,
-    assignedTo: 'Marco Bianchi',
-    createdAt: '2024-03-01',
-    notes: 'Interesse an 30kWp Anlage fuer Mehrfamilienhaus.',
-  },
-  {
-    id: '2',
-    firstName: 'Sandra',
-    lastName: 'Keller',
-    company: 'Keller Holzbau GmbH',
-    address: 'Spitalgasse 18, 3011 Bern',
-    phone: '+41 78 345 67 89',
-    email: 's.keller@keller-holzbau.ch',
-    source: 'EMPFEHLUNG',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'angebot',
-    tags: ['Gewerbe'],
-    value: 120000,
-    assignedTo: 'Laura Meier',
-    createdAt: '2024-02-28',
-    notes: 'Referenz von Elektro Schmid. Grosses Flachdach verfuegbar.',
-  },
-  {
-    id: '3',
-    firstName: 'Andreas',
-    lastName: 'Brunner',
-    company: 'Brunner & Soehne Elektro',
-    address: 'Freie Strasse 7, 4001 Basel',
-    phone: '+41 76 456 78 90',
-    email: 'a.brunner@brunner-elektro.ch',
-    source: 'MESSE',
-    status: 'CONVERTED',
-    pipelineId: '1',
-    bucketId: 'verhandlung',
-    tags: ['Bestandskunde'],
-    value: 45000,
-    assignedTo: 'Marco Bianchi',
-    createdAt: '2024-02-15',
-    notes: 'Kontakt von Solar Expo 2024. Eigenes Geschaeftsgebaeude.',
-  },
-  {
-    id: '4',
-    firstName: 'Claudia',
-    lastName: 'Frei',
-    company: '',
-    address: 'Technikumstrasse 21, 8400 Winterthur',
-    phone: '+41 79 567 89 01',
-    email: 'c.frei@bluewin.ch',
-    source: 'HOMEPAGE',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'neu',
-    tags: ['Privat'],
-    value: 32000,
-    assignedTo: 'Laura Meier',
-    createdAt: '2024-03-02',
-    notes: 'Einfamilienhaus, Suedausrichtung. Interessiert an Batteriespeicher.',
-  },
-  {
-    id: '5',
-    firstName: 'Peter',
-    lastName: 'Zimmermann',
-    company: 'Hotel Alpina',
-    address: 'Pilatusstrasse 5, 6003 Luzern',
-    phone: '+41 77 678 90 12',
-    email: 'p.zimmermann@hotel-alpina.ch',
-    source: 'TELEFON',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'kontaktiert',
-    tags: ['Gewerbe', 'Dringend'],
-    value: 210000,
-    assignedTo: 'Marco Bianchi',
-    createdAt: '2024-02-20',
-    notes: 'Grosses Hoteldach, ca. 800m2. Foerdermittel bereits beantragt.',
-  },
-  {
-    id: '6',
-    firstName: 'Monika',
-    lastName: 'Huber',
-    company: 'Huber Landtechnik',
-    address: 'Rorschacher Strasse 150, 9000 St. Gallen',
-    phone: '+41 71 789 01 23',
-    email: 'm.huber@huber-landtechnik.ch',
-    source: 'PARTNER',
-    status: 'LOST',
-    pipelineId: '1',
-    bucketId: 'qualifiziert',
-    tags: ['Landwirtschaft'],
-    value: 65000,
-    assignedTo: 'Laura Meier',
-    createdAt: '2024-01-10',
-    notes: 'Hat sich fuer Mitbewerber entschieden. Eventuell Nachfassgespraech.',
-  },
-  {
-    id: '7',
-    firstName: 'Reto',
-    lastName: 'Steiner',
-    company: 'Steiner Architekten',
-    address: 'Laurenzenvorstadt 88, 5000 Aarau',
-    phone: '+41 79 890 12 34',
-    email: 'r.steiner@steiner-arch.ch',
-    source: 'SOCIAL_MEDIA',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'neu',
-    tags: ['Architektur', 'Neubau'],
-    value: 150000,
-    assignedTo: 'Marco Bianchi',
-    createdAt: '2024-03-03',
-    notes: 'Plant Neubau-Projekt mit integrierter PV-Anlage.',
-  },
-  {
-    id: '8',
-    firstName: 'Isabella',
-    lastName: 'Weber',
-    company: 'Weber Consulting',
-    address: 'Bielstrasse 12, 4500 Solothurn',
-    phone: '+41 76 901 23 45',
-    email: 'i.weber@weber-consulting.ch',
-    source: 'INSERAT',
-    status: 'CONVERTED',
-    pipelineId: '1',
-    bucketId: 'verhandlung',
-    tags: ['Buerogebaeude'],
-    value: 55000,
-    assignedTo: 'Laura Meier',
-    createdAt: '2024-02-05',
-    notes: 'Buerogebaeude mit Flachdach. Deal abgeschlossen.',
-  },
-  {
-    id: '9',
-    firstName: 'Marcel',
-    lastName: 'Gerber',
-    company: '',
-    address: 'Seestrasse 33, 6004 Luzern',
-    phone: '+41 78 012 34 56',
-    email: 'm.gerber@gmx.ch',
-    source: 'HOMEPAGE',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'kontaktiert',
-    tags: ['Privat', 'Batteriespeicher'],
-    value: 28000,
-    assignedTo: 'Marco Bianchi',
-    createdAt: '2024-02-25',
-    notes: 'Rueckruf gewuenscht. Interesse an Komplettloesung mit Speicher.',
-  },
-  {
-    id: '10',
-    firstName: 'Franziska',
-    lastName: 'Ammann',
-    company: 'Gemeinde Wettingen',
-    address: 'Rathausplatz 1, 5430 Wettingen',
-    phone: '+41 56 123 45 67',
-    email: 'f.ammann@wettingen.ch',
-    source: 'TELEFON',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'angebot',
-    tags: ['Oeffentlich', 'Grossanlage'],
-    value: 340000,
-    assignedTo: 'Laura Meier',
-    createdAt: '2024-02-18',
-    notes: 'Gemeindezentrum und Schulhaus. Oeffentliche Ausschreibung.',
-  },
-  {
-    id: '11',
-    firstName: 'Daniel',
-    lastName: 'Schaerer',
-    company: 'Schaerer Metallbau AG',
-    address: 'Industriestrasse 45, 3600 Thun',
-    phone: '+41 79 234 56 00',
-    email: 'd.schaerer@schaerer-metall.ch',
-    source: 'MESSE',
-    status: 'LOST',
-    pipelineId: '1',
-    bucketId: 'angebot',
-    tags: ['Industrie'],
-    value: 95000,
-    assignedTo: 'Marco Bianchi',
-    createdAt: '2024-01-25',
-    notes: 'Budget wurde intern nicht freigegeben. Vielleicht naechstes Jahr.',
-  },
-  {
-    id: '12',
-    firstName: 'Nadine',
-    lastName: 'Roth',
-    company: 'BioFarm Roth',
-    address: 'Dorfstrasse 8, 8200 Schaffhausen',
-    phone: '+41 77 345 67 00',
-    email: 'n.roth@biofarm-roth.ch',
-    source: 'EMPFEHLUNG',
-    status: 'ACTIVE',
-    pipelineId: '1',
-    bucketId: 'qualifiziert',
-    tags: ['Landwirtschaft', 'Nachhaltig'],
-    value: 78000,
-    assignedTo: 'Laura Meier',
-    createdAt: '2024-03-01',
-    notes: 'Bio-Bauernhof mit grosser Scheunenflaeche. Empfehlung Huber.',
-  },
-]
-
-/* ── Source Display Mapping ── */
-
-export const sourceLabels: Record<LeadSource, string> = {
-  HOMEPAGE: 'Homepage',
-  EMPFEHLUNG: 'Empfehlung',
-  MESSE: 'Messe',
-  TELEFON: 'Telefon',
-  PARTNER: 'Partner',
-  SOCIAL_MEDIA: 'Social Media',
-  INSERAT: 'Inserat',
-}
-
-export const statusLabels: Record<LeadStatus, string> = {
-  ACTIVE: 'Aktiv',
-  CONVERTED: 'Konvertiert',
-  LOST: 'Verloren',
-  ARCHIVED: 'Archiviert',
-}
 
 /* ── Filter Tab Type ── */
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'CONVERTED' | 'LOST'
 
-/* ── Component ── */
+/* ── Loading Skeleton ── */
+
+function LoadingSkeleton() {
+  return (
+    <div className="glass-card overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-border">
+              {['Name', 'Unternehmen', 'Adresse', 'Telefon', 'E-Mail', 'Quelle', 'Status', 'Erstellt'].map(
+                (header) => (
+                  <th
+                    key={header}
+                    className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5"
+                  >
+                    {header}
+                  </th>
+                ),
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <tr key={i} className="border-b border-border">
+                {/* Name cell with avatar */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-full shrink-0 animate-pulse"
+                      style={{ background: 'rgba(255,255,255,0.06)' }}
+                    />
+                    <div
+                      className="h-3.5 rounded-md animate-pulse"
+                      style={{
+                        width: `${100 + Math.random() * 40}px`,
+                        background: 'rgba(255,255,255,0.06)',
+                        animationDelay: `${i * 80}ms`,
+                      }}
+                    />
+                  </div>
+                </td>
+                {/* Unternehmen */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-3.5 rounded-md animate-pulse"
+                    style={{
+                      width: `${80 + Math.random() * 60}px`,
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 40}ms`,
+                    }}
+                  />
+                </td>
+                {/* Adresse */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-3.5 rounded-md animate-pulse"
+                    style={{
+                      width: `${120 + Math.random() * 60}px`,
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 80}ms`,
+                    }}
+                  />
+                </td>
+                {/* Telefon */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-3.5 rounded-md animate-pulse"
+                    style={{
+                      width: '110px',
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 120}ms`,
+                    }}
+                  />
+                </td>
+                {/* E-Mail */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-3.5 rounded-md animate-pulse"
+                    style={{
+                      width: `${130 + Math.random() * 40}px`,
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 160}ms`,
+                    }}
+                  />
+                </td>
+                {/* Quelle */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-5 rounded-full animate-pulse"
+                    style={{
+                      width: '70px',
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 200}ms`,
+                    }}
+                  />
+                </td>
+                {/* Status */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-5 rounded-full animate-pulse"
+                    style={{
+                      width: '65px',
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 240}ms`,
+                    }}
+                  />
+                </td>
+                {/* Erstellt */}
+                <td className="px-6 py-4">
+                  <div
+                    className="h-3.5 rounded-md animate-pulse"
+                    style={{
+                      width: '75px',
+                      background: 'rgba(255,255,255,0.06)',
+                      animationDelay: `${i * 80 + 280}ms`,
+                    }}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+/* ── Error State ── */
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="glass-card p-12 text-center">
+      <div
+        className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+        style={{
+          background: 'color-mix(in srgb, #F87171 12%, transparent)',
+        }}
+      >
+        <AlertTriangle size={20} className="text-red-400" strokeWidth={1.8} />
+      </div>
+      <p className="text-[14px] font-semibold text-text mb-1">Fehler beim Laden der Leads</p>
+      <p className="text-[12px] text-text-sec mb-5">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="btn-secondary inline-flex items-center gap-2 px-5 py-2.5 text-[13px]"
+      >
+        <RefreshCw size={14} strokeWidth={2} />
+        Erneut versuchen
+      </button>
+    </div>
+  )
+}
+
+/* ── Main Component ── */
 
 export default function LeadsPage() {
+  /* ── State ── */
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [panelOpen, setPanelOpen] = useState(false)
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<string>('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  /* ── Filtering ── */
+  /* ── Data fetching via React Query ── */
+  const {
+    data: leadsResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useLeads({
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    source: sourceFilter !== 'ALL' ? sourceFilter : undefined,
+    search: searchQuery.trim() || undefined,
+    sortBy,
+    sortOrder,
+  })
 
+  const leads: Lead[] = leadsResponse?.data ?? []
+
+  const { data: pipelinesData } = usePipelines()
+  const { data: tagsData } = useTags()
+  const moveLead = useMoveLead()
+
+  const buckets = pipelinesData?.data?.[0]?.buckets ?? []
+  const tags = tagsData?.data ?? []
+
+  /* ── Client-side filtering (search acts as a backup for instant feedback) ── */
   const filteredLeads = useMemo(() => {
-    let result = mockLeads
-
-    if (statusFilter !== 'ALL') {
-      result = result.filter((l) => l.status === statusFilter)
-    }
-
-    if (sourceFilter !== 'ALL') {
-      result = result.filter((l) => l.source === sourceFilter)
-    }
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      result = result.filter(
-        (l) =>
-          l.firstName.toLowerCase().includes(q) ||
-          l.lastName.toLowerCase().includes(q) ||
-          l.company.toLowerCase().includes(q) ||
-          l.email.toLowerCase().includes(q) ||
-          l.address.toLowerCase().includes(q),
-      )
-    }
-
-    return result
-  }, [statusFilter, sourceFilter, searchQuery])
+    // The API handles filtering, but we keep client-side search for instant UX
+    // while the debounced API call catches up
+    return leads
+  }, [leads])
 
   /* ── Handlers ── */
 
   const handleSelectLead = (lead: Lead) => {
-    setSelectedLead(lead)
-    setPanelOpen(true)
+    setSelectedLeadId(lead.id)
   }
 
-  const handleClosePanel = () => {
-    setPanelOpen(false)
+  const handleCloseModal = () => {
+    setSelectedLeadId(null)
+  }
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(field)
+      setSortOrder('asc')
+    }
   }
 
   /* ── Status filter tabs ── */
 
-  const statusTabs: { key: StatusFilter; label: string }[] = [
+  const statusTabs: { key: StatusFilter; label: string; count?: number }[] = [
     { key: 'ALL', label: 'Alle' },
-    { key: 'ACTIVE', label: 'Aktiv' },
-    { key: 'CONVERTED', label: 'Konvertiert' },
-    { key: 'LOST', label: 'Verloren' },
+    { key: 'ACTIVE', label: statusLabels.ACTIVE },
+    { key: 'CONVERTED', label: statusLabels.CONVERTED },
+    { key: 'LOST', label: statusLabels.LOST },
   ]
 
-  /* ── Source options ── */
+  /* ── Source options for dropdown ── */
 
   const sourceOptions: { value: LeadSource | 'ALL'; label: string }[] = [
     { value: 'ALL', label: 'Alle Quellen' },
-    { value: 'HOMEPAGE', label: 'Homepage' },
-    { value: 'EMPFEHLUNG', label: 'Empfehlung' },
-    { value: 'MESSE', label: 'Messe' },
-    { value: 'TELEFON', label: 'Telefon' },
-    { value: 'PARTNER', label: 'Partner' },
-    { value: 'SOCIAL_MEDIA', label: 'Social Media' },
-    { value: 'INSERAT', label: 'Inserat' },
+    ...Object.entries(sourceLabels).map(([value, label]) => ({
+      value: value as LeadSource,
+      label,
+    })),
   ]
 
   return (
@@ -389,7 +291,7 @@ export default function LeadsPage() {
                     color: '#60A5FA',
                   }}
                 >
-                  {filteredLeads.length}
+                  {isLoading ? '\u2014' : leadsResponse?.total ?? filteredLeads.length}
                 </span>
               </div>
               <p className="text-[12px] text-text-sec mt-0.5">
@@ -519,23 +421,41 @@ export default function LeadsPage() {
         </div>
 
         {/* ── Content View ── */}
-        {viewMode === 'list' ? (
-          <LeadTable leads={filteredLeads} onSelectLead={handleSelectLead} />
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : isError ? (
+          <ErrorState
+            message={
+              error instanceof Error
+                ? error.message
+                : 'Ein unerwarteter Fehler ist aufgetreten.'
+            }
+            onRetry={() => refetch()}
+          />
+        ) : viewMode === 'list' ? (
+          <LeadTable
+            leads={filteredLeads}
+            onSelectLead={handleSelectLead}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
+            tags={tags}
+          />
         ) : (
-          <LeadKanban leads={filteredLeads} onSelectLead={handleSelectLead} />
+          <LeadKanban
+            leads={filteredLeads}
+            onSelectLead={handleSelectLead}
+            buckets={buckets}
+            tags={tags}
+            onMoveLead={(leadId, bucketId) => moveLead.mutate({ id: leadId, bucketId })}
+          />
         )}
       </div>
 
-      {/* ── Detail Panel ── */}
-      <SlidePanel
-        open={panelOpen}
-        onClose={handleClosePanel}
-        title={selectedLead ? `${selectedLead.firstName} ${selectedLead.lastName}` : ''}
-        subtitle={selectedLead?.company || undefined}
-        width="520px"
-      >
-        {selectedLead && <LeadDetailPanel lead={selectedLead} />}
-      </SlidePanel>
+      {/* ── Detail Modal (centered) ── */}
+      {selectedLeadId && (
+        <LeadDetailModal leadId={selectedLeadId} onClose={handleCloseModal} />
+      )}
 
       {/* ── Create Dialog ── */}
       {createDialogOpen && (

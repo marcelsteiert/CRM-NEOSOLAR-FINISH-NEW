@@ -1,0 +1,1742 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  X,
+  Pencil,
+  Check,
+  Phone,
+  Mail,
+  FileText,
+  MapPin,
+  ArrowRight,
+  CheckSquare,
+  FileUp,
+  Bell,
+  Handshake,
+  Plus,
+  Trash2,
+  PhoneCall,
+  Send,
+  Sparkles,
+  Globe,
+  GitBranch,
+  User,
+  Tag,
+  Clock,
+  AlertTriangle,
+  ChevronDown,
+} from 'lucide-react'
+import {
+  useLead,
+  useUpdateLead,
+  useDeleteLead,
+  useUsers,
+  useTags,
+  usePipelines,
+  useActivities,
+  useCreateActivity,
+  useReminders,
+  useCreateReminder,
+  useDismissReminder,
+  useEmailTemplates,
+  useSendEmail,
+  useAddLeadTags,
+  useRemoveLeadTag,
+  sourceLabels,
+  statusLabels,
+  type LeadSource,
+  type LeadStatus,
+  type ActivityType,
+} from '@/hooks/useLeads'
+
+/* ── Props ── */
+
+interface LeadDetailModalProps {
+  leadId: string
+  open?: boolean
+  onClose: () => void
+}
+
+/* ── Relative Time Helper ── */
+
+function relativeTime(date: string): string {
+  const now = Date.now()
+  const then = new Date(date).getTime()
+  const diffMs = now - then
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffH = Math.floor(diffMs / 3600000)
+  const diffD = Math.floor(diffMs / 86400000)
+
+  if (diffMin < 1) return 'gerade eben'
+  if (diffMin < 60) return `vor ${diffMin} Minuten`
+  if (diffH < 24) return `vor ${diffH} Stunden`
+  if (diffD < 7) return `vor ${diffD} Tagen`
+
+  return new Date(date).toLocaleDateString('de-CH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+/* ── Status Colors ── */
+
+const statusColors: Record<LeadStatus, { bg: string; text: string }> = {
+  ACTIVE: {
+    bg: 'color-mix(in srgb, #34D399 12%, transparent)',
+    text: '#34D399',
+  },
+  CONVERTED: {
+    bg: 'color-mix(in srgb, #60A5FA 12%, transparent)',
+    text: '#60A5FA',
+  },
+  LOST: {
+    bg: 'color-mix(in srgb, #F87171 12%, transparent)',
+    text: '#F87171',
+  },
+  ARCHIVED: {
+    bg: 'color-mix(in srgb, #525E6F 12%, transparent)',
+    text: '#525E6F',
+  },
+}
+
+/* ── Activity Type Config ── */
+
+const activityTypeConfig: Record<ActivityType, { icon: typeof Phone; color: string; label: string }> = {
+  CALL: { icon: Phone, color: '#34D399', label: 'Anruf' },
+  EMAIL: { icon: Mail, color: '#60A5FA', label: 'E-Mail' },
+  NOTE: { icon: FileText, color: '#F59E0B', label: 'Notiz' },
+  MEETING: { icon: MapPin, color: '#A78BFA', label: 'Meeting' },
+  STATUS_CHANGE: { icon: ArrowRight, color: '#525E6F', label: 'Statusaenderung' },
+  TASK: { icon: CheckSquare, color: '#22D3EE', label: 'Aufgabe' },
+  DOCUMENT: { icon: FileUp, color: '#F59E0B', label: 'Dokument' },
+  REMINDER: { icon: Bell, color: '#F87171', label: 'Erinnerung' },
+  DEAL_CREATED: { icon: Handshake, color: '#34D399', label: 'Deal erstellt' },
+}
+
+/* ── Tab Type ── */
+
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'reminders'
+
+/* ── Mock Documents ── */
+
+interface MockDocument {
+  id: string
+  filename: string
+  size: string
+  date: string
+}
+
+/* ── Component ── */
+
+export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProps) {
+  /* ── Data hooks ── */
+  const { data: leadResponse, isLoading } = useLead(leadId)
+  const lead = leadResponse?.data ?? null
+
+  const updateLead = useUpdateLead()
+  const deleteLead = useDeleteLead()
+  const { data: usersResponse } = useUsers()
+  const { data: tagsResponse } = useTags()
+  const { data: pipelinesResponse } = usePipelines()
+  const { data: activitiesResponse } = useActivities(leadId)
+  const createActivity = useCreateActivity()
+  const { data: remindersResponse } = useReminders(leadId)
+  const createReminder = useCreateReminder()
+  const dismissReminder = useDismissReminder()
+  const { data: templatesResponse } = useEmailTemplates()
+  const sendEmail = useSendEmail()
+  const addLeadTags = useAddLeadTags()
+  const removeLeadTag = useRemoveLeadTag()
+
+  const users = usersResponse?.data ?? []
+  const allTags = tagsResponse?.data ?? []
+  const pipelines = pipelinesResponse?.data ?? []
+  const activities = activitiesResponse?.data ?? []
+  const reminders = remindersResponse?.data ?? []
+  const emailTemplates = templatesResponse?.data ?? []
+
+  /* ── Local state ── */
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview')
+  const [isEditing, setIsEditing] = useState(false)
+
+  // Editable fields
+  const [editFirstName, setEditFirstName] = useState('')
+  const [editLastName, setEditLastName] = useState('')
+  const [editCompany, setEditCompany] = useState('')
+  const [editAddress, setEditAddress] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editSource, setEditSource] = useState<LeadSource>('HOMEPAGE')
+  const [editBucketId, setEditBucketId] = useState('')
+  const [editPipelineId, setEditPipelineId] = useState('')
+  const [editAssignedTo, setEditAssignedTo] = useState('')
+  const [editValue, setEditValue] = useState('')
+
+  // Notes
+  const [notesText, setNotesText] = useState('')
+  const [notesSavedAt, setNotesSavedAt] = useState<string | null>(null)
+
+  // New activity form
+  const [showNewActivity, setShowNewActivity] = useState(false)
+  const [newActivityType, setNewActivityType] = useState<ActivityType>('CALL')
+  const [newActivityTitle, setNewActivityTitle] = useState('')
+  const [newActivityDesc, setNewActivityDesc] = useState('')
+
+  // New reminder form
+  const [showNewReminder, setShowNewReminder] = useState(false)
+  const [newReminderTitle, setNewReminderTitle] = useState('')
+  const [newReminderDesc, setNewReminderDesc] = useState('')
+  const [newReminderDate, setNewReminderDate] = useState('')
+  const [newReminderTime, setNewReminderTime] = useState('')
+
+  // Tags dropdown
+  const [showTagDropdown, setShowTagDropdown] = useState(false)
+
+  // Documents (mock)
+  const [documents, setDocuments] = useState<MockDocument[]>([])
+
+  // Email sub-dialog
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [emailTemplateId, setEmailTemplateId] = useState('')
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailBody, setEmailBody] = useState('')
+
+  // Confirmations
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showDealConfirm, setShowDealConfirm] = useState(false)
+
+  // Success message
+  const [successMsg, setSuccessMsg] = useState('')
+
+  const backdropRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  /* ── Sync lead data to edit state ── */
+  useEffect(() => {
+    if (lead) {
+      setEditFirstName(lead.firstName ?? '')
+      setEditLastName(lead.lastName ?? '')
+      setEditCompany(lead.company ?? '')
+      setEditAddress(lead.address ?? '')
+      setEditPhone(lead.phone ?? '')
+      setEditEmail(lead.email ?? '')
+      setEditSource(lead.source)
+      setEditBucketId(lead.bucketId ?? '')
+      setEditPipelineId(lead.pipelineId ?? '')
+      setEditAssignedTo(lead.assignedTo ?? '')
+      setEditValue(lead.value != null ? String(lead.value) : '')
+      setNotesText(lead.notes ?? '')
+    }
+  }, [lead])
+
+  /* ── Escape key handler ── */
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showEmailDialog) {
+          setShowEmailDialog(false)
+        } else if (showDeleteConfirm) {
+          setShowDeleteConfirm(false)
+        } else if (showDealConfirm) {
+          setShowDealConfirm(false)
+        } else {
+          onClose()
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose, showEmailDialog, showDeleteConfirm, showDealConfirm])
+
+  /* ── Focus dialog on mount ── */
+  useEffect(() => {
+    dialogRef.current?.focus()
+  }, [])
+
+  /* ── Backdrop click ── */
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === backdropRef.current) {
+      onClose()
+    }
+  }
+
+  /* ── Save edits ── */
+  const handleSave = useCallback(() => {
+    if (!lead) return
+    updateLead.mutate({
+      id: lead.id,
+      firstName: editFirstName || null,
+      lastName: editLastName || null,
+      company: editCompany || null,
+      address: editAddress,
+      phone: editPhone,
+      email: editEmail,
+      source: editSource,
+      pipelineId: editPipelineId || null,
+      bucketId: editBucketId || null,
+      assignedTo: editAssignedTo || null,
+      value: editValue ? Number(editValue) : undefined,
+    })
+    setIsEditing(false)
+  }, [lead, editFirstName, editLastName, editCompany, editAddress, editPhone, editEmail, editSource, editPipelineId, editBucketId, editAssignedTo, editValue, updateLead])
+
+  /* ── Notes auto-save on blur ── */
+  const handleNotesBlur = useCallback(() => {
+    if (!lead) return
+    if (notesText !== (lead.notes ?? '')) {
+      updateLead.mutate({ id: lead.id, notes: notesText })
+      setNotesSavedAt(new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }))
+    }
+  }, [lead, notesText, updateLead])
+
+  /* ── Create activity ── */
+  const handleCreateActivity = () => {
+    if (!newActivityTitle.trim()) return
+    createActivity.mutate({
+      leadId,
+      type: newActivityType,
+      title: newActivityTitle.trim(),
+      description: newActivityDesc.trim() || undefined,
+    })
+    setNewActivityTitle('')
+    setNewActivityDesc('')
+    setShowNewActivity(false)
+  }
+
+  /* ── Create reminder ── */
+  const handleCreateReminder = () => {
+    if (!newReminderTitle.trim() || !newReminderDate) return
+    const dueAt = newReminderTime
+      ? `${newReminderDate}T${newReminderTime}:00`
+      : `${newReminderDate}T09:00:00`
+    createReminder.mutate({
+      leadId,
+      title: newReminderTitle.trim(),
+      description: newReminderDesc.trim() || undefined,
+      dueAt,
+    })
+    setNewReminderTitle('')
+    setNewReminderDesc('')
+    setNewReminderDate('')
+    setNewReminderTime('')
+    setShowNewReminder(false)
+  }
+
+  /* ── Tags ── */
+  const handleAddTag = (tagId: string) => {
+    addLeadTags.mutate({ id: leadId, tagIds: [tagId] })
+    setShowTagDropdown(false)
+  }
+
+  const handleRemoveTag = (tagId: string) => {
+    removeLeadTag.mutate({ id: leadId, tagId })
+  }
+
+  /* ── Document upload (mock) ── */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const sizeKB = (file.size / 1024).toFixed(0)
+    const sizeStr = Number(sizeKB) > 1024
+      ? `${(file.size / 1048576).toFixed(1)} MB`
+      : `${sizeKB} KB`
+    setDocuments((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        filename: file.name,
+        size: sizeStr,
+        date: new Date().toLocaleDateString('de-CH'),
+      },
+    ])
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  /* ── Email template selection ── */
+  const handleSelectTemplate = (templateId: string) => {
+    setEmailTemplateId(templateId)
+    const tpl = emailTemplates.find((t) => t.id === templateId)
+    if (tpl && lead) {
+      const firstName = lead.firstName ?? ''
+      const lastName = lead.lastName ?? ''
+      setEmailSubject(
+        tpl.subject.replace(/\{\{firstName\}\}/g, firstName).replace(/\{\{lastName\}\}/g, lastName),
+      )
+      setEmailBody(
+        tpl.body.replace(/\{\{firstName\}\}/g, firstName).replace(/\{\{lastName\}\}/g, lastName),
+      )
+    }
+  }
+
+  /* ── Send email ── */
+  const handleSendEmail = () => {
+    if (!lead || !emailSubject.trim()) return
+    sendEmail.mutate({
+      leadId: lead.id,
+      to: lead.email,
+      subject: emailSubject.trim(),
+      body: emailBody.trim(),
+      templateId: emailTemplateId || undefined,
+    })
+    setShowEmailDialog(false)
+    setEmailSubject('')
+    setEmailBody('')
+    setEmailTemplateId('')
+    setSuccessMsg('E-Mail wurde gesendet')
+    setTimeout(() => setSuccessMsg(''), 3000)
+  }
+
+  /* ── Deal creation ── */
+  const handleCreateDeal = () => {
+    if (!lead) return
+    updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus })
+    setShowDealConfirm(false)
+    setSuccessMsg('Lead wurde zu Deal konvertiert')
+    setTimeout(() => {
+      setSuccessMsg('')
+      onClose()
+    }, 1500)
+  }
+
+  /* ── Delete lead ── */
+  const handleDelete = () => {
+    deleteLead.mutate(leadId, {
+      onSuccess: () => {
+        onClose()
+      },
+    })
+  }
+
+  /* ── Derived ── */
+  const initials = lead
+    ? `${(lead.firstName ?? '?')[0]}${(lead.lastName ?? '?')[0]}`.toUpperCase()
+    : '??'
+  const sc = lead ? statusColors[lead.status] : statusColors.ACTIVE
+
+  const selectedPipeline = pipelines.find((p) => p.id === editPipelineId)
+  const buckets = selectedPipeline?.buckets ?? []
+
+  // Available tags (not already on the lead)
+  const leadTagNames = lead?.tags ?? []
+  const availableTags = allTags.filter((t) => !leadTagNames.includes(t.name))
+
+  // Find tag objects for lead tags (match by name)
+  const leadTagObjects = allTags.filter((t) => leadTagNames.includes(t.name))
+
+  const tabs: { key: DetailTab; label: string }[] = [
+    { key: 'overview', label: 'Uebersicht' },
+    { key: 'activities', label: 'Aktivitaeten' },
+    { key: 'notes', label: 'Notizen' },
+    { key: 'documents', label: 'Dokumente' },
+    { key: 'reminders', label: 'Erinnerungen' },
+  ]
+
+  /* ── Source options ── */
+  const sourceOptions: { value: LeadSource; label: string }[] = (
+    Object.entries(sourceLabels) as [LeadSource, string][]
+  ).map(([value, label]) => ({ value, label }))
+
+  /* ── Activity type options ── */
+  const activityTypeOptions: { value: ActivityType; label: string }[] = (
+    Object.entries(activityTypeConfig) as [ActivityType, { icon: typeof Phone; color: string; label: string }][]
+  ).map(([value, cfg]) => ({ value, label: cfg.label }))
+
+  /* ── Render ── */
+
+  if (isLoading || !lead) {
+    return (
+      <div
+        ref={backdropRef}
+        onClick={handleBackdropClick}
+        className="fixed inset-0 z-[100] flex items-center justify-center"
+        style={{
+          background: 'rgba(6, 8, 12, 0.7)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+      >
+        <div
+          className="w-[720px] max-h-[90vh] p-12 text-center"
+          style={{
+            background: 'rgba(255,255,255,0.035)',
+            backdropFilter: 'blur(24px) saturate(1.2)',
+            WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 'var(--radius-lg)',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-full mx-auto mb-3 animate-pulse"
+            style={{ background: 'rgba(255,255,255,0.06)' }}
+          />
+          <p className="text-[13px] text-text-sec">Lead wird geladen...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={backdropRef}
+      onClick={handleBackdropClick}
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{
+        background: 'rgba(6, 8, 12, 0.7)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Lead Details"
+        tabIndex={-1}
+        className="outline-none w-[720px] max-h-[90vh] mx-4 flex flex-col"
+        style={{
+          background: 'rgba(255,255,255,0.035)',
+          backdropFilter: 'blur(24px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 'var(--radius-lg)',
+        }}
+      >
+        {/* ── Header ── */}
+        <div className="flex items-center gap-3.5 px-6 py-5 border-b border-border shrink-0">
+          {/* Avatar */}
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 text-[14px] font-bold"
+            style={{
+              background: 'linear-gradient(135deg, #F59E0B, #F97316)',
+              color: '#06080C',
+            }}
+          >
+            {initials}
+          </div>
+
+          {/* Name / Company */}
+          <div className="min-w-0 flex-1">
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editFirstName}
+                  onChange={(e) => setEditFirstName(e.target.value)}
+                  placeholder="Vorname"
+                  className="glass-input px-3 py-1 text-[14px] font-bold w-[140px]"
+                />
+                <input
+                  type="text"
+                  value={editLastName}
+                  onChange={(e) => setEditLastName(e.target.value)}
+                  placeholder="Nachname"
+                  className="glass-input px-3 py-1 text-[14px] font-bold w-[140px]"
+                />
+              </div>
+            ) : (
+              <h3 className="text-[15px] font-bold leading-snug">
+                {lead.firstName} {lead.lastName}
+              </h3>
+            )}
+            {isEditing ? (
+              <input
+                type="text"
+                value={editCompany}
+                onChange={(e) => setEditCompany(e.target.value)}
+                placeholder="Unternehmen"
+                className="glass-input px-3 py-1 text-[12px] mt-1 w-[290px]"
+              />
+            ) : (
+              lead.company && (
+                <p className="text-[12px] text-text-sec truncate">{lead.company}</p>
+              )
+            )}
+          </div>
+
+          {/* Status badge */}
+          <span
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0"
+            style={{ background: sc.bg, color: sc.text }}
+          >
+            {statusLabels[lead.status]}
+          </span>
+
+          {/* Edit / Save toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              if (isEditing) {
+                handleSave()
+              } else {
+                setIsEditing(true)
+              }
+            }}
+            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-200 shrink-0"
+            aria-label={isEditing ? 'Speichern' : 'Bearbeiten'}
+          >
+            {isEditing ? (
+              <Check size={16} strokeWidth={1.8} />
+            ) : (
+              <Pencil size={16} strokeWidth={1.8} />
+            )}
+          </button>
+
+          {/* Close */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Schliessen"
+            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150 shrink-0"
+          >
+            <X size={18} strokeWidth={1.8} />
+          </button>
+        </div>
+
+        {/* ── Success Message ── */}
+        {successMsg && (
+          <div
+            className="mx-6 mt-3 px-4 py-2.5 rounded-[10px] text-[12px] font-semibold text-center"
+            style={{
+              background: 'color-mix(in srgb, #34D399 12%, transparent)',
+              color: '#34D399',
+              border: '1px solid color-mix(in srgb, #34D399 20%, transparent)',
+            }}
+          >
+            {successMsg}
+          </div>
+        )}
+
+        {/* ── Tabs ── */}
+        <div className="px-6 pt-4 pb-0 shrink-0">
+          <div
+            className="flex items-center rounded-full p-0.5"
+            style={{
+              background: 'rgba(255,255,255,0.035)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={[
+                  'flex-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                  activeTab === tab.key
+                    ? 'bg-amber-soft text-amber'
+                    : 'text-text-dim hover:text-text',
+                ].join(' ')}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Tab Content (scrollable) ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* ────────── TAB 1: Uebersicht ────────── */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Kontaktdaten */}
+              <div
+                className="p-4 space-y-3"
+                style={{
+                  background: 'rgba(255,255,255,0.035)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">
+                  Kontaktdaten
+                </h4>
+                <div className="space-y-2.5">
+                  {/* Address */}
+                  <div className="flex items-start gap-2.5">
+                    <MapPin size={14} className="text-text-dim shrink-0 mt-0.5" strokeWidth={1.8} />
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editAddress}
+                        onChange={(e) => setEditAddress(e.target.value)}
+                        className="glass-input px-3 py-1 text-[12px] flex-1"
+                      />
+                    ) : (
+                      <span className="text-[12px] text-text-sec leading-relaxed">{lead.address}</span>
+                    )}
+                  </div>
+                  {/* Phone */}
+                  <div className="flex items-center gap-2.5">
+                    <Phone size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
+                    {isEditing ? (
+                      <input
+                        type="tel"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="glass-input px-3 py-1 text-[12px] flex-1 tabular-nums"
+                      />
+                    ) : (
+                      <span className="text-[12px] text-text-sec tabular-nums">{lead.phone}</span>
+                    )}
+                  </div>
+                  {/* Email */}
+                  <div className="flex items-center gap-2.5">
+                    <Mail size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        className="glass-input px-3 py-1 text-[12px] flex-1"
+                      />
+                    ) : (
+                      <span className="text-[12px] text-text-sec">{lead.email}</span>
+                    )}
+                  </div>
+                  {/* Source */}
+                  <div className="flex items-center gap-2.5">
+                    <Globe size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
+                    {isEditing ? (
+                      <div className="relative flex-1">
+                        <select
+                          value={editSource}
+                          onChange={(e) => setEditSource(e.target.value as LeadSource)}
+                          className="glass-input appearance-none px-3 py-1 pr-8 text-[12px] w-full cursor-pointer"
+                        >
+                          {sourceOptions.map((opt) => (
+                            <option
+                              key={opt.value}
+                              value={opt.value}
+                              style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                            >
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown
+                          size={12}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                          strokeWidth={2}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-[12px] text-text-sec">{sourceLabels[lead.source]}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Pipeline */}
+              <div
+                className="p-4 space-y-3"
+                style={{
+                  background: 'rgba(255,255,255,0.035)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">
+                  Pipeline
+                </h4>
+                <div className="space-y-2.5">
+                  {/* Pipeline name */}
+                  <div className="flex items-center gap-2.5">
+                    <GitBranch size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
+                    <div className="flex-1">
+                      <span className="text-[11px] text-text-dim">Pipeline</span>
+                      {isEditing ? (
+                        <div className="relative mt-0.5">
+                          <select
+                            value={editPipelineId}
+                            onChange={(e) => {
+                              setEditPipelineId(e.target.value)
+                              setEditBucketId('')
+                            }}
+                            className="glass-input appearance-none px-3 py-1 pr-8 text-[12px] w-full cursor-pointer"
+                          >
+                            <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                              Keine Pipeline
+                            </option>
+                            {pipelines.map((p) => (
+                              <option
+                                key={p.id}
+                                value={p.id}
+                                style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                              >
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={12}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                            strokeWidth={2}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-text-sec font-medium">
+                          {selectedPipeline?.name ?? 'Keine Pipeline'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Bucket / Stage */}
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: 'color-mix(in srgb, #F59E0B 15%, transparent)' }}
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#F59E0B' }} />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[11px] text-text-dim">Stufe</span>
+                      {isEditing ? (
+                        <div className="relative mt-0.5">
+                          <select
+                            value={editBucketId}
+                            onChange={(e) => setEditBucketId(e.target.value)}
+                            className="glass-input appearance-none px-3 py-1 pr-8 text-[12px] w-full cursor-pointer"
+                            disabled={!editPipelineId}
+                          >
+                            <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                              Keine Stufe
+                            </option>
+                            {buckets.map((b) => (
+                              <option
+                                key={b.id}
+                                value={b.id}
+                                style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                              >
+                                {b.name}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={12}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                            strokeWidth={2}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-text-sec font-medium">
+                          {buckets.find((b) => b.id === lead.bucketId)?.name ?? 'Keine Stufe'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Assigned user */}
+                  <div className="flex items-center gap-2.5">
+                    <User size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
+                    <div className="flex-1">
+                      <span className="text-[11px] text-text-dim">Zustaendig</span>
+                      {isEditing ? (
+                        <div className="relative mt-0.5">
+                          <select
+                            value={editAssignedTo}
+                            onChange={(e) => setEditAssignedTo(e.target.value)}
+                            className="glass-input appearance-none px-3 py-1 pr-8 text-[12px] w-full cursor-pointer"
+                          >
+                            <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                              Nicht zugewiesen
+                            </option>
+                            {users.map((u) => (
+                              <option
+                                key={u.id}
+                                value={u.id}
+                                style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                              >
+                                {u.firstName} {u.lastName}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown
+                            size={12}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                            strokeWidth={2}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-text-sec font-medium">
+                          {users.find((u) => u.id === lead.assignedTo)
+                            ? `${users.find((u) => u.id === lead.assignedTo)!.firstName} ${users.find((u) => u.id === lead.assignedTo)!.lastName}`
+                            : lead.assignedTo ?? 'Nicht zugewiesen'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Wert */}
+              <div
+                className="p-4"
+                style={{
+                  background: 'rgba(255,255,255,0.035)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">
+                  Wert
+                </h4>
+                {isEditing ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-text-sec font-medium">CHF</span>
+                    <input
+                      type="number"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      placeholder="0"
+                      className="glass-input px-3 py-1.5 text-[14px] font-bold tabular-nums w-[160px]"
+                      min={0}
+                      step={100}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-[18px] font-bold tabular-nums">
+                    CHF {lead.value != null ? lead.value.toLocaleString('de-CH') : '0'}
+                  </p>
+                )}
+              </div>
+
+              {/* Tags */}
+              <div
+                className="p-4"
+                style={{
+                  background: 'rgba(255,255,255,0.035)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim flex items-center gap-1.5">
+                    <Tag size={12} strokeWidth={1.8} />
+                    Tags
+                  </h4>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowTagDropdown(!showTagDropdown)}
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-150"
+                    >
+                      <Plus size={12} strokeWidth={2.5} />
+                    </button>
+                    {showTagDropdown && availableTags.length > 0 && (
+                      <div
+                        className="absolute right-0 top-7 z-10 py-1 min-w-[160px] max-h-[200px] overflow-y-auto"
+                        style={{
+                          background: 'rgba(11, 15, 21, 0.95)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 'var(--radius-sm)',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                        }}
+                      >
+                        {availableTags.map((tag) => (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => handleAddTag(tag.id)}
+                            className="w-full text-left px-3 py-1.5 text-[12px] text-text-sec hover:text-text hover:bg-surface-hover transition-colors duration-150 flex items-center gap-2"
+                          >
+                            <div
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ background: tag.color }}
+                            />
+                            {tag.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {leadTagObjects.length > 0
+                    ? leadTagObjects.map((tag) => (
+                        <span
+                          key={tag.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium text-text-sec group"
+                          style={{
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                          }}
+                        >
+                          <div
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ background: tag.color }}
+                          />
+                          {tag.name}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag.id)}
+                            className="ml-0.5 text-text-dim hover:text-red opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                            aria-label={`Tag ${tag.name} entfernen`}
+                          >
+                            <X size={10} strokeWidth={2.5} />
+                          </button>
+                        </span>
+                      ))
+                    : leadTagNames.length > 0
+                      ? leadTagNames.map((tagName) => (
+                          <span
+                            key={tagName}
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium text-text-sec"
+                            style={{
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.06)',
+                            }}
+                          >
+                            {tagName}
+                          </span>
+                        ))
+                      : (
+                          <span className="text-[11px] text-text-dim">Keine Tags vorhanden</span>
+                        )}
+                </div>
+              </div>
+
+              {/* KI-Zusammenfassung */}
+              <div
+                className="p-4 relative overflow-hidden"
+                style={{
+                  background:
+                    'linear-gradient(135deg, color-mix(in srgb, #F59E0B 6%, transparent), color-mix(in srgb, #A78BFA 4%, transparent))',
+                  border: '1px solid color-mix(in srgb, #F59E0B 10%, transparent)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <div
+                  className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
+                  style={{
+                    background:
+                      'radial-gradient(circle, color-mix(in srgb, #F59E0B 8%, transparent), transparent 70%)',
+                  }}
+                />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <Sparkles size={14} className="text-amber" strokeWidth={1.8} />
+                    <h4 className="text-[11px] font-bold text-amber uppercase tracking-[0.06em]">
+                      KI-Zusammenfassung
+                    </h4>
+                  </div>
+                  <p className="text-[12px] text-text-sec leading-relaxed">
+                    {lead.notes ||
+                      'Keine Notizen vorhanden. Die KI-Zusammenfassung wird automatisch generiert, sobald genuegend Interaktionsdaten vorliegen.'}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ────────── TAB 2: Aktivitaeten ────────── */}
+          {activeTab === 'activities' && (
+            <>
+              {/* Add activity button */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowNewActivity(!showNewActivity)}
+                  className="btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold"
+                >
+                  <Plus size={14} strokeWidth={2} />
+                  Aktivitaet
+                </button>
+              </div>
+
+              {/* New activity form */}
+              {showNewActivity && (
+                <div
+                  className="p-4 space-y-3"
+                  style={{
+                    background: 'rgba(255,255,255,0.035)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
+                    Neue Aktivitaet
+                  </h4>
+                  <div className="relative">
+                    <select
+                      value={newActivityType}
+                      onChange={(e) => setNewActivityType(e.target.value as ActivityType)}
+                      className="glass-input appearance-none px-3 py-2 pr-8 text-[12px] w-full cursor-pointer"
+                    >
+                      {activityTypeOptions.map((opt) => (
+                        <option
+                          key={opt.value}
+                          value={opt.value}
+                          style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                        >
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={12}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={newActivityTitle}
+                    onChange={(e) => setNewActivityTitle(e.target.value)}
+                    placeholder="Titel"
+                    className="glass-input w-full px-3 py-2 text-[12px]"
+                  />
+                  <textarea
+                    value={newActivityDesc}
+                    onChange={(e) => setNewActivityDesc(e.target.value)}
+                    placeholder="Beschreibung (optional)"
+                    rows={2}
+                    className="glass-input w-full px-3 py-2 text-[12px] resize-none"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  />
+                  <div className="flex items-center gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewActivity(false)}
+                      className="btn-secondary px-3.5 py-1.5 text-[12px] font-semibold"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateActivity}
+                      className="btn-primary px-3.5 py-1.5 text-[12px]"
+                      disabled={!newActivityTitle.trim()}
+                    >
+                      Hinzufuegen
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Activity timeline */}
+              {activities.length > 0 ? (
+                <div className="space-y-0.5">
+                  {activities.map((activity) => {
+                    const cfg = activityTypeConfig[activity.type]
+                    const IconComp = cfg.icon
+                    return (
+                      <div
+                        key={activity.id}
+                        className="flex items-start gap-3 p-3 rounded-[12px] hover:bg-surface-hover transition-colors duration-150"
+                      >
+                        {/* Icon */}
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                          style={{
+                            background: `color-mix(in srgb, ${cfg.color} 12%, transparent)`,
+                          }}
+                        >
+                          <IconComp size={14} strokeWidth={1.8} style={{ color: cfg.color }} />
+                        </div>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[13px] font-semibold truncate">{activity.title}</p>
+                            <span className="text-[11px] text-text-dim shrink-0 tabular-nums">
+                              {relativeTime(activity.createdAt)}
+                            </span>
+                          </div>
+                          {activity.description && (
+                            <p className="text-[12px] text-text-sec mt-0.5 leading-relaxed">
+                              {activity.description}
+                            </p>
+                          )}
+                          <p className="text-[11px] text-text-dim mt-1">
+                            {activity.createdBy}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div
+                  className="p-8 text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.035)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <p className="text-text-dim text-[12px] font-medium">
+                    Noch keine Aktivitaeten erfasst.
+                  </p>
+                  <p className="text-text-dim text-[11px] mt-1">
+                    Aktivitaeten werden hier chronologisch angezeigt.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ────────── TAB 3: Notizen ────────── */}
+          {activeTab === 'notes' && (
+            <div
+              className="p-4 space-y-3"
+              style={{
+                background: 'rgba(255,255,255,0.035)',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
+                  Notizen
+                </h4>
+                {notesSavedAt && (
+                  <span className="text-[10px] text-text-dim flex items-center gap-1">
+                    <Clock size={10} strokeWidth={2} />
+                    Gespeichert um {notesSavedAt}
+                  </span>
+                )}
+              </div>
+              <textarea
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                onBlur={handleNotesBlur}
+                placeholder="Notizen hier eingeben..."
+                rows={12}
+                className="glass-input w-full px-4 py-3 text-[13px] leading-relaxed resize-none"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              />
+            </div>
+          )}
+
+          {/* ────────── TAB 4: Dokumente ────────── */}
+          {activeTab === 'documents' && (
+            <>
+              <div className="flex justify-end">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold"
+                >
+                  <FileUp size={14} strokeWidth={1.8} />
+                  Hochladen
+                </button>
+              </div>
+
+              {documents.length > 0 ? (
+                <div className="space-y-1.5">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center gap-3 p-3 rounded-[12px] hover:bg-surface-hover transition-colors duration-150"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0"
+                        style={{
+                          background: 'color-mix(in srgb, #F59E0B 12%, transparent)',
+                        }}
+                      >
+                        <FileText size={14} className="text-amber" strokeWidth={1.8} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium truncate">{doc.filename}</p>
+                        <p className="text-[11px] text-text-dim">
+                          {doc.size} &middot; {doc.date}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="p-8 text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.035)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <p className="text-text-dim text-[12px] font-medium">
+                    Keine Dokumente vorhanden.
+                  </p>
+                  <p className="text-text-dim text-[11px] mt-1">
+                    Offerten, Vertraege und weitere Dokumente erscheinen hier.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ────────── TAB 5: Erinnerungen ────────── */}
+          {activeTab === 'reminders' && (
+            <>
+              {/* Add reminder button */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowNewReminder(!showNewReminder)}
+                  className="btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold"
+                >
+                  <Plus size={14} strokeWidth={2} />
+                  Erinnerung
+                </button>
+              </div>
+
+              {/* New reminder form */}
+              {showNewReminder && (
+                <div
+                  className="p-4 space-y-3"
+                  style={{
+                    background: 'rgba(255,255,255,0.035)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
+                    Neue Erinnerung
+                  </h4>
+                  <input
+                    type="text"
+                    value={newReminderTitle}
+                    onChange={(e) => setNewReminderTitle(e.target.value)}
+                    placeholder="Titel"
+                    className="glass-input w-full px-3 py-2 text-[12px]"
+                  />
+                  <textarea
+                    value={newReminderDesc}
+                    onChange={(e) => setNewReminderDesc(e.target.value)}
+                    placeholder="Beschreibung (optional)"
+                    rows={2}
+                    className="glass-input w-full px-3 py-2 text-[12px] resize-none"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-sec mb-1">
+                        Datum
+                      </label>
+                      <input
+                        type="date"
+                        value={newReminderDate}
+                        onChange={(e) => setNewReminderDate(e.target.value)}
+                        className="glass-input w-full px-3 py-2 text-[12px]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-text-sec mb-1">
+                        Uhrzeit
+                      </label>
+                      <input
+                        type="time"
+                        value={newReminderTime}
+                        onChange={(e) => setNewReminderTime(e.target.value)}
+                        className="glass-input w-full px-3 py-2 text-[12px]"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewReminder(false)}
+                      className="btn-secondary px-3.5 py-1.5 text-[12px] font-semibold"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCreateReminder}
+                      className="btn-primary px-3.5 py-1.5 text-[12px]"
+                      disabled={!newReminderTitle.trim() || !newReminderDate}
+                    >
+                      Hinzufuegen
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Reminders list */}
+              {reminders.length > 0 ? (
+                <div className="space-y-1.5">
+                  {reminders
+                    .filter((r) => !r.dismissed)
+                    .sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime())
+                    .map((reminder) => {
+                      const isOverdue = new Date(reminder.dueAt).getTime() < Date.now()
+                      return (
+                        <div
+                          key={reminder.id}
+                          className="flex items-start gap-3 p-3 rounded-[12px] transition-colors duration-150"
+                          style={{
+                            background: isOverdue
+                              ? 'color-mix(in srgb, #F87171 6%, transparent)'
+                              : undefined,
+                            border: isOverdue
+                              ? '1px solid color-mix(in srgb, #F87171 15%, transparent)'
+                              : undefined,
+                          }}
+                        >
+                          {/* Icon */}
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                            style={{
+                              background: isOverdue
+                                ? 'color-mix(in srgb, #F87171 15%, transparent)'
+                                : 'color-mix(in srgb, #F59E0B 12%, transparent)',
+                            }}
+                          >
+                            {isOverdue ? (
+                              <AlertTriangle size={14} strokeWidth={1.8} style={{ color: '#F87171' }} />
+                            ) : (
+                              <Bell size={14} strokeWidth={1.8} className="text-amber" />
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p
+                                className="text-[13px] font-semibold truncate"
+                                style={{ color: isOverdue ? '#F87171' : undefined }}
+                              >
+                                {reminder.title}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => dismissReminder.mutate(reminder.id)}
+                                className="btn-secondary px-2.5 py-1 text-[11px] font-semibold shrink-0"
+                              >
+                                Erledigt
+                              </button>
+                            </div>
+                            {reminder.description && (
+                              <p className="text-[12px] text-text-sec mt-0.5 leading-relaxed">
+                                {reminder.description}
+                              </p>
+                            )}
+                            <p className="text-[11px] text-text-dim mt-1 tabular-nums flex items-center gap-1">
+                              <Clock size={10} strokeWidth={2} />
+                              {new Date(reminder.dueAt).toLocaleDateString('de-CH', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                              })}{' '}
+                              {new Date(reminder.dueAt).toLocaleTimeString('de-CH', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                              {isOverdue && (
+                                <span className="text-red font-semibold ml-1">Ueberfaellig</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : (
+                <div
+                  className="p-8 text-center"
+                  style={{
+                    background: 'rgba(255,255,255,0.035)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <p className="text-text-dim text-[12px] font-medium">
+                    Keine Erinnerungen vorhanden.
+                  </p>
+                  <p className="text-text-dim text-[11px] mt-1">
+                    Erstellen Sie Erinnerungen, um wichtige Termine nicht zu verpassen.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── Footer Actions ── */}
+        <div className="flex items-center gap-2.5 px-6 py-4 border-t border-border shrink-0">
+          <button
+            type="button"
+            className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold"
+            onClick={() => {
+              if (lead.phone) window.open(`tel:${lead.phone}`)
+            }}
+          >
+            <PhoneCall size={14} strokeWidth={1.8} />
+            Anrufen
+          </button>
+          <button
+            type="button"
+            className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold"
+            onClick={() => setShowEmailDialog(true)}
+          >
+            <Send size={14} strokeWidth={1.8} />
+            E-Mail
+          </button>
+          <button
+            type="button"
+            className="btn-primary flex items-center gap-2 px-4 py-2.5 text-[12px] flex-1 justify-center"
+            onClick={() => setShowDealConfirm(true)}
+          >
+            <Handshake size={14} strokeWidth={2} />
+            Deal erstellen
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium text-text-dim hover:text-red transition-colors duration-150"
+          >
+            <Trash2 size={13} strokeWidth={1.8} />
+            Loeschen
+          </button>
+        </div>
+
+        {/* ── Email Sub-Dialog ── */}
+        {showEmailDialog && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              background: 'rgba(6, 8, 12, 0.6)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowEmailDialog(false)
+            }}
+          >
+            <div
+              className="w-[520px] mx-4"
+              style={{
+                background: 'rgba(11, 15, 21, 0.98)',
+                backdropFilter: 'blur(24px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+              }}
+            >
+              {/* Email header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div>
+                  <h3 className="text-[14px] font-bold">E-Mail senden</h3>
+                  <p className="text-[11px] text-text-sec mt-0.5">
+                    An: {lead.email}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailDialog(false)}
+                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150"
+                >
+                  <X size={16} strokeWidth={1.8} />
+                </button>
+              </div>
+
+              {/* Email form */}
+              <div className="px-5 py-4 space-y-3">
+                {/* Template selector */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-sec mb-1">
+                    Vorlage
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={emailTemplateId}
+                      onChange={(e) => handleSelectTemplate(e.target.value)}
+                      className="glass-input appearance-none w-full px-3 py-2 pr-8 text-[12px] cursor-pointer"
+                    >
+                      <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                        Keine Vorlage
+                      </option>
+                      {emailTemplates.map((tpl) => (
+                        <option
+                          key={tpl.id}
+                          value={tpl.id}
+                          style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                        >
+                          {tpl.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={12}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                      strokeWidth={2}
+                    />
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-sec mb-1">
+                    Betreff
+                  </label>
+                  <input
+                    type="text"
+                    value={emailSubject}
+                    onChange={(e) => setEmailSubject(e.target.value)}
+                    placeholder="Betreff eingeben..."
+                    className="glass-input w-full px-3 py-2 text-[12px]"
+                  />
+                </div>
+
+                {/* Body */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-sec mb-1">
+                    Nachricht
+                  </label>
+                  <textarea
+                    value={emailBody}
+                    onChange={(e) => setEmailBody(e.target.value)}
+                    placeholder="Nachricht eingeben..."
+                    rows={8}
+                    className="glass-input w-full px-3 py-2 text-[12px] leading-relaxed resize-none"
+                    style={{ borderRadius: 'var(--radius-sm)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Email actions */}
+              <div className="flex items-center gap-2.5 px-5 py-4 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailDialog(false)}
+                  className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendEmail}
+                  className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center flex items-center justify-center gap-2"
+                  disabled={!emailSubject.trim()}
+                >
+                  <Send size={14} strokeWidth={1.8} />
+                  Senden
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Delete Confirmation ── */}
+        {showDeleteConfirm && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              background: 'rgba(6, 8, 12, 0.6)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowDeleteConfirm(false)
+            }}
+          >
+            <div
+              className="w-[360px] mx-4 p-6 text-center"
+              style={{
+                background: 'rgba(11, 15, 21, 0.98)',
+                backdropFilter: 'blur(24px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}
+              >
+                <Trash2 size={20} className="text-red" strokeWidth={1.8} />
+              </div>
+              <h3 className="text-[15px] font-bold mb-1">Lead wirklich loeschen?</h3>
+              <p className="text-[12px] text-text-sec mb-5">
+                Diese Aktion kann nicht rueckgaengig gemacht werden.
+              </p>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-2.5 text-[12px] font-bold text-center rounded-full cursor-pointer transition-all duration-200"
+                  style={{
+                    background: 'color-mix(in srgb, #F87171 15%, transparent)',
+                    color: '#F87171',
+                    border: '1px solid color-mix(in srgb, #F87171 25%, transparent)',
+                  }}
+                >
+                  Loeschen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Deal Confirmation ── */}
+        {showDealConfirm && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              background: 'rgba(6, 8, 12, 0.6)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowDealConfirm(false)
+            }}
+          >
+            <div
+              className="w-[360px] mx-4 p-6 text-center"
+              style={{
+                background: 'rgba(11, 15, 21, 0.98)',
+                backdropFilter: 'blur(24px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 15%, transparent), color-mix(in srgb, #F97316 10%, transparent))',
+                }}
+              >
+                <Handshake size={20} className="text-amber" strokeWidth={1.8} />
+              </div>
+              <h3 className="text-[15px] font-bold mb-1">Lead zu Deal konvertieren?</h3>
+              <p className="text-[12px] text-text-sec mb-5">
+                Der Lead-Status wird auf &quot;Konvertiert&quot; gesetzt.
+              </p>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowDealConfirm(false)}
+                  className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateDeal}
+                  className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center"
+                >
+                  Konvertieren
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
