@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler.js';
+import { getSettings } from './settings.js';
 
 const router = Router();
 
@@ -43,15 +44,17 @@ type DealStage =
 type DealPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 // ---------------------------------------------------------------------------
-// Follow-Up Regeln pro Phase
+// Follow-Up Regeln – dynamisch aus Settings
 // ---------------------------------------------------------------------------
 
-const FOLLOW_UP_RULES: Record<string, { maxDays: number; urgentMaxDays: number; message: string }> = {
-  ERSTELLT: { maxDays: 2, urgentMaxDays: 1, message: 'Angebot noch nicht gesendet – bitte finalisieren!' },
-  GESENDET: { maxDays: 3, urgentMaxDays: 1, message: 'Angebot wurde gesendet – Nachfassen beim Kunden!' },
-  FOLLOW_UP: { maxDays: 2, urgentMaxDays: 1, message: 'Follow-Up ueberfaellig – bitte sofort anrufen!' },
-  VERHANDLUNG: { maxDays: 3, urgentMaxDays: 1, message: 'Verhandlung laeuft – dranbleiben!' },
-};
+function getFollowUpRules(): Record<string, { maxDays: number; urgentMaxDays: number; message: string }> {
+  const s = getSettings();
+  const map: Record<string, { maxDays: number; urgentMaxDays: number; message: string }> = {};
+  for (const r of s.followUpRules) {
+    map[r.stage] = { maxDays: r.maxDays, urgentMaxDays: r.urgentMaxDays, message: r.message };
+  }
+  return map;
+}
 
 interface FollowUp {
   id: string;
@@ -460,7 +463,8 @@ router.get('/follow-ups', (req: Request, res: Response, next: NextFunction) => {
     const followUps: FollowUp[] = [];
 
     for (const deal of userDeals) {
-      const rule = FOLLOW_UP_RULES[deal.stage];
+      const rules = getFollowUpRules();
+      const rule = rules[deal.stage];
       if (!rule) continue;
 
       const daysSinceUpdate = Math.floor((now - new Date(deal.updatedAt).getTime()) / 86400000);

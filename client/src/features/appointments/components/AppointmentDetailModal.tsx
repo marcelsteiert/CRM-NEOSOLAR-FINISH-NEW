@@ -158,9 +158,11 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
         company: appt.company ?? undefined,
         address: appt.address,
         value: appt.value,
+        assignedTo: appt.assignedTo ?? undefined,
         appointmentId: appt.id,
         leadId: appt.leadId ?? undefined,
         notes: appt.notes ?? undefined,
+        stage: 'ERSTELLT',
       })
       updateAppt.mutate({ id: appt.id, status: 'DURCHGEFUEHRT' as AppointmentStatus })
       setShowCreateOffer(false)

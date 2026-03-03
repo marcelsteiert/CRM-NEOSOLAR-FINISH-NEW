@@ -209,6 +209,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const [showLostConfirm, setShowLostConfirm] = useState(false)
   const [lostReason, setLostReason] = useState('')
 
+  // Termin-Formular
+  const [apptAssignedTo, setApptAssignedTo] = useState('')
+  const [apptDate, setApptDate] = useState('')
+  const [apptTime, setApptTime] = useState('')
+  const [apptAddress, setApptAddress] = useState('')
+
   // Success message
   const [successMsg, setSuccessMsg] = useState('')
 
@@ -397,7 +403,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
   /* ── Termin erstellen (Lead → Termin) ── */
   const handleCreateDeal = async () => {
-    if (!lead) return
+    if (!lead || !apptAssignedTo || !apptDate || !apptTime) return
     const name = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unbekannt'
 
     try {
@@ -406,9 +412,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         contactEmail: lead.email,
         contactPhone: lead.phone,
         company: lead.company ?? undefined,
-        address: lead.address,
+        address: apptAddress || lead.address,
         value: lead.value ?? 0,
         leadId: lead.id,
+        assignedTo: apptAssignedTo,
+        appointmentDate: apptDate,
+        appointmentTime: apptTime,
         notes: lead.notes ?? undefined,
       })
       updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus })
@@ -416,7 +425,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         leadId: lead.id,
         type: 'DEAL_CREATED' as ActivityType,
         title: 'Termin erstellt',
-        description: `Lead wurde zu Termin konvertiert – ${name}`,
+        description: `Lead wurde zu Termin konvertiert – ${name} (zugewiesen an ${users.find(u => u.id === apptAssignedTo)?.firstName ?? apptAssignedTo})`,
       })
       setShowDealConfirm(false)
       setSuccessMsg('Termin erstellt! Lead wurde konvertiert.')
@@ -1542,7 +1551,15 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
           <button
             type="button"
             className="btn-primary flex items-center gap-2 px-4 py-2.5 text-[12px] flex-1 justify-center"
-            onClick={() => setShowDealConfirm(true)}
+            onClick={() => {
+              if (lead) {
+                setApptAddress(lead.address ?? '')
+                setApptAssignedTo('')
+                setApptDate('')
+                setApptTime('')
+              }
+              setShowDealConfirm(true)
+            }}
           >
             <CalendarCheck size={14} strokeWidth={2} />
             Termin vereinbaren
@@ -1756,7 +1773,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             }}
           >
             <div
-              className="w-[360px] mx-4 p-6 text-center"
+              className="w-[440px] mx-4 p-6"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
@@ -1765,18 +1782,90 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
               }}
             >
-              <div
-                className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 15%, transparent), color-mix(in srgb, #F97316 10%, transparent))',
-                }}
-              >
-                <CalendarCheck size={20} className="text-amber" strokeWidth={1.8} />
+              <div className="flex items-center gap-3 mb-5">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 15%, transparent), color-mix(in srgb, #F97316 10%, transparent))',
+                  }}
+                >
+                  <CalendarCheck size={18} className="text-amber" strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold">Termin vereinbaren</h3>
+                  <p className="text-[11px] text-text-sec">Verkäufer, Datum, Zeit und Ort festlegen</p>
+                </div>
               </div>
-              <h3 className="text-[15px] font-bold mb-1">Termin vereinbaren?</h3>
-              <p className="text-[12px] text-text-sec mb-5">
-                Es wird ein Besichtigungstermin erstellt und der Lead-Status auf &quot;Konvertiert&quot; gesetzt.
-              </p>
+
+              {/* Verkäufer */}
+              <div className="mb-3">
+                <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                  Verkäufer zuweisen *
+                </label>
+                <select
+                  value={apptAssignedTo}
+                  onChange={(e) => setApptAssignedTo(e.target.value)}
+                  className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+                >
+                  <option value="">Verkäufer auswählen...</option>
+                  {users
+                    .filter((u) => u.role === 'Vertrieb' || u.role === 'Geschaeftsleitung')
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName} – {u.role}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Datum & Zeit */}
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                    Datum *
+                  </label>
+                  <input
+                    type="date"
+                    value={apptDate}
+                    onChange={(e) => setApptDate(e.target.value)}
+                    className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                    Zeit *
+                  </label>
+                  <input
+                    type="time"
+                    value={apptTime}
+                    onChange={(e) => setApptTime(e.target.value)}
+                    className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+                  />
+                </div>
+              </div>
+
+              {/* Adresse / Ort */}
+              <div className="mb-5">
+                <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                  Ort / Adresse
+                </label>
+                <input
+                  type="text"
+                  value={apptAddress}
+                  onChange={(e) => setApptAddress(e.target.value)}
+                  placeholder="Adresse des Termins"
+                  className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+                />
+              </div>
+
+              {/* Info */}
+              <div
+                className="mb-5 px-3 py-2.5 rounded-lg text-[11px] text-text-sec"
+                style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)' }}
+              >
+                Der Termin erscheint beim zugewiesenen Verkäufer unter <strong className="text-amber">Meine Termine</strong>. Der Lead-Status wird auf &quot;Konvertiert&quot; gesetzt.
+              </div>
+
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
@@ -1788,9 +1877,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 <button
                   type="button"
                   onClick={handleCreateDeal}
-                  className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center"
+                  disabled={!apptAssignedTo || !apptDate || !apptTime}
+                  className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Konvertieren
+                  Termin erstellen
                 </button>
               </div>
             </div>
