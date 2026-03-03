@@ -1,5 +1,6 @@
-import { ChevronUp, ChevronDown } from 'lucide-react'
-import { type Lead, type Tag, sourceLabels, statusLabels } from '@/hooks/useLeads'
+import { useState } from 'react'
+import { ChevronUp, ChevronDown, Pencil, Trash2 } from 'lucide-react'
+import { type Lead, type Tag, sourceLabels, statusLabels, useDeleteLead } from '@/hooks/useLeads'
 
 /* ── Props ── */
 
@@ -10,6 +11,7 @@ interface LeadTableProps {
   sortOrder: 'asc' | 'desc'
   onSort: (field: string) => void
   tags: Tag[]
+  onEditLead?: (lead: Lead) => void
 }
 
 /* ── Status color mapping ── */
@@ -164,7 +166,11 @@ export default function LeadTable({
   sortOrder,
   onSort,
   tags,
+  onEditLead,
 }: LeadTableProps) {
+  const deleteLead = useDeleteLead()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
   // Build a tag lookup map
   const tagMap = new Map(tags.map((t) => [t.id, t]))
 
@@ -203,6 +209,9 @@ export default function LeadTable({
                   onSort={onSort}
                 />
               ))}
+              <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">
+                Aktionen
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -315,6 +324,72 @@ export default function LeadTable({
                     <span className="text-[12px] text-text-dim tabular-nums whitespace-nowrap">
                       {formatDate(lead.createdAt)}
                     </span>
+                  </td>
+
+                  {/* Aktionen */}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {confirmDeleteId === lead.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteLead.mutate(lead.id)
+                              setConfirmDeleteId(null)
+                            }}
+                            className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold text-red transition-all duration-150"
+                            style={{
+                              background: 'color-mix(in srgb, #F87171 12%, transparent)',
+                            }}
+                          >
+                            Ja, loeschen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setConfirmDeleteId(null)
+                            }}
+                            className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold text-text-dim hover:text-text transition-all duration-150"
+                            style={{
+                              background: 'rgba(255,255,255,0.04)',
+                            }}
+                          >
+                            Nein
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (onEditLead) {
+                                onEditLead(lead)
+                              } else {
+                                onSelectLead(lead)
+                              }
+                            }}
+                            aria-label="Lead bearbeiten"
+                            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-150"
+                          >
+                            <Pencil size={14} strokeWidth={1.8} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setConfirmDeleteId(lead.id)
+                            }}
+                            aria-label="Lead loeschen"
+                            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-red hover:bg-red/10 transition-all duration-150"
+                          >
+                            <Trash2 size={14} strokeWidth={1.8} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )
