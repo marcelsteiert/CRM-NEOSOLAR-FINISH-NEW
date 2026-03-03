@@ -9,6 +9,7 @@ import activitiesRouter from './routes/activities.js'
 import remindersRouter from './routes/reminders.js'
 import emailTemplatesRouter from './routes/emailTemplates.js'
 import dealsRouter from './routes/deals.js'
+import appointmentsRouter from './routes/appointments.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 export function createApp() {
@@ -27,6 +28,7 @@ export function createApp() {
   app.use('/api/v1/reminders', remindersRouter)
   app.use('/api/v1/emails', emailTemplatesRouter)
   app.use('/api/v1/deals', dealsRouter)
+  app.use('/api/v1/appointments', appointmentsRouter)
 
   app.use(errorHandler)
 

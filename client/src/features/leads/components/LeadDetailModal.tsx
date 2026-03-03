@@ -11,7 +11,7 @@ import {
   CheckSquare,
   FileUp,
   Bell,
-  Handshake,
+  CalendarCheck,
   Plus,
   Trash2,
   PhoneCall,
@@ -47,7 +47,7 @@ import {
   type LeadStatus,
   type ActivityType,
 } from '@/hooks/useLeads'
-import { useCreateDeal } from '@/hooks/useDeals'
+import { useCreateAppointment } from '@/hooks/useAppointments'
 
 /* ── Props ── */
 
@@ -111,7 +111,7 @@ const activityTypeConfig: Record<ActivityType, { icon: typeof Phone; color: stri
   TASK: { icon: CheckSquare, color: '#22D3EE', label: 'Aufgabe' },
   DOCUMENT: { icon: FileUp, color: '#F59E0B', label: 'Dokument' },
   REMINDER: { icon: Bell, color: '#F87171', label: 'Erinnerung' },
-  DEAL_CREATED: { icon: Handshake, color: '#34D399', label: 'Deal erstellt' },
+  DEAL_CREATED: { icon: CalendarCheck, color: '#34D399', label: 'Termin erstellt' },
 }
 
 /* ── Tab Type ── */
@@ -141,7 +141,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const { data: pipelinesResponse } = usePipelines()
   const { data: activitiesResponse } = useActivities(leadId)
   const createActivity = useCreateActivity()
-  const createDeal = useCreateDeal()
+  const createAppointment = useCreateAppointment()
   const { data: remindersResponse } = useReminders(leadId)
   const createReminder = useCreateReminder()
   const dismissReminder = useDismissReminder()
@@ -395,17 +395,13 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     setTimeout(() => setSuccessMsg(''), 3000)
   }
 
-  /* ── Deal creation ── */
+  /* ── Termin erstellen (Lead → Termin) ── */
   const handleCreateDeal = async () => {
     if (!lead) return
     const name = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unbekannt'
-    const title = lead.company
-      ? `PV-Anlage ${lead.company}`
-      : `PV-Anlage ${name}`
 
     try {
-      await createDeal.mutateAsync({
-        title,
+      await createAppointment.mutateAsync({
         contactName: name,
         contactEmail: lead.email,
         contactPhone: lead.phone,
@@ -419,11 +415,11 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
       createActivity.mutate({
         leadId: lead.id,
         type: 'DEAL_CREATED' as ActivityType,
-        title: 'Deal erstellt',
-        description: `Lead wurde zu Deal "${title}" konvertiert`,
+        title: 'Termin erstellt',
+        description: `Lead wurde zu Termin konvertiert – ${name}`,
       })
       setShowDealConfirm(false)
-      setSuccessMsg('Deal erstellt! Lead wurde konvertiert.')
+      setSuccessMsg('Termin erstellt! Lead wurde konvertiert.')
       setTimeout(() => {
         setSuccessMsg('')
         onClose()
@@ -1548,8 +1544,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             className="btn-primary flex items-center gap-2 px-4 py-2.5 text-[12px] flex-1 justify-center"
             onClick={() => setShowDealConfirm(true)}
           >
-            <Handshake size={14} strokeWidth={2} />
-            Deal erstellen
+            <CalendarCheck size={14} strokeWidth={2} />
+            Termin vereinbaren
           </button>
           <button
             type="button"
@@ -1775,11 +1771,11 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   background: 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 15%, transparent), color-mix(in srgb, #F97316 10%, transparent))',
                 }}
               >
-                <Handshake size={20} className="text-amber" strokeWidth={1.8} />
+                <CalendarCheck size={20} className="text-amber" strokeWidth={1.8} />
               </div>
-              <h3 className="text-[15px] font-bold mb-1">Lead zu Deal konvertieren?</h3>
+              <h3 className="text-[15px] font-bold mb-1">Termin vereinbaren?</h3>
               <p className="text-[12px] text-text-sec mb-5">
-                Der Lead-Status wird auf &quot;Konvertiert&quot; gesetzt.
+                Es wird ein Besichtigungstermin erstellt und der Lead-Status auf &quot;Konvertiert&quot; gesetzt.
               </p>
               <div className="flex items-center gap-2.5">
                 <button

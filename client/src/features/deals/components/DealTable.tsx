@@ -30,16 +30,16 @@ export default function DealTable({ deals, onSelectDeal, sortBy, sortOrder, onSo
   if (deals.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
-        <p className="text-[14px] font-semibold text-text mb-1">Keine Deals gefunden</p>
+        <p className="text-[14px] font-semibold text-text mb-1">Keine Angebote gefunden</p>
         <p className="text-[12px] text-text-sec">
-          Erstelle einen neuen Deal oder passe die Filter an.
+          Erstelle ein neues Angebot oder passe die Filter an.
         </p>
       </div>
     )
   }
 
   const columns: { key: string; label: string; sortField?: string }[] = [
-    { key: 'title', label: 'Deal', sortField: 'title' },
+    { key: 'title', label: 'Angebot', sortField: 'title' },
     { key: 'company', label: 'Unternehmen', sortField: 'company' },
     { key: 'value', label: 'Wert', sortField: 'value' },
     { key: 'stage', label: 'Phase' },

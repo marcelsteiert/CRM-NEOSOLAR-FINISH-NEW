@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
-// ── Types ──
+// ── Types – Angebote ──
 
 export type DealStage =
-  | 'QUALIFICATION'
-  | 'NEEDS_ANALYSIS'
-  | 'PROPOSAL'
-  | 'NEGOTIATION'
-  | 'CLOSED_WON'
-  | 'CLOSED_LOST'
+  | 'ERSTELLT'
+  | 'GESENDET'
+  | 'FOLLOW_UP'
+  | 'VERHANDLUNG'
+  | 'GEWONNEN'
+  | 'VERLOREN'
 
 export type DealPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 
@@ -17,6 +17,7 @@ export interface Deal {
   id: string
   title: string
   leadId: string | null
+  appointmentId: string | null
   contactName: string
   contactEmail: string
   contactPhone: string
@@ -63,7 +64,7 @@ interface DealStatsResponse {
   data: DealStats
 }
 
-// ── Query params ──
+// ── Follow-Up types ──
 
 export interface FollowUp {
   id: string
@@ -90,6 +91,8 @@ export interface FollowUpResponse {
   overdue: number
   warning: number
 }
+
+// ── Query params ──
 
 export interface DealFilters {
   stage?: DealStage | 'ALL'
@@ -146,7 +149,7 @@ export function useFollowUps(assignedTo?: string) {
   return useQuery({
     queryKey: ['followUps', assignedTo],
     queryFn: () => api.get<FollowUpResponse>(`/deals/follow-ups${qs}`),
-    refetchInterval: 60000, // alle 60s pruefen
+    refetchInterval: 60000,
   })
 }
 
@@ -191,21 +194,21 @@ export function useDeleteDeal() {
 // ── Display helpers ──
 
 export const stageLabels: Record<DealStage, string> = {
-  QUALIFICATION: 'Qualifikation',
-  NEEDS_ANALYSIS: 'Bedarfsanalyse',
-  PROPOSAL: 'Offerte',
-  NEGOTIATION: 'Verhandlung',
-  CLOSED_WON: 'Gewonnen',
-  CLOSED_LOST: 'Verloren',
+  ERSTELLT: 'Erstellt',
+  GESENDET: 'Gesendet',
+  FOLLOW_UP: 'Follow-Up',
+  VERHANDLUNG: 'Verhandlung',
+  GEWONNEN: 'Gewonnen',
+  VERLOREN: 'Verloren',
 }
 
 export const stageColors: Record<DealStage, string> = {
-  QUALIFICATION: '#60A5FA',
-  NEEDS_ANALYSIS: '#A78BFA',
-  PROPOSAL: '#F59E0B',
-  NEGOTIATION: '#FB923C',
-  CLOSED_WON: '#34D399',
-  CLOSED_LOST: '#F87171',
+  ERSTELLT: '#60A5FA',
+  GESENDET: '#A78BFA',
+  FOLLOW_UP: '#F59E0B',
+  VERHANDLUNG: '#FB923C',
+  GEWONNEN: '#34D399',
+  VERLOREN: '#F87171',
 }
 
 export const priorityLabels: Record<DealPriority, string> = {

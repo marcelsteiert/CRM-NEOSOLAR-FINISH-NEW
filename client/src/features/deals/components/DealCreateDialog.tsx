@@ -25,7 +25,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
   const [company, setCompany] = useState(prefill?.company ?? '')
   const [address, setAddress] = useState(prefill?.address ?? '')
   const [value, setValue] = useState(prefill?.value?.toString() ?? '')
-  const [stage, setStage] = useState<DealStage>('QUALIFICATION')
+  const [stage, setStage] = useState<DealStage>('ERSTELLT')
   const [priority, setPriority] = useState<DealPriority>('MEDIUM')
   const [expectedCloseDate, setExpectedCloseDate] = useState('')
   const [notes, setNotes] = useState(prefill?.notes ?? '')
@@ -72,7 +72,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
       })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen des Deals')
+      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen des Angebots')
     }
   }
 
@@ -92,7 +92,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Neuer Deal"
+        aria-label="Neues Angebot"
         className="outline-none w-full max-w-[560px] mx-4 max-h-[90vh] flex flex-col"
         style={{
           background: 'rgba(255,255,255,0.035)',
@@ -105,8 +105,8 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
           <div>
-            <h2 className="text-base font-bold tracking-[-0.02em]">Neuer Deal</h2>
-            <p className="text-[12px] text-text-sec mt-0.5">Deal-Informationen erfassen</p>
+            <h2 className="text-base font-bold tracking-[-0.02em]">Neues Angebot</h2>
+            <p className="text-[12px] text-text-sec mt-0.5">Angebots-Informationen erfassen</p>
           </div>
           <button
             type="button"
@@ -231,7 +231,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
                   className="glass-input w-full appearance-none px-4 py-2.5 text-[13px] cursor-pointer"
                 >
                   {Object.entries(stageLabels)
-                    .filter(([key]) => key !== 'CLOSED_WON' && key !== 'CLOSED_LOST')
+                    .filter(([key]) => key !== 'GEWONNEN' && key !== 'VERLOREN')
                     .map(([key, label]) => (
                       <option key={key} value={key} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
                         {label}
@@ -313,7 +313,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
               className="btn-primary flex-1 px-4 py-2.5 text-[13px] text-center flex items-center justify-center gap-2"
             >
               {createDeal.isPending && <Loader2 size={14} className="animate-spin" />}
-              Deal erstellen
+              Angebot erstellen
             </button>
           </div>
         </form>

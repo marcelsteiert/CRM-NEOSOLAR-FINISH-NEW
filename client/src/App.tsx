@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import LeadsPage from '@/features/leads/LeadsPage'
+import AppointmentsPage from '@/features/appointments/AppointmentsPage'
 import DealsPage from '@/features/deals/DealsPage'
 import CalculationsPage from '@/features/calculations/CalculationsPage'
 import ProjectsPage from '@/features/projects/ProjectsPage'
@@ -21,6 +22,7 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="leads" element={<LeadsPage />} />
+          <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="deals" element={<DealsPage />} />
           <Route path="calculations" element={<CalculationsPage />} />
           <Route path="projects" element={<ProjectsPage />} />
