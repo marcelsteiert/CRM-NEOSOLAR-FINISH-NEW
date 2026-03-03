@@ -8,6 +8,9 @@ import {
   ChevronDown,
   AlertTriangle,
   RefreshCw,
+  Upload,
+  Download,
+  Tag as TagIcon,
 } from 'lucide-react'
 import {
   useLeads,
@@ -17,17 +20,22 @@ import {
   type Lead,
   type LeadSource,
   type LeadStatus,
-  sourceLabels,
   statusLabels,
 } from '@/hooks/useLeads'
+import { useTablePreferences } from '@/hooks/useTablePreferences'
 import LeadTable from './components/LeadTable'
 import LeadKanban from './components/LeadKanban'
 import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
+import LeadImportDialog from './components/LeadImportDialog'
 
 /* ── Filter Tab Type ── */
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'CONVERTED' | 'LOST'
+
+/* ── Simulated current user (until real auth) ── */
+
+const CURRENT_USER_ROLE: 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' = 'ADMIN'
 
 /* ── Loading Skeleton ── */
 
@@ -53,7 +61,6 @@ function LoadingSkeleton() {
           <tbody>
             {Array.from({ length: 6 }).map((_, i) => (
               <tr key={i} className="border-b border-border">
-                {/* Name cell with avatar */}
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div
@@ -70,83 +77,19 @@ function LoadingSkeleton() {
                     />
                   </div>
                 </td>
-                {/* Unternehmen */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-3.5 rounded-md animate-pulse"
-                    style={{
-                      width: `${80 + Math.random() * 60}px`,
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 40}ms`,
-                    }}
-                  />
-                </td>
-                {/* Adresse */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-3.5 rounded-md animate-pulse"
-                    style={{
-                      width: `${120 + Math.random() * 60}px`,
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 80}ms`,
-                    }}
-                  />
-                </td>
-                {/* Telefon */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-3.5 rounded-md animate-pulse"
-                    style={{
-                      width: '110px',
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 120}ms`,
-                    }}
-                  />
-                </td>
-                {/* E-Mail */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-3.5 rounded-md animate-pulse"
-                    style={{
-                      width: `${130 + Math.random() * 40}px`,
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 160}ms`,
-                    }}
-                  />
-                </td>
-                {/* Quelle */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-5 rounded-full animate-pulse"
-                    style={{
-                      width: '70px',
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 200}ms`,
-                    }}
-                  />
-                </td>
-                {/* Status */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-5 rounded-full animate-pulse"
-                    style={{
-                      width: '65px',
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 240}ms`,
-                    }}
-                  />
-                </td>
-                {/* Erstellt */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-3.5 rounded-md animate-pulse"
-                    style={{
-                      width: '75px',
-                      background: 'rgba(255,255,255,0.06)',
-                      animationDelay: `${i * 80 + 280}ms`,
-                    }}
-                  />
-                </td>
+                {[80, 120, 110, 130, 70, 65, 75].map((w, j) => (
+                  <td key={j} className="px-6 py-4">
+                    <div
+                      className={`rounded-${j >= 5 ? 'full' : 'md'} animate-pulse`}
+                      style={{
+                        width: `${w + Math.random() * (j < 5 ? 40 : 0)}px`,
+                        height: j >= 5 ? '20px' : '14px',
+                        background: 'rgba(255,255,255,0.06)',
+                        animationDelay: `${i * 80 + j * 40}ms`,
+                      }}
+                    />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -183,6 +126,36 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   )
 }
 
+/* ── CSV Export helper ── */
+
+function exportLeadsCsv(leads: Lead[], sourceLabels: Record<string, string>) {
+  const headers = ['Vorname', 'Nachname', 'Unternehmen', 'Adresse', 'Telefon', 'E-Mail', 'Quelle', 'Status', 'Wert', 'Erstellt']
+  const rows = leads.map((l) => [
+    l.firstName ?? '',
+    l.lastName ?? '',
+    l.company ?? '',
+    l.address,
+    l.phone,
+    l.email,
+    sourceLabels[l.source] ?? l.source,
+    statusLabels[l.status],
+    l.value != null ? String(l.value) : '',
+    l.createdAt,
+  ])
+
+  const csvContent = [headers, ...rows]
+    .map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(';'))
+    .join('\n')
+
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 /* ── Main Component ── */
 
 export default function LeadsPage() {
@@ -190,11 +163,16 @@ export default function LeadsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
+  const [tagFilter, setTagFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  /* ── Preferences (custom source labels) ── */
+  const { prefs } = useTablePreferences()
 
   /* ── Data fetching via React Query ── */
   const {
@@ -212,7 +190,7 @@ export default function LeadsPage() {
     pageSize: 100,
   })
 
-  const leads: Lead[] = leadsResponse?.data ?? []
+  const allLeads: Lead[] = leadsResponse?.data ?? []
 
   const { data: pipelinesData } = usePipelines()
   const { data: tagsData } = useTags()
@@ -221,12 +199,11 @@ export default function LeadsPage() {
   const buckets = pipelinesData?.data?.[0]?.buckets ?? []
   const tags = tagsData?.data ?? []
 
-  /* ── Client-side filtering (search acts as a backup for instant feedback) ── */
+  /* ── Client-side tag filtering ── */
   const filteredLeads = useMemo(() => {
-    // The API handles filtering, but we keep client-side search for instant UX
-    // while the debounced API call catches up
-    return leads
-  }, [leads])
+    if (tagFilter === 'ALL') return allLeads
+    return allLeads.filter((lead) => lead.tags.includes(tagFilter))
+  }, [allLeads, tagFilter])
 
   /* ── Handlers ── */
 
@@ -247,22 +224,37 @@ export default function LeadsPage() {
     }
   }
 
+  const handleExport = () => {
+    exportLeadsCsv(filteredLeads, prefs.sourceLabels)
+  }
+
+  /* ── Permissions ── */
+  const canExport = CURRENT_USER_ROLE === 'ADMIN' || CURRENT_USER_ROLE === 'GL'
+  const canImport = CURRENT_USER_ROLE === 'ADMIN' || CURRENT_USER_ROLE === 'GL'
+
   /* ── Status filter tabs ── */
 
-  const statusTabs: { key: StatusFilter; label: string; count?: number }[] = [
+  const statusTabs: { key: StatusFilter; label: string }[] = [
     { key: 'ALL', label: 'Aktive Leads' },
     { key: 'CONVERTED', label: 'Konvertiert' },
     { key: 'LOST', label: 'Verloren' },
   ]
 
-  /* ── Source options for dropdown ── */
+  /* ── Source options for dropdown (use custom labels) ── */
 
   const sourceOptions: { value: LeadSource | 'ALL'; label: string }[] = [
     { value: 'ALL', label: 'Alle Quellen' },
-    ...Object.entries(sourceLabels).map(([value, label]) => ({
-      value: value as LeadSource,
-      label,
+    ...Object.keys(prefs.sourceLabels).map((key) => ({
+      value: key as LeadSource,
+      label: prefs.sourceLabels[key],
     })),
+  ]
+
+  /* ── Tag options for dropdown ── */
+
+  const tagOptions: { value: string; label: string }[] = [
+    { value: 'ALL', label: 'Alle Tags' },
+    ...tags.map((t) => ({ value: t.id, label: t.name })),
   ]
 
   return (
@@ -301,6 +293,31 @@ export default function LeadsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Import button */}
+            {canImport && (
+              <button
+                type="button"
+                className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px]"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <Upload size={14} strokeWidth={2} />
+                Import
+              </button>
+            )}
+
+            {/* Export button */}
+            {canExport && (
+              <button
+                type="button"
+                className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px]"
+                onClick={handleExport}
+                disabled={filteredLeads.length === 0}
+              >
+                <Download size={14} strokeWidth={2} />
+                Export
+              </button>
+            )}
+
             {/* View Toggle */}
             <div
               className="flex items-center rounded-full p-0.5"
@@ -377,6 +394,36 @@ export default function LeadsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Tag Dropdown */}
+            <div className="relative">
+              <TagIcon
+                size={12}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                strokeWidth={2}
+              />
+              <select
+                value={tagFilter}
+                onChange={(e) => setTagFilter(e.target.value)}
+                className="glass-input appearance-none pl-8 pr-9 py-2 text-[12px] font-medium cursor-pointer"
+                style={{ minWidth: '140px' }}
+              >
+                {tagOptions.map((opt) => (
+                  <option
+                    key={opt.value}
+                    value={opt.value}
+                    style={{ background: '#0B0F15', color: '#F0F2F5' }}
+                  >
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={14}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                strokeWidth={2}
+              />
+            </div>
+
             {/* Source Dropdown */}
             <div className="relative">
               <select
@@ -460,6 +507,11 @@ export default function LeadsPage() {
       {/* ── Create Dialog ── */}
       {createDialogOpen && (
         <LeadCreateDialog onClose={() => setCreateDialogOpen(false)} />
+      )}
+
+      {/* ── Import Dialog ── */}
+      {importDialogOpen && (
+        <LeadImportDialog onClose={() => setImportDialogOpen(false)} />
       )}
     </>
   )

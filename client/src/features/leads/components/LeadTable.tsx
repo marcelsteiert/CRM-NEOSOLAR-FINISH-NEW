@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { ChevronUp, ChevronDown, Pencil, Trash2 } from 'lucide-react'
-import { type Lead, type Tag, sourceLabels, statusLabels, useDeleteLead } from '@/hooks/useLeads'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronUp, ChevronDown, Pencil, Trash2, Settings2, RotateCcw, Eye, EyeOff } from 'lucide-react'
+import { type Lead, type Tag, statusLabels, useDeleteLead } from '@/hooks/useLeads'
+import { useTablePreferences, defaultColumnPrefs, defaultSourceLabels } from '@/hooks/useTablePreferences'
 
 /* ── Props ── */
 
@@ -96,49 +97,196 @@ function getDisplayName(firstName: string | null, lastName: string | null): stri
 
 /* ── Column definitions ── */
 
-interface Column {
+interface ColumnDef {
   key: string
-  label: string
-  sortField?: string // if present, column is sortable by this field
+  sortField?: string
 }
 
-const columns: Column[] = [
-  { key: 'name', label: 'Name', sortField: 'lastName' },
-  { key: 'company', label: 'Unternehmen', sortField: 'company' },
-  { key: 'value', label: 'Wert', sortField: 'value' },
-  { key: 'phone', label: 'Telefon' },
-  { key: 'email', label: 'E-Mail' },
-  { key: 'source', label: 'Quelle' },
-  { key: 'status', label: 'Status' },
-  { key: 'tags', label: 'Tags' },
-  { key: 'createdAt', label: 'Erstellt', sortField: 'createdAt' },
+const columnDefs: ColumnDef[] = [
+  { key: 'name', sortField: 'lastName' },
+  { key: 'company', sortField: 'company' },
+  { key: 'value', sortField: 'value' },
+  { key: 'phone' },
+  { key: 'email' },
+  { key: 'source' },
+  { key: 'status' },
+  { key: 'tags' },
+  { key: 'createdAt', sortField: 'createdAt' },
 ]
+
+/* ── Settings Panel ── */
+
+function SettingsPanel({
+  prefs,
+  onToggleColumn,
+  onRenameColumn,
+  onRenameSource,
+  onReset,
+  onClose,
+}: {
+  prefs: ReturnType<typeof useTablePreferences>['prefs']
+  onToggleColumn: (key: string, visible: boolean) => void
+  onRenameColumn: (key: string, label: string) => void
+  onRenameSource: (key: string, label: string) => void
+  onReset: () => void
+  onClose: () => void
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [onClose])
+
+  const columnKeys = Object.keys(defaultColumnPrefs)
+  const sourceKeys = Object.keys(defaultSourceLabels)
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute right-0 top-full mt-2 z-50 w-[340px] max-h-[70vh] overflow-y-auto"
+      style={{
+        background: 'rgba(15, 18, 25, 0.95)',
+        backdropFilter: 'blur(24px) saturate(1.2)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '16px',
+        boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
+        <span className="text-[13px] font-bold">Tabelle anpassen</span>
+        <button
+          type="button"
+          onClick={onReset}
+          className="flex items-center gap-1.5 text-[11px] font-medium text-text-dim hover:text-amber transition-colors"
+        >
+          <RotateCcw size={12} strokeWidth={2} />
+          Zuruecksetzen
+        </button>
+      </div>
+
+      {/* Columns section */}
+      <div className="px-4 pt-3 pb-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-2">
+          Spalten
+        </p>
+        <div className="space-y-1.5">
+          {columnKeys.map((key) => {
+            const col = prefs.columns[key]
+            const isNameCol = key === 'name'
+            return (
+              <div
+                key={key}
+                className="flex items-center gap-2 group"
+              >
+                <button
+                  type="button"
+                  onClick={() => !isNameCol && onToggleColumn(key, !col.visible)}
+                  disabled={isNameCol}
+                  className={[
+                    'w-6 h-6 rounded-[6px] flex items-center justify-center shrink-0 transition-all duration-150',
+                    isNameCol
+                      ? 'opacity-40 cursor-not-allowed'
+                      : 'cursor-pointer hover:bg-surface-hover',
+                    col.visible ? 'text-amber' : 'text-text-dim',
+                  ].join(' ')}
+                  title={isNameCol ? 'Name ist immer sichtbar' : col.visible ? 'Ausblenden' : 'Einblenden'}
+                >
+                  {col.visible ? <Eye size={13} strokeWidth={2} /> : <EyeOff size={13} strokeWidth={2} />}
+                </button>
+                <input
+                  type="text"
+                  value={col.label}
+                  onChange={(e) => onRenameColumn(key, e.target.value)}
+                  className="flex-1 bg-transparent border-b border-transparent focus:border-amber/40 outline-none text-[12px] font-medium text-text py-1 px-1 transition-colors"
+                  spellCheck={false}
+                />
+                <span className="text-[10px] text-text-dim opacity-0 group-hover:opacity-100 transition-opacity">
+                  {defaultColumnPrefs[key].label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Source labels section */}
+      <div className="px-4 pt-3 pb-4 border-t border-border mt-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-2">
+          Quellen-Bezeichnungen
+        </p>
+        <div className="space-y-1.5">
+          {sourceKeys.map((key) => {
+            const label = prefs.sourceLabels[key]
+            return (
+              <div
+                key={key}
+                className="flex items-center gap-2 group"
+              >
+                <div
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: sourceColors[key as Lead['source']]?.text ?? '#525E6F' }}
+                />
+                <input
+                  type="text"
+                  value={label}
+                  onChange={(e) => onRenameSource(key, e.target.value)}
+                  className="flex-1 bg-transparent border-b border-transparent focus:border-amber/40 outline-none text-[12px] font-medium text-text py-1 px-1 transition-colors"
+                  spellCheck={false}
+                />
+                <span className="text-[10px] text-text-dim opacity-0 group-hover:opacity-100 transition-opacity">
+                  {defaultSourceLabels[key]}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 /* ── Sortable header component ── */
 
 function SortableHeader({
-  column,
+  label,
+  sortField,
   sortBy,
   sortOrder,
   onSort,
 }: {
-  column: Column
+  label: string
+  sortField?: string
   sortBy: string
   sortOrder: 'asc' | 'desc'
   onSort: (field: string) => void
 }) {
-  const isActive = column.sortField === sortBy
-  const isSortable = !!column.sortField
+  const isActive = sortField === sortBy
+  const isSortable = !!sortField
 
   return (
     <th
       className={`text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5 ${
         isSortable ? 'cursor-pointer select-none hover:text-text-sec transition-colors' : ''
       }`}
-      onClick={isSortable ? () => onSort(column.sortField!) : undefined}
+      onClick={isSortable ? () => onSort(sortField!) : undefined}
     >
       <div className="flex items-center gap-1">
-        <span>{column.label}</span>
+        <span>{label}</span>
         {isSortable && (
           <span className="inline-flex">
             {isActive ? (
@@ -157,6 +305,110 @@ function SortableHeader({
   )
 }
 
+/* ── Cell renderer ── */
+
+function renderCell(
+  key: string,
+  lead: Lead,
+  tagMap: Map<string, Tag>,
+  customSourceLabels: Record<string, string>,
+) {
+  switch (key) {
+    case 'name':
+      return (
+        <div className="flex items-center gap-3">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
+            style={{
+              background:
+                'linear-gradient(135deg, color-mix(in srgb, #F59E0B 20%, transparent), color-mix(in srgb, #F97316 12%, transparent))',
+              color: '#F59E0B',
+            }}
+          >
+            {getInitials(lead.firstName, lead.lastName)}
+          </div>
+          <span className="text-[13px] font-semibold whitespace-nowrap">
+            {getDisplayName(lead.firstName, lead.lastName)}
+          </span>
+        </div>
+      )
+    case 'company':
+      return (
+        <span className="text-[13px] text-text-sec whitespace-nowrap">
+          {lead.company || '\u2014'}
+        </span>
+      )
+    case 'value':
+      return (
+        <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
+          {lead.value != null ? chfFormatter.format(lead.value) : '\u2014'}
+        </span>
+      )
+    case 'phone':
+      return (
+        <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
+          {lead.phone || '\u2014'}
+        </span>
+      )
+    case 'email':
+      return (
+        <span className="text-[13px] text-text-sec whitespace-nowrap">
+          {lead.email || '\u2014'}
+        </span>
+      )
+    case 'source': {
+      const srcC = sourceColors[lead.source]
+      return (
+        <span
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+          style={{ background: srcC.bg, color: srcC.text }}
+        >
+          {customSourceLabels[lead.source] ?? lead.source}
+        </span>
+      )
+    }
+    case 'status': {
+      const sc = statusColors[lead.status]
+      return (
+        <span
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+          style={{ background: sc.bg, color: sc.text }}
+        >
+          {statusLabels[lead.status]}
+        </span>
+      )
+    }
+    case 'tags':
+      return (
+        <div className="flex items-center gap-1 flex-wrap">
+          {lead.tags.map((tagId) => {
+            const tag = tagMap.get(tagId)
+            return (
+              <span
+                key={tagId}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-text-sec whitespace-nowrap"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                {tag?.name ?? tagId}
+              </span>
+            )
+          })}
+        </div>
+      )
+    case 'createdAt':
+      return (
+        <span className="text-[12px] text-text-dim tabular-nums whitespace-nowrap">
+          {formatDate(lead.createdAt)}
+        </span>
+      )
+    default:
+      return null
+  }
+}
+
 /* ── Component ── */
 
 export default function LeadTable({
@@ -170,9 +422,20 @@ export default function LeadTable({
 }: LeadTableProps) {
   const deleteLead = useDeleteLead()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
-  // Build a tag lookup map
+  const {
+    prefs,
+    setColumnVisible,
+    setColumnLabel,
+    setSourceLabel,
+    resetAll,
+  } = useTablePreferences()
+
   const tagMap = new Map(tags.map((t) => [t.id, t]))
+
+  // Filter visible columns
+  const visibleColumns = columnDefs.filter((col) => prefs.columns[col.key]?.visible !== false)
 
   if (leads.length === 0) {
     return (
@@ -200,200 +463,129 @@ export default function LeadTable({
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {columns.map((col) => (
+              {visibleColumns.map((col) => (
                 <SortableHeader
                   key={col.key}
-                  column={col}
+                  label={prefs.columns[col.key]?.label ?? defaultColumnPrefs[col.key]?.label ?? col.key}
+                  sortField={col.sortField}
                   sortBy={sortBy}
                   sortOrder={sortOrder}
                   onSort={onSort}
                 />
               ))}
               <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">
-                Aktionen
+                <div className="flex items-center justify-end gap-2 relative">
+                  <span>Aktionen</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSettingsOpen((v) => !v)
+                    }}
+                    className={[
+                      'w-6 h-6 rounded-[6px] flex items-center justify-center transition-all duration-150',
+                      settingsOpen
+                        ? 'text-amber bg-amber-soft'
+                        : 'text-text-dim hover:text-text hover:bg-surface-hover',
+                    ].join(' ')}
+                    title="Tabelle anpassen"
+                  >
+                    <Settings2 size={13} strokeWidth={2} />
+                  </button>
+                  {settingsOpen && (
+                    <SettingsPanel
+                      prefs={prefs}
+                      onToggleColumn={setColumnVisible}
+                      onRenameColumn={setColumnLabel}
+                      onRenameSource={setSourceLabel}
+                      onReset={resetAll}
+                      onClose={() => setSettingsOpen(false)}
+                    />
+                  )}
+                </div>
               </th>
             </tr>
           </thead>
           <tbody>
-            {leads.map((lead) => {
-              const sc = statusColors[lead.status]
-              const srcC = sourceColors[lead.source]
-
-              return (
-                <tr
-                  key={lead.id}
-                  onClick={() => onSelectLead(lead)}
-                  className="border-b border-border cursor-pointer hover:bg-surface-hover transition-colors duration-150"
-                >
-                  {/* Name */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
-                        style={{
-                          background:
-                            'linear-gradient(135deg, color-mix(in srgb, #F59E0B 20%, transparent), color-mix(in srgb, #F97316 12%, transparent))',
-                          color: '#F59E0B',
-                        }}
-                      >
-                        {getInitials(lead.firstName, lead.lastName)}
-                      </div>
-                      <span className="text-[13px] font-semibold whitespace-nowrap">
-                        {getDisplayName(lead.firstName, lead.lastName)}
-                      </span>
-                    </div>
+            {leads.map((lead) => (
+              <tr
+                key={lead.id}
+                onClick={() => onSelectLead(lead)}
+                className="border-b border-border cursor-pointer hover:bg-surface-hover transition-colors duration-150"
+              >
+                {visibleColumns.map((col) => (
+                  <td key={col.key} className="px-6 py-4">
+                    {renderCell(col.key, lead, tagMap, prefs.sourceLabels)}
                   </td>
+                ))}
 
-                  {/* Unternehmen */}
-                  <td className="px-6 py-4">
-                    <span className="text-[13px] text-text-sec whitespace-nowrap">
-                      {lead.company || '\u2014'}
-                    </span>
-                  </td>
-
-                  {/* Wert */}
-                  <td className="px-6 py-4">
-                    <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
-                      {lead.value != null ? chfFormatter.format(lead.value) : '\u2014'}
-                    </span>
-                  </td>
-
-                  {/* Telefon */}
-                  <td className="px-6 py-4">
-                    <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
-                      {lead.phone || '\u2014'}
-                    </span>
-                  </td>
-
-                  {/* E-Mail */}
-                  <td className="px-6 py-4">
-                    <span className="text-[13px] text-text-sec whitespace-nowrap">
-                      {lead.email || '\u2014'}
-                    </span>
-                  </td>
-
-                  {/* Quelle */}
-                  <td className="px-6 py-4">
-                    <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
-                      style={{
-                        background: srcC.bg,
-                        color: srcC.text,
-                      }}
-                    >
-                      {sourceLabels[lead.source]}
-                    </span>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-6 py-4">
-                    <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
-                      style={{
-                        background: sc.bg,
-                        color: sc.text,
-                      }}
-                    >
-                      {statusLabels[lead.status]}
-                    </span>
-                  </td>
-
-                  {/* Tags */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {lead.tags.map((tagId) => {
-                        const tag = tagMap.get(tagId)
-                        return (
-                          <span
-                            key={tagId}
-                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-text-sec whitespace-nowrap"
-                            style={{
-                              background: 'rgba(255,255,255,0.04)',
-                              border: '1px solid rgba(255,255,255,0.06)',
-                            }}
-                          >
-                            {tag?.name ?? tagId}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </td>
-
-                  {/* Erstellt */}
-                  <td className="px-6 py-4">
-                    <span className="text-[12px] text-text-dim tabular-nums whitespace-nowrap">
-                      {formatDate(lead.createdAt)}
-                    </span>
-                  </td>
-
-                  {/* Aktionen */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {confirmDeleteId === lead.id ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              deleteLead.mutate(lead.id)
-                              setConfirmDeleteId(null)
-                            }}
-                            className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold text-red transition-all duration-150"
-                            style={{
-                              background: 'color-mix(in srgb, #F87171 12%, transparent)',
-                            }}
-                          >
-                            Ja, loeschen
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setConfirmDeleteId(null)
-                            }}
-                            className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold text-text-dim hover:text-text transition-all duration-150"
-                            style={{
-                              background: 'rgba(255,255,255,0.04)',
-                            }}
-                          >
-                            Nein
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (onEditLead) {
-                                onEditLead(lead)
-                              } else {
-                                onSelectLead(lead)
-                              }
-                            }}
-                            aria-label="Lead bearbeiten"
-                            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-150"
-                          >
-                            <Pencil size={14} strokeWidth={1.8} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setConfirmDeleteId(lead.id)
-                            }}
-                            aria-label="Lead loeschen"
-                            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-red hover:bg-red/10 transition-all duration-150"
-                          >
-                            <Trash2 size={14} strokeWidth={1.8} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+                {/* Aktionen */}
+                <td className="px-6 py-4">
+                  <div className="flex items-center justify-end gap-1.5">
+                    {confirmDeleteId === lead.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteLead.mutate(lead.id)
+                            setConfirmDeleteId(null)
+                          }}
+                          className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold text-red transition-all duration-150"
+                          style={{
+                            background: 'color-mix(in srgb, #F87171 12%, transparent)',
+                          }}
+                        >
+                          Ja, loeschen
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setConfirmDeleteId(null)
+                          }}
+                          className="px-2.5 py-1 rounded-[8px] text-[11px] font-semibold text-text-dim hover:text-text transition-all duration-150"
+                          style={{
+                            background: 'rgba(255,255,255,0.04)',
+                          }}
+                        >
+                          Nein
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (onEditLead) {
+                              onEditLead(lead)
+                            } else {
+                              onSelectLead(lead)
+                            }
+                          }}
+                          aria-label="Lead bearbeiten"
+                          className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-150"
+                        >
+                          <Pencil size={14} strokeWidth={1.8} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setConfirmDeleteId(lead.id)
+                          }}
+                          aria-label="Lead loeschen"
+                          className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-red hover:bg-red/10 transition-all duration-150"
+                        >
+                          <Trash2 size={14} strokeWidth={1.8} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
