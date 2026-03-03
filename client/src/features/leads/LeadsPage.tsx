@@ -2,8 +2,6 @@ import { useState, useMemo } from 'react'
 import {
   Users,
   Plus,
-  List,
-  Columns3,
   Search,
   ChevronDown,
   AlertTriangle,
@@ -14,9 +12,7 @@ import {
 } from 'lucide-react'
 import {
   useLeads,
-  usePipelines,
   useTags,
-  useMoveLead,
   type Lead,
   type LeadSource,
   type LeadStatus,
@@ -24,7 +20,6 @@ import {
 } from '@/hooks/useLeads'
 import { useTablePreferences } from '@/hooks/useTablePreferences'
 import LeadTable from './components/LeadTable'
-import LeadKanban from './components/LeadKanban'
 import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
 import LeadImportDialog from './components/LeadImportDialog'
@@ -160,7 +155,6 @@ function exportLeadsCsv(leads: Lead[], sourceLabels: Record<string, string>) {
 
 export default function LeadsPage() {
   /* ── State ── */
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
   const [tagFilter, setTagFilter] = useState<string>('ALL')
@@ -192,11 +186,8 @@ export default function LeadsPage() {
 
   const allLeads: Lead[] = leadsResponse?.data ?? []
 
-  const { data: pipelinesData } = usePipelines()
   const { data: tagsData } = useTags()
-  const moveLead = useMoveLead()
 
-  const buckets = pipelinesData?.data?.[0]?.buckets ?? []
   const tags = tagsData?.data ?? []
 
   /* ── Client-side tag filtering ── */
@@ -317,42 +308,6 @@ export default function LeadsPage() {
                 Export
               </button>
             )}
-
-            {/* View Toggle */}
-            <div
-              className="flex items-center rounded-full p-0.5"
-              style={{
-                background: 'rgba(255,255,255,0.035)',
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={[
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
-                  viewMode === 'list'
-                    ? 'bg-amber-soft text-amber'
-                    : 'text-text-dim hover:text-text',
-                ].join(' ')}
-              >
-                <List size={14} strokeWidth={2} />
-                Liste
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('kanban')}
-                className={[
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
-                  viewMode === 'kanban'
-                    ? 'bg-amber-soft text-amber'
-                    : 'text-text-dim hover:text-text',
-                ].join(' ')}
-              >
-                <Columns3 size={14} strokeWidth={2} />
-                Kanban
-              </button>
-            </div>
 
             {/* New Lead Button */}
             <button
@@ -479,7 +434,7 @@ export default function LeadsPage() {
             }
             onRetry={() => refetch()}
           />
-        ) : viewMode === 'list' ? (
+        ) : (
           <LeadTable
             leads={filteredLeads}
             onSelectLead={handleSelectLead}
@@ -487,14 +442,6 @@ export default function LeadsPage() {
             sortOrder={sortOrder}
             onSort={handleSort}
             tags={tags}
-          />
-        ) : (
-          <LeadKanban
-            leads={filteredLeads}
-            onSelectLead={handleSelectLead}
-            buckets={buckets}
-            tags={tags}
-            onMoveLead={(leadId, bucketId) => moveLead.mutate({ id: leadId, bucketId })}
           />
         )}
       </div>
