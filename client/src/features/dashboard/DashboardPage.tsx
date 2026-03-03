@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Users,
   TrendingUp,
@@ -10,7 +11,11 @@ import {
   Mail,
   Calendar,
   CheckCircle2,
+  MapPin,
+  Clock,
+  FileText,
 } from 'lucide-react'
+import SlidePanel from '@/components/ui/SlidePanel'
 
 // ── Design token colors as CSS vars for consistency ──
 const colors = {
@@ -128,6 +133,14 @@ function Sparkline({ path, color, id }: { path: string; color: string; id: strin
 // ── Main Dashboard ──
 
 export default function DashboardPage() {
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [selectedActivity, setSelectedActivity] = useState<typeof activities[0] | null>(null)
+
+  const openActivity = (activity: typeof activities[0]) => {
+    setSelectedActivity(activity)
+    setPanelOpen(true)
+  }
+
   return (
     <div className="space-y-5">
       {/* ── KPI Row ── */}
@@ -300,9 +313,11 @@ export default function DashboardPage() {
           <h3 className="text-sm font-bold tracking-[-0.01em] mb-5">Letzte Aktivitäten</h3>
           <div className="space-y-3.5">
             {activities.map((activity, i) => (
-              <div
+              <button
                 key={i}
-                className="flex items-start gap-3 group/activity hover:bg-surface-hover rounded-[10px] p-2 -mx-2 transition-colors duration-150"
+                type="button"
+                onClick={() => openActivity(activity)}
+                className="w-full flex items-start gap-3 hover:bg-surface-hover rounded-[10px] p-2 -mx-2 transition-colors duration-150 text-left cursor-pointer"
               >
                 <div
                   className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0"
@@ -314,11 +329,109 @@ export default function DashboardPage() {
                   <p className="text-[12px] font-[450] text-text-sec leading-snug">{activity.text}</p>
                   <p className="text-[10px] text-text-dim mt-0.5 font-medium">{activity.time}</p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
       </div>
+
+      {/* ── Slide-in Detail Panel ── */}
+      <SlidePanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        title={selectedActivity?.text || ''}
+        subtitle="Aktivitäts-Detail"
+      >
+        {selectedActivity && (
+          <div className="space-y-6">
+            {/* Activity header */}
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-[12px] flex items-center justify-center"
+                style={{ background: `color-mix(in srgb, ${selectedActivity.rawColor} 12%, transparent)` }}
+              >
+                <selectedActivity.icon size={20} style={{ color: selectedActivity.rawColor }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">{selectedActivity.text}</p>
+                <p className="text-[11px] text-text-dim mt-0.5">{selectedActivity.time}</p>
+              </div>
+            </div>
+
+            <div className="h-px bg-border" />
+
+            {/* Mock detail sections */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-[10px] font-bold tracking-[0.08em] uppercase text-text-dim mb-3">Kontakt</h4>
+                <div className="glass-card p-4 space-y-3" style={{ borderRadius: 'var(--radius-md)' }}>
+                  <div className="flex items-center gap-2.5">
+                    <Users size={14} className="text-text-dim" />
+                    <span className="text-[13px] text-text-sec">Max Schneider</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Mail size={14} className="text-text-dim" />
+                    <span className="text-[13px] text-text-sec">m.schneider@example.ch</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <Phone size={14} className="text-text-dim" />
+                    <span className="text-[13px] text-text-sec tabular-nums">+41 79 123 45 67</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <MapPin size={14} className="text-text-dim" />
+                    <span className="text-[13px] text-text-sec">Zürich, CH</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-bold tracking-[0.08em] uppercase text-text-dim mb-3">Details</h4>
+                <div className="glass-card p-4 space-y-3" style={{ borderRadius: 'var(--radius-md)' }}>
+                  <div className="flex items-center gap-2.5">
+                    <Clock size={14} className="text-text-dim" />
+                    <span className="text-[13px] text-text-sec">Dauer: 12 Minuten</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <FileText size={14} className="text-text-dim" />
+                    <span className="text-[13px] text-text-sec">Deal: Solar Winterthur – CHF 45'000</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-[10px] font-bold tracking-[0.08em] uppercase text-text-dim mb-3">KI-Zusammenfassung</h4>
+                <div
+                  className="glass-card p-4"
+                  style={{
+                    borderRadius: 'var(--radius-md)',
+                    background: 'linear-gradient(135deg, rgba(245,158,11,0.03), rgba(96,165,250,0.02))',
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Sparkles size={12} className="text-amber" />
+                    <span className="text-[10px] font-bold tracking-[0.06em] uppercase text-amber">KI-Summary</span>
+                  </div>
+                  <p className="text-[12px] text-text-sec leading-relaxed">
+                    Kunde zeigt starkes Interesse an einer 12kWp-Anlage mit Speicher.
+                    Preisverhandlung steht noch aus. Nächster Schritt: Vor-Ort-Termin
+                    zur Dachbegutachtung vereinbaren.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3 pt-2">
+              <button type="button" className="btn-primary flex-1 py-2.5 text-sm">
+                Termin planen
+              </button>
+              <button type="button" className="btn-secondary flex-1 py-2.5 text-sm">
+                Notiz hinzufügen
+              </button>
+            </div>
+          </div>
+        )}
+      </SlidePanel>
     </div>
   )
 }
