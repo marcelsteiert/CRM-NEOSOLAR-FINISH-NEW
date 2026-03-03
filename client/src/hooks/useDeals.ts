@@ -65,9 +65,36 @@ interface DealStatsResponse {
 
 // ── Query params ──
 
+export interface FollowUp {
+  id: string
+  dealId: string
+  dealTitle: string
+  contactName: string
+  contactPhone: string
+  company: string | null
+  stage: DealStage
+  priority: DealPriority
+  value: number
+  assignedTo: string | null
+  daysSinceUpdate: number
+  maxDays: number
+  overdue: boolean
+  message: string
+  urgency: 'WARNING' | 'OVERDUE' | 'CRITICAL'
+}
+
+export interface FollowUpResponse {
+  data: FollowUp[]
+  total: number
+  critical: number
+  overdue: number
+  warning: number
+}
+
 export interface DealFilters {
   stage?: DealStage | 'ALL'
   priority?: DealPriority | 'ALL'
+  assignedTo?: string
   search?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
@@ -82,6 +109,7 @@ export function useDeals(filters: DealFilters = {}) {
 
   if (filters.stage && filters.stage !== 'ALL') params.set('stage', filters.stage)
   if (filters.priority && filters.priority !== 'ALL') params.set('priority', filters.priority)
+  if (filters.assignedTo) params.set('assignedTo', filters.assignedTo)
   if (filters.search) params.set('search', filters.search)
   if (filters.sortBy) params.set('sortBy', filters.sortBy)
   if (filters.sortOrder) params.set('sortOrder', filters.sortOrder)
@@ -105,10 +133,20 @@ export function useDeal(id: string | null) {
   })
 }
 
-export function useDealStats() {
+export function useDealStats(assignedTo?: string) {
+  const qs = assignedTo ? `?assignedTo=${assignedTo}` : ''
   return useQuery({
-    queryKey: ['dealStats'],
-    queryFn: () => api.get<DealStatsResponse>('/deals/stats'),
+    queryKey: ['dealStats', assignedTo],
+    queryFn: () => api.get<DealStatsResponse>(`/deals/stats${qs}`),
+  })
+}
+
+export function useFollowUps(assignedTo?: string) {
+  const qs = assignedTo ? `?assignedTo=${assignedTo}` : ''
+  return useQuery({
+    queryKey: ['followUps', assignedTo],
+    queryFn: () => api.get<FollowUpResponse>(`/deals/follow-ups${qs}`),
+    refetchInterval: 60000, // alle 60s pruefen
   })
 }
 

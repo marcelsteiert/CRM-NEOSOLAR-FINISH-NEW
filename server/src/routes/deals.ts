@@ -42,6 +42,35 @@ type DealStage =
 type DealPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 // ---------------------------------------------------------------------------
+// Follow-Up Regeln: Max Tage pro Phase bevor Erinnerung ausgeloest wird
+// ---------------------------------------------------------------------------
+
+const FOLLOW_UP_RULES: Record<string, { maxDays: number; urgentMaxDays: number; message: string }> = {
+  QUALIFICATION: { maxDays: 3, urgentMaxDays: 1, message: 'Kunde muss qualifiziert werden – bitte anrufen!' },
+  NEEDS_ANALYSIS: { maxDays: 5, urgentMaxDays: 2, message: 'Bedarfsanalyse steht aus – Follow-Up noetig!' },
+  PROPOSAL: { maxDays: 5, urgentMaxDays: 3, message: 'Offerte wurde gesendet – Nachfassen beim Kunden!' },
+  NEGOTIATION: { maxDays: 3, urgentMaxDays: 1, message: 'Verhandlung laeuft – dranbleiben!' },
+};
+
+interface FollowUp {
+  id: string;
+  dealId: string;
+  dealTitle: string;
+  contactName: string;
+  contactPhone: string;
+  company: string | null;
+  stage: DealStage;
+  priority: DealPriority;
+  value: number;
+  assignedTo: string | null;
+  daysSinceUpdate: number;
+  maxDays: number;
+  overdue: boolean;
+  message: string;
+  urgency: 'WARNING' | 'OVERDUE' | 'CRITICAL';
+}
+
+// ---------------------------------------------------------------------------
 // Validation Schemas
 // ---------------------------------------------------------------------------
 
@@ -102,7 +131,7 @@ const mockDeals: Deal[] = [
     value: 42000,
     stage: 'PROPOSAL',
     priority: 'MEDIUM',
-    assignedTo: null,
+    assignedTo: 'u001',
     expectedCloseDate: '2026-04-15',
     notes: 'Offerte fuer 15kWp Anlage mit Speicher erstellt. Wartet auf Rueckmeldung.',
     tags: [],
@@ -123,7 +152,7 @@ const mockDeals: Deal[] = [
     value: 85000,
     stage: 'NEGOTIATION',
     priority: 'HIGH',
-    assignedTo: null,
+    assignedTo: 'u002',
     expectedCloseDate: '2026-03-30',
     notes: 'Verhandlung ueber Zahlungskonditionen. Finanzierung ueber Bank geplant.',
     tags: [],
@@ -144,7 +173,7 @@ const mockDeals: Deal[] = [
     value: 210000,
     stage: 'NEGOTIATION',
     priority: 'URGENT',
-    assignedTo: null,
+    assignedTo: 'u001',
     expectedCloseDate: '2026-03-20',
     notes: 'Grossprojekt 450kWp. Finanzierungsmodell muss noch geklaert werden.',
     tags: [],
@@ -165,7 +194,7 @@ const mockDeals: Deal[] = [
     value: 120000,
     stage: 'PROPOSAL',
     priority: 'HIGH',
-    assignedTo: null,
+    assignedTo: 'u002',
     expectedCloseDate: '2026-04-01',
     notes: 'Offerte fuer MFH mit 8 Wohneinheiten. Eigentuemerversammlung steht an.',
     tags: [],
@@ -186,7 +215,7 @@ const mockDeals: Deal[] = [
     value: 150000,
     stage: 'NEEDS_ANALYSIS',
     priority: 'HIGH',
-    assignedTo: null,
+    assignedTo: 'u001',
     expectedCloseDate: '2026-05-15',
     notes: 'Architekturbuero plant Neubau mit BIPV. Technische Analyse laeuft.',
     tags: [],
@@ -207,7 +236,7 @@ const mockDeals: Deal[] = [
     value: 95000,
     stage: 'QUALIFICATION',
     priority: 'MEDIUM',
-    assignedTo: null,
+    assignedTo: 'u002',
     expectedCloseDate: '2026-06-01',
     notes: 'Rahmenvertrag fuer mehrere Objekte pro Jahr diskutiert.',
     tags: [],
@@ -228,7 +257,7 @@ const mockDeals: Deal[] = [
     value: 340000,
     stage: 'CLOSED_WON',
     priority: 'URGENT',
-    assignedTo: null,
+    assignedTo: 'u001',
     expectedCloseDate: '2026-03-15',
     notes: 'Vertrag unterschrieben! Projektstart KW12.',
     tags: [],
@@ -249,7 +278,7 @@ const mockDeals: Deal[] = [
     value: 180000,
     stage: 'NEGOTIATION',
     priority: 'URGENT',
-    assignedTo: null,
+    assignedTo: 'u002',
     expectedCloseDate: '2026-03-25',
     notes: 'PV-Pflicht gemaess kantonalem Energiegesetz. Vertragsdetails werden finalisiert.',
     tags: [],
@@ -270,7 +299,7 @@ const mockDeals: Deal[] = [
     value: 35000,
     stage: 'CLOSED_LOST',
     priority: 'LOW',
-    assignedTo: null,
+    assignedTo: 'u001',
     expectedCloseDate: '2026-03-10',
     notes: 'Kunde hat sich fuer Konkurrenz entschieden. Preislich nicht konkurrenzfaehig.',
     tags: [],
@@ -291,7 +320,7 @@ const mockDeals: Deal[] = [
     value: 95000,
     stage: 'CLOSED_WON',
     priority: 'MEDIUM',
-    assignedTo: null,
+    assignedTo: 'u002',
     expectedCloseDate: '2026-02-28',
     notes: 'Vertrag abgeschlossen. 25kWp Anlage installiert. Uebergang zu Projekt.',
     tags: [],
@@ -386,9 +415,15 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
 // GET /api/v1/deals/stats – Deal statistics
 // ---------------------------------------------------------------------------
 
-router.get('/stats', (_req: Request, res: Response, next: NextFunction) => {
+router.get('/stats', (req: Request, res: Response, next: NextFunction) => {
   try {
-    const active = mockDeals.filter((d) => d.deletedAt === null);
+    let active = mockDeals.filter((d) => d.deletedAt === null);
+
+    // Filter by assignedTo if specified
+    const { assignedTo } = req.query;
+    if (assignedTo && typeof assignedTo === 'string') {
+      active = active.filter((d) => d.assignedTo === assignedTo);
+    }
 
     const stages: Record<DealStage, { count: number; value: number }> = {
       QUALIFICATION: { count: 0, value: 0 },
@@ -428,6 +463,93 @@ router.get('/stats', (_req: Request, res: Response, next: NextFunction) => {
               )
             : 0,
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/deals/follow-ups – Auto follow-up reminders
+// Berechnet welche Deals nachgefasst werden muessen basierend auf Regeln
+// ---------------------------------------------------------------------------
+
+router.get('/follow-ups', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { assignedTo } = req.query;
+    const now = Date.now();
+
+    const openDeals = mockDeals.filter(
+      (d) =>
+        d.deletedAt === null &&
+        d.stage !== 'CLOSED_WON' &&
+        d.stage !== 'CLOSED_LOST',
+    );
+
+    // Filter by user if specified
+    const userDeals =
+      assignedTo && typeof assignedTo === 'string'
+        ? openDeals.filter((d) => d.assignedTo === assignedTo)
+        : openDeals;
+
+    const followUps: FollowUp[] = [];
+
+    for (const deal of userDeals) {
+      const rule = FOLLOW_UP_RULES[deal.stage];
+      if (!rule) continue;
+
+      const daysSinceUpdate = Math.floor(
+        (now - new Date(deal.updatedAt).getTime()) / 86400000,
+      );
+      const maxDays =
+        deal.priority === 'URGENT' || deal.priority === 'HIGH'
+          ? rule.urgentMaxDays
+          : rule.maxDays;
+
+      // Nur Deals die mindestens 50% der maxDays erreicht haben
+      if (daysSinceUpdate >= Math.ceil(maxDays * 0.5)) {
+        let urgency: FollowUp['urgency'] = 'WARNING';
+        if (daysSinceUpdate >= maxDays * 2) urgency = 'CRITICAL';
+        else if (daysSinceUpdate >= maxDays) urgency = 'OVERDUE';
+
+        followUps.push({
+          id: `fu-${deal.id}`,
+          dealId: deal.id,
+          dealTitle: deal.title,
+          contactName: deal.contactName,
+          contactPhone: deal.contactPhone,
+          company: deal.company,
+          stage: deal.stage,
+          priority: deal.priority,
+          value: deal.value,
+          assignedTo: deal.assignedTo,
+          daysSinceUpdate,
+          maxDays,
+          overdue: daysSinceUpdate >= maxDays,
+          message: rule.message,
+          urgency,
+        });
+      }
+    }
+
+    // Sortiere: CRITICAL > OVERDUE > WARNING, dann nach Wert
+    const urgencyOrder: Record<string, number> = {
+      CRITICAL: 0,
+      OVERDUE: 1,
+      WARNING: 2,
+    };
+    followUps.sort((a, b) => {
+      const urgDiff = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+      if (urgDiff !== 0) return urgDiff;
+      return b.value - a.value; // Hoechster Wert zuerst
+    });
+
+    res.json({
+      data: followUps,
+      total: followUps.length,
+      critical: followUps.filter((f) => f.urgency === 'CRITICAL').length,
+      overdue: followUps.filter((f) => f.urgency === 'OVERDUE').length,
+      warning: followUps.filter((f) => f.urgency === 'WARNING').length,
     });
   } catch (err) {
     next(err);
