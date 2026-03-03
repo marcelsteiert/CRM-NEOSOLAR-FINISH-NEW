@@ -2,6 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import healthRouter from './routes/health.js';
+import leadsRouter from './routes/leads.js';
+import pipelinesRouter from './routes/pipelines.js';
+import tagsRouter from './routes/tags.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -35,6 +38,9 @@ app.use((req, _res, next) => {
 // Routes
 // ---------------------------------------------------------------------------
 app.use('/api/v1/health', healthRouter);
+app.use('/api/v1/leads', leadsRouter);
+app.use('/api/v1/pipelines', pipelinesRouter);
+app.use('/api/v1/tags', tagsRouter);
 
 // ---------------------------------------------------------------------------
 // Centralized error handling (must be registered last)
