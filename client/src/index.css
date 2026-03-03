@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* ── NeoSolar Design System Tokens ── */
@@ -21,7 +20,7 @@
   /* Text */
   --color-text: #F0F2F5;
   --color-text-sec: #8B95A5;
-  --color-text-dim: #4A5568;
+  --color-text-dim: #525E6F;
 
   /* Accent: Solar Amber */
   --color-amber: #F59E0B;
@@ -45,26 +44,16 @@
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-xl: 24px;
-  --radius-pill: 20px;
+  --radius-pill: 9999px;
 
   /* Font */
   --font-sans: 'Outfit', sans-serif;
 }
 
-/* ── Base Styles ── */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  font-feature-settings: 'tnum';
-}
+/* ── Base ── */
 
 body {
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
   background: var(--color-bg);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
@@ -76,8 +65,8 @@ body {
 /* ── Scrollbar ── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -85,49 +74,40 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* ── Glass Components ── */
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 20px;
-  position: relative;
-  overflow: hidden;
-}
-
-.glass-card-md {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
   position: relative;
   overflow: hidden;
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-pill);
   color: var(--color-text);
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.08);
 }
 
 .glass-input::placeholder {
@@ -139,32 +119,38 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, #F59E0B, #F97316);
   color: #06080C;
-  border-radius: 20px;
+  border-radius: var(--radius-pill);
   font-weight: 700;
-  font-family: 'Outfit', sans-serif;
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+  font-family: var(--font-sans);
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   border: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 0 30px rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 32px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
 }
 
 .btn-secondary {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-pill);
   color: var(--color-text-sec);
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-sans);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
   color: var(--color-text);
 }
 
@@ -176,31 +162,29 @@ body {
   position: fixed;
   pointer-events: none;
   z-index: 0;
+  border-radius: 50%;
+  filter: blur(80px);
 }
 
 .ambient-bg::before {
-  top: -20%;
-  left: 30%;
-  width: 60%;
-  height: 60%;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+  top: -15%;
+  left: 25%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.05) 0%, transparent 70%);
 }
 
 .ambient-bg::after {
-  bottom: -10%;
-  right: -10%;
-  width: 50%;
-  height: 50%;
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.04) 0%, transparent 70%);
+  bottom: -15%;
+  right: -5%;
+  width: 45%;
+  height: 45%;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.035) 0%, transparent 70%);
 }
 
-/* ── Transitions ── */
+/* ── Focus visible ── */
 
-.transition-smooth {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.tabular-nums {
-  font-feature-settings: 'tnum';
-  font-variant-numeric: tabular-nums;
+:focus-visible {
+  outline: 2px solid rgba(245, 158, 11, 0.5);
+  outline-offset: 2px;
 }

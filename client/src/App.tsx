@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import LeadsPage from '@/features/leads/LeadsPage'
@@ -32,6 +32,8 @@ export default function App() {
           <Route path="roles" element={<RolesPage />} />
           <Route path="export" element={<ExportPage />} />
           <Route path="documents" element={<DocumentsPage />} />
+          {/* Catch-all: redirect to dashboard */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

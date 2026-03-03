@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Search } from 'lucide-react'
 
@@ -24,10 +24,9 @@ const integrations = [
   { name: 'Outlook', connected: false },
 ]
 
-export default function TopBar() {
-  const location = useLocation()
+// Isolated clock component to prevent full TopBar re-renders
+const LiveClock = memo(function LiveClock() {
   const [time, setTime] = useState(new Date())
-  const title = pageTitles[location.pathname] || 'NeoSolar'
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000)
@@ -35,18 +34,42 @@ export default function TopBar() {
   }, [])
 
   return (
+    <time className="tabular-nums text-sm font-medium text-text-sec" dateTime={time.toISOString()}>
+      {time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    </time>
+  )
+})
+
+function getPageTitle(pathname: string): string {
+  // Exact match first
+  if (pageTitles[pathname]) return pageTitles[pathname]
+  // Try base path for parameterized routes like /leads/123
+  const basePath = '/' + pathname.split('/')[1]
+  return pageTitles[basePath] || 'NeoSolar'
+}
+
+export default function TopBar() {
+  const location = useLocation()
+  const title = getPageTitle(location.pathname)
+
+  // Update document title
+  useEffect(() => {
+    document.title = `${title} – NeoSolar CRM`
+  }, [title])
+
+  return (
     <header
       className="h-[60px] border-b border-border flex items-center justify-between px-7 sticky top-0 z-40"
       style={{
-        background: 'rgba(6, 8, 12, 0.7)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'rgba(6, 8, 12, 0.75)',
+        backdropFilter: 'blur(24px) saturate(1.2)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
       }}
     >
       {/* Left: Page title */}
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-extrabold tracking-[-0.02em]">{title}</h1>
-        <span className="px-2.5 py-0.5 rounded-pill bg-amber-soft text-amber text-[10px] font-bold tracking-[0.06em] uppercase">
+        <span className="px-2.5 py-0.5 rounded-full bg-amber-soft text-amber text-[10px] font-bold tracking-[0.06em] uppercase">
           CRM
         </span>
       </div>
@@ -56,8 +79,9 @@ export default function TopBar() {
         <div className="relative">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
           <input
-            type="text"
+            type="search"
             placeholder="Suchen... ⌘K"
+            aria-label="Globale Suche"
             className="glass-input w-full pl-10 pr-4 py-2 text-sm"
           />
         </div>
@@ -80,10 +104,7 @@ export default function TopBar() {
           ))}
         </div>
 
-        {/* Live clock */}
-        <div className="tabular-nums text-sm font-medium text-text-sec">
-          {time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-        </div>
+        <LiveClock />
       </div>
     </header>
   )
