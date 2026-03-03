@@ -1,63 +1,16 @@
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import healthRouter from './routes/health.js';
-import leadsRouter from './routes/leads.js';
-import pipelinesRouter from './routes/pipelines.js';
-import tagsRouter from './routes/tags.js';
-import usersRouter from './routes/users.js';
-import activitiesRouter from './routes/activities.js';
-import remindersRouter from './routes/reminders.js';
-import emailTemplatesRouter from './routes/emailTemplates.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { createApp } from './app.js';
 
-const app = express();
+const app = createApp();
 const PORT = Number(process.env.PORT) || 3001;
 
-// ---------------------------------------------------------------------------
-// CORS
-// ---------------------------------------------------------------------------
-app.use(
-  cors({
-    origin: 'http://localhost:5173',
-    credentials: true,
-  }),
-);
-
-// ---------------------------------------------------------------------------
-// Body parsing (Express v5 built-in)
-// ---------------------------------------------------------------------------
-app.use(express.json());
-
-// ---------------------------------------------------------------------------
-// Audit logging middleware
-// ---------------------------------------------------------------------------
+// Audit logging
 app.use((req, _res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`[AUDIT] ${timestamp} | ${req.method} ${req.path}`);
   next();
 });
 
-// ---------------------------------------------------------------------------
-// Routes
-// ---------------------------------------------------------------------------
-app.use('/api/v1/health', healthRouter);
-app.use('/api/v1/leads', leadsRouter);
-app.use('/api/v1/pipelines', pipelinesRouter);
-app.use('/api/v1/tags', tagsRouter);
-app.use('/api/v1/users', usersRouter);
-app.use('/api/v1/activities', activitiesRouter);
-app.use('/api/v1/reminders', remindersRouter);
-app.use('/api/v1/emails', emailTemplatesRouter);
-
-// ---------------------------------------------------------------------------
-// Centralized error handling (must be registered last)
-// ---------------------------------------------------------------------------
-app.use(errorHandler);
-
-// ---------------------------------------------------------------------------
-// Start server
-// ---------------------------------------------------------------------------
 app.listen(PORT, () => {
   console.log(`[SERVER] NeoSolar CRM Backend laeuft auf Port ${PORT}`);
 });

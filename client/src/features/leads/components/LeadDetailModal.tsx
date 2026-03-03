@@ -47,6 +47,7 @@ import {
   type LeadStatus,
   type ActivityType,
 } from '@/hooks/useLeads'
+import { useCreateDeal } from '@/hooks/useDeals'
 
 /* ── Props ── */
 
@@ -140,6 +141,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const { data: pipelinesResponse } = usePipelines()
   const { data: activitiesResponse } = useActivities(leadId)
   const createActivity = useCreateActivity()
+  const createDeal = useCreateDeal()
   const { data: remindersResponse } = useReminders(leadId)
   const createReminder = useCreateReminder()
   const dismissReminder = useDismissReminder()
@@ -394,15 +396,41 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   }
 
   /* ── Deal creation ── */
-  const handleCreateDeal = () => {
+  const handleCreateDeal = async () => {
     if (!lead) return
-    updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus })
-    setShowDealConfirm(false)
-    setSuccessMsg('Lead wurde zu Deal konvertiert')
-    setTimeout(() => {
+    const name = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unbekannt'
+    const title = lead.company
+      ? `PV-Anlage ${lead.company}`
+      : `PV-Anlage ${name}`
+
+    try {
+      await createDeal.mutateAsync({
+        title,
+        contactName: name,
+        contactEmail: lead.email,
+        contactPhone: lead.phone,
+        company: lead.company ?? undefined,
+        address: lead.address,
+        value: lead.value ?? 0,
+        leadId: lead.id,
+        notes: lead.notes ?? undefined,
+      })
+      updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus })
+      createActivity.mutate({
+        leadId: lead.id,
+        type: 'DEAL_CREATED' as ActivityType,
+        title: 'Deal erstellt',
+        description: `Lead wurde zu Deal "${title}" konvertiert`,
+      })
+      setShowDealConfirm(false)
+      setSuccessMsg('Deal erstellt! Lead wurde konvertiert.')
+      setTimeout(() => {
+        setSuccessMsg('')
+        onClose()
+      }, 1500)
+    } catch {
       setSuccessMsg('')
-      onClose()
-    }, 1500)
+    }
   }
 
   /* ── Mark as lost ── */
