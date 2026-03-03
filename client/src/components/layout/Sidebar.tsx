@@ -55,7 +55,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 flex flex-col items-center gap-0.5 overflow-y-auto py-1" aria-label="Hauptnavigation">
+      <nav className="flex-1 flex flex-col items-center gap-0.5 py-1" aria-label="Hauptnavigation">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
