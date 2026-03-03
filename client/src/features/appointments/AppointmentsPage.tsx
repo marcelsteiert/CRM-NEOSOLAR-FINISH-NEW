@@ -6,8 +6,6 @@ import {
   ChevronDown,
   AlertTriangle,
   RefreshCw,
-  TrendingUp,
-  CheckCircle2,
   Clock,
   ClipboardCheck,
   Users,
@@ -18,9 +16,7 @@ import {
   type Appointment,
   type AppointmentStatus,
   type AppointmentPriority,
-  statusLabels,
   priorityLabels,
-  formatCHF,
 } from '@/hooks/useAppointments'
 import { useUsers } from '@/hooks/useLeads'
 import AppointmentTable from './components/AppointmentTable'
@@ -34,7 +30,7 @@ const CURRENT_USER_ROLE: 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG'
 
 /* ── Filter Types ── */
 
-type StatusFilter = 'ALL' | 'OFFEN' | 'DURCHGEFUEHRT' | 'ABGESAGT'
+type StatusFilter = 'ALL' | 'GEPLANT' | 'BESTAETIGT' | 'VORBEREITUNG'
 
 /* ── Loading Skeleton ── */
 
@@ -45,7 +41,7 @@ function LoadingSkeleton() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {['Kontakt', 'Unternehmen', 'Termin', 'Status', 'Checkliste', 'Wert', 'Erstellt'].map((h) => (
+              {['Kontakt', 'Unternehmen', 'Termin', 'Fahrzeit', 'Status', 'Checkliste', 'Erstellt'].map((h) => (
                 <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">
                   {h}
                 </th>
@@ -129,9 +125,9 @@ export default function AppointmentsPage() {
   // Map filter to API status
   const statusQueryMap: Record<StatusFilter, AppointmentStatus | undefined> = {
     ALL: undefined,
-    OFFEN: undefined,
-    DURCHGEFUEHRT: 'DURCHGEFUEHRT',
-    ABGESAGT: 'ABGESAGT',
+    GEPLANT: 'GEPLANT',
+    BESTAETIGT: 'BESTAETIGT',
+    VORBEREITUNG: 'VORBEREITUNG',
   }
 
   const {
@@ -151,10 +147,8 @@ export default function AppointmentsPage() {
   })
 
   const allItems: Appointment[] = listResponse?.data ?? []
-  const filteredItems =
-    statusFilter === 'OFFEN' || statusFilter === 'ALL'
-      ? allItems.filter((a) => a.status !== 'DURCHGEFUEHRT' && a.status !== 'ABGESAGT')
-      : allItems
+  // Only show open appointments (exclude old DURCHGEFUEHRT/ABGESAGT)
+  const filteredItems = allItems.filter((a) => a.status !== 'DURCHGEFUEHRT' && a.status !== 'ABGESAGT')
 
   const { data: statsResponse } = useAppointmentStats(assignedTo)
   const stats = statsResponse?.data
@@ -170,9 +164,10 @@ export default function AppointmentsPage() {
   }
 
   const statusTabs: { key: StatusFilter; label: string }[] = [
-    { key: 'ALL', label: 'Offen' },
-    { key: 'DURCHGEFUEHRT', label: 'Durchgefuehrt' },
-    { key: 'ABGESAGT', label: 'Abgesagt' },
+    { key: 'ALL', label: 'Alle' },
+    { key: 'GEPLANT', label: 'Geplant' },
+    { key: 'BESTAETIGT', label: 'Bestaetigt' },
+    { key: 'VORBEREITUNG', label: 'Vorbereitung' },
   ]
 
   const priorityOptions: { value: AppointmentPriority | 'ALL'; label: string }[] = [
@@ -244,11 +239,10 @@ export default function AppointmentsPage() {
 
         {/* ── Stats Row ── */}
         {stats && (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <StatCard icon={Clock} label="Anstehend" value={String(stats.upcoming)} color="#60A5FA" />
-            <StatCard icon={TrendingUp} label="Pipeline-Wert" value={formatCHF(stats.totalValue)} color="#F59E0B" />
-            <StatCard icon={CheckCircle2} label="Durchgefuehrt" value={String(stats.completed)} color="#34D399" />
             <StatCard icon={ClipboardCheck} label="Vorbereitung" value={`${stats.checklistProgress}%`} color="#A78BFA" />
+            <StatCard icon={CalendarCheck} label="Gesamt" value={String(stats.total)} color="#34D399" />
           </div>
         )}
 
@@ -274,6 +268,30 @@ export default function AppointmentsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Verkäufer Filter */}
+            {canViewAll && viewAll && (
+              <div className="relative">
+                <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+                <select
+                  value={assignedTo ?? 'ALL'}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === 'ALL') setViewAll(true)
+                  }}
+                  className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
+                  style={{ minWidth: '160px' }}
+                >
+                  <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
+                  {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL').map((u) => (
+                    <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                      {u.firstName} {u.lastName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+              </div>
+            )}
+
             <div className="relative">
               <select
                 value={priorityFilter}

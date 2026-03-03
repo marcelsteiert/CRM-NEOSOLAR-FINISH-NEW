@@ -3,9 +3,6 @@ import {
   type Appointment,
   statusLabels,
   statusColors,
-  priorityLabels,
-  priorityColors,
-  formatCHF,
 } from '@/hooks/useAppointments'
 
 interface Props {
@@ -39,7 +36,6 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
     { key: 'fahrzeit', label: 'Fahrzeit' },
     { key: 'status', label: 'Status' },
     { key: 'checklist', label: 'Checkliste' },
-    { key: 'value', label: 'Wert', sortField: 'value' },
     { key: 'created', label: 'Erstellt', sortField: 'createdAt' },
   ]
 
@@ -150,11 +146,6 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
                       </span>
                       {progress === 100 && <CheckCircle2 size={12} className="text-emerald-400" />}
                     </div>
-                  </td>
-
-                  {/* Value */}
-                  <td className="px-6 py-3.5">
-                    <span className="text-[13px] font-bold tabular-nums text-amber">{formatCHF(a.value)}</span>
                   </td>
 
                   {/* Created */}

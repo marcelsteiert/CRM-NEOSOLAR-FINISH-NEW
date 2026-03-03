@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
-  statusLabels, statusColors, priorityLabels, priorityColors, formatCHF,
+  statusLabels, statusColors, priorityLabels, priorityColors,
   type AppointmentStatus, type AppointmentPriority, type ChecklistItem,
 } from '@/hooks/useAppointments'
 import { useCreateDeal } from '@/hooks/useDeals'
@@ -41,7 +41,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
   const [editContactPhone, setEditContactPhone] = useState('')
   const [editCompany, setEditCompany] = useState('')
   const [editAddress, setEditAddress] = useState('')
-  const [editValue, setEditValue] = useState('')
   const [editStatus, setEditStatus] = useState<AppointmentStatus>('GEPLANT')
   const [editPriority, setEditPriority] = useState<AppointmentPriority>('MEDIUM')
   const [editDate, setEditDate] = useState('')
@@ -62,7 +61,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       setEditContactPhone(appt.contactPhone)
       setEditCompany(appt.company ?? '')
       setEditAddress(appt.address)
-      setEditValue(String(appt.value))
       setEditStatus(appt.status)
       setEditPriority(appt.priority)
       setEditDate(appt.appointmentDate ?? '')
@@ -98,7 +96,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       contactPhone: editContactPhone.trim(),
       company: editCompany.trim() || undefined,
       address: editAddress.trim(),
-      value: Number(editValue) || 0,
       status: editStatus,
       priority: editPriority,
       appointmentDate: editDate || undefined,
@@ -204,8 +201,8 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Date/Time + Fahrzeit + Value */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Date/Time + Fahrzeit */}
+          <div className="grid grid-cols-2 gap-3">
             <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #34D399 6%, transparent)', border: '1px solid color-mix(in srgb, #34D399 15%, transparent)' }}>
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Termin</p>
               {isEditing ? (
@@ -234,14 +231,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                   <p className="text-[14px] font-semibold text-text-dim">Unbekannt</p>
                 )}
               </div>
-            </div>
-            <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Gesch. Wert</p>
-              {isEditing ? (
-                <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="glass-input px-2 py-1 text-lg font-bold tabular-nums w-full" />
-              ) : (
-                <p className="text-[18px] font-extrabold tabular-nums text-amber">{formatCHF(appt.value)}</p>
-              )}
             </div>
           </div>
 
