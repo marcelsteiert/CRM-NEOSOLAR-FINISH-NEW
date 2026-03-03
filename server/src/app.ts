@@ -12,6 +12,8 @@ import dealsRouter from './routes/deals.js'
 import appointmentsRouter from './routes/appointments.js'
 import settingsRouter from './routes/settings.js'
 import tasksRouter from './routes/tasks.js'
+import dashboardRouter from './routes/dashboard.js'
+import documentsRouter from './routes/documents.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 export function createApp() {
@@ -33,6 +35,8 @@ export function createApp() {
   app.use('/api/v1/appointments', appointmentsRouter)
   app.use('/api/v1/settings', settingsRouter)
   app.use('/api/v1/tasks', tasksRouter)
+  app.use('/api/v1/dashboard', dashboardRouter)
+  app.use('/api/v1/documents', documentsRouter)
 
   app.use(errorHandler)
 

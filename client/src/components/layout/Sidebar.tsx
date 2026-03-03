@@ -33,7 +33,7 @@ export function useSidebarPinned() {
 }
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const [pinned, setPinned] = useState(false)
+  const [pinned, setPinned] = useState(true)
   return <SidebarContext.Provider value={{ pinned, setPinned }}>{children}</SidebarContext.Provider>
 }
 

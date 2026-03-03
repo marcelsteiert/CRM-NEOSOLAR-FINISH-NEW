@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronUp, ChevronDown, Pencil, Trash2, Settings2, RotateCcw, Eye, EyeOff } from 'lucide-react'
-import { type Lead, type Tag, statusLabels, useDeleteLead } from '@/hooks/useLeads'
+import { ChevronUp, ChevronDown, Pencil, Trash2, Settings2, RotateCcw, Eye, EyeOff, Plus, X } from 'lucide-react'
+import { type Lead, type Tag, statusLabels, useDeleteLead, useUpdateLead } from '@/hooks/useLeads'
 import { useTablePreferences, defaultColumnPrefs, defaultSourceLabels } from '@/hooks/useTablePreferences'
 
 /* ── Props ── */
@@ -305,6 +305,127 @@ function SortableHeader({
   )
 }
 
+/* ── Inline Tag Picker ── */
+
+function InlineTagCell({
+  lead,
+  tagMap,
+  allTags,
+}: {
+  lead: Lead
+  tagMap: Map<string, Tag>
+  allTags: Tag[]
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const updateLead = useUpdateLead()
+
+  useEffect(() => {
+    if (!open) return
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [open])
+
+  const toggleTag = (tagId: string) => {
+    const newTags = lead.tags.includes(tagId)
+      ? lead.tags.filter((t) => t !== tagId)
+      : [...lead.tags, tagId]
+    updateLead.mutate({ id: lead.id, tags: newTags })
+  }
+
+  const removeTag = (tagId: string) => {
+    updateLead.mutate({ id: lead.id, tags: lead.tags.filter((t) => t !== tagId) })
+  }
+
+  return (
+    <div ref={ref} className="relative flex items-center gap-1 flex-wrap">
+      {lead.tags.map((tagId) => {
+        const tag = tagMap.get(tagId)
+        return (
+          <span
+            key={tagId}
+            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium text-text-sec whitespace-nowrap group/tag"
+            style={{
+              background: tag?.color ? `color-mix(in srgb, ${tag.color} 15%, transparent)` : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${tag?.color ? `color-mix(in srgb, ${tag.color} 20%, transparent)` : 'rgba(255,255,255,0.06)'}`,
+              color: tag?.color || undefined,
+            }}
+          >
+            {tag?.name ?? tagId}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); removeTag(tagId) }}
+              className="opacity-0 group-hover/tag:opacity-100 transition-opacity ml-0.5"
+            >
+              <X size={10} strokeWidth={2.5} />
+            </button>
+          </span>
+        )
+      })}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        className="w-5 h-5 rounded-full flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all shrink-0"
+        title="Tag hinzufuegen"
+      >
+        <Plus size={12} strokeWidth={2.5} />
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1 z-50 w-[180px] py-1.5 max-h-[200px] overflow-y-auto"
+          style={{
+            background: 'rgba(15, 18, 25, 0.95)',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+          }}
+        >
+          {allTags.length === 0 ? (
+            <p className="px-3 py-2 text-[11px] text-text-dim">Keine Tags verfuegbar</p>
+          ) : (
+            allTags.map((tag) => {
+              const isActive = lead.tags.includes(tag.id)
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggleTag(tag.id) }}
+                  className={[
+                    'w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors',
+                    isActive ? 'bg-surface-hover' : 'hover:bg-surface-hover',
+                  ].join(' ')}
+                >
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ background: tag.color || '#525E6F' }}
+                  />
+                  <span className="text-[11px] font-medium flex-1">{tag.name}</span>
+                  {isActive && (
+                    <span className="text-[10px] font-bold text-amber">✓</span>
+                  )}
+                </button>
+              )
+            })
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── Cell renderer ── */
 
 function renderCell(
@@ -312,6 +433,7 @@ function renderCell(
   lead: Lead,
   tagMap: Map<string, Tag>,
   customSourceLabels: Record<string, string>,
+  allTags: Tag[],
 ) {
   switch (key) {
     case 'name':
@@ -379,25 +501,7 @@ function renderCell(
       )
     }
     case 'tags':
-      return (
-        <div className="flex items-center gap-1 flex-wrap">
-          {lead.tags.map((tagId) => {
-            const tag = tagMap.get(tagId)
-            return (
-              <span
-                key={tagId}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium text-text-sec whitespace-nowrap"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                {tag?.name ?? tagId}
-              </span>
-            )
-          })}
-        </div>
-      )
+      return <InlineTagCell lead={lead} tagMap={tagMap} allTags={allTags} />
     case 'createdAt':
       return (
         <span className="text-[12px] text-text-dim tabular-nums whitespace-nowrap">
@@ -515,7 +619,7 @@ export default function LeadTable({
               >
                 {visibleColumns.map((col) => (
                   <td key={col.key} className="px-6 py-4">
-                    {renderCell(col.key, lead, tagMap, prefs.sourceLabels)}
+                    {renderCell(col.key, lead, tagMap, prefs.sourceLabels, tags)}
                   </td>
                 ))}
 

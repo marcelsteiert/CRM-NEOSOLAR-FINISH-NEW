@@ -9,6 +9,7 @@ import {
   type AppointmentStatus, type AppointmentPriority, type ChecklistItem,
 } from '@/hooks/useAppointments'
 import { useCreateDeal } from '@/hooks/useDeals'
+import DocumentSection from '@/components/ui/DocumentSection'
 
 interface Props {
   appointmentId: string
@@ -352,6 +353,9 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
               </div>
             )}
           </div>
+
+          {/* Dokumente */}
+          <DocumentSection entityType="TERMIN" entityId={appt.id} />
         </div>
 
         {/* Footer */}

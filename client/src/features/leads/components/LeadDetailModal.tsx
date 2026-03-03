@@ -48,6 +48,7 @@ import {
   type ActivityType,
 } from '@/hooks/useLeads'
 import { useCreateAppointment } from '@/hooks/useAppointments'
+import DocumentSection from '@/components/ui/DocumentSection'
 
 /* ── Props ── */
 
@@ -120,13 +121,6 @@ type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'reminders'
 
 /* ── Mock Documents ── */
 
-interface MockDocument {
-  id: string
-  filename: string
-  size: string
-  date: string
-}
-
 /* ── Component ── */
 
 export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProps) {
@@ -194,9 +188,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   // Tags dropdown
   const [showTagDropdown, setShowTagDropdown] = useState(false)
 
-  // Documents (mock)
-  const [documents, setDocuments] = useState<MockDocument[]>([])
-
   // Email sub-dialog
   const [showEmailDialog, setShowEmailDialog] = useState(false)
   const [emailTemplateId, setEmailTemplateId] = useState('')
@@ -220,7 +211,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
   const backdropRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   /* ── Sync lead data to edit state ── */
   useEffect(() => {
@@ -344,27 +334,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
   const handleRemoveTag = (tagId: string) => {
     removeLeadTag.mutate({ id: leadId, tagId })
-  }
-
-  /* ── Document upload (mock) ── */
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const sizeKB = (file.size / 1024).toFixed(0)
-    const sizeStr = Number(sizeKB) > 1024
-      ? `${(file.size / 1048576).toFixed(1)} MB`
-      : `${sizeKB} KB`
-    setDocuments((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        filename: file.name,
-        size: sizeStr,
-        date: new Date().toLocaleDateString('de-CH'),
-      },
-    ])
-    // Reset input
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   /* ── Email template selection ── */
@@ -1271,66 +1240,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
           {/* ────────── TAB 4: Dokumente ────────── */}
           {activeTab === 'documents' && (
-            <>
-              <div className="flex justify-end">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold"
-                >
-                  <FileUp size={14} strokeWidth={1.8} />
-                  Hochladen
-                </button>
-              </div>
-
-              {documents.length > 0 ? (
-                <div className="space-y-1.5">
-                  {documents.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center gap-3 p-3 rounded-[12px] hover:bg-surface-hover transition-colors duration-150"
-                    >
-                      <div
-                        className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0"
-                        style={{
-                          background: 'color-mix(in srgb, #F59E0B 12%, transparent)',
-                        }}
-                      >
-                        <FileText size={14} className="text-amber" strokeWidth={1.8} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium truncate">{doc.filename}</p>
-                        <p className="text-[11px] text-text-dim">
-                          {doc.size} &middot; {doc.date}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="p-8 text-center"
-                  style={{
-                    background: 'rgba(255,255,255,0.035)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: 'var(--radius-md)',
-                  }}
-                >
-                  <p className="text-text-dim text-[12px] font-medium">
-                    Keine Dokumente vorhanden.
-                  </p>
-                  <p className="text-text-dim text-[11px] mt-1">
-                    Offerten, Vertraege und weitere Dokumente erscheinen hier.
-                  </p>
-                </div>
-              )}
-            </>
+            <DocumentSection entityType="LEAD" entityId={lead.id} />
           )}
 
           {/* ────────── TAB 5: Erinnerungen ────────── */}

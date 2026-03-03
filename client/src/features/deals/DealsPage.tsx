@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Trophy,
   XCircle,
+  X,
   Target,
   Bell,
   Phone,

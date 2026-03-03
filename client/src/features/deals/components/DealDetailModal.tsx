@@ -11,6 +11,7 @@ import {
   activityTypeLabels, activityTypeColors,
   type DealStage, type DealPriority, type ActivityType,
 } from '@/hooks/useDeals'
+import DocumentSection from '@/components/ui/DocumentSection'
 
 interface Props {
   dealId: string
@@ -349,6 +350,9 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
               </div>
             )}
           </div>
+
+          {/* Dokumente */}
+          <DocumentSection entityType="ANGEBOT" entityId={deal.id} />
 
           {/* ── Activities Log ── */}
           <div>

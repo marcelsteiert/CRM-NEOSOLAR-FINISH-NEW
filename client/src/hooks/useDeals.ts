@@ -223,10 +223,33 @@ export function useDismissFollowUp() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ followUpId, ...data }: { followUpId: string; note: string; dismissedBy?: string }) =>
-      api.post<{ message: string }>(`/deals/follow-ups/${followUpId}/dismiss`, data),
-    onSuccess: () => {
+      api.post<{ data: unknown; message: string }>(`/deals/follow-ups/${followUpId}/dismiss`, data),
+    onMutate: async ({ followUpId }) => {
+      // Optimistisch: Follow-Up sofort aus allen Caches entfernen
+      await qc.cancelQueries({ queryKey: ['followUps'] })
+      const previousFollowUps = qc.getQueriesData({ queryKey: ['followUps'] })
+      qc.setQueriesData({ queryKey: ['followUps'] }, (old: unknown) => {
+        if (!old || typeof old !== 'object') return old
+        const obj = old as { data?: FollowUp[] }
+        if (!obj.data) return old
+        return { ...obj, data: obj.data.filter((fu: FollowUp) => fu.id !== followUpId) }
+      })
+      return { previousFollowUps }
+    },
+    onError: (_err, _vars, context) => {
+      // Bei Fehler: alte Daten wiederherstellen
+      if (context?.previousFollowUps) {
+        for (const [queryKey, data] of context.previousFollowUps) {
+          qc.setQueryData(queryKey, data)
+        }
+      }
+    },
+    onSettled: () => {
+      // Alle relevanten Queries neu laden
       qc.invalidateQueries({ queryKey: ['followUps'] })
       qc.invalidateQueries({ queryKey: ['deal'] })
+      qc.invalidateQueries({ queryKey: ['deals'] })
+      qc.invalidateQueries({ queryKey: ['dealStats'] })
     },
   })
 }
