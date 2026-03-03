@@ -204,11 +204,12 @@ export default function LeadsPage() {
     error,
     refetch,
   } = useLeads({
-    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    status: statusFilter === 'ALL' ? 'ACTIVE' : statusFilter,
     source: sourceFilter !== 'ALL' ? sourceFilter : undefined,
     search: searchQuery.trim() || undefined,
     sortBy,
     sortOrder,
+    pageSize: 100,
   })
 
   const leads: Lead[] = leadsResponse?.data ?? []
@@ -249,10 +250,9 @@ export default function LeadsPage() {
   /* ── Status filter tabs ── */
 
   const statusTabs: { key: StatusFilter; label: string; count?: number }[] = [
-    { key: 'ALL', label: 'Alle' },
-    { key: 'ACTIVE', label: statusLabels.ACTIVE },
-    { key: 'CONVERTED', label: statusLabels.CONVERTED },
-    { key: 'LOST', label: statusLabels.LOST },
+    { key: 'ALL', label: 'Aktive Leads' },
+    { key: 'CONVERTED', label: 'Konvertiert' },
+    { key: 'LOST', label: 'Verloren' },
   ]
 
   /* ── Source options for dropdown ── */
