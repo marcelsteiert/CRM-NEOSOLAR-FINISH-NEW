@@ -204,6 +204,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   // Confirmations
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showDealConfirm, setShowDealConfirm] = useState(false)
+  const [showLostConfirm, setShowLostConfirm] = useState(false)
+  const [lostReason, setLostReason] = useState('')
 
   // Success message
   const [successMsg, setSuccessMsg] = useState('')
@@ -240,6 +242,9 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
           setShowDeleteConfirm(false)
         } else if (showDealConfirm) {
           setShowDealConfirm(false)
+        } else if (showLostConfirm) {
+          setShowLostConfirm(false)
+          setLostReason('')
         } else {
           onClose()
         }
@@ -247,7 +252,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose, showEmailDialog, showDeleteConfirm, showDealConfirm])
+  }, [onClose, showEmailDialog, showDeleteConfirm, showDealConfirm, showLostConfirm])
 
   /* ── Focus dialog on mount ── */
   useEffect(() => {
@@ -394,6 +399,28 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus })
     setShowDealConfirm(false)
     setSuccessMsg('Lead wurde zu Deal konvertiert')
+    setTimeout(() => {
+      setSuccessMsg('')
+      onClose()
+    }, 1500)
+  }
+
+  /* ── Mark as lost ── */
+  const handleMarkLost = () => {
+    if (!lead || !lostReason.trim()) return
+    const prevNotes = lead.notes ?? ''
+    const lostNote = `[VERLOREN] ${new Date().toLocaleDateString('de-CH')}: ${lostReason.trim()}`
+    const updatedNotes = prevNotes ? `${lostNote}\n\n${prevNotes}` : lostNote
+    updateLead.mutate({ id: lead.id, status: 'LOST' as LeadStatus, notes: updatedNotes })
+    createActivity.mutate({
+      leadId: lead.id,
+      type: 'STATUS_CHANGE' as ActivityType,
+      title: 'Lead als verloren markiert',
+      description: lostReason.trim(),
+    })
+    setShowLostConfirm(false)
+    setLostReason('')
+    setSuccessMsg('Lead als verloren markiert')
     setTimeout(() => {
       setSuccessMsg('')
       onClose()
@@ -1481,6 +1508,15 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
           </button>
           <button
             type="button"
+            onClick={() => setShowLostConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-semibold text-text-dim hover:text-red transition-colors duration-150 rounded-full"
+            style={{ border: '1px solid rgba(248,113,113,0.15)' }}
+          >
+            <AlertTriangle size={13} strokeWidth={1.8} />
+            Verloren
+          </button>
+          <button
+            type="button"
             className="btn-primary flex items-center gap-2 px-4 py-2.5 text-[12px] flex-1 justify-center"
             onClick={() => setShowDealConfirm(true)}
           >
@@ -1731,6 +1767,79 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center"
                 >
                   Konvertieren
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Lost Confirmation with required reason ── */}
+        {showLostConfirm && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center"
+            style={{
+              background: 'rgba(6, 8, 12, 0.6)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: 'var(--radius-lg)',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowLostConfirm(false)
+                setLostReason('')
+              }
+            }}
+          >
+            <div
+              className="w-[400px] mx-4 p-6"
+              style={{
+                background: 'rgba(11, 15, 21, 0.98)',
+                backdropFilter: 'blur(24px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+                style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}
+              >
+                <AlertTriangle size={20} className="text-red" strokeWidth={1.8} />
+              </div>
+              <h3 className="text-[15px] font-bold mb-1 text-center">Lead als verloren markieren?</h3>
+              <p className="text-[12px] text-text-sec mb-4 text-center">
+                Bitte gib eine Begruendung an, warum der Lead verloren ist.
+              </p>
+              <textarea
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                placeholder="z.B. Kein Budget, anderer Anbieter gewaehlt, kein Interesse mehr..."
+                rows={3}
+                className="glass-input w-full px-4 py-2.5 text-[12px] resize-none mb-4"
+                autoFocus
+              />
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLostConfirm(false)
+                    setLostReason('')
+                  }}
+                  className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMarkLost}
+                  disabled={!lostReason.trim()}
+                  className="flex-1 px-4 py-2.5 text-[12px] font-bold text-center rounded-full cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{
+                    background: 'color-mix(in srgb, #F87171 15%, transparent)',
+                    color: '#F87171',
+                    border: '1px solid color-mix(in srgb, #F87171 25%, transparent)',
+                  }}
+                >
+                  Als verloren markieren
                 </button>
               </div>
             </div>
