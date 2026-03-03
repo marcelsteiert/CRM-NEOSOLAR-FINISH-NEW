@@ -6,6 +6,54 @@ import { AppError } from '../middleware/errorHandler.js';
 const router = Router();
 
 // ---------------------------------------------------------------------------
+// Fahrzeit-Lookup ab St. Margrethen (Minuten, ungefaehr)
+// ---------------------------------------------------------------------------
+
+const TRAVEL_TIMES: Record<string, number> = {
+  'st. margrethen': 0,
+  'st. gallen': 25,
+  'rorschach': 15,
+  'heerbrugg': 5,
+  'altstätten': 10,
+  'altstaetten': 10,
+  'dornbirn': 15,
+  'bregenz': 20,
+  'frauenfeld': 55,
+  'kreuzlingen': 50,
+  'winterthur': 65,
+  'wetzikon': 75,
+  'zuerich': 80,
+  'zürich': 80,
+  'baden': 90,
+  'aarau': 95,
+  'olten': 100,
+  'basel': 120,
+  'bern': 135,
+  'biel': 145,
+  'thun': 155,
+  'luzern': 110,
+  'baar': 90,
+  'zug': 95,
+  'schaffhausen': 70,
+  'chur': 65,
+  'davos': 110,
+  'lausanne': 210,
+  'genf': 240,
+  'sion': 195,
+  'lugano': 180,
+  'bellinzona': 165,
+};
+
+function estimateTravelMinutes(address: string): number | null {
+  const lower = address.toLowerCase();
+  // Try to match city from address (PLZ Stadt pattern or just Stadt)
+  for (const [city, minutes] of Object.entries(TRAVEL_TIMES)) {
+    if (lower.includes(city)) return minutes;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -45,6 +93,10 @@ interface Appointment {
   updatedAt: string;
   completedAt: string | null;
   deletedAt: string | null;
+}
+
+function withTravelTime(a: Appointment) {
+  return { ...a, travelMinutes: estimateTravelMinutes(a.address) };
 }
 
 // ---------------------------------------------------------------------------
@@ -344,7 +396,7 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
     const start = (page - 1) * pageSize;
     const paginated = filtered.slice(start, start + pageSize);
 
-    res.json({ data: paginated, total, page, pageSize });
+    res.json({ data: paginated.map(withTravelTime), total, page, pageSize });
   } catch (err) {
     next(err);
   }
@@ -408,7 +460,7 @@ router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
   try {
     const appt = mockAppointments.find((a) => a.id === req.params.id && a.deletedAt === null);
     if (!appt) throw new AppError('Termin nicht gefunden', 404);
-    res.json({ data: appt });
+    res.json({ data: withTravelTime(appt) });
   } catch (err) {
     next(err);
   }
@@ -451,7 +503,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
     };
 
     mockAppointments.push(newAppt);
-    res.status(201).json({ data: newAppt });
+    res.status(201).json({ data: withTravelTime(newAppt) });
   } catch (err) {
     next(err);
   }
@@ -497,7 +549,7 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
     }
 
     appt.updatedAt = new Date().toISOString();
-    res.json({ data: appt });
+    res.json({ data: withTravelTime(appt) });
   } catch (err) {
     next(err);
   }

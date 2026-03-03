@@ -35,6 +35,7 @@ export interface Appointment {
   preparationNotes: string | null
   checklist: ChecklistItem[]
   notes: string | null
+  travelMinutes: number | null
   createdAt: string
   updatedAt: string
   completedAt: string | null

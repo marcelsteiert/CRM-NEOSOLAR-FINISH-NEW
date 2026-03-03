@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar, Clock,
-  Trash2, ChevronDown, FileText, CheckCircle2, XCircle, ArrowRight,
+  Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle,
 } from 'lucide-react'
 import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
@@ -50,7 +50,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
   const [editNotes, setEditNotes] = useState('')
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showCreateOffer, setShowCreateOffer] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
 
@@ -77,7 +76,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (showDeleteConfirm) setShowDeleteConfirm(false)
-        else if (showCancelConfirm) setShowCancelConfirm(false)
         else if (showCreateOffer) setShowCreateOffer(false)
         else if (isEditing) setIsEditing(false)
         else onClose()
@@ -85,7 +83,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose, isEditing, showDeleteConfirm, showCancelConfirm, showCreateOffer])
+  }, [onClose, isEditing, showDeleteConfirm, showCreateOffer])
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === backdropRef.current) onClose()
@@ -119,21 +117,6 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       c.id === itemId ? { ...c, checked: !c.checked } : c,
     )
     updateAppt.mutate({ id: appt.id, checklist: updated } as never)
-  }
-
-  const handleMarkDone = () => {
-    if (!appt) return
-    updateAppt.mutate({ id: appt.id, status: 'DURCHGEFUEHRT' as AppointmentStatus })
-    setSuccessMsg('Termin als durchgefuehrt markiert!')
-    setTimeout(() => setSuccessMsg(''), 2000)
-  }
-
-  const handleCancel = () => {
-    if (!appt) return
-    updateAppt.mutate({ id: appt.id, status: 'ABGESAGT' as AppointmentStatus })
-    setShowCancelConfirm(false)
-    setSuccessMsg('Termin abgesagt')
-    setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
   }
 
   const handleDelete = () => {
@@ -221,8 +204,8 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Date/Time + Value */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Date/Time + Fahrzeit + Value */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #34D399 6%, transparent)', border: '1px solid color-mix(in srgb, #34D399 15%, transparent)' }}>
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Termin</p>
               {isEditing ? (
@@ -236,6 +219,21 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                   {appt.appointmentTime && <span className="text-[14px] font-bold ml-2">{appt.appointmentTime}</span>}
                 </p>
               )}
+            </div>
+            <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #60A5FA 6%, transparent)', border: '1px solid color-mix(in srgb, #60A5FA 15%, transparent)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Fahrzeit ab St. Margrethen</p>
+              <div className="flex items-center gap-2">
+                <Car size={16} className="text-blue-400" strokeWidth={1.8} />
+                {appt.travelMinutes != null ? (
+                  <p className="text-[18px] font-extrabold tabular-nums text-blue-400">
+                    {appt.travelMinutes >= 60
+                      ? `${Math.floor(appt.travelMinutes / 60)}h ${appt.travelMinutes % 60 > 0 ? `${appt.travelMinutes % 60}m` : ''}`
+                      : `${appt.travelMinutes}m`}
+                  </p>
+                ) : (
+                  <p className="text-[14px] font-semibold text-text-dim">Unbekannt</p>
+                )}
+              </div>
             </div>
             <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Gesch. Wert</p>
@@ -377,50 +375,34 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
             </div>
           )}
 
-          {showCancelConfirm && (
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[12px] text-red flex-1">Termin absagen?</span>
-              <button type="button" onClick={() => setShowCancelConfirm(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Nein</button>
-              <button type="button" onClick={handleCancel} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#F87171' }}>Absagen</button>
-            </div>
-          )}
-
           {showCreateOffer && (
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[12px] text-emerald-400 flex-1">Angebot aus diesem Termin erstellen?</span>
-              <button type="button" onClick={() => setShowCreateOffer(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Abbrechen</button>
-              <button type="button" onClick={handleCreateOffer} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#34D399' }}>Angebot erstellen</button>
+            <div className="mb-3">
+              {progress < 100 ? (
+                <div className="flex items-center gap-2.5 p-3 rounded-xl mb-2" style={{ background: 'color-mix(in srgb, #F59E0B 8%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 20%, transparent)' }}>
+                  <AlertTriangle size={16} className="text-amber shrink-0" strokeWidth={2} />
+                  <div className="flex-1">
+                    <p className="text-[12px] font-semibold text-amber">Checkliste nicht vollstaendig ({checkedCount}/{totalCount})</p>
+                    <p className="text-[11px] text-text-sec mt-0.5">Bitte alle Punkte abschliessen bevor ein Angebot erstellt wird.</p>
+                  </div>
+                  <button type="button" onClick={() => setShowCreateOffer(false)} className="btn-secondary px-3 py-1.5 text-[11px] shrink-0">OK</button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[12px] text-emerald-400 flex-1">Checkliste vollstaendig! Angebot jetzt erstellen?</span>
+                  <button type="button" onClick={() => setShowCreateOffer(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Abbrechen</button>
+                  <button type="button" onClick={handleCreateOffer} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#34D399' }}>Angebot erstellen</button>
+                </div>
+              )}
             </div>
           )}
 
-          {!showDeleteConfirm && !showCancelConfirm && !showCreateOffer && (
+          {!showDeleteConfirm && !showCreateOffer && (
             <div className="flex items-center gap-2">
-              {/* Create Offer (from completed appointment) */}
               {!isClosed && (
                 <button type="button" onClick={() => setShowCreateOffer(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(52,211,153,0.15)' }}>
                   <ArrowRight size={14} strokeWidth={1.8} />
                   Angebot erstellen
                 </button>
-              )}
-
-              {appt.status === 'DURCHGEFUEHRT' && (
-                <button type="button" onClick={() => setShowCreateOffer(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-amber hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(245,158,11,0.15)' }}>
-                  <ArrowRight size={14} strokeWidth={1.8} />
-                  Angebot erstellen
-                </button>
-              )}
-
-              {!isClosed && (
-                <>
-                  <button type="button" onClick={handleMarkDone} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-violet-400 hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(167,139,250,0.15)' }}>
-                    <CheckCircle2 size={14} strokeWidth={1.8} />
-                    Durchgefuehrt
-                  </button>
-                  <button type="button" onClick={() => setShowCancelConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>
-                    <XCircle size={14} strokeWidth={1.8} />
-                    Absagen
-                  </button>
-                </>
               )}
 
               <a href={`tel:${appt.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Shield, Settings, Clock, Save, RotateCcw } from 'lucide-react'
+import { Shield, Settings, Clock, Save, RotateCcw, ClipboardCheck, Plus, Trash2, GripVertical, MapPin } from 'lucide-react'
 import {
   useSettings,
   useUpdateSettings,
   stageLabelsMap,
   type FollowUpRule,
+  type ChecklistTemplate,
 } from '@/hooks/useSettings'
 
 export default function RolesPage() {
@@ -16,6 +17,8 @@ export default function RolesPage() {
   /* ── Local form state ── */
   const [defaultDays, setDefaultDays] = useState(3)
   const [rules, setRules] = useState<FollowUpRule[]>([])
+  const [checklist, setChecklist] = useState<ChecklistTemplate[]>([])
+  const [companyAddress, setCompanyAddress] = useState('St. Margrethen')
   const [saved, setSaved] = useState(false)
 
   /* ── Sync from server ── */
@@ -23,6 +26,8 @@ export default function RolesPage() {
     if (settings) {
       setDefaultDays(settings.defaultFollowUpDays)
       setRules(settings.followUpRules.map((r) => ({ ...r })))
+      setChecklist(settings.checklistTemplate?.map((c) => ({ ...c })) ?? [])
+      setCompanyAddress(settings.companyAddress ?? 'St. Margrethen')
     }
   }, [settings])
 
@@ -38,6 +43,8 @@ export default function RolesPage() {
       await updateSettings.mutateAsync({
         defaultFollowUpDays: defaultDays,
         followUpRules: rules,
+        checklistTemplate: checklist,
+        companyAddress,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -50,7 +57,21 @@ export default function RolesPage() {
     if (settings) {
       setDefaultDays(settings.defaultFollowUpDays)
       setRules(settings.followUpRules.map((r) => ({ ...r })))
+      setChecklist(settings.checklistTemplate?.map((c) => ({ ...c })) ?? [])
+      setCompanyAddress(settings.companyAddress ?? 'St. Margrethen')
     }
+  }
+
+  const addChecklistItem = () => {
+    setChecklist((prev) => [...prev, { id: `c${Date.now()}`, label: '' }])
+  }
+
+  const removeChecklistItem = (id: string) => {
+    setChecklist((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  const updateChecklistLabel = (id: string, label: string) => {
+    setChecklist((prev) => prev.map((c) => (c.id === id ? { ...c, label } : c)))
   }
 
   if (isLoading) {
@@ -203,6 +224,95 @@ export default function RolesPage() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* ── Standort Card ── */}
+      <div
+        className="glass-card p-6"
+        style={{ borderRadius: 'var(--radius-lg)' }}
+      >
+        <div className="flex items-center gap-2.5 mb-5">
+          <MapPin size={16} className="text-blue-400" strokeWidth={2} />
+          <h2 className="text-[14px] font-bold">Firmenstandort</h2>
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold text-text-sec mb-1.5 uppercase tracking-wider">
+            Standort fuer Fahrzeit-Berechnung
+          </label>
+          <input
+            type="text"
+            value={companyAddress}
+            onChange={(e) => setCompanyAddress(e.target.value)}
+            className="w-full max-w-xs px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-blue-400/50"
+            placeholder="z.B. St. Margrethen"
+          />
+          <p className="text-[11px] text-text-dim mt-1.5">
+            Wird als Ausgangspunkt fuer die Fahrzeit-Kalkulation zu Terminen verwendet.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Checkliste Card ── */}
+      <div
+        className="glass-card p-6"
+        style={{ borderRadius: 'var(--radius-lg)' }}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <ClipboardCheck size={16} className="text-emerald-400" strokeWidth={2} />
+            <h2 className="text-[14px] font-bold">Vorbereitungs-Checkliste</h2>
+          </div>
+          <button
+            type="button"
+            onClick={addChecklistItem}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
+            style={{ border: '1px solid rgba(52,211,153,0.15)' }}
+          >
+            <Plus size={12} strokeWidth={2} />
+            Punkt hinzufuegen
+          </button>
+        </div>
+
+        <p className="text-[11px] text-text-sec mb-4">
+          Diese Checkliste wird jedem neuen Termin zugewiesen. Alle Verkaeuer sehen dieselben Punkte.
+        </p>
+
+        <div className="space-y-2">
+          {checklist.map((item, idx) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-2 p-2.5 rounded-lg"
+              style={{
+                background: 'color-mix(in srgb, var(--color-surface-hover) 60%, transparent)',
+                border: '1px solid rgba(255,255,255,0.04)',
+              }}
+            >
+              <GripVertical size={14} className="text-text-dim shrink-0" />
+              <span className="text-[11px] font-semibold text-text-dim w-6 text-center shrink-0">
+                {idx + 1}.
+              </span>
+              <input
+                type="text"
+                value={item.label}
+                onChange={(e) => updateChecklistLabel(item.id, e.target.value)}
+                placeholder="Checklisten-Punkt beschreiben..."
+                className="flex-1 px-2.5 py-1.5 text-[12px] rounded-lg bg-bg border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-emerald-400/50"
+              />
+              <button
+                type="button"
+                onClick={() => removeChecklistItem(item.id)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-colors shrink-0"
+              >
+                <Trash2 size={13} strokeWidth={1.8} />
+              </button>
+            </div>
+          ))}
+          {checklist.length === 0 && (
+            <p className="text-[12px] text-text-dim text-center py-4">
+              Keine Checklisten-Punkte definiert. Klicke auf "Punkt hinzufuegen" um zu starten.
+            </p>
+          )}
         </div>
       </div>
 

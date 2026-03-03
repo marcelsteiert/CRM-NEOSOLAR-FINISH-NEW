@@ -1,4 +1,4 @@
-import { ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2 } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, Car } from 'lucide-react'
 import {
   type Appointment,
   statusLabels,
@@ -36,6 +36,7 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
     { key: 'contact', label: 'Kontakt', sortField: 'contactName' },
     { key: 'company', label: 'Unternehmen', sortField: 'company' },
     { key: 'date', label: 'Termin', sortField: 'appointmentDate' },
+    { key: 'fahrzeit', label: 'Fahrzeit' },
     { key: 'status', label: 'Status' },
     { key: 'checklist', label: 'Checkliste' },
     { key: 'value', label: 'Wert', sortField: 'value' },
@@ -103,6 +104,22 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
                         <p className="text-[11px] text-text-sec tabular-nums">{a.appointmentTime} Uhr</p>
                       )}
                     </div>
+                  </td>
+
+                  {/* Fahrzeit */}
+                  <td className="px-6 py-3.5">
+                    {a.travelMinutes != null ? (
+                      <div className="flex items-center gap-1.5">
+                        <Car size={12} className="text-text-dim" strokeWidth={1.8} />
+                        <span className="text-[12px] font-semibold tabular-nums text-text-sec">
+                          {a.travelMinutes >= 60
+                            ? `${Math.floor(a.travelMinutes / 60)}h ${a.travelMinutes % 60 > 0 ? `${a.travelMinutes % 60}m` : ''}`
+                            : `${a.travelMinutes}m`}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-text-dim">{'\u2014'}</span>
+                    )}
                   </td>
 
                   {/* Status */}

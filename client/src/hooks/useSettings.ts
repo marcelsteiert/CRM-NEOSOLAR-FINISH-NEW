@@ -8,9 +8,16 @@ export interface FollowUpRule {
   message: string
 }
 
+export interface ChecklistTemplate {
+  id: string
+  label: string
+}
+
 export interface AppSettings {
   followUpRules: FollowUpRule[]
   defaultFollowUpDays: number
+  checklistTemplate: ChecklistTemplate[]
+  companyAddress: string
 }
 
 interface SettingsResponse {

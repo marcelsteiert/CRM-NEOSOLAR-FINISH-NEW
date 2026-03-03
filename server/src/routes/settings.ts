@@ -15,13 +15,31 @@ export interface FollowUpRule {
   message: string;
 }
 
+export interface ChecklistTemplate {
+  id: string;
+  label: string;
+}
+
 export interface AppSettings {
   followUpRules: FollowUpRule[];
   defaultFollowUpDays: number; // Default fuer neue Angebote
+  checklistTemplate: ChecklistTemplate[];
+  companyAddress: string; // Standort fuer Fahrzeit-Berechnung
 }
 
 const settings: AppSettings = {
   defaultFollowUpDays: 3,
+  companyAddress: 'St. Margrethen',
+  checklistTemplate: [
+    { id: 'c1', label: 'Dach-Fotos/Bilder erhalten' },
+    { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet' },
+    { id: 'c3', label: 'kWp-Potenzial geschaetzt' },
+    { id: 'c4', label: 'Stromverbrauch des Kunden analysiert' },
+    { id: 'c5', label: 'Anfahrt geplant' },
+    { id: 'c6', label: 'Offerte-Vorlage vorbereitet' },
+    { id: 'c7', label: 'Technische Unterlagen zusammengestellt' },
+    { id: 'c8', label: 'Kunde ueber Ablauf informiert' },
+  ],
   followUpRules: [
     { stage: 'ERSTELLT', maxDays: 2, urgentMaxDays: 1, message: 'Angebot noch nicht gesendet – bitte finalisieren!' },
     { stage: 'GESENDET', maxDays: 3, urgentMaxDays: 1, message: 'Angebot wurde gesendet – Nachfassen beim Kunden!' },
@@ -41,6 +59,15 @@ export function getSettings(): AppSettings {
 
 const updateSettingsSchema = z.object({
   defaultFollowUpDays: z.number().min(1).max(30).optional(),
+  companyAddress: z.string().min(1).optional(),
+  checklistTemplate: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string().min(1),
+      }),
+    )
+    .optional(),
   followUpRules: z
     .array(
       z.object({
@@ -78,6 +105,12 @@ router.put('/', (req: Request, res: Response, next: NextFunction) => {
     const u = result.data;
     if (u.defaultFollowUpDays !== undefined) {
       settings.defaultFollowUpDays = u.defaultFollowUpDays;
+    }
+    if (u.companyAddress !== undefined) {
+      settings.companyAddress = u.companyAddress;
+    }
+    if (u.checklistTemplate !== undefined) {
+      settings.checklistTemplate = u.checklistTemplate;
     }
     if (u.followUpRules !== undefined) {
       settings.followUpRules = u.followUpRules;
