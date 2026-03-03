@@ -35,14 +35,23 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-[72px] flex flex-col items-center py-5 z-50 border-r border-border bg-bg/80 backdrop-blur-2xl">
       {/* Logo */}
-      <div
-        className="w-[42px] h-[42px] rounded-[14px] flex items-center justify-center mb-8 shrink-0"
-        style={{
-          background: 'linear-gradient(135deg, #F59E0B, #F97316)',
-          boxShadow: '0 0 28px rgba(245, 158, 11, 0.2)',
-        }}
-      >
-        <span className="text-bg font-extrabold text-[13px] tracking-tight">NS</span>
+      <div className="relative group/logo mb-8 shrink-0">
+        <div
+          className="w-[42px] h-[42px] rounded-[14px] flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, #F59E0B, #F97316)',
+            boxShadow: '0 0 28px rgba(245, 158, 11, 0.2)',
+          }}
+        >
+          <span className="text-bg font-extrabold text-[13px] tracking-tight">NS</span>
+        </div>
+        {/* Logo tooltip */}
+        <div
+          className="absolute left-[62px] top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-bg-sub border border-border text-[11px] font-semibold text-amber whitespace-nowrap opacity-0 pointer-events-none group-hover/logo:opacity-100 transition-opacity duration-150 z-[60] shadow-lg"
+          role="tooltip"
+        >
+          NeoSolar CRM
+        </div>
       </div>
 
       {/* Navigation */}
