@@ -13,6 +13,16 @@ export type DealStage =
 
 export type DealPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 
+export type ActivityType = 'NOTE' | 'CALL' | 'EMAIL' | 'MEETING' | 'STATUS_CHANGE' | 'SYSTEM'
+
+export interface Activity {
+  id: string
+  type: ActivityType
+  text: string
+  createdBy: string
+  createdAt: string
+}
+
 export interface Deal {
   id: string
   title: string
@@ -28,8 +38,11 @@ export interface Deal {
   priority: DealPriority
   assignedTo: string | null
   expectedCloseDate: string | null
+  winProbability: number | null
+  followUpDate: string | null
   notes: string | null
   tags: string[]
+  activities: Activity[]
   createdAt: string
   updatedAt: string
   closedAt: string | null
@@ -40,6 +53,7 @@ export interface DealStats {
   totalDeals: number
   totalValue: number
   pipelineValue: number
+  weightedPipelineValue: number
   stages: Record<DealStage, { count: number; value: number }>
   avgDealValue: number
   wonDeals: number
@@ -176,6 +190,7 @@ export function useUpdateDeal() {
       qc.invalidateQueries({ queryKey: ['deals'] })
       qc.invalidateQueries({ queryKey: ['deal'] })
       qc.invalidateQueries({ queryKey: ['dealStats'] })
+      qc.invalidateQueries({ queryKey: ['followUps'] })
     },
   })
 }
@@ -187,6 +202,31 @@ export function useDeleteDeal() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['deals'] })
       qc.invalidateQueries({ queryKey: ['dealStats'] })
+    },
+  })
+}
+
+export function useAddActivity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ dealId, ...data }: { dealId: string; type?: ActivityType; text: string; createdBy?: string }) =>
+      api.post<{ data: Activity }>(`/deals/${dealId}/activities`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['deal'] })
+      qc.invalidateQueries({ queryKey: ['deals'] })
+      qc.invalidateQueries({ queryKey: ['followUps'] })
+    },
+  })
+}
+
+export function useDismissFollowUp() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ followUpId, ...data }: { followUpId: string; note: string; dismissedBy?: string }) =>
+      api.post<{ message: string }>(`/deals/follow-ups/${followUpId}/dismiss`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['followUps'] })
+      qc.invalidateQueries({ queryKey: ['deal'] })
     },
   })
 }
@@ -223,6 +263,24 @@ export const priorityColors: Record<DealPriority, string> = {
   MEDIUM: '#60A5FA',
   HIGH: '#F59E0B',
   URGENT: '#F87171',
+}
+
+export const activityTypeLabels: Record<ActivityType, string> = {
+  NOTE: 'Notiz',
+  CALL: 'Anruf',
+  EMAIL: 'E-Mail',
+  MEETING: 'Meeting',
+  STATUS_CHANGE: 'Status',
+  SYSTEM: 'System',
+}
+
+export const activityTypeColors: Record<ActivityType, string> = {
+  NOTE: '#94A3B8',
+  CALL: '#F59E0B',
+  EMAIL: '#60A5FA',
+  MEETING: '#A78BFA',
+  STATUS_CHANGE: '#34D399',
+  SYSTEM: '#64748B',
 }
 
 export function formatCHF(value: number): string {

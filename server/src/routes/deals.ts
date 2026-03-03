@@ -10,6 +10,14 @@ const router = Router();
 // Types – Angebote (ehemals Deals)
 // ---------------------------------------------------------------------------
 
+interface Activity {
+  id: string;
+  type: 'NOTE' | 'CALL' | 'EMAIL' | 'MEETING' | 'STATUS_CHANGE' | 'SYSTEM';
+  text: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 interface Deal {
   id: string;
   title: string;
@@ -25,8 +33,11 @@ interface Deal {
   priority: DealPriority;
   assignedTo: string | null;
   expectedCloseDate: string | null;
+  winProbability: number | null;
+  followUpDate: string | null;
   notes: string | null;
   tags: string[];
+  activities: Activity[];
   createdAt: string;
   updatedAt: string;
   closedAt: string | null;
@@ -74,6 +85,18 @@ interface FollowUp {
   urgency: 'WARNING' | 'OVERDUE' | 'CRITICAL';
 }
 
+// Dismissed follow-ups tracking
+interface DismissedFollowUp {
+  id: string;
+  followUpId: string;
+  dealId: string;
+  note: string;
+  dismissedBy: string;
+  dismissedAt: string;
+}
+
+const dismissedFollowUps: DismissedFollowUp[] = [];
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -101,11 +124,24 @@ const createDealSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   assignedTo: z.string().optional(),
   expectedCloseDate: z.string().optional(),
+  winProbability: z.number().min(0).max(100).optional(),
+  followUpDate: z.string().optional(),
   notes: z.string().optional(),
   tags: z.array(z.string()).optional(),
 });
 
 const updateDealSchema = createDealSchema.partial();
+
+const addActivitySchema = z.object({
+  type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM']).optional().default('NOTE'),
+  text: z.string().min(1, 'Aktivitaetstext ist erforderlich'),
+  createdBy: z.string().optional().default('u001'),
+});
+
+const dismissFollowUpSchema = z.object({
+  note: z.string().min(1, 'Begruendung ist erforderlich'),
+  dismissedBy: z.string().optional().default('u001'),
+});
 
 // ---------------------------------------------------------------------------
 // UUID helper
@@ -139,8 +175,15 @@ const mockDeals: Deal[] = [
     priority: 'MEDIUM',
     assignedTo: 'u001',
     expectedCloseDate: '2026-04-15',
+    winProbability: 40,
+    followUpDate: '2026-03-05',
     notes: 'Offerte fuer 15kWp Anlage mit Speicher gesendet. Wartet auf Rueckmeldung.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-20T10:30:00.000Z' },
+      { id: uuid(), type: 'EMAIL', text: 'Offerte per E-Mail an Kunden gesendet', createdBy: 'u001', createdAt: '2026-02-21T09:00:00.000Z' },
+      { id: uuid(), type: 'CALL', text: 'Telefonat: Kunde hat Fragen zur Speichergroesse', createdBy: 'u001', createdAt: '2026-02-28T14:00:00.000Z' },
+    ],
     createdAt: '2026-02-20T10:30:00.000Z',
     updatedAt: '2026-02-28T14:00:00.000Z',
     closedAt: null,
@@ -161,8 +204,15 @@ const mockDeals: Deal[] = [
     priority: 'HIGH',
     assignedTo: 'u002',
     expectedCloseDate: '2026-03-30',
+    winProbability: 70,
+    followUpDate: '2026-03-04',
     notes: 'Verhandlung ueber Zahlungskonditionen. Finanzierung ueber Bank geplant.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-02-18T09:15:00.000Z' },
+      { id: uuid(), type: 'MEETING', text: 'Vor-Ort-Besichtigung: 500m2 Flachdach, gute Ausrichtung', createdBy: 'u002', createdAt: '2026-02-22T10:00:00.000Z' },
+      { id: uuid(), type: 'NOTE', text: 'Kundin moechte Finanzierung ueber ZKB', createdBy: 'u002', createdAt: '2026-03-01T11:00:00.000Z' },
+    ],
     createdAt: '2026-02-18T09:15:00.000Z',
     updatedAt: '2026-03-01T11:00:00.000Z',
     closedAt: null,
@@ -183,8 +233,14 @@ const mockDeals: Deal[] = [
     priority: 'URGENT',
     assignedTo: 'u001',
     expectedCloseDate: '2026-03-20',
+    winProbability: 85,
+    followUpDate: '2026-03-04',
     notes: 'Grossprojekt 450kWp. Finanzierungsmodell muss noch geklaert werden.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-10T08:00:00.000Z' },
+      { id: uuid(), type: 'CALL', text: 'Verhandlung: Rabatt auf Module besprochen', createdBy: 'u001', createdAt: '2026-03-02T09:30:00.000Z' },
+    ],
     createdAt: '2026-02-10T08:00:00.000Z',
     updatedAt: '2026-03-02T09:30:00.000Z',
     closedAt: null,
@@ -205,8 +261,14 @@ const mockDeals: Deal[] = [
     priority: 'HIGH',
     assignedTo: 'u002',
     expectedCloseDate: '2026-04-01',
+    winProbability: 50,
+    followUpDate: null,
     notes: 'Offerte gesendet. Eigentuemerversammlung muss noch zustimmen.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-02-22T13:45:00.000Z' },
+      { id: uuid(), type: 'EMAIL', text: 'Offerte an Verwaltung gesendet', createdBy: 'u002', createdAt: '2026-02-24T10:00:00.000Z' },
+    ],
     createdAt: '2026-02-22T13:45:00.000Z',
     updatedAt: '2026-03-01T08:15:00.000Z',
     closedAt: null,
@@ -227,8 +289,13 @@ const mockDeals: Deal[] = [
     priority: 'HIGH',
     assignedTo: 'u001',
     expectedCloseDate: '2026-05-15',
+    winProbability: 30,
+    followUpDate: null,
     notes: 'Architekturbuero plant Neubau mit BIPV. Offerte wird vorbereitet.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-25T12:15:00.000Z' },
+    ],
     createdAt: '2026-02-25T12:15:00.000Z',
     updatedAt: '2026-03-01T16:00:00.000Z',
     closedAt: null,
@@ -249,8 +316,13 @@ const mockDeals: Deal[] = [
     priority: 'MEDIUM',
     assignedTo: 'u002',
     expectedCloseDate: '2026-06-01',
+    winProbability: 20,
+    followUpDate: null,
     notes: 'Rahmenvertrag fuer mehrere Objekte. Offerte in Vorbereitung.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-02-28T09:00:00.000Z' },
+    ],
     createdAt: '2026-02-28T09:00:00.000Z',
     updatedAt: '2026-03-02T10:30:00.000Z',
     closedAt: null,
@@ -271,8 +343,15 @@ const mockDeals: Deal[] = [
     priority: 'URGENT',
     assignedTo: 'u001',
     expectedCloseDate: '2026-03-15',
+    winProbability: 100,
+    followUpDate: null,
     notes: 'Vertrag unterschrieben! Projektstart KW12.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-05T08:30:00.000Z' },
+      { id: uuid(), type: 'MEETING', text: 'Vertragsverhandlung vor Ort', createdBy: 'u001', createdAt: '2026-03-01T10:00:00.000Z' },
+      { id: uuid(), type: 'STATUS_CHANGE', text: 'Angebot GEWONNEN – Vertrag unterschrieben', createdBy: 'u001', createdAt: '2026-03-03T14:00:00.000Z' },
+    ],
     createdAt: '2026-02-05T08:30:00.000Z',
     updatedAt: '2026-03-03T14:00:00.000Z',
     closedAt: '2026-03-03T14:00:00.000Z',
@@ -293,8 +372,14 @@ const mockDeals: Deal[] = [
     priority: 'URGENT',
     assignedTo: 'u002',
     expectedCloseDate: '2026-03-25',
+    winProbability: 60,
+    followUpDate: '2026-03-05',
     notes: 'PV-Pflicht gemaess kantonalem Energiegesetz. Vertragsdetails werden finalisiert.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-02-15T10:00:00.000Z' },
+      { id: uuid(), type: 'NOTE', text: 'Kanton Basel verlangt PV-Pflicht bei Neubau', createdBy: 'u002', createdAt: '2026-02-20T14:00:00.000Z' },
+    ],
     createdAt: '2026-02-15T10:00:00.000Z',
     updatedAt: '2026-03-02T17:45:00.000Z',
     closedAt: null,
@@ -315,8 +400,14 @@ const mockDeals: Deal[] = [
     priority: 'LOW',
     assignedTo: 'u001',
     expectedCloseDate: '2026-03-10',
+    winProbability: 0,
+    followUpDate: null,
     notes: 'Kunde hat sich fuer Konkurrenz entschieden. Preislich nicht konkurrenzfaehig.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-12T08:00:00.000Z' },
+      { id: uuid(), type: 'STATUS_CHANGE', text: 'Angebot VERLOREN – Konkurrenz guenstiger', createdBy: 'u001', createdAt: '2026-03-01T09:00:00.000Z' },
+    ],
     createdAt: '2026-02-12T08:00:00.000Z',
     updatedAt: '2026-03-01T09:00:00.000Z',
     closedAt: '2026-03-01T09:00:00.000Z',
@@ -337,11 +428,44 @@ const mockDeals: Deal[] = [
     priority: 'MEDIUM',
     assignedTo: 'u002',
     expectedCloseDate: '2026-02-28',
+    winProbability: 100,
+    followUpDate: null,
     notes: 'Vertrag abgeschlossen. 25kWp Anlage. Uebergang zu Projekt.',
     tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-01-15T08:00:00.000Z' },
+      { id: uuid(), type: 'STATUS_CHANGE', text: 'Angebot GEWONNEN', createdBy: 'u002', createdAt: '2026-02-28T17:00:00.000Z' },
+    ],
     createdAt: '2026-01-15T08:00:00.000Z',
     updatedAt: '2026-02-28T17:00:00.000Z',
     closedAt: '2026-02-28T17:00:00.000Z',
+    deletedAt: null,
+  },
+  {
+    id: uuid(),
+    title: 'Offerte Kessler Weine',
+    leadId: null,
+    appointmentId: null,
+    contactName: 'Monika Kessler',
+    contactEmail: 'monika@kessler-weine.ch',
+    contactPhone: '+41 52 345 67 89',
+    company: 'Kessler Weine',
+    address: 'Rebbergstrasse 7, 8400 Winterthur',
+    value: 45000,
+    stage: 'ERSTELLT',
+    priority: 'MEDIUM',
+    assignedTo: 'u001',
+    expectedCloseDate: null,
+    winProbability: null,
+    followUpDate: null,
+    notes: null,
+    tags: [],
+    activities: [
+      { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt (aus Termin konvertiert)', createdBy: 'u001', createdAt: '2026-03-03T10:00:00.000Z' },
+    ],
+    createdAt: '2026-03-03T10:00:00.000Z',
+    updatedAt: '2026-03-03T10:00:00.000Z',
+    closedAt: null,
     deletedAt: null,
   },
 ];
@@ -395,7 +519,7 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/deals/stats
+// GET /api/v1/deals/stats (with weighted pipeline)
 // ---------------------------------------------------------------------------
 
 router.get('/stats', (req: Request, res: Response, next: NextFunction) => {
@@ -422,11 +546,17 @@ router.get('/stats', (req: Request, res: Response, next: NextFunction) => {
     const openDeals = active.filter((d) => d.stage !== 'GEWONNEN' && d.stage !== 'VERLOREN');
     const pipelineValue = openDeals.reduce((s, d) => s + d.value, 0);
 
+    // Weighted pipeline: sum of (value * winProbability / 100)
+    const weightedPipelineValue = Math.round(
+      openDeals.reduce((s, d) => s + d.value * ((d.winProbability ?? 50) / 100), 0),
+    );
+
     res.json({
       data: {
         totalDeals: active.length,
         totalValue,
         pipelineValue,
+        weightedPipelineValue,
         stages,
         avgDealValue: active.length > 0 ? Math.round(totalValue / active.length) : 0,
         wonDeals: stages.GEWONNEN.count,
@@ -460,6 +590,9 @@ router.get('/follow-ups', (req: Request, res: Response, next: NextFunction) => {
         ? openDeals.filter((d) => d.assignedTo === assignedTo)
         : openDeals;
 
+    // Get dismissed follow-up IDs
+    const dismissedIds = new Set(dismissedFollowUps.map((df) => df.followUpId));
+
     const followUps: FollowUp[] = [];
 
     for (const deal of userDeals) {
@@ -472,12 +605,17 @@ router.get('/follow-ups', (req: Request, res: Response, next: NextFunction) => {
         deal.priority === 'URGENT' || deal.priority === 'HIGH' ? rule.urgentMaxDays : rule.maxDays;
 
       if (daysSinceUpdate >= Math.ceil(maxDays * 0.5)) {
+        const fuId = `fu-${deal.id}`;
+
+        // Skip dismissed follow-ups
+        if (dismissedIds.has(fuId)) continue;
+
         let urgency: FollowUp['urgency'] = 'WARNING';
         if (daysSinceUpdate >= maxDays * 2) urgency = 'CRITICAL';
         else if (daysSinceUpdate >= maxDays) urgency = 'OVERDUE';
 
         followUps.push({
-          id: `fu-${deal.id}`,
+          id: fuId,
           dealId: deal.id,
           dealTitle: deal.title,
           contactName: deal.contactName,
@@ -510,6 +648,54 @@ router.get('/follow-ups', (req: Request, res: Response, next: NextFunction) => {
       overdue: followUps.filter((f) => f.urgency === 'OVERDUE').length,
       warning: followUps.filter((f) => f.urgency === 'WARNING').length,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/deals/follow-ups/:id/dismiss – Dismiss with required note
+// ---------------------------------------------------------------------------
+
+router.post('/follow-ups/:id/dismiss', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = dismissFollowUpSchema.safeParse(req.body);
+    if (!result.success) {
+      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
+      throw new AppError(`Validierungsfehler: ${messages}`, 422);
+    }
+
+    const followUpId = req.params.id as string;
+
+    // Extract deal ID from follow-up ID (format: fu-{dealId})
+    const dealId = (followUpId as string).replace(/^fu-/, '');
+    const deal = mockDeals.find((d) => d.id === dealId && d.deletedAt === null);
+    if (!deal) throw new AppError('Angebot nicht gefunden', 404);
+
+    const dismissed: DismissedFollowUp = {
+      id: uuid(),
+      followUpId: followUpId as string,
+      dealId: dealId as string,
+      note: result.data.note,
+      dismissedBy: result.data.dismissedBy,
+      dismissedAt: new Date().toISOString(),
+    };
+
+    dismissedFollowUps.push(dismissed);
+
+    // Add activity to deal
+    deal.activities.push({
+      id: uuid(),
+      type: 'NOTE',
+      text: `Follow-Up erledigt: ${result.data.note}`,
+      createdBy: result.data.dismissedBy,
+      createdAt: dismissed.dismissedAt,
+    });
+
+    // Update the deal's updatedAt to reset follow-up timer
+    deal.updatedAt = dismissed.dismissedAt;
+
+    res.json({ data: dismissed, message: 'Follow-Up erledigt' });
   } catch (err) {
     next(err);
   }
@@ -557,8 +743,13 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       priority: result.data.priority ?? 'MEDIUM',
       assignedTo: result.data.assignedTo ?? null,
       expectedCloseDate: result.data.expectedCloseDate ?? null,
+      winProbability: result.data.winProbability ?? null,
+      followUpDate: result.data.followUpDate ?? null,
       notes: result.data.notes ?? null,
       tags: result.data.tags ?? [],
+      activities: [
+        { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: now },
+      ],
       createdAt: now,
       updatedAt: now,
       closedAt: null,
@@ -567,6 +758,38 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
 
     mockDeals.push(newDeal);
     res.status(201).json({ data: newDeal });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/deals/:id/activities – Add activity
+// ---------------------------------------------------------------------------
+
+router.post('/:id/activities', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const deal = mockDeals.find((d) => d.id === req.params.id && d.deletedAt === null);
+    if (!deal) throw new AppError('Angebot nicht gefunden', 404);
+
+    const result = addActivitySchema.safeParse(req.body);
+    if (!result.success) {
+      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
+      throw new AppError(`Validierungsfehler: ${messages}`, 422);
+    }
+
+    const activity: Activity = {
+      id: uuid(),
+      type: result.data.type,
+      text: result.data.text,
+      createdBy: result.data.createdBy,
+      createdAt: new Date().toISOString(),
+    };
+
+    deal.activities.push(activity);
+    deal.updatedAt = activity.createdAt;
+
+    res.status(201).json({ data: activity });
   } catch (err) {
     next(err);
   }
@@ -600,15 +823,34 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
     if (u.priority !== undefined) deal.priority = u.priority;
     if (u.assignedTo !== undefined) deal.assignedTo = u.assignedTo ?? null;
     if (u.expectedCloseDate !== undefined) deal.expectedCloseDate = u.expectedCloseDate ?? null;
+    if (u.winProbability !== undefined) deal.winProbability = u.winProbability ?? null;
+    if (u.followUpDate !== undefined) deal.followUpDate = u.followUpDate ?? null;
     if (u.notes !== undefined) deal.notes = u.notes ?? null;
     if (u.tags !== undefined) deal.tags = u.tags;
 
     if (u.stage !== undefined) {
       const wasOpen = deal.stage !== 'GEWONNEN' && deal.stage !== 'VERLOREN';
       const isClosing = u.stage === 'GEWONNEN' || u.stage === 'VERLOREN';
+      const oldStage = deal.stage;
       deal.stage = u.stage as DealStage;
-      if (wasOpen && isClosing) deal.closedAt = new Date().toISOString();
-      else if (!isClosing) deal.closedAt = null;
+
+      if (wasOpen && isClosing) {
+        deal.closedAt = new Date().toISOString();
+        deal.winProbability = u.stage === 'GEWONNEN' ? 100 : 0;
+      } else if (!isClosing) {
+        deal.closedAt = null;
+      }
+
+      // Auto-add stage change activity
+      if (oldStage !== u.stage) {
+        deal.activities.push({
+          id: uuid(),
+          type: 'STATUS_CHANGE',
+          text: `Phase geaendert: ${oldStage} → ${u.stage}`,
+          createdBy: 'u001',
+          createdAt: new Date().toISOString(),
+        });
+      }
     }
 
     deal.updatedAt = new Date().toISOString();

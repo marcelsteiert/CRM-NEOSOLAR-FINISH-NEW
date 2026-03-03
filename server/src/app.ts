@@ -11,6 +11,7 @@ import emailTemplatesRouter from './routes/emailTemplates.js'
 import dealsRouter from './routes/deals.js'
 import appointmentsRouter from './routes/appointments.js'
 import settingsRouter from './routes/settings.js'
+import tasksRouter from './routes/tasks.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 export function createApp() {
@@ -31,6 +32,7 @@ export function createApp() {
   app.use('/api/v1/deals', dealsRouter)
   app.use('/api/v1/appointments', appointmentsRouter)
   app.use('/api/v1/settings', settingsRouter)
+  app.use('/api/v1/tasks', tasksRouter)
 
   app.use(errorHandler)
 

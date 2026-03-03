@@ -19,6 +19,7 @@ import {
   useDeals,
   useDealStats,
   useFollowUps,
+  useDismissFollowUp,
   type Deal,
   type DealStage,
   type DealPriority,
@@ -114,6 +115,10 @@ function StatCard({ icon: Icon, label, value, color }: {
 
 function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; onSelectDeal: (id: string) => void }) {
   const [expanded, setExpanded] = useState(true)
+  const [dismissingId, setDismissingId] = useState<string | null>(null)
+  const [dismissNote, setDismissNote] = useState('')
+  const dismissFollowUp = useDismissFollowUp()
+
   if (followUps.length === 0) return null
 
   const criticalCount = followUps.filter((f) => f.urgency === 'CRITICAL').length
@@ -121,6 +126,13 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
 
   const urgencyColors = { CRITICAL: '#F87171', OVERDUE: '#FB923C', WARNING: '#F59E0B' }
   const urgencyLabels = { CRITICAL: 'Kritisch', OVERDUE: 'Ueberfaellig', WARNING: 'Bald faellig' }
+
+  const handleDismiss = (fuId: string) => {
+    if (!dismissNote.trim()) return
+    dismissFollowUp.mutate({ followUpId: fuId, note: dismissNote.trim() })
+    setDismissingId(null)
+    setDismissNote('')
+  }
 
   return (
     <div className="rounded-xl overflow-hidden" style={{
@@ -147,23 +159,69 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
       {expanded && (
         <div className="px-5 pb-4 space-y-2">
           {followUps.map((fu) => (
-            <button key={fu.id} type="button" onClick={() => onSelectDeal(fu.dealId)} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-surface-hover/50 transition-colors text-left" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: urgencyColors[fu.urgency], boxShadow: `0 0 8px ${urgencyColors[fu.urgency]}40` }} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-[12px] font-semibold truncate">{fu.dealTitle}</p>
-                  <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase" style={{ background: `color-mix(in srgb, ${urgencyColors[fu.urgency]} 15%, transparent)`, color: urgencyColors[fu.urgency] }}>
-                    {urgencyLabels[fu.urgency]}
-                  </span>
+            <div key={fu.id}>
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-left" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: urgencyColors[fu.urgency], boxShadow: `0 0 8px ${urgencyColors[fu.urgency]}40` }} />
+                <button type="button" onClick={() => onSelectDeal(fu.dealId)} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[12px] font-semibold truncate">{fu.dealTitle}</p>
+                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase" style={{ background: `color-mix(in srgb, ${urgencyColors[fu.urgency]} 15%, transparent)`, color: urgencyColors[fu.urgency] }}>
+                      {urgencyLabels[fu.urgency]}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-text-sec mt-0.5">{fu.message}</p>
+                </button>
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-1 text-[11px] text-text-sec"><Phone size={10} strokeWidth={2} /><span>{fu.contactName}</span></div>
+                  <div className="flex items-center gap-1 text-[11px] mt-0.5" style={{ color: urgencyColors[fu.urgency] }}><Clock size={10} strokeWidth={2} /><span className="font-semibold">{fu.daysSinceUpdate} Tage</span></div>
                 </div>
-                <p className="text-[11px] text-text-sec mt-0.5">{fu.message}</p>
+                <span className="text-[12px] font-bold tabular-nums text-amber shrink-0">{formatCHF(fu.value)}</span>
+                {/* Dismiss button */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setDismissingId(dismissingId === fu.id ? null : fu.id); setDismissNote('') }}
+                  className="shrink-0 w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all"
+                  title="Erledigt markieren"
+                >
+                  <X size={14} strokeWidth={2} />
+                </button>
               </div>
-              <div className="text-right shrink-0">
-                <div className="flex items-center gap-1 text-[11px] text-text-sec"><Phone size={10} strokeWidth={2} /><span>{fu.contactName}</span></div>
-                <div className="flex items-center gap-1 text-[11px] mt-0.5" style={{ color: urgencyColors[fu.urgency] }}><Clock size={10} strokeWidth={2} /><span className="font-semibold">{fu.daysSinceUpdate} Tage</span></div>
-              </div>
-              <span className="text-[12px] font-bold tabular-nums text-amber shrink-0">{formatCHF(fu.value)}</span>
-            </button>
+
+              {/* Dismiss note input */}
+              {dismissingId === fu.id && (
+                <div className="flex items-center gap-2 mt-1.5 ml-7">
+                  <input
+                    type="text"
+                    value={dismissNote}
+                    onChange={(e) => setDismissNote(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleDismiss(fu.id)}
+                    placeholder="Kommentar eingeben (Pflicht)..."
+                    className="glass-input flex-1 px-3 py-1.5 text-[11px]"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleDismiss(fu.id)}
+                    disabled={!dismissNote.trim()}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-opacity"
+                    style={{
+                      background: dismissNote.trim() ? 'color-mix(in srgb, #34D399 15%, transparent)' : 'transparent',
+                      color: dismissNote.trim() ? '#34D399' : 'var(--color-text-dim)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    Erledigt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDismissingId(null); setDismissNote('') }}
+                    className="px-2 py-1.5 rounded-lg text-[11px] text-text-dim hover:text-text transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -278,8 +336,9 @@ export default function DealsPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <StatCard icon={TrendingUp} label="Pipeline-Wert" value={formatCHF(stats.pipelineValue)} color="#F59E0B" />
+            <StatCard icon={TrendingUp} label="Gewichtet" value={formatCHF(stats.weightedPipelineValue)} color="#A78BFA" />
             <StatCard icon={Target} label="Offene Angebote" value={String(stats.totalDeals - stats.wonDeals - stats.lostDeals)} color="#60A5FA" />
             <StatCard icon={Trophy} label="Gewonnen" value={String(stats.wonDeals)} color="#34D399" />
             <StatCard icon={XCircle} label="Win-Rate" value={`${stats.winRate}%`} color={stats.winRate >= 50 ? '#34D399' : '#F87171'} />

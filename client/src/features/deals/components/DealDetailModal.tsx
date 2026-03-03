@@ -2,11 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar,
   Trash2, ChevronDown, Trophy, XCircle, FileText, Clock,
+  MessageSquare, PhoneCall, Users as UsersIcon,
+  Zap, Send, Percent, CalendarClock,
 } from 'lucide-react'
 import {
-  useDeal, useUpdateDeal, useDeleteDeal,
+  useDeal, useUpdateDeal, useDeleteDeal, useAddActivity,
   stageLabels, stageColors, priorityLabels, priorityColors, formatCHF,
-  type DealStage, type DealPriority,
+  activityTypeLabels, activityTypeColors,
+  type DealStage, type DealPriority, type ActivityType,
 } from '@/hooks/useDeals'
 
 interface Props {
@@ -26,11 +29,21 @@ function relativeTime(date: string): string {
   return new Date(date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+const activityIcons: Record<ActivityType, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  NOTE: MessageSquare,
+  CALL: PhoneCall,
+  EMAIL: Mail,
+  MEETING: UsersIcon,
+  STATUS_CHANGE: Zap,
+  SYSTEM: Zap,
+}
+
 export default function DealDetailModal({ dealId, onClose }: Props) {
   const { data: dealResponse, isLoading } = useDeal(dealId)
   const deal = dealResponse?.data ?? null
   const updateDeal = useUpdateDeal()
   const deleteDeal = useDeleteDeal()
+  const addActivity = useAddActivity()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
@@ -43,6 +56,8 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const [editStage, setEditStage] = useState<DealStage>('ERSTELLT')
   const [editPriority, setEditPriority] = useState<DealPriority>('MEDIUM')
   const [editExpectedClose, setEditExpectedClose] = useState('')
+  const [editWinProb, setEditWinProb] = useState('')
+  const [editFollowUpDate, setEditFollowUpDate] = useState('')
   const [editNotes, setEditNotes] = useState('')
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -50,6 +65,10 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const [showLostConfirm, setShowLostConfirm] = useState(false)
   const [lostReason, setLostReason] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  // Activity input
+  const [activityText, setActivityText] = useState('')
+  const [activityType, setActivityType] = useState<ActivityType>('NOTE')
 
   const backdropRef = useRef<HTMLDivElement>(null)
 
@@ -65,6 +84,8 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
       setEditStage(deal.stage)
       setEditPriority(deal.priority)
       setEditExpectedClose(deal.expectedCloseDate ?? '')
+      setEditWinProb(deal.winProbability != null ? String(deal.winProbability) : '')
+      setEditFollowUpDate(deal.followUpDate ?? '')
       setEditNotes(deal.notes ?? '')
     }
   }, [deal])
@@ -93,6 +114,8 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
       company: editCompany.trim() || undefined, address: editAddress.trim(),
       value: Number(editValue) || 0, stage: editStage, priority: editPriority,
       expectedCloseDate: editExpectedClose || undefined, notes: editNotes.trim() || undefined,
+      winProbability: editWinProb ? Number(editWinProb) : undefined,
+      followUpDate: editFollowUpDate || undefined,
     })
     setIsEditing(false)
     setSuccessMsg('Aenderungen gespeichert')
@@ -103,7 +126,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     if (!deal) return
     updateDeal.mutate({ id: deal.id, stage: 'GEWONNEN' as DealStage })
     setShowWonConfirm(false)
-    setSuccessMsg('Angebot als gewonnen markiert!')
+    setSuccessMsg('Angebot als gewonnen markiert – Projekt wird erstellt!')
     setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
   }
 
@@ -126,6 +149,13 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     setTimeout(() => { setSuccessMsg(''); onClose() }, 1200)
   }
 
+  const handleAddActivity = () => {
+    if (!deal || !activityText.trim()) return
+    addActivity.mutate({ dealId: deal.id, type: activityType, text: activityText.trim() })
+    setActivityText('')
+    setActivityType('NOTE')
+  }
+
   if (isLoading || !deal) {
     return (
       <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }}>
@@ -135,10 +165,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   }
 
   const isClosed = deal.stage === 'GEWONNEN' || deal.stage === 'VERLOREN'
+  const sortedActivities = [...deal.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return (
     <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-      <div role="dialog" aria-modal="true" className="outline-none w-full max-w-[640px] mx-4 max-h-[90vh] flex flex-col" style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}>
+      <div role="dialog" aria-modal="true" className="outline-none w-full max-w-[700px] mx-4 max-h-[90vh] flex flex-col" style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
           <div className="flex-1 min-w-0 pr-4">
@@ -152,6 +183,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] }} />
                 {stageLabels[deal.stage]}
               </span>
+              {deal.winProbability != null && (
+                <span className="text-[10px] font-bold tabular-nums" style={{ color: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171' }}>
+                  {deal.winProbability}%
+                </span>
+              )}
               <span className="text-[11px] text-text-dim">Erstellt {relativeTime(deal.createdAt)}</span>
             </div>
           </div>
@@ -175,14 +211,31 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Value */}
-          <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Angebotswert</p>
-            {isEditing ? (
-              <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="glass-input px-3 py-1 text-lg font-bold tabular-nums w-full" />
-            ) : (
-              <p className="text-[22px] font-extrabold tabular-nums text-amber">{formatCHF(deal.value)}</p>
-            )}
+          {/* Value + Win Probability row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Angebotswert</p>
+              {isEditing ? (
+                <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="glass-input px-3 py-1 text-lg font-bold tabular-nums w-full" />
+              ) : (
+                <p className="text-[22px] font-extrabold tabular-nums text-amber">{formatCHF(deal.value)}</p>
+              )}
+            </div>
+            <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #A78BFA 6%, transparent)', border: '1px solid color-mix(in srgb, #A78BFA 15%, transparent)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1 flex items-center gap-1">
+                <Percent size={10} strokeWidth={2} /> Abschlusswahrscheinlichkeit
+              </p>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <input type="range" min="0" max="100" step="5" value={editWinProb || '50'} onChange={(e) => setEditWinProb(e.target.value)} className="flex-1 accent-violet-400" />
+                  <span className="text-lg font-extrabold tabular-nums text-violet-400 w-12 text-right">{editWinProb || '50'}%</span>
+                </div>
+              ) : (
+                <p className="text-[22px] font-extrabold tabular-nums" style={{ color: (deal.winProbability ?? 0) >= 70 ? '#34D399' : (deal.winProbability ?? 0) >= 40 ? '#F59E0B' : '#F87171' }}>
+                  {deal.winProbability != null ? `${deal.winProbability}%` : '\u2014'}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Contact */}
@@ -236,19 +289,40 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
             </div>
           </div>
 
-          {/* Expected Close */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
-            {isEditing ? (
-              <input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} className="glass-input px-3 py-1.5 text-[12px]" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <Calendar size={14} className="text-text-dim" strokeWidth={1.8} />
-                <span className="text-[12px] text-text-sec tabular-nums">
-                  {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : '\u2014'}
-                </span>
-              </div>
-            )}
+          {/* Expected Close + Follow-Up Date */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
+              {isEditing ? (
+                <input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} className="text-text-dim" strokeWidth={1.8} />
+                  <span className="text-[12px] text-text-sec tabular-nums">
+                    {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : '\u2014'}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5 flex items-center gap-1">
+                <CalendarClock size={10} strokeWidth={2} /> Naechstes Follow-Up
+              </p>
+              {isEditing ? (
+                <input type="date" value={editFollowUpDate} onChange={(e) => setEditFollowUpDate(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CalendarClock size={14} className="text-text-dim" strokeWidth={1.8} />
+                  <span className="text-[12px] tabular-nums" style={{
+                    color: deal.followUpDate
+                      ? new Date(deal.followUpDate) <= new Date() ? '#F87171' : '#F59E0B'
+                      : 'var(--color-text-sec)',
+                  }}>
+                    {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Nicht gesetzt'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {deal.closedAt && (
@@ -267,13 +341,81 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Notizen</p>
             {isEditing ? (
-              <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={4} className="glass-input w-full px-3 py-2 text-[12px] resize-none" />
+              <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} className="glass-input w-full px-3 py-2 text-[12px] resize-none" />
             ) : (
               <div className="flex items-start gap-2">
                 <FileText size={14} className="text-text-dim shrink-0 mt-0.5" strokeWidth={1.8} />
                 <p className="text-[12px] text-text-sec whitespace-pre-wrap">{deal.notes ?? 'Keine Notizen vorhanden.'}</p>
               </div>
             )}
+          </div>
+
+          {/* ── Activities Log ── */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">Aktivitaeten ({deal.activities.length})</p>
+
+            {/* Add Activity */}
+            {!isClosed && (
+              <div className="flex items-start gap-2 mb-4">
+                <div className="relative shrink-0">
+                  <select
+                    value={activityType}
+                    onChange={(e) => setActivityType(e.target.value as ActivityType)}
+                    className="glass-input appearance-none pl-3 pr-7 py-2 text-[11px] font-medium cursor-pointer"
+                    style={{ minWidth: '90px' }}
+                  >
+                    {(['NOTE', 'CALL', 'EMAIL', 'MEETING'] as ActivityType[]).map((t) => (
+                      <option key={t} value={t} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                        {activityTypeLabels[t]}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+                </div>
+                <input
+                  type="text"
+                  value={activityText}
+                  onChange={(e) => setActivityText(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddActivity()}
+                  placeholder="Aktivitaet hinzufuegen..."
+                  className="glass-input flex-1 px-3 py-2 text-[12px]"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddActivity}
+                  disabled={!activityText.trim()}
+                  className="shrink-0 w-8 h-8 rounded-[10px] flex items-center justify-center transition-all"
+                  style={{
+                    background: activityText.trim() ? 'color-mix(in srgb, #A78BFA 15%, transparent)' : 'transparent',
+                    color: activityText.trim() ? '#A78BFA' : 'var(--color-text-dim)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                >
+                  <Send size={14} strokeWidth={2} />
+                </button>
+              </div>
+            )}
+
+            {/* Activity List */}
+            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+              {sortedActivities.map((act) => {
+                const ActIcon = activityIcons[act.type] ?? Zap
+                return (
+                  <div key={act.id} className="flex items-start gap-2.5 py-1.5">
+                    <div
+                      className="w-6 h-6 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: `color-mix(in srgb, ${activityTypeColors[act.type]} 12%, transparent)` }}
+                    >
+                      <ActIcon size={12} strokeWidth={2} style={{ color: activityTypeColors[act.type] }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] text-text-sec">{act.text}</p>
+                      <p className="text-[10px] text-text-dim mt-0.5">{relativeTime(act.createdAt)}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
 
@@ -288,10 +430,13 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           )}
 
           {showWonConfirm && (
-            <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[12px] text-emerald-400 flex-1">Angebot als gewonnen markieren?</span>
-              <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Abbrechen</button>
-              <button type="button" onClick={handleMarkWon} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#34D399' }}>Gewonnen!</button>
+            <div className="space-y-2.5 mb-3">
+              <p className="text-[12px] text-emerald-400 font-semibold">Angebot als gewonnen markieren und zu Projekt konvertieren?</p>
+              <p className="text-[11px] text-text-sec">Alle Aktivitaeten und Daten werden zum Projekt uebernommen.</p>
+              <div className="flex items-center gap-2.5">
+                <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary flex-1 px-3 py-1.5 text-[11px] text-center">Abbrechen</button>
+                <button type="button" onClick={handleMarkWon} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white text-center" style={{ background: '#34D399' }}>Gewonnen &rarr; Projekt</button>
+              </div>
             </div>
           )}
 
