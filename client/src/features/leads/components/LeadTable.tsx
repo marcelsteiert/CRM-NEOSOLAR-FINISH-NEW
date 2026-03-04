@@ -398,7 +398,7 @@ function InlineTagCell({
           }}
         >
           {allTags.length === 0 ? (
-            <p className="px-3 py-2 text-[11px] text-text-dim">Keine Tags verfuegbar</p>
+            <p className="px-3 py-2 text-[11px] text-text-dim">Keine Tags verfügbar</p>
           ) : (
             allTags.map((tag) => {
               const isActive = lead.tags.includes(tag.id)
@@ -644,7 +644,7 @@ export default function LeadTable({
                             background: 'color-mix(in srgb, #F87171 12%, transparent)',
                           }}
                         >
-                          Ja, loeschen
+                          Ja, löschen
                         </button>
                         <button
                           type="button"
@@ -683,7 +683,7 @@ export default function LeadTable({
                             e.stopPropagation()
                             setConfirmDeleteId(lead.id)
                           }}
-                          aria-label="Lead loeschen"
+                          aria-label="Lead löschen"
                           className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-red hover:bg-red/10 transition-all duration-150"
                         >
                           <Trash2 size={14} strokeWidth={1.8} />

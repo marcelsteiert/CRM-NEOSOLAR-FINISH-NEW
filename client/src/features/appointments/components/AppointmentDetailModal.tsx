@@ -106,7 +106,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       notes: editNotes.trim() || undefined,
     })
     setIsEditing(false)
-    setSuccessMsg('Aenderungen gespeichert')
+    setSuccessMsg('Änderungen gespeichert')
     setTimeout(() => setSuccessMsg(''), 2000)
   }
 
@@ -122,7 +122,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     if (!appt) return
     deleteAppt.mutate(appt.id)
     setShowDeleteConfirm(false)
-    setSuccessMsg('Termin geloescht')
+    setSuccessMsg('Termin gelöscht')
     setTimeout(() => { setSuccessMsg(''); onClose() }, 1200)
   }
 
@@ -271,7 +271,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
               )}
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Prioritaet</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Priorität</p>
               {isEditing ? (
                 <div className="relative">
                   <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as AppointmentPriority)} className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer">
@@ -382,9 +382,9 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
         <div className="px-6 py-4 border-t border-border shrink-0">
           {showDeleteConfirm && (
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[12px] text-red flex-1">Termin endgueltig loeschen?</span>
+              <span className="text-[12px] text-red flex-1">Termin endgültig löschen?</span>
               <button type="button" onClick={() => setShowDeleteConfirm(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Abbrechen</button>
-              <button type="button" onClick={handleDelete} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#F87171' }}>Loeschen</button>
+              <button type="button" onClick={handleDelete} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#F87171' }}>Löschen</button>
             </div>
           )}
 
@@ -427,7 +427,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
               <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>
                 <Trash2 size={14} strokeWidth={1.8} />
-                Loeschen
+                Löschen
               </button>
             </div>
           )}

@@ -153,7 +153,7 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
     const idx = mockDocuments.findIndex((d) => d.id === req.params.id);
     if (idx === -1) throw new AppError('Dokument nicht gefunden', 404);
     mockDocuments.splice(idx, 1);
-    res.json({ message: 'Dokument geloescht' });
+    res.json({ message: 'Dokument gelöscht' });
   } catch (err) {
     next(err);
   }

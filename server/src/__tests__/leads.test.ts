@@ -14,7 +14,7 @@ beforeAll(() => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/leads', () => {
-  it('gibt eine Liste von Leads zurueck', async () => {
+  it('gibt eine Liste von Leads zurück', async () => {
     const res = await request(app).get('/api/v1/leads')
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('data')
@@ -91,7 +91,7 @@ describe('GET /api/v1/leads', () => {
   })
 
   it('sucht nach Adresse', async () => {
-    const res = await request(app).get('/api/v1/leads?search=Zuerich')
+    const res = await request(app).get('/api/v1/leads?search=Zürich')
     expect(res.status).toBe(200)
     expect(res.body.data.length).toBeGreaterThan(0)
   })
@@ -147,7 +147,7 @@ describe('GET /api/v1/leads', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/leads/:id', () => {
-  it('gibt einen einzelnen Lead zurueck', async () => {
+  it('gibt einen einzelnen Lead zurück', async () => {
     const list = await request(app).get('/api/v1/leads')
     const leadId = list.body.data[0].id
 
@@ -156,7 +156,7 @@ describe('GET /api/v1/leads/:id', () => {
     expect(res.body.data.id).toBe(leadId)
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).get(
       '/api/v1/leads/00000000-0000-0000-0000-000000000000',
     )
@@ -173,7 +173,7 @@ describe('POST /api/v1/leads', () => {
     const newLead = {
       firstName: 'Test',
       lastName: 'Benutzer',
-      address: 'Teststrasse 1, 8000 Zuerich',
+      address: 'Teststrasse 1, 8000 Zürich',
       phone: '+41 44 000 00 00',
       email: 'test@example.ch',
       source: 'HOMEPAGE',
@@ -244,7 +244,7 @@ describe('POST /api/v1/leads', () => {
     await request(app).post('/api/v1/leads').send({
       firstName: 'Neu',
       lastName: 'InListe',
-      address: 'Neustrasse 1, 8000 Zuerich',
+      address: 'Neustrasse 1, 8000 Zürich',
       phone: '+41 44 111 11 11',
       email: 'neuliste@test.ch',
       source: 'SONSTIGE',
@@ -309,7 +309,7 @@ describe('PUT /api/v1/leads/:id', () => {
     expect(res.body.data.value).toBe(99999)
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app)
       .put('/api/v1/leads/00000000-0000-0000-0000-000000000000')
       .send({ company: 'Test' })
@@ -340,12 +340,12 @@ describe('PUT /api/v1/leads/:id', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('DELETE /api/v1/leads/:id', () => {
-  it('loescht einen Lead (soft delete)', async () => {
-    // Erstelle einen Lead zum Loeschen
+  it('löscht einen Lead (soft delete)', async () => {
+    // Erstelle einen Lead zum Löschen
     const create = await request(app).post('/api/v1/leads').send({
       firstName: 'Zum',
-      lastName: 'Loeschen',
-      address: 'Loeschstrasse 1, 8000 Zuerich',
+      lastName: 'Löschen',
+      address: 'Löschstrasse 1, 8000 Zürich',
       phone: '+41 44 999 99 99',
       email: 'loeschen@test.ch',
       source: 'SONSTIGE',
@@ -354,14 +354,14 @@ describe('DELETE /api/v1/leads/:id', () => {
 
     const res = await request(app).delete(`/api/v1/leads/${leadId}`)
     expect(res.status).toBe(200)
-    expect(res.body.message).toContain('geloescht')
+    expect(res.body.message).toContain('gelöscht')
   })
 
-  it('geloeschter Lead erscheint nicht mehr in der Liste', async () => {
+  it('gelöschter Lead erscheint nicht mehr in der Liste', async () => {
     const create = await request(app).post('/api/v1/leads').send({
       firstName: 'Verschwinde',
       lastName: 'Test',
-      address: 'Weg 1, 8000 Zuerich',
+      address: 'Weg 1, 8000 Zürich',
       phone: '+41 44 888 88 88',
       email: 'verschwinde@test.ch',
       source: 'SONSTIGE',
@@ -374,7 +374,7 @@ describe('DELETE /api/v1/leads/:id', () => {
     expect(get.status).toBe(404)
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).delete(
       '/api/v1/leads/00000000-0000-0000-0000-000000000000',
     )
@@ -407,7 +407,7 @@ describe('POST /api/v1/leads/:id/tags', () => {
     const create = await request(app).post('/api/v1/leads').send({
       firstName: 'Tag',
       lastName: 'Doppelt',
-      address: 'Tagstrasse 1, 8000 Zuerich',
+      address: 'Tagstrasse 1, 8000 Zürich',
       phone: '+41 44 222 22 22',
       email: 'tagdoppelt@test.ch',
       source: 'HOMEPAGE',
@@ -503,7 +503,7 @@ describe('PUT /api/v1/leads/:id/move', () => {
     expect(res.status).toBe(422)
   })
 
-  it('gibt 404 fuer unbekannte Lead-ID', async () => {
+  it('gibt 404 für unbekannte Lead-ID', async () => {
     const res = await request(app)
       .put('/api/v1/leads/00000000-0000-0000-0000-000000000000/move')
       .send({ bucketId: 'b1000001-0000-4000-a000-000000000003' })

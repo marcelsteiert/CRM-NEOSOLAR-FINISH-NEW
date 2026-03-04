@@ -87,7 +87,7 @@ export default function ReminderPopup() {
                     isOverdue ? 'text-red' : 'text-text-dim',
                   ].join(' ')}
                 >
-                  {isOverdue ? 'Ueberfaellig' : formatDueTime(reminder.dueAt)}
+                  {isOverdue ? 'Überfällig' : formatDueTime(reminder.dueAt)}
                 </span>
               </div>
               <button
@@ -115,7 +115,7 @@ export default function ReminderPopup() {
 
 function formatDueTime(dueAt: string): string {
   const diff = new Date(dueAt).getTime() - Date.now()
-  if (diff < 0) return 'Ueberfaellig'
+  if (diff < 0) return 'Überfällig'
   const mins = Math.floor(diff / 60000)
   if (mins < 60) return `in ${mins} Min.`
   const hours = Math.floor(mins / 60)

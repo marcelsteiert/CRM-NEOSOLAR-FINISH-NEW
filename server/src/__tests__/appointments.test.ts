@@ -14,7 +14,7 @@ beforeAll(() => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/appointments', () => {
-  it('gibt eine Liste von Terminen zurueck', async () => {
+  it('gibt eine Liste von Terminen zurück', async () => {
     const res = await request(app).get('/api/v1/appointments')
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('data')
@@ -42,7 +42,7 @@ describe('GET /api/v1/appointments', () => {
     expect(Array.isArray(appt.checklist)).toBe(true)
   })
 
-  it('berechnet travelMinutes korrekt fuer bekannte Staedte', async () => {
+  it('berechnet travelMinutes korrekt für bekannte Städte', async () => {
     const res = await request(app).get('/api/v1/appointments')
     const wetzikon = res.body.data.find((a: { address: string }) => a.address.includes('Wetzikon'))
     if (wetzikon) {
@@ -62,7 +62,7 @@ describe('GET /api/v1/appointments', () => {
     })
   })
 
-  it('filtert nach Prioritaet', async () => {
+  it('filtert nach Priorität', async () => {
     const res = await request(app).get('/api/v1/appointments?priority=URGENT')
     expect(res.status).toBe(200)
     res.body.data.forEach((a: { priority: string }) => {
@@ -121,7 +121,7 @@ describe('GET /api/v1/appointments', () => {
     }
   })
 
-  it('zeigt keine geloeschten Termine an', async () => {
+  it('zeigt keine gelöschten Termine an', async () => {
     const res = await request(app).get('/api/v1/appointments')
     res.body.data.forEach((a: { deletedAt: string | null }) => {
       expect(a.deletedAt).toBeNull()
@@ -134,7 +134,7 @@ describe('GET /api/v1/appointments', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/appointments/stats', () => {
-  it('gibt Statistiken zurueck', async () => {
+  it('gibt Statistiken zurück', async () => {
     const res = await request(app).get('/api/v1/appointments/stats')
     expect(res.status).toBe(200)
     expect(res.body.data).toHaveProperty('total')
@@ -158,7 +158,7 @@ describe('GET /api/v1/appointments/stats', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/appointments/:id', () => {
-  it('gibt einen einzelnen Termin zurueck', async () => {
+  it('gibt einen einzelnen Termin zurück', async () => {
     const list = await request(app).get('/api/v1/appointments')
     const id = list.body.data[0].id
     const res = await request(app).get(`/api/v1/appointments/${id}`)
@@ -167,7 +167,7 @@ describe('GET /api/v1/appointments/:id', () => {
     expect(res.body.data).toHaveProperty('travelMinutes')
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).get('/api/v1/appointments/non-existent-id')
     expect(res.status).toBe(404)
   })
@@ -294,7 +294,7 @@ describe('PUT /api/v1/appointments/:id', () => {
     expect(res.body.data.status).toBe('VORBEREITUNG')
   })
 
-  it('setzt updatedAt bei Aenderung', async () => {
+  it('setzt updatedAt bei Änderung', async () => {
     const list = await request(app).get('/api/v1/appointments')
     const appt = list.body.data[0]
     const before = new Date(appt.updatedAt).getTime()
@@ -306,7 +306,7 @@ describe('PUT /api/v1/appointments/:id', () => {
     expect(after).toBeGreaterThanOrEqual(before)
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).put('/api/v1/appointments/non-existent-id').send({
       notes: 'Test',
     })
@@ -319,25 +319,25 @@ describe('PUT /api/v1/appointments/:id', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('DELETE /api/v1/appointments/:id', () => {
-  it('loescht einen Termin (soft delete)', async () => {
+  it('löscht einen Termin (soft delete)', async () => {
     const create = await request(app).post('/api/v1/appointments').send({
-      contactName: 'Zum Loeschen',
+      contactName: 'Zum Löschen',
       contactEmail: 'delete@test.ch',
       contactPhone: '+41 79 000 00 00',
-      address: 'Loeschweg 1, 8000 Zuerich',
+      address: 'Löschweg 1, 8000 Zuerich',
     })
     const id = create.body.data.id
 
     const res = await request(app).delete(`/api/v1/appointments/${id}`)
     expect(res.status).toBe(200)
 
-    // Geloeschter Termin nicht mehr in Liste
+    // Gelöschter Termin nicht mehr in Liste
     const list = await request(app).get('/api/v1/appointments')
     const found = list.body.data.find((a: { id: string }) => a.id === id)
     expect(found).toBeUndefined()
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).delete('/api/v1/appointments/non-existent-id')
     expect(res.status).toBe(404)
   })

@@ -154,7 +154,7 @@ const mockTasks: Task[] = [
   },
   {
     id: uuid(),
-    title: 'Finanzierungsmodell Keller pruefen',
+    title: 'Finanzierungsmodell Keller prüfen',
     description: 'Grossprojekt 450kWp, ZKB-Finanzierung',
     status: 'OFFEN',
     priority: 'URGENT',
@@ -333,7 +333,7 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
     const idx = mockTasks.findIndex((t) => t.id === req.params.id);
     if (idx === -1) throw new AppError('Aufgabe nicht gefunden', 404);
     mockTasks.splice(idx, 1);
-    res.json({ message: 'Aufgabe erfolgreich geloescht' });
+    res.json({ message: 'Aufgabe erfolgreich gelöscht' });
   } catch (err) {
     next(err);
   }

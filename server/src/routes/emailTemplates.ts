@@ -35,26 +35,26 @@ const mockTemplates: EmailTemplate[] = [
   {
     id: 'tpl-001',
     name: 'Erstanfrage Antwort',
-    subject: 'Vielen Dank fuer Ihre Anfrage – NeoSolar AG',
-    body: 'Guten Tag {{firstName}} {{lastName}},\n\nVielen Dank fuer Ihr Interesse an einer Solaranlage. Wir freuen uns, Sie persoenlich beraten zu duerfen.\n\nGerne vereinbaren wir einen unverbindlichen Beratungstermin. Wann passt es Ihnen am besten?\n\nFreundliche Gruesse\nNeoSolar AG',
+    subject: 'Vielen Dank für Ihre Anfrage – NeoSolar AG',
+    body: 'Guten Tag {{firstName}} {{lastName}},\n\nVielen Dank für Ihr Interesse an einer Solaranlage. Wir freuen uns, Sie persönlich beraten zu dürfen.\n\nGerne vereinbaren wir einen unverbindlichen Beratungstermin. Wann passt es Ihnen am besten?\n\nFreundliche Grüsse\nNeoSolar AG',
   },
   {
     id: 'tpl-002',
     name: 'Offerte Begleitschreiben',
     subject: 'Ihre individuelle Offerte – NeoSolar AG',
-    body: 'Guten Tag {{firstName}} {{lastName}},\n\nAnbei erhalten Sie unsere massgeschneiderte Offerte fuer Ihre Solaranlage.\n\nDie wichtigsten Eckdaten:\n- Anlageleistung: {{leistung}}\n- Investition: {{preis}}\n- Geschaetzte Amortisation: {{amortisation}}\n\nBei Fragen stehen wir Ihnen jederzeit zur Verfuegung.\n\nFreundliche Gruesse\nNeoSolar AG',
+    body: 'Guten Tag {{firstName}} {{lastName}},\n\nAnbei erhalten Sie unsere massgeschneiderte Offerte für Ihre Solaranlage.\n\nDie wichtigsten Eckdaten:\n- Anlageleistung: {{leistung}}\n- Investition: {{preis}}\n- Geschätzte Amortisation: {{amortisation}}\n\nBei Fragen stehen wir Ihnen jederzeit zur Verfügung.\n\nFreundliche Grüsse\nNeoSolar AG',
   },
   {
     id: 'tpl-003',
     name: 'Nachfassen',
     subject: 'Rueckmeldung zu unserer Offerte – NeoSolar AG',
-    body: 'Guten Tag {{firstName}} {{lastName}},\n\nWir moechten uns kurz erkundigen, ob Sie unsere Offerte erhalten haben und ob noch Fragen offen sind.\n\nGerne besprechen wir alles in einem kurzen Telefonat oder vor Ort.\n\nFreundliche Gruesse\nNeoSolar AG',
+    body: 'Guten Tag {{firstName}} {{lastName}},\n\nWir möchten uns kurz erkundigen, ob Sie unsere Offerte erhalten haben und ob noch Fragen offen sind.\n\nGerne besprechen wir alles in einem kurzen Telefonat oder vor Ort.\n\nFreundliche Grüsse\nNeoSolar AG',
   },
   {
     id: 'tpl-004',
     name: 'Terminbestaetigung',
     subject: 'Bestaetigung Ihres Termins – NeoSolar AG',
-    body: 'Guten Tag {{firstName}} {{lastName}},\n\nHiermit bestaetigen wir unseren Termin am {{datum}} um {{uhrzeit}}.\n\nAdresse: {{adresse}}\n\nWir freuen uns auf das Gespraech.\n\nFreundliche Gruesse\nNeoSolar AG',
+    body: 'Guten Tag {{firstName}} {{lastName}},\n\nHiermit bestätigen wir unseren Termin am {{datum}} um {{uhrzeit}}.\n\nAdresse: {{adresse}}\n\nWir freuen uns auf das Gespräch.\n\nFreundliche Grüsse\nNeoSolar AG',
   },
 ];
 

@@ -43,7 +43,7 @@ export default function DealTable({ deals, onSelectDeal, sortBy, sortOrder, onSo
     { key: 'company', label: 'Unternehmen', sortField: 'company' },
     { key: 'value', label: 'Wert', sortField: 'value' },
     { key: 'stage', label: 'Phase' },
-    { key: 'priority', label: 'Prioritaet' },
+    { key: 'priority', label: 'Priorität' },
     { key: 'expectedCloseDate', label: 'Erwarteter Abschluss', sortField: 'expectedCloseDate' },
     { key: 'createdAt', label: 'Erstellt', sortField: 'createdAt' },
   ]

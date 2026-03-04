@@ -177,7 +177,7 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
 
     mockTags.splice(index, 1);
 
-    res.json({ message: 'Tag erfolgreich geloescht' });
+    res.json({ message: 'Tag erfolgreich gelöscht' });
   } catch (err) {
     next(err);
   }

@@ -22,7 +22,7 @@ function formatCHFExact(value: number): string {
   }).format(value)
 }
 
-const MONTH_NAMES = ['Januar', 'Februar', 'Maerz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+const MONTH_NAMES = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
 
 /* ── Component ── */
 
@@ -150,7 +150,7 @@ export default function ProvisionPage() {
       <div className="glass-card overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex items-center gap-2">
           <Users size={16} className="text-text-dim" strokeWidth={1.8} />
-          <h2 className="text-[13px] font-bold">Provisionen nach Verkaeufer</h2>
+          <h2 className="text-[13px] font-bold">Provisionen nach Verkäufer</h2>
         </div>
 
         {isLoading ? (
@@ -214,7 +214,7 @@ export default function ProvisionPage() {
         </div>
         <div className="p-6">
           {!monthlyData.length ? (
-            <div className="text-center text-text-dim text-[12px] py-4">Keine Daten verfuegbar</div>
+            <div className="text-center text-text-dim text-[12px] py-4">Keine Daten verfügbar</div>
           ) : (
             <div className="flex items-end gap-3 h-[140px]">
               {monthlyData.map((m) => {

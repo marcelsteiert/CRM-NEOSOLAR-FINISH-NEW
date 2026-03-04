@@ -14,7 +14,7 @@ beforeAll(() => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/deals', () => {
-  it('gibt eine Liste von Angeboten zurueck', async () => {
+  it('gibt eine Liste von Angeboten zurück', async () => {
     const res = await request(app).get('/api/v1/deals')
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('data')
@@ -51,7 +51,7 @@ describe('GET /api/v1/deals', () => {
     })
   })
 
-  it('filtert nach Prioritaet', async () => {
+  it('filtert nach Priorität', async () => {
     const res = await request(app).get('/api/v1/deals?priority=HIGH')
     expect(res.status).toBe(200)
     res.body.data.forEach((d: { priority: string }) => {
@@ -95,7 +95,7 @@ describe('GET /api/v1/deals', () => {
     }
   })
 
-  it('zeigt keine geloeschten Angebote an', async () => {
+  it('zeigt keine gelöschten Angebote an', async () => {
     const res = await request(app).get('/api/v1/deals')
     res.body.data.forEach((d: { deletedAt: string | null }) => {
       expect(d.deletedAt).toBeNull()
@@ -108,7 +108,7 @@ describe('GET /api/v1/deals', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/deals/stats', () => {
-  it('gibt Angebots-Statistiken zurueck', async () => {
+  it('gibt Angebots-Statistiken zurück', async () => {
     const res = await request(app).get('/api/v1/deals/stats')
     expect(res.status).toBe(200)
     expect(res.body.data).toHaveProperty('totalDeals')
@@ -124,7 +124,7 @@ describe('GET /api/v1/deals/stats', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/deals/follow-ups', () => {
-  it('gibt Follow-Up-Liste zurueck', async () => {
+  it('gibt Follow-Up-Liste zurück', async () => {
     const res = await request(app).get('/api/v1/deals/follow-ups')
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('data')
@@ -153,7 +153,7 @@ describe('GET /api/v1/deals/follow-ups', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('GET /api/v1/deals/:id', () => {
-  it('gibt ein einzelnes Angebot zurueck', async () => {
+  it('gibt ein einzelnes Angebot zurück', async () => {
     const list = await request(app).get('/api/v1/deals')
     const id = list.body.data[0].id
     const res = await request(app).get(`/api/v1/deals/${id}`)
@@ -161,7 +161,7 @@ describe('GET /api/v1/deals/:id', () => {
     expect(res.body.data.id).toBe(id)
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).get('/api/v1/deals/non-existent-id')
     expect(res.status).toBe(404)
   })
@@ -257,7 +257,7 @@ describe('PUT /api/v1/deals/:id', () => {
     expect(res.body.data.notes).toBe('Aktualisierte Angebots-Notizen')
   })
 
-  it('aendert Stage auf GESENDET', async () => {
+  it('ändert Stage auf GESENDET', async () => {
     const list = await request(app).get('/api/v1/deals')
     const deal = list.body.data.find((d: { stage: string }) => d.stage === 'ERSTELLT')
     if (!deal) return
@@ -303,7 +303,7 @@ describe('PUT /api/v1/deals/:id', () => {
     expect(res.body.data.closedAt).not.toBeNull()
   })
 
-  it('setzt updatedAt bei Aenderung', async () => {
+  it('setzt updatedAt bei Änderung', async () => {
     const list = await request(app).get('/api/v1/deals')
     const deal = list.body.data[0]
     const before = new Date(deal.updatedAt).getTime()
@@ -315,7 +315,7 @@ describe('PUT /api/v1/deals/:id', () => {
     expect(after).toBeGreaterThanOrEqual(before)
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).put('/api/v1/deals/non-existent-id').send({
       notes: 'Test',
     })
@@ -328,13 +328,13 @@ describe('PUT /api/v1/deals/:id', () => {
 // ─────────────────────────────────────────────────────────────
 
 describe('DELETE /api/v1/deals/:id', () => {
-  it('loescht ein Angebot (soft delete)', async () => {
+  it('löscht ein Angebot (soft delete)', async () => {
     const create = await request(app).post('/api/v1/deals').send({
-      title: 'Zum Loeschen',
+      title: 'Zum Löschen',
       contactName: 'Delete Test',
       contactEmail: 'delete@test.ch',
       contactPhone: '+41 79 666 77 88',
-      address: 'Loeschweg 1, 8000 Zuerich',
+      address: 'Löschweg 1, 8000 Zuerich',
     })
     const id = create.body.data.id
 
@@ -346,7 +346,7 @@ describe('DELETE /api/v1/deals/:id', () => {
     expect(found).toBeUndefined()
   })
 
-  it('gibt 404 fuer unbekannte ID', async () => {
+  it('gibt 404 für unbekannte ID', async () => {
     const res = await request(app).delete('/api/v1/deals/non-existent-id')
     expect(res.status).toBe(404)
   })

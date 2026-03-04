@@ -166,12 +166,12 @@ export default function AppointmentsPage() {
   const statusTabs: { key: StatusFilter; label: string }[] = [
     { key: 'ALL', label: 'Alle' },
     { key: 'GEPLANT', label: 'Geplant' },
-    { key: 'BESTAETIGT', label: 'Bestaetigt' },
+    { key: 'BESTAETIGT', label: 'Bestätigt' },
     { key: 'VORBEREITUNG', label: 'Vorbereitung' },
   ]
 
   const priorityOptions: { value: AppointmentPriority | 'ALL'; label: string }[] = [
-    { value: 'ALL', label: 'Alle Prioritaeten' },
+    { value: 'ALL', label: 'Alle Prioritäten' },
     ...Object.entries(priorityLabels).map(([key, label]) => ({ value: key as AppointmentPriority, label })),
   ]
 

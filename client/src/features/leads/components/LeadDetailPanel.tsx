@@ -67,8 +67,8 @@ export default function LeadDetailPanel({ lead }: LeadDetailPanelProps) {
   const initials = `${lead.firstName[0]}${lead.lastName[0]}`
 
   const tabs: { key: DetailTab; label: string }[] = [
-    { key: 'overview', label: 'Uebersicht' },
-    { key: 'activities', label: 'Aktivitaeten' },
+    { key: 'overview', label: 'Übersicht' },
+    { key: 'activities', label: 'Aktivitäten' },
     { key: 'documents', label: 'Dokumente' },
   ]
 
@@ -296,10 +296,10 @@ export default function LeadDetailPanel({ lead }: LeadDetailPanelProps) {
             }}
           >
             <p className="text-text-dim text-[12px] font-medium">
-              Noch keine Aktivitaeten erfasst.
+              Noch keine Aktivitäten erfasst.
             </p>
             <p className="text-text-dim text-[11px] mt-1">
-              Aktivitaeten werden hier chronologisch angezeigt.
+              Aktivitäten werden hier chronologisch angezeigt.
             </p>
           </div>
         )}

@@ -53,7 +53,7 @@ function LoadingSkeleton() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {['Angebot', 'Unternehmen', 'Wert', 'Phase', 'Prioritaet', 'Abschluss', 'Erstellt'].map((h) => (
+              {['Angebot', 'Unternehmen', 'Wert', 'Phase', 'Priorität', 'Abschluss', 'Erstellt'].map((h) => (
                 <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">{h}</th>
               ))}
             </tr>
@@ -130,7 +130,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
   const overdueCount = visibleFollowUps.filter((f) => f.urgency === 'OVERDUE').length
 
   const urgencyColors = { CRITICAL: '#F87171', OVERDUE: '#FB923C', WARNING: '#F59E0B' }
-  const urgencyLabels = { CRITICAL: 'Kritisch', OVERDUE: 'Ueberfaellig', WARNING: 'Bald faellig' }
+  const urgencyLabels = { CRITICAL: 'Kritisch', OVERDUE: 'Überfällig', WARNING: 'Bald fällig' }
 
   const handleDismiss = (fuId: string) => {
     if (!dismissNote.trim()) return
@@ -156,7 +156,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
             <p className="text-[11px] text-text-sec">
               {criticalCount > 0 && <span className="text-red font-semibold">{criticalCount} kritisch</span>}
               {criticalCount > 0 && overdueCount > 0 && ' · '}
-              {overdueCount > 0 && <span className="text-orange-400 font-semibold">{overdueCount} ueberfaellig</span>}
+              {overdueCount > 0 && <span className="text-orange-400 font-semibold">{overdueCount} überfällig</span>}
             </p>
           </div>
         </div>
@@ -295,7 +295,7 @@ export default function DealsPage() {
   ]
 
   const priorityOptions: { value: DealPriority | 'ALL'; label: string }[] = [
-    { value: 'ALL', label: 'Alle Prioritaeten' },
+    { value: 'ALL', label: 'Alle Prioritäten' },
     ...Object.entries(priorityLabels).map(([key, label]) => ({ value: key as DealPriority, label })),
   ]
 

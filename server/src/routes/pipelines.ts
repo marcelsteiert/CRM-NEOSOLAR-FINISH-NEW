@@ -81,7 +81,7 @@ const mockPipelines: Pipeline[] = [
   {
     id: PIPELINE_STANDARD_ID,
     name: 'Standard Leads',
-    description: 'Haupt-Pipeline fuer neue Leads und Vertriebsprozess',
+    description: 'Haupt-Pipeline für neue Leads und Vertriebsprozess',
     buckets: [
       {
         id: 'b1000001-0000-4000-a000-000000000001',
@@ -130,7 +130,7 @@ const mockPipelines: Pipeline[] = [
   {
     id: PIPELINE_AFTER_SALES_ID,
     name: 'After-Sales',
-    description: 'Pipeline fuer bestehende Kunden und After-Sales-Prozesse',
+    description: 'Pipeline für bestehende Kunden und After-Sales-Prozesse',
     buckets: [
       {
         id: 'b2000001-0000-4000-a000-000000000001',

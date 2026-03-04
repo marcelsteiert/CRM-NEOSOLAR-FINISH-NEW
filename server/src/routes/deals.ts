@@ -177,7 +177,7 @@ const mockDeals: Deal[] = [
     expectedCloseDate: '2026-04-15',
     winProbability: 40,
     followUpDate: '2026-03-05',
-    notes: 'Offerte fuer 15kWp Anlage mit Speicher gesendet. Wartet auf Rueckmeldung.',
+    notes: 'Offerte für 15kWp Anlage mit Speicher gesendet. Wartet auf Rückmeldung.',
     tags: [],
     activities: [
       { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-20T10:30:00.000Z' },
@@ -206,12 +206,12 @@ const mockDeals: Deal[] = [
     expectedCloseDate: '2026-03-30',
     winProbability: 70,
     followUpDate: '2026-03-04',
-    notes: 'Verhandlung ueber Zahlungskonditionen. Finanzierung ueber Bank geplant.',
+    notes: 'Verhandlung über Zahlungskonditionen. Finanzierung über Bank geplant.',
     tags: [],
     activities: [
       { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-02-18T09:15:00.000Z' },
       { id: uuid(), type: 'MEETING', text: 'Vor-Ort-Besichtigung: 500m2 Flachdach, gute Ausrichtung', createdBy: 'u002', createdAt: '2026-02-22T10:00:00.000Z' },
-      { id: uuid(), type: 'NOTE', text: 'Kundin moechte Finanzierung ueber ZKB', createdBy: 'u002', createdAt: '2026-03-01T11:00:00.000Z' },
+      { id: uuid(), type: 'NOTE', text: 'Kundin möchte Finanzierung über ZKB', createdBy: 'u002', createdAt: '2026-03-01T11:00:00.000Z' },
     ],
     createdAt: '2026-02-18T09:15:00.000Z',
     updatedAt: '2026-03-01T11:00:00.000Z',
@@ -318,7 +318,7 @@ const mockDeals: Deal[] = [
     expectedCloseDate: '2026-06-01',
     winProbability: 20,
     followUpDate: null,
-    notes: 'Rahmenvertrag fuer mehrere Objekte. Offerte in Vorbereitung.',
+    notes: 'Rahmenvertrag für mehrere Objekte. Offerte in Vorbereitung.',
     tags: [],
     activities: [
       { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-02-28T09:00:00.000Z' },
@@ -359,7 +359,7 @@ const mockDeals: Deal[] = [
   },
   {
     id: uuid(),
-    title: 'Offerte Ueberbauung PV-Pflicht Bauer',
+    title: 'Offerte Überbauung PV-Pflicht Bauer',
     leadId: null,
     appointmentId: null,
     contactName: 'Karin Bauer',
@@ -402,7 +402,7 @@ const mockDeals: Deal[] = [
     expectedCloseDate: '2026-03-10',
     winProbability: 0,
     followUpDate: null,
-    notes: 'Kunde hat sich fuer Konkurrenz entschieden. Preislich nicht konkurrenzfaehig.',
+    notes: 'Kunde hat sich für Konkurrenz entschieden. Preislich nicht konkurrenzfähig.',
     tags: [],
     activities: [
       { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u001', createdAt: '2026-02-12T08:00:00.000Z' },
@@ -430,7 +430,7 @@ const mockDeals: Deal[] = [
     expectedCloseDate: '2026-02-28',
     winProbability: 100,
     followUpDate: null,
-    notes: 'Vertrag abgeschlossen. 25kWp Anlage. Uebergang zu Projekt.',
+    notes: 'Vertrag abgeschlossen. 25kWp Anlage. Übergang zu Projekt.',
     tags: [],
     activities: [
       { id: uuid(), type: 'SYSTEM', text: 'Angebot erstellt', createdBy: 'u002', createdAt: '2026-01-15T08:00:00.000Z' },
@@ -846,7 +846,7 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
         deal.activities.push({
           id: uuid(),
           type: 'STATUS_CHANGE',
-          text: `Phase geaendert: ${oldStage} → ${u.stage}`,
+          text: `Phase geändert: ${oldStage} → ${u.stage}`,
           createdBy: 'u001',
           createdAt: new Date().toISOString(),
         });
@@ -870,7 +870,7 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
     if (!deal) throw new AppError('Angebot nicht gefunden', 404);
     deal.deletedAt = new Date().toISOString();
     deal.updatedAt = deal.deletedAt;
-    res.json({ message: 'Angebot erfolgreich geloescht' });
+    res.json({ message: 'Angebot erfolgreich gelöscht' });
   } catch (err) {
     next(err);
   }

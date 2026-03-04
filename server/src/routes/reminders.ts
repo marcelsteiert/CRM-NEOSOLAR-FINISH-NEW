@@ -39,7 +39,7 @@ const mockReminders: Reminder[] = [
     id: uuid(),
     leadId: '*',
     title: 'Dachbesichtigung planen',
-    description: 'Termin mit Kunde vereinbaren fuer Vor-Ort-Analyse.',
+    description: 'Termin mit Kunde vereinbaren für Vor-Ort-Analyse.',
     dueAt: new Date(Date.now() + 3600000).toISOString(), // 1h from now
     dismissed: false,
     createdBy: 'Laura Meier',
@@ -120,7 +120,7 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
       throw new AppError('Erinnerung nicht gefunden', 404);
     }
     mockReminders.splice(idx, 1);
-    res.json({ message: 'Erinnerung geloescht' });
+    res.json({ message: 'Erinnerung gelöscht' });
   } catch (err) {
     next(err);
   }

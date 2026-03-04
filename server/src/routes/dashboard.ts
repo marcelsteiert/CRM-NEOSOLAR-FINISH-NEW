@@ -14,7 +14,7 @@ const router = Router();
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/dashboard/stats
-// Aggregierte Statistiken fuer das Dashboard
+// Aggregierte Statistiken für das Dashboard
 // ---------------------------------------------------------------------------
 
 router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
@@ -48,7 +48,7 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/dashboard/monthly
-// Monatliche Statistiken: Abschluesse + Termine pro Monat + Provision
+// Monatliche Statistiken: Abschlüsse + Termine pro Monat + Provision
 // ---------------------------------------------------------------------------
 
 router.get('/monthly', async (req: Request, res: Response, next: NextFunction) => {
@@ -135,7 +135,7 @@ router.get('/monthly', async (req: Request, res: Response, next: NextFunction) =
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/dashboard/provision
-// Provisions-Berechnung pro Verkaeufer fuer einen Monat
+// Provisions-Berechnung pro Verkäufer für einen Monat
 // ---------------------------------------------------------------------------
 
 router.get('/provision', async (req: Request, res: Response, next: NextFunction) => {
@@ -168,7 +168,7 @@ router.get('/provision', async (req: Request, res: Response, next: NextFunction)
       return closed.getFullYear() === targetYear && closed.getMonth() === targetMon;
     });
 
-    // Gruppierung nach Verkaeufer
+    // Gruppierung nach Verkäufer
     const byUser: Record<string, { deals: { title: string; value: number; closedAt: string }[]; totalValue: number; provision: number }> = {};
 
     for (const deal of wonDeals) {

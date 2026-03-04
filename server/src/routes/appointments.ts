@@ -108,13 +108,13 @@ function withTravelTime(a: Appointment) {
 
 const DEFAULT_CHECKLIST: ChecklistItem[] = [
   { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: false },
-  { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet', checked: false },
-  { id: 'c3', label: 'kWp-Potenzial geschaetzt', checked: false },
+  { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: false },
+  { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: false },
   { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: false },
   { id: 'c5', label: 'Anfahrt geplant', checked: false },
   { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: false },
   { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: false },
-  { id: 'c8', label: 'Kunde ueber Ablauf informiert', checked: false },
+  { id: 'c8', label: 'Kunde über Ablauf informiert', checked: false },
 ];
 
 // ---------------------------------------------------------------------------
@@ -188,15 +188,15 @@ const mockAppointments: Appointment[] = [
     preparationNotes: 'EFH mit Satteldach, ca. 80m2 nutzbar. Kunde interessiert an Speicher.',
     checklist: [
       { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: true },
-      { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet', checked: true },
-      { id: 'c3', label: 'kWp-Potenzial geschaetzt', checked: false },
+      { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: true },
+      { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: false },
       { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: false },
       { id: 'c5', label: 'Anfahrt geplant', checked: true },
       { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: false },
       { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: false },
-      { id: 'c8', label: 'Kunde ueber Ablauf informiert', checked: true },
+      { id: 'c8', label: 'Kunde über Ablauf informiert', checked: true },
     ],
-    notes: 'Nachbar hat bereits PV – Kunde moechte vergleichbares System.',
+    notes: 'Nachbar hat bereits PV – Kunde möchte vergleichbares System.',
     createdAt: '2026-03-01T09:00:00.000Z',
     updatedAt: '2026-03-02T14:30:00.000Z',
     completedAt: null,
@@ -217,16 +217,16 @@ const mockAppointments: Appointment[] = [
     assignedTo: 'u002',
     appointmentDate: '2026-03-05',
     appointmentTime: '14:00',
-    preparationNotes: 'MFH mit 12 Wohneinheiten. Grosses Flachdach. EVG mit ZEV pruefen.',
+    preparationNotes: 'MFH mit 12 Wohneinheiten. Grosses Flachdach. EVG mit ZEV prüfen.',
     checklist: [
       { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: true },
-      { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet', checked: true },
-      { id: 'c3', label: 'kWp-Potenzial geschaetzt', checked: true },
+      { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: true },
+      { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: true },
       { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: true },
       { id: 'c5', label: 'Anfahrt geplant', checked: true },
       { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: false },
       { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: false },
-      { id: 'c8', label: 'Kunde ueber Ablauf informiert', checked: true },
+      { id: 'c8', label: 'Kunde über Ablauf informiert', checked: true },
     ],
     notes: 'Eigentuemerversammlung hat PV-Projekt genehmigt. Budget vorhanden.',
     createdAt: '2026-02-25T10:15:00.000Z',
@@ -252,13 +252,13 @@ const mockAppointments: Appointment[] = [
     preparationNotes: 'Gewerbegebaeude mit grossem Satteldach. Eigenverbrauch optimieren.',
     checklist: [
       { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: true },
-      { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet', checked: true },
-      { id: 'c3', label: 'kWp-Potenzial geschaetzt', checked: true },
+      { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: true },
+      { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: true },
       { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: true },
       { id: 'c5', label: 'Anfahrt geplant', checked: true },
       { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: true },
       { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: true },
-      { id: 'c8', label: 'Kunde ueber Ablauf informiert', checked: false },
+      { id: 'c8', label: 'Kunde über Ablauf informiert', checked: false },
     ],
     notes: 'Foerderbeitraege Kanton SO abklaeren. Kunde hat bereits 3 Offerten.',
     createdAt: '2026-02-20T08:45:00.000Z',
@@ -284,15 +284,15 @@ const mockAppointments: Appointment[] = [
     preparationNotes: 'EFH Neubau. Architektin empfiehlt Indach-Loesung.',
     checklist: [
       { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: true },
-      { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet', checked: true },
-      { id: 'c3', label: 'kWp-Potenzial geschaetzt', checked: true },
+      { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: true },
+      { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: true },
       { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: true },
       { id: 'c5', label: 'Anfahrt geplant', checked: true },
       { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: true },
       { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: true },
-      { id: 'c8', label: 'Kunde ueber Ablauf informiert', checked: true },
+      { id: 'c8', label: 'Kunde über Ablauf informiert', checked: true },
     ],
-    notes: 'Termin erfolgreich. Kundin moechte Offerte fuer 12kWp mit Speicher.',
+    notes: 'Termin erfolgreich. Kundin möchte Offerte für 12kWp mit Speicher.',
     createdAt: '2026-02-18T14:30:00.000Z',
     updatedAt: '2026-02-28T15:00:00.000Z',
     completedAt: '2026-02-28T15:00:00.000Z',
@@ -315,7 +315,7 @@ const mockAppointments: Appointment[] = [
     appointmentTime: '08:30',
     preparationNotes: 'Gewerbebau 600m2 Flachdach. Moegliches Grossprojekt mit Folgeprojekten.',
     checklist: DEFAULT_CHECKLIST.map((c) => ({ ...c })),
-    notes: 'CEO persoenlich. Schnelle Entscheidung erwartet.',
+    notes: 'CEO persönlich. Schnelle Entscheidung erwartet.',
     createdAt: '2026-03-02T16:00:00.000Z',
     updatedAt: '2026-03-02T16:00:00.000Z',
     completedAt: null,
@@ -339,13 +339,13 @@ const mockAppointments: Appointment[] = [
     preparationNotes: 'Weinkeller mit grossem Dach. Interesse an Eigenverbrauchsoptimierung.',
     checklist: [
       { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: true },
-      { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet', checked: false },
-      { id: 'c3', label: 'kWp-Potenzial geschaetzt', checked: false },
+      { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: false },
+      { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: false },
       { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: true },
       { id: 'c5', label: 'Anfahrt geplant', checked: true },
       { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: false },
       { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: false },
-      { id: 'c8', label: 'Kunde ueber Ablauf informiert', checked: false },
+      { id: 'c8', label: 'Kunde über Ablauf informiert', checked: false },
     ],
     notes: null,
     createdAt: '2026-02-28T11:00:00.000Z',
@@ -580,7 +580,7 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
     if (!appt) throw new AppError('Termin nicht gefunden', 404);
     appt.deletedAt = new Date().toISOString();
     appt.updatedAt = appt.deletedAt;
-    res.json({ message: 'Termin erfolgreich geloescht' });
+    res.json({ message: 'Termin erfolgreich gelöscht' });
   } catch (err) {
     next(err);
   }

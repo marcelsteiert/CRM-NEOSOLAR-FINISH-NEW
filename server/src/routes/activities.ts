@@ -27,11 +27,11 @@ function uuid(): string {
 
 // Pre-seeded activities for demo
 const mockActivities: Activity[] = [
-  { id: uuid(), leadId: '*', type: 'CALL', title: 'Erstgespraech gefuehrt', description: 'Interesse an 15kWp Anlage bestaetigt. Termin fuer Dachbesichtigung vereinbart.', createdBy: 'Marco Bianchi', createdAt: '2026-02-15T11:00:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'EMAIL', title: 'Offerte versendet', description: 'Standard-Offerte fuer EFH mit 15kWp versendet.', createdBy: 'Laura Meier', createdAt: '2026-02-16T09:30:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'NOTE', title: 'Notiz hinzugefuegt', description: 'Kunde bevorzugt Schweizer Panels. Budget ca. CHF 40k.', createdBy: 'Marco Bianchi', createdAt: '2026-02-17T14:15:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'MEETING', title: 'Vor-Ort-Besichtigung', description: 'Dachbesichtigung durchgefuehrt. Suedausrichtung bestaetigt, keine Verschattung.', createdBy: 'Simon Keller', createdAt: '2026-02-20T10:00:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'STATUS_CHANGE', title: 'Status geaendert: Qualifiziert', description: null, createdBy: 'System', createdAt: '2026-02-20T10:30:00.000Z' },
+  { id: uuid(), leadId: '*', type: 'CALL', title: 'Erstgespräch geführt', description: 'Interesse an 15kWp Anlage bestätigt. Termin für Dachbesichtigung vereinbart.', createdBy: 'Marco Bianchi', createdAt: '2026-02-15T11:00:00.000Z' },
+  { id: uuid(), leadId: '*', type: 'EMAIL', title: 'Offerte versendet', description: 'Standard-Offerte für EFH mit 15kWp versendet.', createdBy: 'Laura Meier', createdAt: '2026-02-16T09:30:00.000Z' },
+  { id: uuid(), leadId: '*', type: 'NOTE', title: 'Notiz hinzugefügt', description: 'Kunde bevorzugt Schweizer Panels. Budget ca. CHF 40k.', createdBy: 'Marco Bianchi', createdAt: '2026-02-17T14:15:00.000Z' },
+  { id: uuid(), leadId: '*', type: 'MEETING', title: 'Vor-Ort-Besichtigung', description: 'Dachbesichtigung durchgeführt. Südausrichtung bestätigt, keine Verschattung.', createdBy: 'Simon Keller', createdAt: '2026-02-20T10:00:00.000Z' },
+  { id: uuid(), leadId: '*', type: 'STATUS_CHANGE', title: 'Status geändert: Qualifiziert', description: null, createdBy: 'System', createdAt: '2026-02-20T10:30:00.000Z' },
 ];
 
 const createActivitySchema = z.object({

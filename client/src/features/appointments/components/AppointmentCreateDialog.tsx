@@ -155,7 +155,7 @@ export default function AppointmentCreateDialog({ onClose, prefill }: Props) {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Prioritaet</label>
+                <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Priorität</label>
                 <select value={priority} onChange={(e) => setPriority(e.target.value as AppointmentPriority)} className="glass-input w-full appearance-none px-4 py-2.5 text-[13px] cursor-pointer">
                   {Object.entries(priorityLabels).map(([k, l]) => <option key={k} value={k} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{l}</option>)}
                 </select>

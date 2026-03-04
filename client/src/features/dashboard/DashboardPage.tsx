@@ -77,7 +77,7 @@ function StatCard({
   )
 }
 
-// ── Mini Bar Chart (fuer Monatsstatistik) ──
+// ── Mini Bar Chart (für Monatsstatistik) ──
 
 function MiniBarChart({
   data,
@@ -171,7 +171,7 @@ export default function DashboardPage() {
   const inProgressTasks = inProgressRes?.data || []
   const allMyTasks = [...inProgressTasks, ...openTasks].slice(0, 6)
 
-  // Berechne Maximalwerte fuer Charts
+  // Berechne Maximalwerte für Charts
   const maxWon = Math.max(...monthly.map((m) => m.wonValue), 1)
   const maxAppointments = Math.max(...monthly.map((m) => m.totalAppointments), 1)
 
@@ -199,7 +199,7 @@ export default function DashboardPage() {
           label="Termine"
           value={stats ? String(stats.appointments.upcoming) : '–'}
           color="#60A5FA"
-          subtitle={stats ? `${stats.appointments.completed} durchgefuehrt` : undefined}
+          subtitle={stats ? `${stats.appointments.completed} durchgeführt` : undefined}
           onClick={() => navigate('/appointments')}
         />
         <StatCard
@@ -207,7 +207,7 @@ export default function DashboardPage() {
           label="Offene Aufgaben"
           value={stats ? String(stats.tasks.open + stats.tasks.inProgress) : '–'}
           color={stats && stats.tasks.overdue > 0 ? '#F87171' : '#A78BFA'}
-          subtitle={stats && stats.tasks.overdue > 0 ? `${stats.tasks.overdue} ueberfaellig` : undefined}
+          subtitle={stats && stats.tasks.overdue > 0 ? `${stats.tasks.overdue} überfällig` : undefined}
           onClick={() => navigate('/tasks')}
         />
       </div>
@@ -255,7 +255,7 @@ export default function DashboardPage() {
                   )}
                   {stats.tasks.overdue > 0 && (
                     <>
-                      <span className="text-red font-semibold">{stats.tasks.overdue} Aufgabe(n) ueberfaellig</span> – bitte priorisieren.{' '}
+                      <span className="text-red font-semibold">{stats.tasks.overdue} Aufgabe(n) überfällig</span> – bitte priorisieren.{' '}
                     </>
                   )}
                   {stats.appointments.upcoming > 0 && (
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                   )}
                   {stats.tasks.overdue > 0 && (
                     <span className="px-3 py-1 rounded-full bg-red-soft text-red text-[11px] font-semibold">
-                      {stats.tasks.overdue} ueberfaellig
+                      {stats.tasks.overdue} überfällig
                     </span>
                   )}
                   <span className="px-3 py-1 rounded-full bg-amber-soft text-amber text-[11px] font-semibold">
@@ -319,12 +319,12 @@ export default function DashboardPage() {
 
       {/* ── Monatsstatistik ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {/* Abschluesse pro Monat */}
+        {/* Abschlüsse pro Monat */}
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <BarChart3 size={16} className="text-green" />
-              <h3 className="text-sm font-bold tracking-[-0.01em]">Abschluesse pro Monat</h3>
+              <h3 className="text-sm font-bold tracking-[-0.01em]">Abschlüsse pro Monat</h3>
             </div>
             {monthly.length > 0 && (
               <span className="text-[11px] font-semibold text-text-dim">
@@ -371,7 +371,7 @@ export default function DashboardPage() {
                   <div key={m.month} className="text-center">
                     <p className="text-[10px] font-bold uppercase text-text-dim">{m.label}</p>
                     <p className="text-[14px] font-extrabold tabular-nums text-blue">{m.totalAppointments}</p>
-                    <p className="text-[10px] text-text-dim">{m.completedAppointments} durchgefuehrt</p>
+                    <p className="text-[10px] text-text-dim">{m.completedAppointments} durchgeführt</p>
                   </div>
                 ))}
               </div>
@@ -389,7 +389,7 @@ export default function DashboardPage() {
             <DollarSign size={16} className="text-amber" />
             <h3 className="text-sm font-bold tracking-[-0.01em]">Provision (aktueller Monat)</h3>
           </div>
-          <span className="text-[11px] font-semibold text-text-dim">5% auf Abschluesse</span>
+          <span className="text-[11px] font-semibold text-text-dim">5% auf Abschlüsse</span>
         </div>
         {monthly.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                   <span className="text-[11px] text-text-dim">Provision</span>
                 </div>
                 <div className="text-[11px] text-text-sec">
-                  {m.wonDeals} Abschluss/Abschluesse · Wert: {formatCHF(m.wonValue)}
+                  {m.wonDeals} Abschluss/Abschlüsse · Wert: {formatCHF(m.wonValue)}
                 </div>
               </div>
             ))}
@@ -442,13 +442,13 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Pipeline-Uebersicht ── */}
+      {/* ── Pipeline-Übersicht ── */}
       {stats && (
         <div className="glass-card p-5">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <FileText size={16} className="text-violet" />
-              <h3 className="text-sm font-bold tracking-[-0.01em]">Pipeline-Uebersicht</h3>
+              <h3 className="text-sm font-bold tracking-[-0.01em]">Pipeline-Übersicht</h3>
             </div>
             <button
               type="button"

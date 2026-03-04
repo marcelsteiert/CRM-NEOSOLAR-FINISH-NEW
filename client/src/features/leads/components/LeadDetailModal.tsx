@@ -112,7 +112,7 @@ const activityTypeConfig: Record<ActivityType, { icon: typeof Phone; color: stri
   EMAIL: { icon: Mail, color: '#60A5FA', label: 'E-Mail' },
   NOTE: { icon: FileText, color: '#F59E0B', label: 'Notiz' },
   MEETING: { icon: MapPin, color: '#A78BFA', label: 'Meeting' },
-  STATUS_CHANGE: { icon: ArrowRight, color: '#525E6F', label: 'Statusaenderung' },
+  STATUS_CHANGE: { icon: ArrowRight, color: '#525E6F', label: 'Statusänderung' },
   TASK: { icon: CheckSquare, color: '#22D3EE', label: 'Aufgabe' },
   DOCUMENT: { icon: FileUp, color: '#F59E0B', label: 'Dokument' },
   REMINDER: { icon: Bell, color: '#F87171', label: 'Erinnerung' },
@@ -461,8 +461,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const leadTagObjects = allTags.filter((t) => leadTagNames.includes(t.name))
 
   const tabs: { key: DetailTab; label: string }[] = [
-    { key: 'overview', label: 'Uebersicht' },
-    { key: 'activities', label: 'Aktivitaeten' },
+    { key: 'overview', label: 'Übersicht' },
+    { key: 'activities', label: 'Aktivitäten' },
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
     { key: 'reminders', label: 'Erinnerungen' },
@@ -672,7 +672,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
         {/* ── Tab Content (scrollable) ── */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* ────────── TAB 1: Uebersicht ────────── */}
+          {/* ────────── TAB 1: Übersicht ────────── */}
           {activeTab === 'overview' && (
             <>
               {/* Kontaktdaten */}
@@ -1065,7 +1065,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             </>
           )}
 
-          {/* ────────── TAB 2: Aktivitaeten ────────── */}
+          {/* ────────── TAB 2: Aktivitäten ────────── */}
           {activeTab === 'activities' && (
             <>
               {/* Add activity button */}
@@ -1076,7 +1076,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   className="btn-secondary flex items-center gap-1.5 px-3.5 py-2 text-[12px] font-semibold"
                 >
                   <Plus size={14} strokeWidth={2} />
-                  Aktivitaet
+                  Aktivität
                 </button>
               </div>
 
@@ -1091,7 +1091,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   }}
                 >
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">
-                    Neue Aktivitaet
+                    Neue Aktivität
                   </h4>
                   <div className="relative">
                     <select
@@ -1201,10 +1201,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   }}
                 >
                   <p className="text-text-dim text-[12px] font-medium">
-                    Noch keine Aktivitaeten erfasst.
+                    Noch keine Aktivitäten erfasst.
                   </p>
                   <p className="text-text-dim text-[11px] mt-1">
-                    Aktivitaeten werden hier chronologisch angezeigt.
+                    Aktivitäten werden hier chronologisch angezeigt.
                   </p>
                 </div>
               )}
@@ -1406,7 +1406,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                                 minute: '2-digit',
                               })}
                               {isOverdue && (
-                                <span className="text-red font-semibold ml-1">Ueberfaellig</span>
+                                <span className="text-red font-semibold ml-1">Überfällig</span>
                               )}
                             </p>
                           </div>
@@ -1486,7 +1486,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium text-text-dim hover:text-red transition-colors duration-150"
           >
             <Trash2 size={13} strokeWidth={1.8} />
-            Loeschen
+            Löschen
           </button>
         </div>
 
@@ -1646,9 +1646,9 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
               >
                 <Trash2 size={20} className="text-red" strokeWidth={1.8} />
               </div>
-              <h3 className="text-[15px] font-bold mb-1">Lead wirklich loeschen?</h3>
+              <h3 className="text-[15px] font-bold mb-1">Lead wirklich löschen?</h3>
               <p className="text-[12px] text-text-sec mb-5">
-                Diese Aktion kann nicht rueckgaengig gemacht werden.
+                Diese Aktion kann nicht rückgängig gemacht werden.
               </p>
               <div className="flex items-center gap-2.5">
                 <button
@@ -1668,7 +1668,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                     border: '1px solid color-mix(in srgb, #F87171 25%, transparent)',
                   }}
                 >
-                  Loeschen
+                  Löschen
                 </button>
               </div>
             </div>

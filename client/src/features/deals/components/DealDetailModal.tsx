@@ -119,7 +119,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
       followUpDate: editFollowUpDate || undefined,
     })
     setIsEditing(false)
-    setSuccessMsg('Aenderungen gespeichert')
+    setSuccessMsg('Änderungen gespeichert')
     setTimeout(() => setSuccessMsg(''), 2000)
   }
 
@@ -274,7 +274,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
               )}
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Prioritaet</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Priorität</p>
               {isEditing ? (
                 <div className="relative">
                   <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as DealPriority)} className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer">
@@ -356,7 +356,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
           {/* ── Activities Log ── */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">Aktivitaeten ({deal.activities.length})</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">Aktivitäten ({deal.activities.length})</p>
 
             {/* Add Activity */}
             {!isClosed && (
@@ -381,7 +381,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                   value={activityText}
                   onChange={(e) => setActivityText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddActivity()}
-                  placeholder="Aktivitaet hinzufuegen..."
+                  placeholder="Aktivität hinzufügen..."
                   className="glass-input flex-1 px-3 py-2 text-[12px]"
                 />
                 <button
@@ -427,16 +427,16 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         <div className="px-6 py-4 border-t border-border shrink-0">
           {showDeleteConfirm && (
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[12px] text-red flex-1">Angebot endgueltig loeschen?</span>
+              <span className="text-[12px] text-red flex-1">Angebot endgültig löschen?</span>
               <button type="button" onClick={() => setShowDeleteConfirm(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Abbrechen</button>
-              <button type="button" onClick={handleDelete} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#F87171' }}>Loeschen</button>
+              <button type="button" onClick={handleDelete} className="px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white" style={{ background: '#F87171' }}>Löschen</button>
             </div>
           )}
 
           {showWonConfirm && (
             <div className="space-y-2.5 mb-3">
               <p className="text-[12px] text-emerald-400 font-semibold">Angebot als gewonnen markieren und zu Projekt konvertieren?</p>
-              <p className="text-[11px] text-text-sec">Alle Aktivitaeten und Daten werden zum Projekt uebernommen.</p>
+              <p className="text-[11px] text-text-sec">Alle Aktivitäten und Daten werden zum Projekt übernommen.</p>
               <div className="flex items-center gap-2.5">
                 <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary flex-1 px-3 py-1.5 text-[11px] text-center">Abbrechen</button>
                 <button type="button" onClick={handleMarkWon} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white text-center" style={{ background: '#34D399' }}>Gewonnen &rarr; Projekt</button>
@@ -477,7 +477,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
               </a>
               <div className="flex-1" />
               <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>
-                <Trash2 size={14} strokeWidth={1.8} />Loeschen
+                <Trash2 size={14} strokeWidth={1.8} />Löschen
               </button>
             </div>
           )}

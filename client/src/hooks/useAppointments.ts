@@ -172,9 +172,9 @@ export function useDeleteAppointment() {
 
 export const statusLabels: Record<AppointmentStatus, string> = {
   GEPLANT: 'Geplant',
-  BESTAETIGT: 'Bestaetigt',
+  BESTAETIGT: 'Bestätigt',
   VORBEREITUNG: 'In Vorbereitung',
-  DURCHGEFUEHRT: 'Durchgefuehrt',
+  DURCHGEFUEHRT: 'Durchgeführt',
   ABGESAGT: 'Abgesagt',
 }
 

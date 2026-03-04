@@ -21,7 +21,7 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-const monthNames = ['Januar', 'Februar', 'Maerz', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
 
 // ── ProvisionTable (druckbar) ──
 
@@ -60,7 +60,7 @@ function ProvisionTable({
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim print:text-gray-500">
-                Abschluesse
+                Abschlüsse
               </p>
               <p className="text-[20px] font-extrabold tabular-nums text-green print:text-green-700">
                 {data.summary.totalDeals}
@@ -196,7 +196,7 @@ function ProvisionTable({
         </div>
       ) : (
         <div className="glass-card p-8 text-center">
-          <p className="text-[13px] text-text-dim">Keine Abschluesse in diesem Monat</p>
+          <p className="text-[13px] text-text-dim">Keine Abschlüsse in diesem Monat</p>
         </div>
       )}
 
@@ -251,7 +251,7 @@ export default function InvoicesPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight">Rechnungen & Provision</h1>
-            <p className="text-[12px] text-text-sec">5% Provision auf Monatsabschluesse</p>
+            <p className="text-[12px] text-text-sec">5% Provision auf Monatsabschlüsse</p>
           </div>
         </div>
 
@@ -294,11 +294,11 @@ export default function InvoicesPage() {
         <ProvisionTable data={provision} month={selectedMonth} printRef={printRef} />
       ) : (
         <div className="glass-card p-8 text-center">
-          <p className="text-[13px] text-text-dim">Keine Daten verfuegbar</p>
+          <p className="text-[13px] text-text-dim">Keine Daten verfügbar</p>
         </div>
       )}
 
-      {/* ── Jahresuebersicht ── */}
+      {/* ── Jahresübersicht ── */}
       {monthly.length > 0 && (
         <div className="glass-card p-5 print:hidden">
           <div className="flex items-center gap-2 mb-5">

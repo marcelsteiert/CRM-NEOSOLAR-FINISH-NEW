@@ -22,9 +22,9 @@ export interface ChecklistTemplate {
 
 export interface AppSettings {
   followUpRules: FollowUpRule[];
-  defaultFollowUpDays: number; // Default fuer neue Angebote
+  defaultFollowUpDays: number; // Default für neue Angebote
   checklistTemplate: ChecklistTemplate[];
-  companyAddress: string; // Standort fuer Fahrzeit-Berechnung
+  companyAddress: string; // Standort für Fahrzeit-Berechnung
 }
 
 const settings: AppSettings = {
@@ -32,19 +32,19 @@ const settings: AppSettings = {
   companyAddress: 'St. Margrethen',
   checklistTemplate: [
     { id: 'c1', label: 'Dach-Fotos/Bilder erhalten' },
-    { id: 'c2', label: 'Dachflaeche & Ausrichtung berechnet' },
-    { id: 'c3', label: 'kWp-Potenzial geschaetzt' },
+    { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet' },
+    { id: 'c3', label: 'kWp-Potenzial geschätzt' },
     { id: 'c4', label: 'Stromverbrauch des Kunden analysiert' },
     { id: 'c5', label: 'Anfahrt geplant' },
     { id: 'c6', label: 'Offerte-Vorlage vorbereitet' },
     { id: 'c7', label: 'Technische Unterlagen zusammengestellt' },
-    { id: 'c8', label: 'Kunde ueber Ablauf informiert' },
+    { id: 'c8', label: 'Kunde über Ablauf informiert' },
   ],
   followUpRules: [
     { stage: 'ERSTELLT', maxDays: 2, urgentMaxDays: 1, message: 'Angebot noch nicht gesendet – bitte finalisieren!' },
     { stage: 'GESENDET', maxDays: 3, urgentMaxDays: 1, message: 'Angebot wurde gesendet – Nachfassen beim Kunden!' },
-    { stage: 'FOLLOW_UP', maxDays: 2, urgentMaxDays: 1, message: 'Follow-Up ueberfaellig – bitte sofort anrufen!' },
-    { stage: 'VERHANDLUNG', maxDays: 3, urgentMaxDays: 1, message: 'Verhandlung laeuft – dranbleiben!' },
+    { stage: 'FOLLOW_UP', maxDays: 2, urgentMaxDays: 1, message: 'Follow-Up überfällig – bitte sofort anrufen!' },
+    { stage: 'VERHANDLUNG', maxDays: 3, urgentMaxDays: 1, message: 'Verhandlung läuft – dranbleiben!' },
   ],
 };
 

@@ -241,7 +241,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">
-                  Prioritaet
+                  Priorität
                 </label>
                 <select
                   value={priority}
