@@ -6,7 +6,7 @@ import AppointmentsPage from '@/features/appointments/AppointmentsPage'
 import DealsPage from '@/features/deals/DealsPage'
 import CalculationsPage from '@/features/calculations/CalculationsPage'
 import ProjectsPage from '@/features/projects/ProjectsPage'
-import InvoicesPage from '@/features/invoices/InvoicesPage'
+import ProvisionPage from '@/features/provision/ProvisionPage'
 import CommunicationPage from '@/features/communication/CommunicationPage'
 import AiSummaryPage from '@/features/ai/AiSummaryPage'
 import TasksPage from '@/features/tasks/TasksPage'
@@ -26,7 +26,7 @@ export default function App() {
           <Route path="deals" element={<DealsPage />} />
           <Route path="calculations" element={<CalculationsPage />} />
           <Route path="projects" element={<ProjectsPage />} />
-          <Route path="invoices" element={<InvoicesPage />} />
+          <Route path="provision" element={<ProvisionPage />} />
           <Route path="communication" element={<CommunicationPage />} />
           <Route path="ai" element={<AiSummaryPage />} />
           <Route path="tasks" element={<TasksPage />} />

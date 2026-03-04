@@ -99,6 +99,10 @@ const statusColors: Record<LeadStatus, { bg: string; text: string }> = {
     bg: 'color-mix(in srgb, #525E6F 12%, transparent)',
     text: '#525E6F',
   },
+  AFTER_SALES: {
+    bg: 'color-mix(in srgb, #A78BFA 12%, transparent)',
+    text: '#A78BFA',
+  },
 }
 
 /* ── Activity Type Config ── */
@@ -205,6 +209,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const [apptDate, setApptDate] = useState('')
   const [apptTime, setApptTime] = useState('')
   const [apptAddress, setApptAddress] = useState('')
+  const [apptType, setApptType] = useState<'VOR_ORT' | 'ONLINE'>('VOR_ORT')
 
   // Success message
   const [successMsg, setSuccessMsg] = useState('')
@@ -387,9 +392,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         assignedTo: apptAssignedTo,
         appointmentDate: apptDate,
         appointmentTime: apptTime,
+        appointmentType: apptType,
         notes: lead.notes ?? undefined,
       })
-      updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus })
+      updateLead.mutate({ id: lead.id, status: 'CONVERTED' as LeadStatus, appointmentType: apptType })
       createActivity.mutate({
         leadId: lead.id,
         type: 'DEAL_CREATED' as ActivityType,
@@ -1726,6 +1732,41 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                       </option>
                     ))}
                 </select>
+              </div>
+
+              {/* Termin-Typ */}
+              <div className="mb-3">
+                <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                  Termin-Typ *
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setApptType('VOR_ORT')}
+                    className={[
+                      'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-150 border',
+                      apptType === 'VOR_ORT'
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                        : 'bg-surface-hover border-border text-text-dim hover:text-text',
+                    ].join(' ')}
+                  >
+                    <MapPin size={14} className="inline mr-1.5 -mt-0.5" strokeWidth={1.8} />
+                    Vor Ort
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setApptType('ONLINE')}
+                    className={[
+                      'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-150 border',
+                      apptType === 'ONLINE'
+                        ? 'bg-blue-500/15 border-blue-500/30 text-blue-400'
+                        : 'bg-surface-hover border-border text-text-dim hover:text-text',
+                    ].join(' ')}
+                  >
+                    <Globe size={14} className="inline mr-1.5 -mt-0.5" strokeWidth={1.8} />
+                    Online
+                  </button>
+                </div>
               </div>
 
               {/* Datum & Zeit */}

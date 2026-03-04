@@ -6,7 +6,7 @@ import {
   CalendarCheck,
   FileText,
   FolderKanban,
-  Receipt,
+  Coins,
   Mail,
   Sparkles,
   Bell,
@@ -63,6 +63,7 @@ const navGroups: NavGroup[] = [
       { to: '/leads', icon: Users, label: 'Leads' },
       { to: '/appointments', icon: CalendarCheck, label: 'Termine' },
       { to: '/deals', icon: FileText, label: 'Angebote' },
+      { to: '/provision', icon: Coins, label: 'Provision' },
     ],
   },
   {
@@ -75,7 +76,6 @@ const navGroups: NavGroup[] = [
   {
     label: 'Betrieb',
     items: [
-      { to: '/invoices', icon: Receipt, label: 'Rechnungen' },
       { to: '/communication', icon: Mail, label: 'Kommunikation' },
       { to: '/ai', icon: Sparkles, label: 'KI-Summary' },
     ],

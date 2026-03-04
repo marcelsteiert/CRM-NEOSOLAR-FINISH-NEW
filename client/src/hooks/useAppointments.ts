@@ -12,6 +12,8 @@ export type AppointmentStatus =
 
 export type AppointmentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 
+export type AppointmentType = 'VOR_ORT' | 'ONLINE'
+
 export interface ChecklistItem {
   id: string
   label: string
@@ -29,6 +31,7 @@ export interface Appointment {
   value: number
   status: AppointmentStatus
   priority: AppointmentPriority
+  appointmentType: AppointmentType
   assignedTo: string | null
   appointmentDate: string | null
   appointmentTime: string | null
@@ -74,6 +77,7 @@ interface AppointmentStatsResponse {
 export interface AppointmentFilters {
   status?: AppointmentStatus | 'ALL'
   priority?: AppointmentPriority | 'ALL'
+  appointmentType?: AppointmentType | 'ALL'
   assignedTo?: string
   search?: string
   sortBy?: string
@@ -89,6 +93,7 @@ export function useAppointments(filters: AppointmentFilters = {}) {
 
   if (filters.status && filters.status !== 'ALL') params.set('status', filters.status)
   if (filters.priority && filters.priority !== 'ALL') params.set('priority', filters.priority)
+  if (filters.appointmentType && filters.appointmentType !== 'ALL') params.set('appointmentType', filters.appointmentType)
   if (filters.assignedTo) params.set('assignedTo', filters.assignedTo)
   if (filters.search) params.set('search', filters.search)
   if (filters.sortBy) params.set('sortBy', filters.sortBy)
@@ -179,6 +184,16 @@ export const statusColors: Record<AppointmentStatus, string> = {
   VORBEREITUNG: '#F59E0B',
   DURCHGEFUEHRT: '#A78BFA',
   ABGESAGT: '#F87171',
+}
+
+export const appointmentTypeLabels: Record<AppointmentType, string> = {
+  VOR_ORT: 'Vor Ort',
+  ONLINE: 'Online',
+}
+
+export const appointmentTypeColors: Record<AppointmentType, string> = {
+  VOR_ORT: '#34D399',
+  ONLINE: '#60A5FA',
 }
 
 export const priorityLabels: Record<AppointmentPriority, string> = {

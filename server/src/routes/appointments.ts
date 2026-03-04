@@ -66,6 +66,8 @@ type AppointmentStatus =
 
 type AppointmentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
+type AppointmentType = 'VOR_ORT' | 'ONLINE';
+
 interface ChecklistItem {
   id: string;
   label: string;
@@ -83,6 +85,7 @@ interface Appointment {
   value: number;
   status: AppointmentStatus;
   priority: AppointmentPriority;
+  appointmentType: AppointmentType;
   assignedTo: string | null;
   appointmentDate: string | null;
   appointmentTime: string | null;
@@ -130,6 +133,7 @@ const createAppointmentSchema = z.object({
     .enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'ABGESAGT'])
     .optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).optional(),
   assignedTo: z.string().optional(),
   appointmentDate: z.string().optional(),
   appointmentTime: z.string().optional(),
@@ -177,6 +181,7 @@ const mockAppointments: Appointment[] = [
     value: 38000,
     status: 'GEPLANT',
     priority: 'MEDIUM',
+    appointmentType: 'VOR_ORT',
     assignedTo: 'u001',
     appointmentDate: '2026-03-07',
     appointmentTime: '10:00',
@@ -208,6 +213,7 @@ const mockAppointments: Appointment[] = [
     value: 125000,
     status: 'BESTAETIGT',
     priority: 'HIGH',
+    appointmentType: 'VOR_ORT',
     assignedTo: 'u002',
     appointmentDate: '2026-03-05',
     appointmentTime: '14:00',
@@ -239,6 +245,7 @@ const mockAppointments: Appointment[] = [
     value: 68000,
     status: 'VORBEREITUNG',
     priority: 'MEDIUM',
+    appointmentType: 'VOR_ORT',
     assignedTo: 'u001',
     appointmentDate: '2026-03-10',
     appointmentTime: '09:00',
@@ -270,6 +277,7 @@ const mockAppointments: Appointment[] = [
     value: 32000,
     status: 'DURCHGEFUEHRT',
     priority: 'MEDIUM',
+    appointmentType: 'VOR_ORT',
     assignedTo: 'u002',
     appointmentDate: '2026-02-28',
     appointmentTime: '11:00',
@@ -301,6 +309,7 @@ const mockAppointments: Appointment[] = [
     value: 185000,
     status: 'GEPLANT',
     priority: 'URGENT',
+    appointmentType: 'VOR_ORT',
     assignedTo: 'u002',
     appointmentDate: '2026-03-04',
     appointmentTime: '08:30',
@@ -323,6 +332,7 @@ const mockAppointments: Appointment[] = [
     value: 45000,
     status: 'BESTAETIGT',
     priority: 'MEDIUM',
+    appointmentType: 'ONLINE',
     assignedTo: 'u001',
     appointmentDate: '2026-03-06',
     appointmentTime: '15:30',
@@ -351,7 +361,7 @@ const mockAppointments: Appointment[] = [
 
 router.get('/', (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status, priority, assignedTo, search, page: pp, pageSize: psp, sortBy = 'appointmentDate', sortOrder = 'asc' } =
+    const { status, priority, appointmentType, assignedTo, search, page: pp, pageSize: psp, sortBy = 'appointmentDate', sortOrder = 'asc' } =
       req.query;
 
     let filtered = mockAppointments.filter((a) => a.deletedAt === null);
@@ -361,6 +371,9 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
     }
     if (priority && typeof priority === 'string') {
       filtered = filtered.filter((a) => a.priority === priority);
+    }
+    if (appointmentType && typeof appointmentType === 'string') {
+      filtered = filtered.filter((a) => a.appointmentType === appointmentType);
     }
     if (assignedTo && typeof assignedTo === 'string') {
       filtered = filtered.filter((a) => a.assignedTo === assignedTo);
@@ -490,6 +503,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       value: result.data.value ?? 0,
       status: result.data.status ?? 'GEPLANT',
       priority: result.data.priority ?? 'MEDIUM',
+      appointmentType: result.data.appointmentType ?? 'VOR_ORT',
       assignedTo: result.data.assignedTo ?? null,
       appointmentDate: result.data.appointmentDate ?? null,
       appointmentTime: result.data.appointmentTime ?? null,
@@ -532,6 +546,7 @@ router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
     if (u.address !== undefined) appt.address = u.address;
     if (u.value !== undefined) appt.value = u.value;
     if (u.priority !== undefined) appt.priority = u.priority;
+    if (u.appointmentType !== undefined) appt.appointmentType = u.appointmentType;
     if (u.assignedTo !== undefined) appt.assignedTo = u.assignedTo ?? null;
     if (u.appointmentDate !== undefined) appt.appointmentDate = u.appointmentDate ?? null;
     if (u.appointmentTime !== undefined) appt.appointmentTime = u.appointmentTime ?? null;

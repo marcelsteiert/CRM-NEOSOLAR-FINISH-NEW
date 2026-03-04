@@ -11,7 +11,7 @@ export type LeadSource =
   | 'KALTAKQUISE'
   | 'SONSTIGE'
 
-export type LeadStatus = 'ACTIVE' | 'CONVERTED' | 'LOST' | 'ARCHIVED'
+export type LeadStatus = 'ACTIVE' | 'CONVERTED' | 'LOST' | 'ARCHIVED' | 'AFTER_SALES'
 
 export interface Lead {
   id: string
@@ -29,6 +29,7 @@ export interface Lead {
   tags: string[]
   value?: number
   notes?: string
+  appointmentType: 'VOR_ORT' | 'ONLINE' | null
   createdAt: string
   updatedAt: string
   deletedAt: string | null
@@ -80,6 +81,7 @@ interface TagListResponse {
 export interface LeadFilters {
   status?: LeadStatus | 'ALL'
   source?: LeadSource | 'ALL'
+  appointmentType?: 'VOR_ORT' | 'ONLINE' | 'ALL'
   search?: string
   pipelineId?: string
   bucketId?: string
@@ -96,6 +98,7 @@ export function useLeads(filters: LeadFilters = {}) {
 
   if (filters.status && filters.status !== 'ALL') params.set('status', filters.status)
   if (filters.source && filters.source !== 'ALL') params.set('source', filters.source)
+  if (filters.appointmentType && filters.appointmentType !== 'ALL') params.set('appointmentType', filters.appointmentType)
   if (filters.search) params.set('search', filters.search)
   if (filters.pipelineId) params.set('pipelineId', filters.pipelineId)
   if (filters.bucketId) params.set('bucketId', filters.bucketId)
@@ -200,6 +203,63 @@ export function useRemoveLeadTag() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['lead'] })
+    },
+  })
+}
+
+// ── Pipeline Mutations ──
+
+export function useCreatePipeline() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; description?: string }) =>
+      api.post<{ data: Pipeline }>('/pipelines', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pipelines'] })
+    },
+  })
+}
+
+export function useUpdatePipeline() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; name?: string; description?: string }) =>
+      api.put<{ data: Pipeline }>(`/pipelines/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pipelines'] })
+    },
+  })
+}
+
+export function useCreateBucket() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ pipelineId, ...data }: { pipelineId: string; name: string; position?: number }) =>
+      api.post<{ data: Bucket }>(`/pipelines/${pipelineId}/buckets`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pipelines'] })
+    },
+  })
+}
+
+export function useUpdateBucket() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ pipelineId, bucketId, ...data }: { pipelineId: string; bucketId: string; name?: string }) =>
+      api.put<{ data: Bucket }>(`/pipelines/${pipelineId}/buckets/${bucketId}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pipelines'] })
+    },
+  })
+}
+
+export function useReorderBuckets() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ pipelineId, bucketIds }: { pipelineId: string; bucketIds: string[] }) =>
+      api.put<{ data: Bucket[] }>(`/pipelines/${pipelineId}/buckets/reorder`, { bucketIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pipelines'] })
     },
   })
 }
@@ -349,4 +409,5 @@ export const statusLabels: Record<LeadStatus, string> = {
   CONVERTED: 'Konvertiert',
   LOST: 'Verloren',
   ARCHIVED: 'Archiviert',
+  AFTER_SALES: 'After Sales',
 }

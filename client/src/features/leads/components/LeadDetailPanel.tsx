@@ -38,6 +38,10 @@ const statusColors: Record<Lead['status'], { bg: string; text: string }> = {
     bg: 'color-mix(in srgb, #525E6F 12%, transparent)',
     text: '#525E6F',
   },
+  AFTER_SALES: {
+    bg: 'color-mix(in srgb, #A78BFA 12%, transparent)',
+    text: '#A78BFA',
+  },
 }
 
 /* ── Kanban bucket labels ── */

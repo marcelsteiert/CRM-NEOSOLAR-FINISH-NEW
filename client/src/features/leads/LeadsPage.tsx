@@ -26,7 +26,7 @@ import LeadImportDialog from './components/LeadImportDialog'
 
 /* ── Filter Tab Type ── */
 
-type StatusFilter = 'ALL' | 'ACTIVE' | 'CONVERTED' | 'LOST'
+type StatusFilter = 'ALL' | 'ACTIVE' | 'CONVERTED' | 'LOST' | 'AFTER_SALES'
 
 /* ── Simulated current user (until real auth) ── */
 
@@ -162,6 +162,7 @@ export default function LeadsPage() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -176,8 +177,9 @@ export default function LeadsPage() {
     error,
     refetch,
   } = useLeads({
-    status: statusFilter === 'ALL' ? 'ACTIVE' : statusFilter,
+    status: statusFilter === 'ALL' ? 'ACTIVE' : statusFilter as LeadStatus,
     source: sourceFilter !== 'ALL' ? sourceFilter : undefined,
+    appointmentType: appointmentTypeFilter !== 'ALL' ? appointmentTypeFilter : undefined,
     search: searchQuery.trim() || undefined,
     sortBy,
     sortOrder,
@@ -228,6 +230,7 @@ export default function LeadsPage() {
   const statusTabs: { key: StatusFilter; label: string }[] = [
     { key: 'ALL', label: 'Aktive Leads' },
     { key: 'CONVERTED', label: 'Konvertiert' },
+    { key: 'AFTER_SALES', label: 'After Sales' },
     { key: 'LOST', label: 'Verloren' },
   ]
 
@@ -371,6 +374,25 @@ export default function LeadsPage() {
                     {opt.label}
                   </option>
                 ))}
+              </select>
+              <ChevronDown
+                size={14}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
+                strokeWidth={2}
+              />
+            </div>
+
+            {/* Termin-Typ Dropdown */}
+            <div className="relative">
+              <select
+                value={appointmentTypeFilter}
+                onChange={(e) => setAppointmentTypeFilter(e.target.value as 'VOR_ORT' | 'ONLINE' | 'ALL')}
+                className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
+                style={{ minWidth: '130px' }}
+              >
+                <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Termine</option>
+                <option value="VOR_ORT" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Vor Ort</option>
+                <option value="ONLINE" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Online</option>
               </select>
               <ChevronDown
                 size={14}
