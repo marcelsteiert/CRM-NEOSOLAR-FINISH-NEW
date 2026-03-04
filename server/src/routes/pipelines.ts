@@ -314,53 +314,8 @@ router.post(
 );
 
 // ---------------------------------------------------------------------------
-// PUT /api/v1/pipelines/:id/buckets/:bucketId – Update bucket
-// ---------------------------------------------------------------------------
-
-router.put(
-  '/:id/buckets/:bucketId',
-  (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const pipeline = mockPipelines.find((p) => p.id === req.params.id);
-
-      if (!pipeline) {
-        throw new AppError('Pipeline nicht gefunden', 404);
-      }
-
-      const bucket = pipeline.buckets.find(
-        (b) => b.id === req.params.bucketId,
-      );
-
-      if (!bucket) {
-        throw new AppError('Bucket nicht gefunden', 404);
-      }
-
-      const result = updateBucketSchema.safeParse(req.body);
-
-      if (!result.success) {
-        const messages = result.error.errors
-          .map((e) => `${e.path.join('.')}: ${e.message}`)
-          .join('; ');
-        throw new AppError(`Validierungsfehler: ${messages}`, 422);
-      }
-
-      if (result.data.name !== undefined) bucket.name = result.data.name;
-      if (result.data.position !== undefined)
-        bucket.position = result.data.position;
-
-      const now = new Date().toISOString();
-      bucket.updatedAt = now;
-      pipeline.updatedAt = now;
-
-      res.json({ data: bucket });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-// ---------------------------------------------------------------------------
 // PUT /api/v1/pipelines/:id/buckets/reorder – Reorder buckets
+// IMPORTANT: Must be defined BEFORE /:id/buckets/:bucketId to avoid param conflict
 // ---------------------------------------------------------------------------
 
 router.put(
@@ -412,6 +367,111 @@ router.put(
       );
 
       res.json({ data: sortedBuckets });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// PUT /api/v1/pipelines/:id/buckets/:bucketId – Update bucket
+// ---------------------------------------------------------------------------
+
+router.put(
+  '/:id/buckets/:bucketId',
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const pipeline = mockPipelines.find((p) => p.id === req.params.id);
+
+      if (!pipeline) {
+        throw new AppError('Pipeline nicht gefunden', 404);
+      }
+
+      const bucket = pipeline.buckets.find(
+        (b) => b.id === req.params.bucketId,
+      );
+
+      if (!bucket) {
+        throw new AppError('Bucket nicht gefunden', 404);
+      }
+
+      const result = updateBucketSchema.safeParse(req.body);
+
+      if (!result.success) {
+        const messages = result.error.errors
+          .map((e) => `${e.path.join('.')}: ${e.message}`)
+          .join('; ');
+        throw new AppError(`Validierungsfehler: ${messages}`, 422);
+      }
+
+      if (result.data.name !== undefined) bucket.name = result.data.name;
+      if (result.data.position !== undefined)
+        bucket.position = result.data.position;
+
+      const now = new Date().toISOString();
+      bucket.updatedAt = now;
+      pipeline.updatedAt = now;
+
+      res.json({ data: bucket });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// DELETE /api/v1/pipelines/:id – Delete pipeline
+// ---------------------------------------------------------------------------
+
+router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const idx = mockPipelines.findIndex((p) => p.id === req.params.id);
+
+    if (idx === -1) {
+      throw new AppError('Pipeline nicht gefunden', 404);
+    }
+
+    mockPipelines.splice(idx, 1);
+    res.json({ message: 'Pipeline gelöscht' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/v1/pipelines/:id/buckets/:bucketId – Delete bucket
+// ---------------------------------------------------------------------------
+
+router.delete(
+  '/:id/buckets/:bucketId',
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const pipeline = mockPipelines.find((p) => p.id === req.params.id);
+
+      if (!pipeline) {
+        throw new AppError('Pipeline nicht gefunden', 404);
+      }
+
+      const bucketIdx = pipeline.buckets.findIndex(
+        (b) => b.id === req.params.bucketId,
+      );
+
+      if (bucketIdx === -1) {
+        throw new AppError('Bucket nicht gefunden', 404);
+      }
+
+      pipeline.buckets.splice(bucketIdx, 1);
+
+      // Re-index positions
+      pipeline.buckets
+        .sort((a, b) => a.position - b.position)
+        .forEach((b, i) => {
+          b.position = i;
+        });
+
+      pipeline.updatedAt = new Date().toISOString();
+
+      res.json({ message: 'Bucket gelöscht' });
     } catch (err) {
       next(err);
     }

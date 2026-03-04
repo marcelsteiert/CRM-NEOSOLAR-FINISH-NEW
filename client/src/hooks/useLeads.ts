@@ -266,19 +266,77 @@ export function useReorderBuckets() {
 
 // ── Users ──
 
+export type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL'
+
 export interface User {
   id: string
   firstName: string
   lastName: string
   email: string
-  role: string
+  phone: string
+  role: UserRole
   avatar: string | null
+  isActive: boolean
+  allowedModules: string[]
+  createdAt: string
 }
 
 export function useUsers() {
   return useQuery({
     queryKey: ['users'],
     queryFn: () => api.get<{ data: User[] }>('/users'),
+  })
+}
+
+export function useRoleDefaults() {
+  return useQuery({
+    queryKey: ['roleDefaults'],
+    queryFn: () => api.get<{ data: Record<UserRole, string[]> }>('/users/role-defaults'),
+  })
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { firstName: string; lastName: string; email: string; phone?: string; role: UserRole; allowedModules?: string[] }) =>
+      api.post<{ data: User }>('/users', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; firstName?: string; lastName?: string; email?: string; phone?: string; role?: UserRole; isActive?: boolean; allowedModules?: string[] }) =>
+      api.put<{ data: User }>(`/users/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ message: string; data: User }>(`/users/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
+// ── Pipeline Delete ──
+
+export function useDeletePipeline() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ message: string }>(`/pipelines/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pipelines'] }),
+  })
+}
+
+export function useDeleteBucket() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ pipelineId, bucketId }: { pipelineId: string; bucketId: string }) =>
+      api.delete<{ message: string }>(`/pipelines/${pipelineId}/buckets/${bucketId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pipelines'] }),
   })
 }
 
