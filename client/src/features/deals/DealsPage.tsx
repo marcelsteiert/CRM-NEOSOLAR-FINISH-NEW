@@ -118,18 +118,24 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
   const [expanded, setExpanded] = useState(true)
   const [dismissingId, setDismissingId] = useState<string | null>(null)
   const [dismissNote, setDismissNote] = useState('')
+  const [localDismissed, setLocalDismissed] = useState<Set<string>>(new Set())
   const dismissFollowUp = useDismissFollowUp()
 
-  if (followUps.length === 0) return null
+  // Lokal dismissed Follow-Ups rausfiltern
+  const visibleFollowUps = followUps.filter((f) => !localDismissed.has(f.id))
 
-  const criticalCount = followUps.filter((f) => f.urgency === 'CRITICAL').length
-  const overdueCount = followUps.filter((f) => f.urgency === 'OVERDUE').length
+  if (visibleFollowUps.length === 0) return null
+
+  const criticalCount = visibleFollowUps.filter((f) => f.urgency === 'CRITICAL').length
+  const overdueCount = visibleFollowUps.filter((f) => f.urgency === 'OVERDUE').length
 
   const urgencyColors = { CRITICAL: '#F87171', OVERDUE: '#FB923C', WARNING: '#F59E0B' }
   const urgencyLabels = { CRITICAL: 'Kritisch', OVERDUE: 'Ueberfaellig', WARNING: 'Bald faellig' }
 
   const handleDismiss = (fuId: string) => {
     if (!dismissNote.trim()) return
+    // Sofort lokal ausblenden
+    setLocalDismissed((prev) => new Set(prev).add(fuId))
     dismissFollowUp.mutate({ followUpId: fuId, note: dismissNote.trim() })
     setDismissingId(null)
     setDismissNote('')
@@ -146,7 +152,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
             <Bell size={16} strokeWidth={1.8} style={{ color: criticalCount > 0 ? '#F87171' : '#FB923C' }} />
           </div>
           <div className="text-left">
-            <p className="text-[13px] font-bold">{followUps.length} Follow-Up{followUps.length !== 1 ? 's' : ''} noetig</p>
+            <p className="text-[13px] font-bold">{visibleFollowUps.length} Follow-Up{visibleFollowUps.length !== 1 ? 's' : ''} noetig</p>
             <p className="text-[11px] text-text-sec">
               {criticalCount > 0 && <span className="text-red font-semibold">{criticalCount} kritisch</span>}
               {criticalCount > 0 && overdueCount > 0 && ' · '}
@@ -159,7 +165,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
 
       {expanded && (
         <div className="px-5 pb-4 space-y-2">
-          {followUps.map((fu) => (
+          {visibleFollowUps.map((fu) => (
             <div key={fu.id}>
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-left" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: urgencyColors[fu.urgency], boxShadow: `0 0 8px ${urgencyColors[fu.urgency]}40` }} />
