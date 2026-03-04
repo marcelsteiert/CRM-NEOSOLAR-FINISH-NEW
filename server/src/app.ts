@@ -14,6 +14,15 @@ import settingsRouter from './routes/settings.js'
 import tasksRouter from './routes/tasks.js'
 import dashboardRouter from './routes/dashboard.js'
 import documentsRouter from './routes/documents.js'
+import adminProductsRouter from './routes/admin/products.js'
+import adminIntegrationsRouter from './routes/admin/integrations.js'
+import adminWebhooksRouter from './routes/admin/webhooks.js'
+import adminAuditLogRouter from './routes/admin/auditLog.js'
+import adminBrandingRouter from './routes/admin/branding.js'
+import adminAiSettingsRouter from './routes/admin/aiSettings.js'
+import adminNotifSettingsRouter from './routes/admin/notifSettings.js'
+import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
+import adminDbExportRouter from './routes/admin/dbExport.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 export function createApp() {
@@ -37,6 +46,17 @@ export function createApp() {
   app.use('/api/v1/tasks', tasksRouter)
   app.use('/api/v1/dashboard', dashboardRouter)
   app.use('/api/v1/documents', documentsRouter)
+
+  // Admin routes
+  app.use('/api/v1/admin/products', adminProductsRouter)
+  app.use('/api/v1/admin/integrations', adminIntegrationsRouter)
+  app.use('/api/v1/admin/webhooks', adminWebhooksRouter)
+  app.use('/api/v1/admin/audit-log', adminAuditLogRouter)
+  app.use('/api/v1/admin/branding', adminBrandingRouter)
+  app.use('/api/v1/admin/ai-settings', adminAiSettingsRouter)
+  app.use('/api/v1/admin/notification-settings', adminNotifSettingsRouter)
+  app.use('/api/v1/admin/doc-templates', adminDocTemplatesRouter)
+  app.use('/api/v1/admin/db-export', adminDbExportRouter)
 
   app.use(errorHandler)
 

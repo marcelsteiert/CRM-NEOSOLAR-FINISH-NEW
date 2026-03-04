@@ -85,7 +85,7 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/tasks', icon: ClipboardList, label: 'Aufgaben' },
       { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true },
-      { to: '/roles', icon: Shield, label: 'Rollen' },
+      { to: '/admin', icon: Shield, label: 'Admin' },
       { to: '/export', icon: Download, label: 'Export' },
       { to: '/documents', icon: FileBox, label: 'Dokumente' },
     ],

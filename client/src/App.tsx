@@ -11,7 +11,7 @@ import CommunicationPage from '@/features/communication/CommunicationPage'
 import AiSummaryPage from '@/features/ai/AiSummaryPage'
 import TasksPage from '@/features/tasks/TasksPage'
 import NotificationsPage from '@/features/notifications/NotificationsPage'
-import RolesPage from '@/features/roles/RolesPage'
+import AdminPage from '@/features/admin/AdminPage'
 import ExportPage from '@/features/export/ExportPage'
 import DocumentsPage from '@/features/documents/DocumentsPage'
 
@@ -31,7 +31,7 @@ export default function App() {
           <Route path="ai" element={<AiSummaryPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="roles" element={<RolesPage />} />
+          <Route path="admin" element={<AdminPage />} />
           <Route path="export" element={<ExportPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           {/* Catch-all: redirect to dashboard */}

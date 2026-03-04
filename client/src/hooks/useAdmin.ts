@@ -1,0 +1,294 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+
+// ── Product Catalog ──
+
+export type ProductCategory = 'PV_MODULE' | 'INVERTER' | 'BATTERY' | 'INSTALLATION' | 'PARTNER_PRICE'
+
+export interface Product {
+  id: string
+  category: ProductCategory
+  name: string
+  manufacturer: string
+  model: string
+  specs: Record<string, string | number>
+  unitPrice: number
+  unit: string
+  isActive: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export function useProducts(category?: ProductCategory) {
+  const qs = category ? `?category=${category}` : ''
+  return useQuery({
+    queryKey: ['products', category],
+    queryFn: () => api.get<{ data: Product[]; total: number }>(`/admin/products${qs}`),
+  })
+}
+
+export function useCreateProduct() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<Product> & { category: ProductCategory; name: string; unitPrice: number }) =>
+      api.post<{ data: Product }>('/admin/products', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  })
+}
+
+export function useUpdateProduct() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: Partial<Product> & { id: string }) =>
+      api.put<{ data: Product }>(`/admin/products/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  })
+}
+
+export function useDeleteProduct() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ message: string }>(`/admin/products/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  })
+}
+
+// ── Integrations ──
+
+export interface Integration {
+  id: string
+  service: string
+  displayName: string
+  description: string
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR'
+  apiKey: string | null
+  lastSyncAt: string | null
+  icon: string
+}
+
+export function useIntegrations() {
+  return useQuery({
+    queryKey: ['integrations'],
+    queryFn: () => api.get<{ data: Integration[] }>('/admin/integrations'),
+  })
+}
+
+export function useUpdateIntegration() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; apiKey?: string; status?: string }) =>
+      api.put<{ data: Integration }>(`/admin/integrations/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['integrations'] }),
+  })
+}
+
+// ── Webhooks ──
+
+export interface WebhookSource {
+  id: string
+  name: string
+  sourceType: string
+  endpointUrl: string
+  secret: string
+  isActive: boolean
+  lastReceivedAt: string | null
+  receivedCount: number
+  createdAt: string
+}
+
+export function useWebhooks() {
+  return useQuery({
+    queryKey: ['webhooks'],
+    queryFn: () => api.get<{ data: WebhookSource[] }>('/admin/webhooks'),
+  })
+}
+
+export function useCreateWebhook() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; sourceType?: string }) =>
+      api.post<{ data: WebhookSource }>('/admin/webhooks', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks'] }),
+  })
+}
+
+export function useDeleteWebhook() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ message: string }>(`/admin/webhooks/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['webhooks'] }),
+  })
+}
+
+// ── Audit Log ──
+
+export interface AuditEntry {
+  id: string
+  userId: string
+  userName: string
+  action: string
+  entityType: string
+  entityId: string | null
+  description: string
+  createdAt: string
+}
+
+export function useAuditLog(filters: { userId?: string; action?: string; page?: number; pageSize?: number } = {}) {
+  const params = new URLSearchParams()
+  if (filters.userId) params.set('userId', filters.userId)
+  if (filters.action) params.set('action', filters.action)
+  if (filters.page) params.set('page', String(filters.page))
+  if (filters.pageSize) params.set('pageSize', String(filters.pageSize))
+  const qs = params.toString()
+  return useQuery({
+    queryKey: ['auditLog', filters],
+    queryFn: () => api.get<{ data: AuditEntry[]; total: number; page: number; pageSize: number }>(`/admin/audit-log${qs ? `?${qs}` : ''}`),
+  })
+}
+
+// ── Branding ──
+
+export interface BrandingSettings {
+  companyName: string
+  companySlogan: string
+  logoUrl: string | null
+  primaryColor: string
+  offerTemplate: string
+  footerText: string
+}
+
+export function useBranding() {
+  return useQuery({
+    queryKey: ['branding'],
+    queryFn: () => api.get<{ data: BrandingSettings }>('/admin/branding'),
+  })
+}
+
+export function useUpdateBranding() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<BrandingSettings>) =>
+      api.put<{ data: BrandingSettings }>('/admin/branding', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['branding'] }),
+  })
+}
+
+// ── AI Settings ──
+
+export interface AiSettingsData {
+  enabled: boolean
+  model: string
+  language: string
+  maxTokens: number
+  systemPrompt: string
+  features: {
+    leadSummary: boolean
+    dealAnalysis: boolean
+    emailDraft: boolean
+  }
+}
+
+export function useAiSettings() {
+  return useQuery({
+    queryKey: ['aiSettings'],
+    queryFn: () => api.get<{ data: AiSettingsData }>('/admin/ai-settings'),
+  })
+}
+
+export function useUpdateAiSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Partial<AiSettingsData>) =>
+      api.put<{ data: AiSettingsData }>('/admin/ai-settings', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['aiSettings'] }),
+  })
+}
+
+// ── Notification Settings ──
+
+export interface NotificationSetting {
+  event: string
+  label: string
+  enabled: boolean
+  channels: ('IN_APP' | 'EMAIL')[]
+  reminderMinutes: number | null
+}
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: ['notifSettings'],
+    queryFn: () => api.get<{ data: NotificationSetting[] }>('/admin/notification-settings'),
+  })
+}
+
+export function useUpdateNotificationSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (settings: NotificationSetting[]) =>
+      api.put<{ data: NotificationSetting[] }>('/admin/notification-settings', { settings }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifSettings'] }),
+  })
+}
+
+// ── Document Templates ──
+
+export interface FolderTemplate {
+  id: string
+  entityType: string
+  folders: { name: string; subfolders?: string[] }[]
+}
+
+export function useDocTemplates() {
+  return useQuery({
+    queryKey: ['docTemplates'],
+    queryFn: () => api.get<{ data: FolderTemplate[] }>('/admin/doc-templates'),
+  })
+}
+
+export function useUpdateDocTemplate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ entityType, folders }: { entityType: string; folders: FolderTemplate['folders'] }) =>
+      api.put<{ data: FolderTemplate }>(`/admin/doc-templates/${entityType}`, { folders }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['docTemplates'] }),
+  })
+}
+
+// ── DB Export / Stats ──
+
+export interface DbStats {
+  leads: number
+  appointments: number
+  deals: number
+  tasks: number
+  documents: number
+  users: number
+  lastBackup: string
+  dbSize: string
+}
+
+export function useDbStats() {
+  return useQuery({
+    queryKey: ['dbStats'],
+    queryFn: () => api.get<{ data: DbStats }>('/admin/db-export/stats'),
+  })
+}
+
+// ── Category Labels ──
+
+export const categoryLabels: Record<ProductCategory, string> = {
+  PV_MODULE: 'PV-Module',
+  INVERTER: 'Wechselrichter',
+  BATTERY: 'Batteriespeicher',
+  INSTALLATION: 'Installationskosten',
+  PARTNER_PRICE: 'Partner-Preise',
+}
+
+export const categoryColors: Record<ProductCategory, string> = {
+  PV_MODULE: '#F59E0B',
+  INVERTER: '#60A5FA',
+  BATTERY: '#34D399',
+  INSTALLATION: '#A78BFA',
+  PARTNER_PRICE: '#FB923C',
+}
