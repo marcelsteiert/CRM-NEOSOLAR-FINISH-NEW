@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar, Clock,
-  Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle,
+  Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle, Globe,
 } from 'lucide-react'
 import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
   statusLabels, statusColors, priorityLabels, priorityColors,
-  type AppointmentStatus, type AppointmentPriority, type ChecklistItem,
+  appointmentTypeLabels, appointmentTypeColors,
+  type AppointmentStatus, type AppointmentPriority, type AppointmentType, type ChecklistItem,
 } from '@/hooks/useAppointments'
 import { useCreateDeal } from '@/hooks/useDeals'
 import DocumentSection from '@/components/ui/DocumentSection'
@@ -251,8 +252,8 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
             ))}
           </div>
 
-          {/* Status & Priority */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Status, Priority & Type */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Status</p>
               {isEditing ? (
@@ -283,6 +284,25 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                   {priorityLabels[appt.priority]}
                 </span>
               )}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Termin-Typ</p>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = appt.appointmentType === 'VOR_ORT' ? 'ONLINE' : 'VOR_ORT'
+                  updateAppt.mutate({ id: appt.id, appointmentType: next })
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                style={{
+                  background: `color-mix(in srgb, ${appointmentTypeColors[appt.appointmentType]} 12%, transparent)`,
+                  color: appointmentTypeColors[appt.appointmentType],
+                }}
+                title="Klicken zum Wechseln"
+              >
+                {appt.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
+                {appointmentTypeLabels[appt.appointmentType]}
+              </button>
             </div>
           </div>
 

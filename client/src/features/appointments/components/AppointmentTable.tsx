@@ -5,6 +5,7 @@ import {
   statusColors,
   appointmentTypeLabels,
   appointmentTypeColors,
+  useUpdateAppointment,
 } from '@/hooks/useAppointments'
 
 interface Props {
@@ -22,6 +23,7 @@ function SortIcon({ field, sortBy, sortOrder }: { field: string; sortBy: string;
 }
 
 export default function AppointmentTable({ appointments, onSelect, sortBy, sortOrder, onSort }: Props) {
+  const updateAppt = useUpdateAppointment()
   if (appointments.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
@@ -91,18 +93,25 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
                     <span className="text-[12px] text-text-sec">{a.company ?? '\u2014'}</span>
                   </td>
 
-                  {/* Appointment Type */}
+                  {/* Appointment Type – click to toggle */}
                   <td className="px-6 py-3.5">
-                    <span
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const next = a.appointmentType === 'VOR_ORT' ? 'ONLINE' : 'VOR_ORT'
+                        updateAppt.mutate({ id: a.id, appointmentType: next })
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer hover:opacity-80 transition-opacity"
                       style={{
                         background: `color-mix(in srgb, ${appointmentTypeColors[a.appointmentType]} 12%, transparent)`,
                         color: appointmentTypeColors[a.appointmentType],
                       }}
+                      title="Klicken zum Wechseln"
                     >
                       {a.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
                       {appointmentTypeLabels[a.appointmentType]}
-                    </span>
+                    </button>
                   </td>
 
                   {/* Date/Time */}
