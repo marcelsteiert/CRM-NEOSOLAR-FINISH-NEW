@@ -1,8 +1,10 @@
-import { ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, Car } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, Car, MapPin, Globe } from 'lucide-react'
 import {
   type Appointment,
   statusLabels,
   statusColors,
+  appointmentTypeLabels,
+  appointmentTypeColors,
 } from '@/hooks/useAppointments'
 
 interface Props {
@@ -32,6 +34,7 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
   const columns: { key: string; label: string; sortField?: string }[] = [
     { key: 'contact', label: 'Kontakt', sortField: 'contactName' },
     { key: 'company', label: 'Unternehmen', sortField: 'company' },
+    { key: 'type', label: 'Typ' },
     { key: 'date', label: 'Termin', sortField: 'appointmentDate' },
     { key: 'fahrzeit', label: 'Fahrzeit' },
     { key: 'status', label: 'Status' },
@@ -86,6 +89,20 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
                   {/* Company */}
                   <td className="px-6 py-3.5">
                     <span className="text-[12px] text-text-sec">{a.company ?? '\u2014'}</span>
+                  </td>
+
+                  {/* Appointment Type */}
+                  <td className="px-6 py-3.5">
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                      style={{
+                        background: `color-mix(in srgb, ${appointmentTypeColors[a.appointmentType]} 12%, transparent)`,
+                        color: appointmentTypeColors[a.appointmentType],
+                      }}
+                    >
+                      {a.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
+                      {appointmentTypeLabels[a.appointmentType]}
+                    </span>
                   </td>
 
                   {/* Date/Time */}
