@@ -130,7 +130,59 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     if (!deal) return
     updateDeal.mutate({ id: deal.id, stage: 'GEWONNEN' as DealStage })
 
-    // Projekt automatisch erstellen mit allen Deal-Daten
+    // Komplette Historie sammeln: Alle Deal-Aktivitäten + Konvertierungs-Events
+    const now = new Date().toISOString()
+    const historyActivities: Array<{ type: string; text: string; createdBy: string; createdAt: string }> = []
+
+    // 1. System-Event: Lead-Erstellung (falls vorhanden)
+    if (deal.leadId) {
+      historyActivities.push({
+        type: 'SYSTEM',
+        text: `Lead erstellt (ID: ${deal.leadId})`,
+        createdBy: 'System',
+        createdAt: deal.createdAt, // Approximation
+      })
+    }
+
+    // 2. System-Event: Termin (falls vorhanden)
+    if (deal.appointmentId) {
+      historyActivities.push({
+        type: 'SYSTEM',
+        text: `Besichtigungstermin durchgeführt (ID: ${deal.appointmentId})`,
+        createdBy: 'System',
+        createdAt: deal.createdAt,
+      })
+    }
+
+    // 3. Alle Aktivitäten vom Angebot übernehmen
+    for (const act of deal.activities) {
+      historyActivities.push({
+        type: act.type,
+        text: `[Angebot] ${act.text}`,
+        createdBy: act.createdBy,
+        createdAt: act.createdAt,
+      })
+    }
+
+    // 4. Notizen vom Angebot als Aktivität
+    if (deal.notes?.trim()) {
+      historyActivities.push({
+        type: 'NOTE',
+        text: `[Angebot-Notizen] ${deal.notes}`,
+        createdBy: 'System',
+        createdAt: now,
+      })
+    }
+
+    // 5. Konvertierungs-Event
+    historyActivities.push({
+      type: 'SYSTEM',
+      text: `Angebot "${deal.title}" als gewonnen markiert → Projekt erstellt`,
+      createdBy: 'System',
+      createdAt: now,
+    })
+
+    // Projekt erstellen mit kompletter Historie
     try {
       await createProject.mutateAsync({
         name: deal.company || deal.contactName,
@@ -146,6 +198,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         dealId: deal.id,
         notes: deal.notes ?? undefined,
         priority: deal.priority === 'URGENT' ? 'URGENT' : deal.priority === 'HIGH' ? 'HIGH' : 'MEDIUM',
+        activities: historyActivities,
       })
     } catch { /* project creation errors are non-blocking */ }
 

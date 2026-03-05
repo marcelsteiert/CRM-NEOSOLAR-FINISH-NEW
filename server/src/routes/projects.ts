@@ -269,6 +269,12 @@ const createProjectSchema = z.object({
   dealId: z.string().optional(),
   notes: z.string().optional(),
   kalkulation: z.object({ soll: z.number(), ist: z.number().nullable() }).optional(),
+  activities: z.array(z.object({
+    type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM']),
+    text: z.string(),
+    createdBy: z.string(),
+    createdAt: z.string(),
+  })).optional(),
 });
 
 const updateProjectSchema = createProjectSchema.partial().extend({
@@ -529,7 +535,13 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       appointmentId: d.appointmentId ?? null,
       dealId: d.dealId ?? null,
       notes: d.notes ?? null,
-      activities: [],
+      activities: (d.activities ?? []).map((a, i) => ({
+        id: `pa-${String(activitySeq++).padStart(4, '0')}`,
+        type: a.type as ActivityType,
+        text: a.text,
+        createdBy: a.createdBy,
+        createdAt: a.createdAt,
+      })),
       createdAt: now,
       updatedAt: now,
       completedAt: null,

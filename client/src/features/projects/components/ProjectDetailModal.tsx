@@ -3,7 +3,7 @@ import {
   X, AlertTriangle, MapPin, Phone, Mail, Building2, Sun, Zap, CheckCircle2,
   FolderKanban, Check, Loader2, Pencil, Save, XCircle,
   ExternalLink, FileText, TrendingUp, MessageSquare, PhoneCall,
-  Users as UsersIcon, Send,
+  Users as UsersIcon, Send, GitBranch, Calendar, FileCheck,
 } from 'lucide-react'
 import {
   useProject, usePhaseDefinitions, useToggleStep, useUpdateProject, useAddProjectActivity,
@@ -358,7 +358,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                   )}
                 </div>
 
-                {/* Partners + Links */}
+                {/* Partners */}
                 <div className="glass-card p-4 space-y-2.5">
                   {isEditing ? (
                     <>
@@ -387,24 +387,6 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                         <span className="text-text-dim">Elektro</span>
                         <span className="text-[11px] font-semibold">{project.elektroPartner || '–'}</span>
                       </div>
-                      {project.leadId && (
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-text-dim">Lead</span>
-                          <span className="flex items-center gap-1 text-[11px]" style={{ color: '#A78BFA' }}><ExternalLink size={10} /> Verknüpft</span>
-                        </div>
-                      )}
-                      {project.appointmentId && (
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-text-dim">Termin</span>
-                          <span className="flex items-center gap-1 text-[11px]" style={{ color: '#34D399' }}><ExternalLink size={10} /> Verknüpft</span>
-                        </div>
-                      )}
-                      {project.dealId && (
-                        <div className="flex items-center justify-between text-[12px]">
-                          <span className="text-text-dim">Angebot</span>
-                          <span className="flex items-center gap-1 text-[11px]" style={{ color: '#60A5FA' }}><ExternalLink size={10} /> Verknüpft</span>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
@@ -581,6 +563,57 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
 
             {/* RIGHT SIDEBAR */}
             <div className="w-[280px] shrink-0 space-y-5">
+              {/* Kundenreise – Verknüpfungskette */}
+              {(project.leadId || project.appointmentId || project.dealId) && (
+                <div className="glass-card p-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <GitBranch size={12} className="text-text-dim" />
+                    <span className="text-[10px] font-bold tracking-[0.08em] uppercase text-text-dim">Kundenreise</span>
+                  </div>
+                  <div className="space-y-0">
+                    {[
+                      { id: project.leadId, label: 'Lead', icon: UsersIcon, color: '#A78BFA', desc: 'Erstkontakt' },
+                      { id: project.appointmentId, label: 'Termin', icon: Calendar, color: '#34D399', desc: 'Besichtigung' },
+                      { id: project.dealId, label: 'Angebot', icon: FileCheck, color: '#60A5FA', desc: 'Offerte' },
+                      { id: project.id, label: 'Projekt', icon: FolderKanban, color: '#F59E0B', desc: 'Ausführung' },
+                    ].map((step, i, arr) => {
+                      const active = !!step.id
+                      const StepIcon = step.icon
+                      const isLast = i === arr.length - 1
+                      return (
+                        <div key={step.label} className="flex items-stretch gap-3">
+                          {/* Vertical line + dot */}
+                          <div className="flex flex-col items-center w-6 shrink-0">
+                            <div
+                              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                              style={{
+                                background: active ? `color-mix(in srgb, ${step.color} 20%, transparent)` : 'rgba(255,255,255,0.05)',
+                                border: `1.5px solid ${active ? step.color : 'rgba(255,255,255,0.1)'}`,
+                              }}
+                            >
+                              {active && <StepIcon size={10} style={{ color: step.color }} strokeWidth={2} />}
+                            </div>
+                            {!isLast && (
+                              <div className="w-px flex-1 min-h-[16px]" style={{ background: active && arr[i + 1]?.id ? step.color : 'rgba(255,255,255,0.08)' }} />
+                            )}
+                          </div>
+                          {/* Label */}
+                          <div className="pb-2.5">
+                            <span className={`text-[11px] font-semibold ${active ? 'text-text' : 'text-text-dim'}`}>{step.label}</span>
+                            {active && step.id !== project.id && (
+                              <span className="flex items-center gap-1 text-[9px] mt-0.5" style={{ color: step.color }}>
+                                <ExternalLink size={8} /> {step.id}
+                              </span>
+                            )}
+                            {isLast && <span className="text-[9px] text-text-dim block mt-0.5">{step.desc}</span>}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Notizen */}
               <div className="glass-card p-4">
                 <div className="flex items-center gap-1.5 mb-2">
