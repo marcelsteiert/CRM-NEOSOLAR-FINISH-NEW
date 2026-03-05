@@ -13,7 +13,7 @@ const pageTitles: Record<string, string> = {
   '/ai': 'KI-Summary',
   '/tasks': 'Aufgaben',
   '/notifications': 'Benachrichtigungen',
-  '/roles': 'Rollen & Rechte',
+  '/admin': 'Administration',
   '/export': 'Datenexport',
   '/documents': 'Dokumente',
 }
