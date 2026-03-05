@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useUsers, useRoleDefaults, useCreateUser, useUpdateUser, useDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
-import { Shield, Plus, Pencil, Trash2, Check, X, UserPlus, ChevronDown } from 'lucide-react'
+import { Shield, Pencil, Trash2, Check, X, UserPlus, ChevronDown, RotateCcw } from 'lucide-react'
 
 const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']
 const roleLabels: Record<UserRole, string> = {
@@ -33,7 +33,7 @@ const ALL_MODULES = [
   { id: 'export', label: 'Export' },
 ]
 
-type FormData = {
+interface FormData {
   firstName: string
   lastName: string
   email: string
@@ -66,31 +66,9 @@ export default function UsersRolesSection() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editForm, setEditForm] = useState<FormData>({ ...emptyForm })
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  // When role changes in create form, apply defaults
-  const handleCreateRoleChange = (role: UserRole) => {
-    setCreateForm({
-      ...createForm,
-      role,
-      allowedModules: roleDefaults[role] ? [...roleDefaults[role]] : [],
-    })
-  }
-
-  // When role changes in edit form, apply defaults
-  const handleEditRoleChange = (role: UserRole) => {
-    setEditForm({
-      ...editForm,
-      role,
-      allowedModules: roleDefaults[role] ? [...roleDefaults[role]] : [],
-    })
-  }
-
-  const toggleModule = (form: FormData, setForm: (f: FormData) => void, moduleId: string) => {
-    const modules = form.allowedModules.includes(moduleId)
-      ? form.allowedModules.filter((m) => m !== moduleId)
-      : [...form.allowedModules, moduleId]
-    setForm({ ...form, allowedModules: modules })
-  }
+  const getDefaults = (role: UserRole) => roleDefaults[role] ? [...roleDefaults[role]] : []
 
   const handleCreate = () => {
     if (!createForm.firstName.trim() || !createForm.lastName.trim() || !createForm.email.trim()) return
@@ -115,9 +93,9 @@ export default function UsersRolesSection() {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
-      phone: user.phone,
+      phone: user.phone ?? '',
       role: user.role,
-      allowedModules: [...user.allowedModules],
+      allowedModules: [...(user.allowedModules ?? [])],
     })
   }
 
@@ -140,144 +118,181 @@ export default function UsersRolesSection() {
     updateUser.mutate({ id: user.id, isActive: !user.isActive })
   }
 
-  const handleDelete = (user: User) => {
-    deleteUser.mutate(user.id)
+  const handleDelete = (userId: string) => {
+    deleteUser.mutate(userId, {
+      onSuccess: () => setConfirmDelete(null),
+    })
   }
 
-  const renderModuleCheckboxes = (form: FormData, setForm: (f: FormData) => void) => (
-    <div className="grid grid-cols-3 gap-1.5 mt-2">
-      {ALL_MODULES.map((mod) => {
-        const checked = form.allowedModules.includes(mod.id)
-        return (
-          <button
-            key={mod.id}
-            type="button"
-            onClick={() => toggleModule(form, setForm, mod.id)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-            style={{
-              background: checked
-                ? `color-mix(in srgb, ${roleColors[form.role]} 12%, transparent)`
-                : 'rgba(255,255,255,0.02)',
-              color: checked ? roleColors[form.role] : '#94A3B8',
-              border: `1px solid ${checked ? `color-mix(in srgb, ${roleColors[form.role]} 25%, transparent)` : 'transparent'}`,
-            }}
-          >
-            <div
-              className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
-              style={{
-                background: checked ? roleColors[form.role] : 'rgba(255,255,255,0.06)',
-              }}
-            >
-              {checked && <Check size={9} strokeWidth={3} className="text-white" />}
-            </div>
-            {mod.label}
-          </button>
-        )
-      })}
-    </div>
-  )
+  // ── Shared Form Renderer ──
 
-  const renderUserForm = (form: FormData, setForm: (f: FormData) => void, onSave: () => void, onCancel: () => void, isPending: boolean) => (
-    <div className="glass-card p-5 space-y-4" style={{ borderRadius: 'var(--radius-lg)' }}>
-      <div className="grid grid-cols-2 gap-3">
+  function UserForm({ form, setForm, onSave, onCancel, isPending }: {
+    form: FormData
+    setForm: (f: FormData) => void
+    onSave: () => void
+    onCancel: () => void
+    isPending: boolean
+  }) {
+    const color = roleColors[form.role]
+
+    const handleRoleChange = (role: UserRole) => {
+      setForm({ ...form, role, allowedModules: getDefaults(role) })
+    }
+
+    const toggleModule = (moduleId: string) => {
+      const modules = form.allowedModules.includes(moduleId)
+        ? form.allowedModules.filter((m) => m !== moduleId)
+        : [...form.allowedModules, moduleId]
+      setForm({ ...form, allowedModules: modules })
+    }
+
+    const loadDefaults = () => {
+      setForm({ ...form, allowedModules: getDefaults(form.role) })
+    }
+
+    return (
+      <div className="glass-card p-5 space-y-4" style={{ borderRadius: 'var(--radius-lg)' }}>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Vorname</label>
+            <input
+              type="text"
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="Vorname"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Nachname</label>
+            <input
+              type="text"
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="Nachname"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">E-Mail</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="email@neosolar.ch"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Telefon</label>
+            <input
+              type="text"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="+41 71 555 00 00"
+            />
+          </div>
+        </div>
+
+        {/* Rolle */}
         <div>
-          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Vorname</label>
-          <input
-            type="text"
-            value={form.firstName}
-            onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-            placeholder="Vorname"
-          />
+          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Rolle</label>
+          <div className="flex gap-2 flex-wrap">
+            {ROLES.map((r) => {
+              const active = form.role === r
+              const rc = roleColors[r]
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => handleRoleChange(r)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all"
+                  style={{
+                    background: active ? `color-mix(in srgb, ${rc} 18%, transparent)` : 'rgba(255,255,255,0.03)',
+                    color: active ? rc : '#525E6F',
+                    border: `1px solid ${active ? `color-mix(in srgb, ${rc} 30%, transparent)` : 'transparent'}`,
+                    boxShadow: active ? `0 0 12px color-mix(in srgb, ${rc} 10%, transparent)` : 'none',
+                  }}
+                >
+                  <Shield size={11} strokeWidth={2} />
+                  {roleLabels[r]}
+                </button>
+              )
+            })}
+          </div>
         </div>
+
+        {/* Module */}
         <div>
-          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Nachname</label>
-          <input
-            type="text"
-            value={form.lastName}
-            onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-            placeholder="Nachname"
-          />
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+              Modul-Berechtigungen ({form.allowedModules.length}/{ALL_MODULES.length})
+            </label>
+            <button
+              type="button"
+              onClick={loadDefaults}
+              className="flex items-center gap-1 text-[10px] text-text-dim hover:text-amber transition-colors"
+            >
+              <RotateCcw size={10} strokeWidth={2} />
+              Standard laden
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {ALL_MODULES.map((mod) => {
+              const checked = form.allowedModules.includes(mod.id)
+              return (
+                <button
+                  key={mod.id}
+                  type="button"
+                  onClick={() => toggleModule(mod.id)}
+                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                  style={{
+                    background: checked
+                      ? `color-mix(in srgb, ${color} 12%, transparent)`
+                      : 'rgba(255,255,255,0.02)',
+                    color: checked ? color : '#94A3B8',
+                    border: `1px solid ${checked ? `color-mix(in srgb, ${color} 25%, transparent)` : 'transparent'}`,
+                  }}
+                >
+                  <div
+                    className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
+                    style={{ background: checked ? color : 'rgba(255,255,255,0.06)' }}
+                  >
+                    {checked && <Check size={9} strokeWidth={3} className="text-white" />}
+                  </div>
+                  {mod.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">E-Mail</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-            placeholder="email@neosolar.ch"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Telefon</label>
-          <input
-            type="text"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-            placeholder="+41 71 555 00 00"
-          />
-        </div>
-      </div>
-      <div>
-        <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Rolle</label>
-        <div className="relative">
-          <select
-            value={form.role}
-            onChange={(e) => {
-              const role = e.target.value as UserRole
-              if (form === createForm) handleCreateRoleChange(role)
-              else handleEditRoleChange(role)
-            }}
-            className="w-full appearance-none px-3 py-2 pr-8 text-[12px] rounded-lg bg-surface-hover border border-border text-text cursor-pointer focus:outline-none"
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r} style={{ background: '#0B0F15' }}>{roleLabels[r]}</option>
-            ))}
-          </select>
-          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-        </div>
-      </div>
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="text-[10px] font-semibold text-text-dim uppercase tracking-wider">Modul-Berechtigungen</label>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 pt-1">
           <button
             type="button"
-            onClick={() => {
-              const defaults = roleDefaults[form.role] ?? []
-              if (form === createForm) setCreateForm({ ...createForm, allowedModules: [...defaults] })
-              else setEditForm({ ...editForm, allowedModules: [...defaults] })
-            }}
-            className="text-[10px] text-text-dim hover:text-amber transition-colors"
+            onClick={onSave}
+            disabled={isPending || !form.firstName.trim() || !form.email.trim()}
+            className="btn-primary flex items-center gap-1.5 px-4 py-2 text-[12px] disabled:opacity-40"
           >
-            Rolle-Standard laden
+            <Check size={13} strokeWidth={2} /> Speichern
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary px-4 py-2 text-[12px]"
+          >
+            Abbrechen
           </button>
         </div>
-        {renderModuleCheckboxes(form, setForm)}
       </div>
-      <div className="flex items-center gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={isPending || !form.firstName.trim() || !form.email.trim()}
-          className="btn-primary flex items-center gap-1.5 px-4 py-2 text-[12px] disabled:opacity-40"
-        >
-          <Check size={13} strokeWidth={2} /> Speichern
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="btn-secondary px-4 py-2 text-[12px]"
-        >
-          Abbrechen
-        </button>
-      </div>
-    </div>
-  )
+    )
+  }
+
+  // ── Main Render ──
 
   return (
     <div className="space-y-4">
@@ -290,7 +305,7 @@ export default function UsersRolesSection() {
             setShowCreate(!showCreate)
             setCreateForm({
               ...emptyForm,
-              allowedModules: roleDefaults.VERTRIEB ? [...roleDefaults.VERTRIEB] : [],
+              allowedModules: getDefaults('VERTRIEB'),
             })
           }}
           className="btn-primary flex items-center gap-1.5 px-3 py-2 text-[11px]"
@@ -300,12 +315,14 @@ export default function UsersRolesSection() {
       </div>
 
       {/* Create Form */}
-      {showCreate && renderUserForm(
-        createForm,
-        setCreateForm,
-        handleCreate,
-        () => { setShowCreate(false); setCreateForm({ ...emptyForm }) },
-        createUser.isPending,
+      {showCreate && (
+        <UserForm
+          form={createForm}
+          setForm={setCreateForm}
+          onSave={handleCreate}
+          onCancel={() => { setShowCreate(false); setCreateForm({ ...emptyForm }) }}
+          isPending={createUser.isPending}
+        />
       )}
 
       {/* Users List */}
@@ -314,17 +331,18 @@ export default function UsersRolesSection() {
           const isEditing = editingUser?.id === user.id
           const isExpanded = expandedUser === user.id
           const color = roleColors[user.role] ?? '#94A3B8'
+          const modules = user.allowedModules ?? []
 
           if (isEditing) {
             return (
               <div key={user.id}>
-                {renderUserForm(
-                  editForm,
-                  setEditForm,
-                  handleSaveEdit,
-                  () => setEditingUser(null),
-                  updateUser.isPending,
-                )}
+                <UserForm
+                  form={editForm}
+                  setForm={setEditForm}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setEditingUser(null)}
+                  isPending={updateUser.isPending}
+                />
               </div>
             )
           }
@@ -341,7 +359,7 @@ export default function UsersRolesSection() {
                   className="w-9 h-9 rounded-xl flex items-center justify-center text-[13px] font-bold shrink-0"
                   style={{ background: `color-mix(in srgb, ${color} 15%, transparent)`, color }}
                 >
-                  {user.firstName[0]}{user.lastName[0]}
+                  {user.firstName?.[0]}{user.lastName?.[0]}
                 </div>
 
                 {/* Info */}
@@ -372,6 +390,11 @@ export default function UsersRolesSection() {
                   {roleLabels[user.role] ?? user.role}
                 </span>
 
+                {/* Modules Count */}
+                <span className="text-[10px] text-text-dim shrink-0">
+                  {modules.length}/{ALL_MODULES.length}
+                </span>
+
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
@@ -391,14 +414,33 @@ export default function UsersRolesSection() {
                   >
                     {user.isActive ? <Check size={13} strokeWidth={2} /> : <X size={13} strokeWidth={2} />}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(user)}
-                    className="p-1.5 rounded-lg hover:bg-surface-hover text-text-dim hover:text-red-400 transition-colors"
-                    title="Deaktivieren"
-                  >
-                    <Trash2 size={13} strokeWidth={2} />
-                  </button>
+                  {confirmDelete === user.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(user.id)}
+                        className="px-2 py-1 rounded-lg text-[10px] font-bold text-red hover:bg-red-soft transition-colors"
+                      >
+                        Löschen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(null)}
+                        className="p-1 rounded-lg text-text-dim hover:text-text transition-colors"
+                      >
+                        <X size={11} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(user.id)}
+                      className="p-1.5 rounded-lg hover:bg-surface-hover text-text-dim hover:text-red transition-colors"
+                      title="Löschen"
+                    >
+                      <Trash2 size={13} strokeWidth={2} />
+                    </button>
+                  )}
                 </div>
 
                 <ChevronDown
@@ -410,12 +452,22 @@ export default function UsersRolesSection() {
               {/* Expanded: Module Permissions (read-only view) */}
               {isExpanded && (
                 <div className="px-5 pb-4 pt-1 border-t border-border">
-                  <p className="text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-2">
-                    Modul-Berechtigungen ({user.allowedModules.length}/{ALL_MODULES.length})
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+                      Modul-Berechtigungen ({modules.length}/{ALL_MODULES.length})
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); startEdit(user) }}
+                      className="flex items-center gap-1 text-[10px] text-text-dim hover:text-amber transition-colors"
+                    >
+                      <Pencil size={10} strokeWidth={2} />
+                      Bearbeiten
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {ALL_MODULES.map((mod) => {
-                      const has = user.allowedModules.includes(mod.id)
+                      const has = modules.includes(mod.id)
                       return (
                         <span
                           key={mod.id}
