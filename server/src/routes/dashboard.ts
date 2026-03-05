@@ -55,12 +55,12 @@ router.get('/monthly', async (req: Request, res: Response, next: NextFunction) =
   try {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const { assignedTo } = req.query;
-    const userQs = assignedTo ? `?assignedTo=${assignedTo}` : '';
+    const userQs = assignedTo ? `&assignedTo=${assignedTo}` : '';
 
     // Hole alle Deals und Termine
     const [dealsRes, appointmentsRes] = await Promise.all([
-      fetch(`${baseUrl}/api/v1/deals${userQs}&pageSize=1000`),
-      fetch(`${baseUrl}/api/v1/appointments${userQs}&pageSize=1000`),
+      fetch(`${baseUrl}/api/v1/deals?pageSize=1000${userQs}`),
+      fetch(`${baseUrl}/api/v1/appointments?pageSize=1000${userQs}`),
     ]);
 
     const dealsBody = await dealsRes.json();
