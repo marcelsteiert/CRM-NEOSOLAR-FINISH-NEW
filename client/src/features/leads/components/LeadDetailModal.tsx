@@ -1725,10 +1725,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 >
                   <option value="">Verkäufer auswählen...</option>
                   {users
-                    .filter((u) => u.role === 'Vertrieb' || u.role === 'Geschaeftsleitung')
+                    .filter((u) => u.role === 'VERTRIEB' || u.role === 'GL')
                     .map((u) => (
                       <option key={u.id} value={u.id}>
-                        {u.firstName} {u.lastName} – {u.role}
+                        {u.firstName} {u.lastName} – {u.role === 'VERTRIEB' ? 'Vertrieb' : 'Geschäftsleitung'}
                       </option>
                     ))}
                 </select>

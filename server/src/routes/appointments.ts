@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppError } from '../middleware/errorHandler.js';
+import { getSettings } from './settings.js';
 
 const router = Router();
 
@@ -103,19 +104,13 @@ function withTravelTime(a: Appointment) {
 }
 
 // ---------------------------------------------------------------------------
-// Default Checklist for new appointments
+// Default Checklist – reads from settings so admin changes apply immediately
 // ---------------------------------------------------------------------------
 
-const DEFAULT_CHECKLIST: ChecklistItem[] = [
-  { id: 'c1', label: 'Dach-Fotos/Bilder erhalten', checked: false },
-  { id: 'c2', label: 'Dachfläche & Ausrichtung berechnet', checked: false },
-  { id: 'c3', label: 'kWp-Potenzial geschätzt', checked: false },
-  { id: 'c4', label: 'Stromverbrauch des Kunden analysiert', checked: false },
-  { id: 'c5', label: 'Anfahrt geplant', checked: false },
-  { id: 'c6', label: 'Offerte-Vorlage vorbereitet', checked: false },
-  { id: 'c7', label: 'Technische Unterlagen zusammengestellt', checked: false },
-  { id: 'c8', label: 'Kunde über Ablauf informiert', checked: false },
-];
+function getDefaultChecklist(): ChecklistItem[] {
+  const tpl = getSettings().checklistTemplate;
+  return tpl.map((c) => ({ id: c.id, label: c.label, checked: false }));
+}
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -314,7 +309,7 @@ const mockAppointments: Appointment[] = [
     appointmentDate: '2026-03-04',
     appointmentTime: '08:30',
     preparationNotes: 'Gewerbebau 600m2 Flachdach. Moegliches Grossprojekt mit Folgeprojekten.',
-    checklist: DEFAULT_CHECKLIST.map((c) => ({ ...c })),
+    checklist: getDefaultChecklist(),
     notes: 'CEO persönlich. Schnelle Entscheidung erwartet.',
     createdAt: '2026-03-02T16:00:00.000Z',
     updatedAt: '2026-03-02T16:00:00.000Z',
@@ -508,7 +503,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       appointmentDate: result.data.appointmentDate ?? null,
       appointmentTime: result.data.appointmentTime ?? null,
       preparationNotes: result.data.preparationNotes ?? null,
-      checklist: DEFAULT_CHECKLIST.map((c) => ({ ...c })),
+      checklist: getDefaultChecklist(),
       notes: result.data.notes ?? null,
       createdAt: now,
       updatedAt: now,
