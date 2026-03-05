@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import {
   FolderKanban, LayoutDashboard, Users2, Search, AlertTriangle, ChevronRight,
   TrendingUp, Sun, Zap, CheckCircle2, Clock, Star, ArrowUpRight, Loader2, Building2,
+  GripVertical,
 } from 'lucide-react'
 import {
-  useProjects, useProjectStats, usePartners, usePhaseDefinitions,
+  useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
   phaseLabels, phaseColors, priorityColors, formatCHF, computePhaseProgress,
   type Project, type ProjectPhase,
 } from '@/hooks/useProjects'
@@ -29,6 +30,7 @@ export default function ProjectsPage() {
   const { data: statsData } = useProjectStats()
   const { data: partnersData } = usePartners()
   const { data: phasesData } = usePhaseDefinitions()
+  const updateProject = useUpdateProject()
 
   const projects = projectsData?.data ?? []
   const stats = statsData?.data
@@ -105,7 +107,7 @@ export default function ProjectsPage() {
             <Loader2 size={24} className="animate-spin text-text-dim" />
           </div>
         ) : view === 'kanban' ? (
-          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} />
+          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={(projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase })} />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
         ) : (
@@ -130,11 +132,54 @@ function KanbanView({
   projectsByPhase,
   phases,
   onSelect,
+  onMoveProject,
 }: {
   projectsByPhase: Record<ProjectPhase, Project[]>
   phases: { id: string; name: string; color: string; steps: string[] }[]
   onSelect: (id: string) => void
+  onMoveProject: (projectId: string, targetPhase: ProjectPhase) => void
 }) {
+  const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+
+  const handleDragStart = useCallback((e: React.DragEvent, projectId: string) => {
+    e.dataTransfer.setData('text/plain', projectId)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggingId(projectId)
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null)
+    setDragOverPhase(null)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, phaseId: ProjectPhase) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverPhase(phaseId)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    // Only reset if leaving the column entirely (not entering a child)
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverPhase(null)
+    }
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent, targetPhase: ProjectPhase) => {
+    e.preventDefault()
+    const projectId = e.dataTransfer.getData('text/plain')
+    if (projectId) {
+      // Find the project's current phase
+      const currentPhase = phaseOrder.find((ph) => projectsByPhase[ph].some((p) => p.id === projectId))
+      if (currentPhase !== targetPhase) {
+        onMoveProject(projectId, targetPhase)
+      }
+    }
+    setDragOverPhase(null)
+    setDraggingId(null)
+  }, [onMoveProject, projectsByPhase])
+
   return (
     <div className="grid grid-cols-4 gap-4 h-full overflow-hidden">
       {phaseOrder.map((phaseId) => {
@@ -143,11 +188,21 @@ function KanbanView({
         const items = projectsByPhase[phaseId]
         const Icon = phaseIcons[phaseId]
         const totalValue = items.reduce((s, p) => s + p.value, 0)
+        const isOver = dragOverPhase === phaseId && !items.some((p) => p.id === draggingId)
 
         return (
-          <div key={phaseId} className="flex flex-col gap-3 h-full overflow-hidden">
+          <div
+            key={phaseId}
+            className="flex flex-col gap-3 h-full overflow-hidden transition-all duration-200"
+            onDragOver={(e) => handleDragOver(e, phaseId)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, phaseId)}
+          >
             {/* Column Header */}
-            <div className="glass-card px-4 py-3 shrink-0">
+            <div
+              className="glass-card px-4 py-3 shrink-0 transition-all duration-200"
+              style={isOver ? { borderColor: color, boxShadow: `0 0 12px ${color}30` } : undefined}
+            >
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-2 h-2 rounded-full" style={{ background: color }} />
                 <Icon size={14} style={{ color }} />
@@ -158,12 +213,33 @@ function KanbanView({
             </div>
 
             {/* Cards */}
-            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin">
+            <div
+              className={`flex-1 overflow-y-auto space-y-2.5 pr-1 scrollbar-thin rounded-xl transition-all duration-200 ${isOver ? 'ring-1 ring-opacity-40' : ''}`}
+              style={isOver ? { background: `color-mix(in srgb, ${color} 4%, transparent)`, ringColor: color } : undefined}
+            >
               {items.map((project) => (
-                <ProjectCard key={project.id} project={project} phaseId={phaseId} onClick={() => onSelect(project.id)} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  phaseId={phaseId}
+                  onClick={() => onSelect(project.id)}
+                  onDragStart={(e) => handleDragStart(e, project.id)}
+                  onDragEnd={handleDragEnd}
+                  isDragging={draggingId === project.id}
+                />
               ))}
               {items.length === 0 && (
-                <div className="text-center py-8 text-[12px] text-text-dim">Keine Projekte</div>
+                <div className={`text-center py-8 text-[12px] ${isOver ? 'text-text-sec' : 'text-text-dim'}`}>
+                  {isOver ? 'Hier ablegen' : 'Keine Projekte'}
+                </div>
+              )}
+              {/* Drop indicator at bottom */}
+              {isOver && items.length > 0 && (
+                <div className="h-12 rounded-xl border-2 border-dashed flex items-center justify-center text-[11px] font-semibold transition-all duration-200"
+                  style={{ borderColor: `color-mix(in srgb, ${color} 40%, transparent)`, color }}
+                >
+                  Hier ablegen
+                </div>
               )}
             </div>
           </div>
@@ -173,20 +249,31 @@ function KanbanView({
   )
 }
 
-function ProjectCard({ project, phaseId, onClick }: { project: Project; phaseId: ProjectPhase; onClick: () => void }) {
+function ProjectCard({
+  project, phaseId, onClick, onDragStart, onDragEnd, isDragging,
+}: {
+  project: Project; phaseId: ProjectPhase; onClick: () => void
+  onDragStart: (e: React.DragEvent) => void; onDragEnd: () => void; isDragging: boolean
+}) {
   const color = phaseColors[phaseId]
   const pp = computePhaseProgress(project.progress, phaseId)
   const totalProgress = project.percent ?? 0
 
   return (
-    <button
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onClick}
-      className="glass-card w-full text-left p-4 hover:border-[rgba(255,255,255,0.12)] transition-all duration-150 group"
+      className={`glass-card w-full text-left p-4 hover:border-[rgba(255,255,255,0.12)] transition-all duration-150 group cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40 scale-95' : ''}`}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-bold truncate group-hover:text-white transition-colors">{project.name}</p>
-          <p className="text-[11px] text-text-dim mt-0.5">{project.description}</p>
+        <div className="flex items-start gap-1.5 flex-1 min-w-0">
+          <GripVertical size={14} className="text-text-dim/40 shrink-0 mt-0.5 group-hover:text-text-dim transition-colors" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-bold truncate group-hover:text-white transition-colors">{project.name}</p>
+            <p className="text-[11px] text-text-dim mt-0.5">{project.description}</p>
+          </div>
         </div>
         {project.risk && (
           <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 ml-2" style={{ background: 'rgba(248,113,113,0.15)' }}>
@@ -222,7 +309,7 @@ function ProjectCard({ project, phaseId, onClick }: { project: Project; phaseId:
           <span className="font-mono text-text-sec">{totalProgress}%</span>
         </div>
       </div>
-    </button>
+    </div>
   )
 }
 
