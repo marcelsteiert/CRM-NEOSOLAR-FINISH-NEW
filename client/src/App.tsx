@@ -14,6 +14,7 @@ import NotificationsPage from '@/features/notifications/NotificationsPage'
 import AdminPage from '@/features/admin/AdminPage'
 import ExportPage from '@/features/export/ExportPage'
 import DocumentsPage from '@/features/documents/DocumentsPage'
+import FeaturesPage from '@/features/features/FeaturesPage'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="admin" element={<AdminPage />} />
           <Route path="export" element={<ExportPage />} />
           <Route path="documents" element={<DocumentsPage />} />
+          <Route path="features" element={<FeaturesPage />} />
           {/* Catch-all: redirect to dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

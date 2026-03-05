@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from 'react'
+import { useState, createContext, useContext, useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -17,7 +17,9 @@ import {
   Calculator,
   PanelLeftClose,
   PanelLeft,
+  Puzzle,
 } from 'lucide-react'
+import { useFeatureFlags, type FeatureFlag } from '@/hooks/useFeatureFlags'
 
 // ── Sidebar Context ──
 
@@ -44,6 +46,7 @@ interface NavItem {
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
   label: string
   hasNotification?: boolean
+  featureId?: FeatureFlag
 }
 
 interface NavGroup {
@@ -51,43 +54,44 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const navGroups: NavGroup[] = [
+const allNavGroups: NavGroup[] = [
   {
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard', featureId: 'dashboard' },
     ],
   },
   {
     label: 'Vertrieb',
     items: [
-      { to: '/leads', icon: Users, label: 'Leads' },
-      { to: '/appointments', icon: CalendarCheck, label: 'Termine' },
-      { to: '/deals', icon: FileText, label: 'Angebote' },
-      { to: '/provision', icon: Coins, label: 'Provision' },
+      { to: '/leads', icon: Users, label: 'Leads', featureId: 'leads' },
+      { to: '/appointments', icon: CalendarCheck, label: 'Termine', featureId: 'appointments' },
+      { to: '/deals', icon: FileText, label: 'Angebote', featureId: 'deals' },
+      { to: '/provision', icon: Coins, label: 'Provision', featureId: 'provision' },
     ],
   },
   {
     label: 'Planung',
     items: [
-      { to: '/calculations', icon: Calculator, label: 'Kalkulation' },
-      { to: '/projects', icon: FolderKanban, label: 'Projekte' },
+      { to: '/calculations', icon: Calculator, label: 'Kalkulation', featureId: 'calculations' },
+      { to: '/projects', icon: FolderKanban, label: 'Projekte', featureId: 'projects' },
     ],
   },
   {
     label: 'Betrieb',
     items: [
-      { to: '/communication', icon: Mail, label: 'Kommunikation' },
-      { to: '/ai', icon: Sparkles, label: 'KI-Summary' },
+      { to: '/communication', icon: Mail, label: 'Kommunikation', featureId: 'communication' },
+      { to: '/ai', icon: Sparkles, label: 'KI-Summary', featureId: 'ai' },
+      { to: '/tasks', icon: ClipboardList, label: 'Aufgaben', featureId: 'tasks' },
     ],
   },
   {
     label: 'System',
     items: [
-      { to: '/tasks', icon: ClipboardList, label: 'Aufgaben' },
-      { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true },
-      { to: '/admin', icon: Shield, label: 'Admin' },
-      { to: '/export', icon: Download, label: 'Export' },
-      { to: '/documents', icon: FileBox, label: 'Dokumente' },
+      { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true, featureId: 'notifications' },
+      { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin' },
+      { to: '/export', icon: Download, label: 'Export', featureId: 'export' },
+      { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents' },
+      { to: '/features', icon: Puzzle, label: 'Features' },
     ],
   },
 ]
@@ -97,8 +101,19 @@ const navGroups: NavGroup[] = [
 export default function Sidebar() {
   const { pinned, setPinned } = useSidebarPinned()
   const [hovered, setHovered] = useState(false)
+  const { flags } = useFeatureFlags()
 
   const expanded = pinned || hovered
+
+  // Filter nav groups based on enabled features
+  const navGroups = useMemo(() => {
+    return allNavGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.featureId || flags[item.featureId]),
+      }))
+      .filter((group) => group.items.length > 0)
+  }, [flags])
 
   return (
     <aside
