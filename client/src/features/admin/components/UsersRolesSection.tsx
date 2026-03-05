@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useUsers, useRoleDefaults, useCreateUser, useUpdateUser, useDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
-import { Shield, Pencil, Trash2, Check, X, UserPlus, ChevronDown, RotateCcw } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, useDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
+import { Shield, Pencil, Trash2, Check, X, UserPlus, ChevronDown, RotateCcw, Save } from 'lucide-react'
 
 const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']
 const roleLabels: Record<UserRole, string> = {
@@ -54,6 +54,7 @@ const emptyForm: FormData = {
 export default function UsersRolesSection() {
   const { data: usersResponse } = useUsers()
   const { data: roleDefaultsResponse } = useRoleDefaults()
+  const updateRoleDefaults = useUpdateRoleDefaults()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
@@ -68,7 +69,51 @@ export default function UsersRolesSection() {
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  const getDefaults = (role: UserRole) => roleDefaults[role] ? [...roleDefaults[role]] : []
+  // Editable role defaults matrix
+  const [editableDefaults, setEditableDefaults] = useState<Record<string, string[]>>({})
+  const [defaultsDirty, setDefaultsDirty] = useState(false)
+
+  // Sync from server when loaded
+  useEffect(() => {
+    if (roleDefaultsResponse?.data) {
+      setEditableDefaults(
+        Object.fromEntries(
+          Object.entries(roleDefaultsResponse.data).map(([k, v]) => [k, [...v]])
+        )
+      )
+      setDefaultsDirty(false)
+    }
+  }, [roleDefaultsResponse?.data])
+
+  const toggleDefaultModule = (role: UserRole, moduleId: string) => {
+    setEditableDefaults((prev) => {
+      const modules = prev[role] ?? []
+      const next = modules.includes(moduleId)
+        ? modules.filter((m) => m !== moduleId)
+        : [...modules, moduleId]
+      return { ...prev, [role]: next }
+    })
+    setDefaultsDirty(true)
+  }
+
+  const saveDefaults = () => {
+    updateRoleDefaults.mutate(editableDefaults, {
+      onSuccess: () => setDefaultsDirty(false),
+    })
+  }
+
+  const resetDefaults = () => {
+    if (roleDefaultsResponse?.data) {
+      setEditableDefaults(
+        Object.fromEntries(
+          Object.entries(roleDefaultsResponse.data).map(([k, v]) => [k, [...v]])
+        )
+      )
+    }
+    setDefaultsDirty(false)
+  }
+
+  const getDefaults = (role: UserRole) => editableDefaults[role] ? [...editableDefaults[role]] : roleDefaults[role] ? [...roleDefaults[role]] : []
 
   const handleCreate = () => {
     if (!createForm.firstName.trim() || !createForm.lastName.trim() || !createForm.email.trim()) return
@@ -496,10 +541,43 @@ export default function UsersRolesSection() {
         })}
       </div>
 
-      {/* Role Defaults Overview */}
-      {Object.keys(roleDefaults).length > 0 && (
+      {/* Editable Role Defaults Matrix */}
+      {Object.keys(editableDefaults).length > 0 && (
         <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
-          <h3 className="text-[12px] font-bold mb-3 uppercase tracking-wider text-text-sec">Standard-Berechtigungen pro Rolle</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[12px] font-bold uppercase tracking-wider text-text-sec">Standard-Berechtigungen pro Rolle</h3>
+            <div className="flex items-center gap-2">
+              {defaultsDirty && (
+                <>
+                  <button
+                    type="button"
+                    onClick={resetDefaults}
+                    className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[11px]"
+                  >
+                    <RotateCcw size={11} strokeWidth={2} />
+                    Zurücksetzen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveDefaults}
+                    disabled={updateRoleDefaults.isPending}
+                    className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-[11px] disabled:opacity-40"
+                  >
+                    <Save size={11} strokeWidth={2} />
+                    {updateRoleDefaults.isPending ? 'Speichern...' : 'Speichern'}
+                  </button>
+                </>
+              )}
+              {!defaultsDirty && updateRoleDefaults.isSuccess && (
+                <span className="flex items-center gap-1 text-[10px] text-green font-medium">
+                  <Check size={11} strokeWidth={2} /> Gespeichert
+                </span>
+              )}
+            </div>
+          </div>
+          <p className="text-[10px] text-text-dim mb-3">
+            Klicke auf die Felder um die Standard-Module pro Rolle zu ändern. Neue Benutzer erhalten diese Berechtigungen automatisch.
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -515,22 +593,25 @@ export default function UsersRolesSection() {
               </thead>
               <tbody>
                 {ALL_MODULES.map((mod) => (
-                  <tr key={mod.id} className="border-b border-border">
+                  <tr key={mod.id} className="border-b border-border hover:bg-surface-hover/50 transition-colors">
                     <td className="px-3 py-2 text-[11px] text-text-sec">{mod.label}</td>
                     {ROLES.map((r) => {
-                      const has = roleDefaults[r]?.includes(mod.id) ?? false
+                      const has = editableDefaults[r]?.includes(mod.id) ?? false
                       return (
                         <td key={r} className="text-center px-3 py-2">
-                          <div
-                            className="w-5 h-5 rounded mx-auto flex items-center justify-center"
+                          <button
+                            type="button"
+                            onClick={() => toggleDefaultModule(r, mod.id)}
+                            className="w-6 h-6 rounded-md mx-auto flex items-center justify-center cursor-pointer transition-all hover:scale-110"
                             style={{
                               background: has
-                                ? `color-mix(in srgb, ${roleColors[r]} 15%, transparent)`
+                                ? `color-mix(in srgb, ${roleColors[r]} 18%, transparent)`
                                 : 'rgba(255,255,255,0.03)',
+                              border: `1px solid ${has ? `color-mix(in srgb, ${roleColors[r]} 25%, transparent)` : 'rgba(255,255,255,0.06)'}`,
                             }}
                           >
-                            {has && <Check size={12} strokeWidth={2.5} style={{ color: roleColors[r] }} />}
-                          </div>
+                            {has && <Check size={13} strokeWidth={2.5} style={{ color: roleColors[r] }} />}
+                          </button>
                         </td>
                       )
                     })}

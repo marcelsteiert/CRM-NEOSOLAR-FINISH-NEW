@@ -99,6 +99,22 @@ router.get('/role-defaults', (_req, res) => {
   res.json({ data: defaultModulesByRole })
 })
 
+// PUT role defaults
+router.put('/role-defaults', (req, res) => {
+  const schema = z.record(
+    z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']),
+    z.array(z.string()),
+  )
+  const parsed = schema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ error: 'Ungültige Daten', details: parsed.error.issues })
+
+  for (const [role, modules] of Object.entries(parsed.data)) {
+    defaultModulesByRole[role as UserRole] = modules
+  }
+
+  res.json({ data: defaultModulesByRole })
+})
+
 // GET single user
 router.get('/:id', (req, res) => {
   const user = users.find((u) => u.id === req.params.id)
