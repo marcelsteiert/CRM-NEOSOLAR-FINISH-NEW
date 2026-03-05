@@ -303,28 +303,28 @@ export default function DealsPage() {
     <>
       <div className="space-y-5">
         {/* Top Bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[14px] flex items-center justify-center" style={{ background: 'linear-gradient(135deg, color-mix(in srgb, #A78BFA 12%, transparent), color-mix(in srgb, #A78BFA 4%, transparent))', border: '1px solid color-mix(in srgb, #A78BFA 10%, transparent)' }}>
+            <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, color-mix(in srgb, #A78BFA 12%, transparent), color-mix(in srgb, #A78BFA 4%, transparent))', border: '1px solid color-mix(in srgb, #A78BFA 10%, transparent)' }}>
               <FileText size={20} className="text-violet-400" strokeWidth={1.8} />
             </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-xl font-bold tracking-[-0.02em]">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">
                   {canViewAll && viewAll ? 'Angebote – Alle' : 'Meine Angebote'}
                 </h1>
                 {currentUser && !viewAll && (
-                  <span className="text-[11px] text-text-sec font-medium">({currentUser.firstName} {currentUser.lastName})</span>
+                  <span className="text-[11px] text-text-sec font-medium hidden sm:inline">({currentUser.firstName} {currentUser.lastName})</span>
                 )}
                 <span className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums" style={{ background: 'color-mix(in srgb, #A78BFA 12%, transparent)', color: '#A78BFA' }}>
                   {isLoading ? '\u2014' : filteredDeals.length}
                 </span>
               </div>
-              <p className="text-[12px] text-text-sec mt-0.5">Offerten verwalten und zum Abschluss fuehren</p>
+              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Offerten verwalten und zum Abschluss fuehren</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             {canViewAll && (
               <button type="button" onClick={() => setViewAll(!viewAll)} className={['flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors', viewAll ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text hover:bg-surface-hover'].join(' ')} style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Users size={14} strokeWidth={1.8} />
@@ -343,7 +343,7 @@ export default function DealsPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatCard icon={TrendingUp} label="Pipeline-Wert" value={formatCHF(stats.pipelineValue)} color="#F59E0B" />
             <StatCard icon={TrendingUp} label="Gewichtet" value={formatCHF(stats.weightedPipelineValue)} color="#A78BFA" />
             <StatCard icon={Target} label="Offene Angebote" value={String(stats.totalDeals - stats.wonDeals - stats.lostDeals)} color="#60A5FA" />
@@ -353,25 +353,25 @@ export default function DealsPage() {
         )}
 
         {/* Filter Bar */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center rounded-full p-0.5" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-4">
+          <div className="flex items-center rounded-full p-0.5 overflow-x-auto max-w-full" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {statusTabs.map((tab) => (
-              <button key={tab.key} type="button" onClick={() => setStageFilter(tab.key)} className={['px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200', stageFilter === tab.key ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text'].join(' ')}>
+              <button key={tab.key} type="button" onClick={() => setStageFilter(tab.key)} className={['px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-all duration-200 whitespace-nowrap', stageFilter === tab.key ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text'].join(' ')}>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
             <div className="relative">
-              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as DealPriority | 'ALL')} className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer" style={{ minWidth: '160px' }}>
+              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as DealPriority | 'ALL')} className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer" style={{ minWidth: '140px' }}>
                 {priorityOptions.map((opt) => <option key={opt.value} value={opt.value} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{opt.label}</option>)}
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
             </div>
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
-              <input type="text" placeholder="Angebote durchsuchen..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="glass-input pl-9 pr-4 py-2 text-[12px] w-[220px]" />
+              <input type="text" placeholder="Durchsuchen..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="glass-input pl-9 pr-4 py-2 text-[12px] w-full sm:w-[220px]" />
             </div>
           </div>
         </div>

@@ -95,7 +95,7 @@ interface Props {
 
 export default function AdminNav({ active, onChange }: Props) {
   return (
-    <div className="w-[220px] shrink-0 space-y-1">
+    <div className="w-full lg:w-[220px] shrink-0 space-y-1 overflow-x-auto">
       {navGroups.map((group, gi) => (
         <div key={group.label}>
           {gi > 0 && <div className="h-px my-2" style={{ background: 'rgba(255,255,255,0.06)' }} />}

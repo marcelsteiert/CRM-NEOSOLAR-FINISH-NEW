@@ -255,10 +255,10 @@ export default function LeadsPage() {
     <>
       <div className="space-y-5">
         {/* ── Top Bar ── */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-[14px] flex items-center justify-center"
+              className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0"
               style={{
                 background:
                   'linear-gradient(135deg, color-mix(in srgb, #60A5FA 12%, transparent), color-mix(in srgb, #60A5FA 4%, transparent))',
@@ -269,7 +269,7 @@ export default function LeadsPage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-xl font-bold tracking-[-0.02em]">Lead Hub</h1>
+                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Lead Hub</h1>
                 <span
                   className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
                   style={{
@@ -280,22 +280,22 @@ export default function LeadsPage() {
                   {isLoading ? '\u2014' : leadsResponse?.total ?? filteredLeads.length}
                 </span>
               </div>
-              <p className="text-[12px] text-text-sec mt-0.5">
+              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">
                 Leads verwalten und qualifizieren
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             {/* Import button */}
             {canImport && (
               <button
                 type="button"
-                className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px]"
+                className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[12px]"
                 onClick={() => setImportDialogOpen(true)}
               >
                 <Upload size={14} strokeWidth={2} />
-                Import
+                <span className="hidden sm:inline">Import</span>
               </button>
             )}
 
@@ -303,32 +303,33 @@ export default function LeadsPage() {
             {canExport && (
               <button
                 type="button"
-                className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px]"
+                className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[12px]"
                 onClick={handleExport}
                 disabled={filteredLeads.length === 0}
               >
                 <Download size={14} strokeWidth={2} />
-                Export
+                <span className="hidden sm:inline">Export</span>
               </button>
             )}
 
             {/* New Lead Button */}
             <button
               type="button"
-              className="btn-primary flex items-center gap-2 px-5 py-2.5 text-[13px]"
+              className="btn-primary flex items-center gap-2 px-4 sm:px-5 py-2.5 text-[13px] ml-auto sm:ml-0"
               onClick={() => setCreateDialogOpen(true)}
             >
               <Plus size={16} strokeWidth={2.5} />
-              Neuer Lead
+              <span className="hidden sm:inline">Neuer Lead</span>
+              <span className="sm:hidden">Neu</span>
             </button>
           </div>
         </div>
 
         {/* ── Filter Bar ── */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-4">
           {/* Status Tabs */}
           <div
-            className="flex items-center rounded-full p-0.5"
+            className="flex items-center rounded-full p-0.5 overflow-x-auto max-w-full"
             style={{
               background: 'rgba(255,255,255,0.035)',
               border: '1px solid rgba(255,255,255,0.06)',
@@ -340,7 +341,7 @@ export default function LeadsPage() {
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
                 className={[
-                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                  'px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap',
                   statusFilter === tab.key
                     ? 'bg-amber-soft text-amber'
                     : 'text-text-dim hover:text-text',
@@ -351,7 +352,7 @@ export default function LeadsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
             {/* Tag Dropdown */}
             <div className="relative">
               <TagIcon
@@ -438,7 +439,7 @@ export default function LeadsPage() {
                 placeholder="Leads durchsuchen..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="glass-input pl-9 pr-4 py-2 text-[12px] w-[220px]"
+                className="glass-input pl-9 pr-4 py-2 text-[12px] w-full sm:w-[220px]"
               />
             </div>
           </div>

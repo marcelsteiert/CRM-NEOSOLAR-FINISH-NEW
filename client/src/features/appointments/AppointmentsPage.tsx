@@ -179,10 +179,10 @@ export default function AppointmentsPage() {
     <>
       <div className="space-y-5">
         {/* ── Top Bar ── */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-[14px] flex items-center justify-center"
+              className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0"
               style={{
                 background: 'linear-gradient(135deg, color-mix(in srgb, #34D399 12%, transparent), color-mix(in srgb, #34D399 4%, transparent))',
                 border: '1px solid color-mix(in srgb, #34D399 10%, transparent)',
@@ -191,12 +191,12 @@ export default function AppointmentsPage() {
               <CalendarCheck size={20} className="text-emerald-400" strokeWidth={1.8} />
             </div>
             <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-xl font-bold tracking-[-0.02em]">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">
                   {canViewAll && viewAll ? 'Termine – Alle' : 'Meine Termine'}
                 </h1>
                 {currentUser && !viewAll && (
-                  <span className="text-[11px] text-text-sec font-medium">
+                  <span className="text-[11px] text-text-sec font-medium hidden sm:inline">
                     ({currentUser.firstName} {currentUser.lastName})
                   </span>
                 )}
@@ -207,11 +207,11 @@ export default function AppointmentsPage() {
                   {isLoading ? '\u2014' : filteredItems.length}
                 </span>
               </div>
-              <p className="text-[12px] text-text-sec mt-0.5">Besichtigungstermine planen und vorbereiten</p>
+              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Besichtigungstermine planen und vorbereiten</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             {canViewAll && (
               <button
                 type="button"
@@ -239,7 +239,7 @@ export default function AppointmentsPage() {
 
         {/* ── Stats Row ── */}
         {stats && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard icon={Clock} label="Anstehend" value={String(stats.upcoming)} color="#60A5FA" />
             <StatCard icon={ClipboardCheck} label="Vorbereitung" value={`${stats.checklistProgress}%`} color="#A78BFA" />
             <StatCard icon={CalendarCheck} label="Gesamt" value={String(stats.total)} color="#34D399" />
@@ -247,9 +247,9 @@ export default function AppointmentsPage() {
         )}
 
         {/* ── Filter Bar ── */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-4">
           <div
-            className="flex items-center rounded-full p-0.5"
+            className="flex items-center rounded-full p-0.5 overflow-x-auto max-w-full"
             style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}
           >
             {statusTabs.map((tab) => (
@@ -258,7 +258,7 @@ export default function AppointmentsPage() {
                 type="button"
                 onClick={() => setStatusFilter(tab.key)}
                 className={[
-                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200',
+                  'px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-all duration-200 whitespace-nowrap',
                   statusFilter === tab.key ? 'bg-emerald-400/10 text-emerald-400' : 'text-text-dim hover:text-text',
                 ].join(' ')}
               >
@@ -267,7 +267,7 @@ export default function AppointmentsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
             {/* Verkäufer Filter */}
             {canViewAll && viewAll && (
               <div className="relative">
@@ -315,7 +315,7 @@ export default function AppointmentsPage() {
                 placeholder="Termine durchsuchen..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="glass-input pl-9 pr-4 py-2 text-[12px] w-[220px]"
+                className="glass-input pl-9 pr-4 py-2 text-[12px] w-full sm:w-[220px]"
               />
             </div>
           </div>

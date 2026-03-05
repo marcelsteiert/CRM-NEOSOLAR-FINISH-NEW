@@ -1292,7 +1292,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                     className="glass-input w-full px-3 py-2 text-[12px] resize-none"
                     style={{ borderRadius: 'var(--radius-sm)' }}
                   />
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-text-sec mb-1">
                         Datum
@@ -1770,7 +1770,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
               </div>
 
               {/* Datum & Zeit */}
-              <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
                     Datum *

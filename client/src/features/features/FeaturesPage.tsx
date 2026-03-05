@@ -72,9 +72,9 @@ export default function FeaturesPage() {
   const totalCount = features.length
 
   return (
-    <div className="flex-1 flex flex-col gap-5 p-6 overflow-hidden">
+    <div className="flex-1 flex flex-col gap-4 sm:gap-5 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-[14px] flex items-center justify-center"
@@ -94,14 +94,14 @@ export default function FeaturesPage() {
         </div>
 
         {/* Category filter */}
-        <div className="flex rounded-[10px] p-0.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex rounded-[10px] p-0.5 overflow-x-auto max-w-full" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {(['all', 'core', 'sales', 'operations', 'system'] as const).map((cat) => {
             const active = filter === cat
             return (
               <button
                 key={cat}
                 onClick={() => setFilter(cat)}
-                className={`px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all duration-150 ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-[8px] text-[11px] sm:text-[12px] font-semibold transition-all duration-150 whitespace-nowrap ${
                   active ? 'text-text' : 'text-text-dim hover:text-text-sec'
                 }`}
                 style={active ? { background: 'rgba(255,255,255,0.08)' } : undefined}
@@ -115,7 +115,7 @@ export default function FeaturesPage() {
 
       {/* Feature Grid */}
       <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((feature) => {
             const enabled = flags[feature.id]
             const status = statusConfig[feature.status]

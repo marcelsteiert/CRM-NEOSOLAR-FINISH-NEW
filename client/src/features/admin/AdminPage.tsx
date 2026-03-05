@@ -79,7 +79,7 @@ export default function AdminPage() {
       </div>
 
       {/* Content: Nav + Section */}
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start">
         <AdminNav active={active} onChange={setActive} />
         <div className="flex-1 min-w-0 space-y-4">
           {/* Section Title */}

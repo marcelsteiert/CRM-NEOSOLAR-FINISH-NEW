@@ -70,10 +70,10 @@ export default function ProvisionPage() {
   return (
     <div className="space-y-5">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-[14px] flex items-center justify-center"
+            className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0"
             style={{
               background: 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 12%, transparent), color-mix(in srgb, #F59E0B 4%, transparent))',
               border: '1px solid color-mix(in srgb, #F59E0B 10%, transparent)',
@@ -82,22 +82,22 @@ export default function ProvisionPage() {
             <Coins size={20} className="text-amber" strokeWidth={1.8} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-[-0.02em]">Provision</h1>
-            <p className="text-[12px] text-text-sec mt-0.5">Monatsbasierte Provisionsabrechnung (5%)</p>
+            <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Provision</h1>
+            <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Monatsbasierte Provisionsabrechnung (5%)</p>
           </div>
         </div>
 
         {/* Month Selector */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={goPrev}
-            className="btn-secondary w-9 h-9 flex items-center justify-center rounded-lg"
+            className="btn-secondary w-9 h-9 flex items-center justify-center rounded-lg shrink-0"
           >
             <ChevronLeft size={16} strokeWidth={2} />
           </button>
           <div
-            className="px-5 py-2 rounded-lg text-[13px] font-semibold text-text min-w-[180px] text-center"
+            className="px-3 sm:px-5 py-2 rounded-lg text-[12px] sm:text-[13px] font-semibold text-text min-w-0 sm:min-w-[180px] text-center flex-1 sm:flex-none"
             style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
           >
             {monthLabel}
@@ -106,23 +106,23 @@ export default function ProvisionPage() {
             type="button"
             onClick={goNext}
             disabled={isCurrentMonth}
-            className="btn-secondary w-9 h-9 flex items-center justify-center rounded-lg disabled:opacity-30 disabled:cursor-not-allowed"
+            className="btn-secondary w-9 h-9 flex items-center justify-center rounded-lg disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
           >
             <ChevronRight size={16} strokeWidth={2} />
           </button>
           <button
             type="button"
             onClick={() => window.print()}
-            className="btn-secondary flex items-center gap-2 px-4 py-2 text-[12px] ml-2"
+            className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2 text-[12px] ml-auto sm:ml-2 shrink-0"
           >
             <Printer size={14} strokeWidth={2} />
-            Drucken
+            <span className="hidden sm:inline">Drucken</span>
           </button>
         </div>
       </div>
 
       {/* ── Summary Cards ── */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="glass-card p-5">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={16} className="text-emerald-400" strokeWidth={1.8} />
@@ -181,11 +181,11 @@ export default function ProvisionPage() {
                 </div>
 
                 {/* Deal List */}
-                <div className="ml-12 space-y-1.5">
+                <div className="ml-0 sm:ml-12 space-y-1.5">
                   {p.deals.map((deal, i) => (
-                    <div key={i} className="flex items-center justify-between text-[11px]">
-                      <span className="text-text-sec">{deal.title}</span>
-                      <div className="flex items-center gap-3">
+                    <div key={i} className="flex items-center justify-between text-[11px] gap-2">
+                      <span className="text-text-sec truncate">{deal.title}</span>
+                      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <span className="text-text-dim tabular-nums">{new Date(deal.closedAt).toLocaleDateString('de-CH')}</span>
                         <span className="font-semibold tabular-nums">{formatCHF(deal.value)}</span>
                       </div>

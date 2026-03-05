@@ -1,6 +1,7 @@
 import { useState, useEffect, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, Menu } from 'lucide-react'
+import { useSidebarPinned } from './Sidebar'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -34,7 +35,7 @@ const LiveClock = memo(function LiveClock() {
   }, [])
 
   return (
-    <time className="tabular-nums text-sm font-medium text-text-sec" dateTime={time.toISOString()}>
+    <time className="tabular-nums text-sm font-medium text-text-sec hidden sm:block" dateTime={time.toISOString()}>
       {time.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
     </time>
   )
@@ -51,6 +52,7 @@ function getPageTitle(pathname: string): string {
 export default function TopBar() {
   const location = useLocation()
   const title = getPageTitle(location.pathname)
+  const { setMobileOpen } = useSidebarPinned()
 
   // Update document title
   useEffect(() => {
@@ -59,23 +61,31 @@ export default function TopBar() {
 
   return (
     <header
-      className="h-[60px] border-b border-border flex items-center justify-between px-7 sticky top-0 z-40"
+      className="h-[52px] md:h-[60px] border-b border-border flex items-center justify-between px-4 md:px-7 sticky top-0 z-40"
       style={{
         background: 'rgba(6, 8, 12, 0.75)',
         backdropFilter: 'blur(24px) saturate(1.2)',
         WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
       }}
     >
-      {/* Left: Page title */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-extrabold tracking-[-0.02em]">{title}</h1>
-        <span className="px-2.5 py-0.5 rounded-full bg-amber-soft text-amber text-[10px] font-bold tracking-[0.06em] uppercase">
+      {/* Left: Hamburger (mobile) + Page title */}
+      <div className="flex items-center gap-2 md:gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-text-sec hover:text-text hover:bg-surface-hover transition-colors shrink-0"
+          aria-label="Menü öffnen"
+        >
+          <Menu size={20} strokeWidth={1.8} />
+        </button>
+        <h1 className="text-lg md:text-xl font-extrabold tracking-[-0.02em] truncate">{title}</h1>
+        <span className="px-2 md:px-2.5 py-0.5 rounded-full bg-amber-soft text-amber text-[10px] font-bold tracking-[0.06em] uppercase shrink-0 hidden sm:inline-flex">
           CRM
         </span>
       </div>
 
-      {/* Center: Search */}
-      <div className="flex-1 max-w-md mx-8">
+      {/* Center: Search (hidden on small mobile) */}
+      <div className="flex-1 max-w-md mx-4 md:mx-8 hidden sm:block">
         <div className="relative">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
           <input
@@ -88,7 +98,7 @@ export default function TopBar() {
       </div>
 
       {/* Right: Integrations + Clock */}
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-3 md:gap-5 shrink-0">
         {/* Integration status */}
         <div className="hidden lg:flex items-center gap-4">
           {integrations.map((integration) => (

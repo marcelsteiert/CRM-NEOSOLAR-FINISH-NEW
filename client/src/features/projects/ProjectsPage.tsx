@@ -54,31 +54,31 @@ export default function ProjectsPage() {
   ]
 
   return (
-    <div className="flex-1 flex flex-col gap-5 p-6 overflow-hidden">
+    <div className="flex-1 flex flex-col gap-4 sm:gap-5 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
         <div>
-          <h1 className="text-[22px] font-bold tracking-[-0.03em]">Projekte</h1>
-          <p className="text-[13px] text-text-sec mt-0.5">
+          <h1 className="text-lg sm:text-[22px] font-bold tracking-[-0.03em]">Projekte</h1>
+          <p className="text-[12px] sm:text-[13px] text-text-sec mt-0.5">
             {projects.length} aktive Projekte · {stats ? formatCHF(stats.totalValue) : '–'} Auftragsvolumen
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {/* Search */}
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Projekt suchen..."
-              className="glass-input pl-9 pr-4 py-2 text-[13px] w-[220px]"
+              className="glass-input pl-9 pr-4 py-2 text-[13px] w-full sm:w-[220px]"
             />
           </div>
 
           {/* View Tabs */}
-          <div className="flex rounded-[10px] p-0.5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex rounded-[10px] p-0.5 shrink-0" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {views.map((v) => {
               const Icon = v.icon
               const active = view === v.id
@@ -86,13 +86,13 @@ export default function ProjectsPage() {
                 <button
                   key={v.id}
                   onClick={() => setView(v.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all duration-150 ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all duration-150 ${
                     active ? 'text-text' : 'text-text-dim hover:text-text-sec'
                   }`}
                   style={active ? { background: 'rgba(255,255,255,0.08)' } : undefined}
                 >
                   <Icon size={13} />
-                  {v.label}
+                  <span className="hidden sm:inline">{v.label}</span>
                 </button>
               )
             })}
@@ -181,7 +181,7 @@ function KanbanView({
   }, [onMoveProject, projectsByPhase])
 
   return (
-    <div className="grid grid-cols-4 gap-4 h-full overflow-hidden">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 h-full overflow-hidden overflow-x-auto">
       {phaseOrder.map((phaseId) => {
         const phaseDef = phases.find((p) => p.id === phaseId)
         const color = phaseColors[phaseId]
@@ -344,7 +344,7 @@ function DashboardView({
   return (
     <div className="h-full overflow-y-auto space-y-5 pr-1">
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((kpi) => {
           const Icon = kpi.icon
           return (
@@ -362,7 +362,7 @@ function DashboardView({
       </div>
 
       {/* Two columns */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Risk Projects */}
         <div className="glass-card p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -417,7 +417,7 @@ function DashboardView({
       {/* Phase Distribution */}
       <div className="glass-card p-5">
         <h3 className="text-[13px] font-bold mb-4">Verteilung nach Phase</h3>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {phaseOrder.map((ph) => {
             const data = stats.byPhase[ph]
             const Icon = phaseIcons[ph]
@@ -440,7 +440,7 @@ function DashboardView({
       {stats.kalkulation.totalSoll > 0 && (
         <div className="glass-card p-5">
           <h3 className="text-[13px] font-bold mb-3">Nachkalkulation (Gesamt)</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <p className="text-[11px] text-text-dim mb-1">Soll</p>
               <p className="text-[16px] font-bold tabular-nums">{formatCHF(stats.kalkulation.totalSoll)}</p>
@@ -471,7 +471,7 @@ function PartnerView({ partners }: { partners: ReturnType<typeof usePartners>['d
   return (
     <div className="h-full overflow-y-auto space-y-5 pr-1">
       {/* Partner Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {partners.map((p) => {
           const color = p.type === 'montage' ? '#FB923C' : '#F59E0B'
           return (

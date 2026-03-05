@@ -277,11 +277,11 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
 
         {/* Content – Two columns: Left (main) + Right (sidebar) */}
         <div className="flex-1 overflow-y-auto">
-          <div className="flex gap-5 px-6 py-5">
+          <div className="flex flex-col md:flex-row gap-5 px-4 sm:px-6 py-5">
             {/* LEFT COLUMN */}
             <div className="flex-1 min-w-0 space-y-5">
               {/* Info Row */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Contact */}
                 <div className="glass-card p-4 space-y-2.5">
                   {isEditing ? (
@@ -400,7 +400,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                     {totalPercent}% · {totalDone}/{totalSteps} Schritte
                   </span>
                 </div>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {phaseOrder.map((ph) => {
                     const pp = computePhaseProgress(project.progress, ph)
                     const color = phaseColors[ph]
@@ -474,7 +474,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
               </div>
 
               {/* Nachkalkulation + Risiko */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="glass-card p-5">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -562,7 +562,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
             </div>
 
             {/* RIGHT SIDEBAR */}
-            <div className="w-[280px] shrink-0 space-y-5">
+            <div className="w-full md:w-[280px] shrink-0 space-y-5">
               {/* Kundenreise – Verknüpfungskette */}
               {(project.leadId || project.appointmentId || project.dealId) && (
                 <div className="glass-card p-4">
