@@ -14,6 +14,7 @@ import settingsRouter from './routes/settings.js'
 import tasksRouter from './routes/tasks.js'
 import dashboardRouter from './routes/dashboard.js'
 import documentsRouter from './routes/documents.js'
+import projectsRouter from './routes/projects.js'
 import adminProductsRouter from './routes/admin/products.js'
 import adminIntegrationsRouter from './routes/admin/integrations.js'
 import adminWebhooksRouter from './routes/admin/webhooks.js'
@@ -46,6 +47,7 @@ export function createApp() {
   app.use('/api/v1/tasks', tasksRouter)
   app.use('/api/v1/dashboard', dashboardRouter)
   app.use('/api/v1/documents', documentsRouter)
+  app.use('/api/v1/projects', projectsRouter)
 
   // Admin routes
   app.use('/api/v1/admin/products', adminProductsRouter)

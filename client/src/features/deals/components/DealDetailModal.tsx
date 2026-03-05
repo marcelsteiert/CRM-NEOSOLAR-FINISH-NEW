@@ -11,6 +11,7 @@ import {
   activityTypeLabels, activityTypeColors,
   type DealStage, type DealPriority, type ActivityType,
 } from '@/hooks/useDeals'
+import { useCreateProject } from '@/hooks/useProjects'
 import DocumentSection from '@/components/ui/DocumentSection'
 
 interface Props {
@@ -45,6 +46,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const updateDeal = useUpdateDeal()
   const deleteDeal = useDeleteDeal()
   const addActivity = useAddActivity()
+  const createProject = useCreateProject()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
@@ -124,11 +126,31 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     setTimeout(() => setSuccessMsg(''), 2000)
   }
 
-  const handleMarkWon = () => {
+  const handleMarkWon = async () => {
     if (!deal) return
     updateDeal.mutate({ id: deal.id, stage: 'GEWONNEN' as DealStage })
+
+    // Projekt automatisch erstellen mit allen Deal-Daten
+    try {
+      await createProject.mutateAsync({
+        name: deal.company || deal.contactName,
+        description: deal.title,
+        kWp: 0,
+        value: deal.value,
+        address: deal.address,
+        phone: deal.contactPhone,
+        email: deal.contactEmail,
+        company: deal.company ?? undefined,
+        leadId: deal.leadId ?? undefined,
+        appointmentId: deal.appointmentId ?? undefined,
+        dealId: deal.id,
+        notes: deal.notes ?? undefined,
+        priority: deal.priority === 'URGENT' ? 'URGENT' : deal.priority === 'HIGH' ? 'HIGH' : 'MEDIUM',
+      })
+    } catch { /* project creation errors are non-blocking */ }
+
     setShowWonConfirm(false)
-    setSuccessMsg('Angebot als gewonnen markiert – Projekt wird erstellt!')
+    setSuccessMsg('Angebot als gewonnen markiert – Projekt erstellt!')
     setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
   }
 

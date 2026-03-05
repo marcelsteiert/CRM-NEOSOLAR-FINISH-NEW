@@ -13,6 +13,7 @@ import {
   Sparkles,
   ScrollText,
   HardDrive,
+  ClipboardList,
 } from 'lucide-react'
 
 export type AdminSection =
@@ -22,6 +23,7 @@ export type AdminSection =
   | 'products'
   | 'tags'
   | 'automations'
+  | 'projectPhases'
   | 'integrations'
   | 'webhooks'
   | 'templates'
@@ -58,6 +60,7 @@ const navGroups: AdminNavGroup[] = [
       { id: 'products', icon: Database, label: 'Stammdaten / Preise', color: '#F59E0B' },
       { id: 'tags', icon: Tag, label: 'Tag-Verwaltung', color: '#34D399' },
       { id: 'automations', icon: Zap, label: 'Automations-Regeln', color: '#F59E0B' },
+      { id: 'projectPhases', icon: ClipboardList, label: 'Projekt-Phasen', color: '#34D399' },
     ],
   },
   {

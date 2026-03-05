@@ -15,6 +15,7 @@ import AiSettingsSection from './components/AiSettingsSection'
 import AuditLogSection from './components/AuditLogSection'
 import CompanyBrandingSection from './components/CompanyBrandingSection'
 import DatabaseExportSection from './components/DatabaseExportSection'
+import ProjectPhasesSection from './components/ProjectPhasesSection'
 
 const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   users: { title: 'Benutzer & Rollen', desc: 'Benutzer verwalten, Rollen und Modul-Berechtigungen zuweisen' },
@@ -23,6 +24,7 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   products: { title: 'Stammdaten / Preisdatenbank', desc: 'PV-Module, Wechselrichter, Batterien und Preise pflegen' },
   tags: { title: 'Tag-Verwaltung', desc: 'Tags erstellen, bearbeiten und Farben zuweisen' },
   automations: { title: 'Automations-Regeln', desc: 'Follow-Up Regeln, Checklisten und Wiedervorlage-Logik' },
+  projectPhases: { title: 'Projekt-Phasen', desc: 'Checklisten-Schritte pro Projektphase konfigurieren' },
   integrations: { title: 'Integrationen', desc: 'Outlook, 3CX, Zoom und Bexio verbinden' },
   webhooks: { title: 'Webhook-Verwaltung', desc: 'Leadquellen und Webhooks konfigurieren' },
   templates: { title: 'Dokumenten-Vorlagen', desc: 'Ordnerstruktur-Templates pro Entität definieren' },
@@ -40,6 +42,7 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   products: ProductCatalogSection,
   tags: TagManagementSection,
   automations: AutomationRulesSection,
+  projectPhases: ProjectPhasesSection,
   integrations: IntegrationsSection,
   webhooks: WebhookSection,
   templates: DocumentTemplatesSection,
