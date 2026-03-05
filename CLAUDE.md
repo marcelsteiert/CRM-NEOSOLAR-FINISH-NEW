@@ -13,7 +13,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Backend: Express v5 + TypeScript (Mock-Daten, kein DB noch)
 - State: Zustand (global), React Query (server state)
 - API: `/api/v1/...`, api.ts Helpers (api.get, api.post, api.put, api.delete)
-- Tests: Vitest v4.0.18 + Supertest (181 Tests, 7 Dateien)
+- Tests: Vitest v4.0.18 + Supertest (362 Tests, 14 Dateien)
 
 ## Design-System
 - Dark Glassmorphism: #06080C Hintergrund, rgba(255,255,255,0.035) Glass-Cards
@@ -24,6 +24,16 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Glass-Cards: `className="glass-card p-5"` mit `borderRadius: 'var(--radius-lg)'`
 - Color-Mix: `color-mix(in srgb, ${color} 12%, transparent)` fuer subtile farbige Hintergruende
 
+## Responsive Design (Mobile-First)
+- Breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
+- useIsMobile Hook: Reaktiver matchMedia Listener fuer JS-basierte Responsive-Logik
+- Sidebar: Mobile Drawer Overlay mit Backdrop, Hamburger-Toggle, Auto-Close bei Navigation
+- TopBar: Hamburger-Button (md:hidden), responsive Search/Clock
+- AppLayout: marginLeft 0 auf Mobile, responsive Padding (p-4 sm:p-5 md:p-7)
+- Headers: flex-col sm:flex-row, Beschreibungen hidden auf Mobile
+- Grids: Mobile 1-col → Tablet 2-col → Desktop 3-5 col (je nach Seite)
+- SidebarContext erweitert mit mobileOpen/setMobileOpen fuer Hamburger-Steuerung
+
 ## Konventionen
 - Hooks in client/src/hooks/ (useXxx.ts Muster wie useLeads.ts)
 - Admin-Hooks: client/src/hooks/useAdmin.ts (Products, Integrations, Webhooks, etc.)
@@ -32,7 +42,8 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Admin-Backend: server/src/routes/admin/ (products, integrations, webhooks, auditLog, branding, aiSettings, notifSettings, docTemplates, dbExport)
 - Alle Modals: fixed inset-0 z-[90], Backdrop blur, Escape-Handler
 - Formulare: glass-input Klasse, btn-primary / btn-secondary Buttons
-- Sidebar: Expandable mit SidebarProvider Context (Sidebar.tsx exportiert SidebarProvider + useSidebarPinned)
+- Sidebar: Expandable mit SidebarProvider Context (Sidebar.tsx exportiert SidebarProvider + useSidebarPinned + mobileOpen)
+- Mobile Sidebar: Drawer-Overlay mit Backdrop, translate-x Animation, md:translate-x-0 Desktop
 - Error Boundary in main.tsx fuer App-weite Fehleranzeige
 - Express Route-Order: Statische Routen VOR parametrische (z.B. /reorder vor /:id)
 
@@ -43,15 +54,19 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Tests mit `npx vitest run` (181 Tests, 7 Dateien)
 
 ## Module (Status)
-- [x] Lead Hub (v1 fertig, Fahrzeit-Kalkulation)
-- [x] Termine Hub (v1 fertig, Checkliste, Termin→Angebot, Fahrzeit)
-- [x] Angebote Hub (v2: Aktivitaeten-Log, winProbability %, Follow-Up, Dismiss)
+- [x] Lead Hub (v2, After Sales Tab, Termin-Typ Filter, responsive)
+- [x] Termine Hub (v1, Checkliste, Termin→Angebot, Fahrzeit, responsive)
+- [x] Angebote Hub (v2, Aktivitaeten-Log, winProbability %, Follow-Up, Dismiss, responsive)
+- [x] Projekte (Kanban, Dashboard, Partner, Detail-Modal, responsive)
+- [x] Deal→Projekt (Auto-Konvertierung bei Gewonnen)
+- [x] Provision (Monatsstatistiken, responsive)
 - [x] Tasks-System Backend (moduluebergreifend, zuweisbar, CRUD + Stats)
-- [x] Sidebar (Expandable Hover + Pin-Toggle)
-- [x] Admin-Menue (14 Sektionen mit linker Tab-Navigation)
+- [x] Sidebar (Expandable + Mobile Drawer)
+- [x] Admin-Menue (15 Sektionen mit linker Tab-Navigation, responsive)
+- [x] Features-Seite (14 togglebare Module, responsive)
+- [x] Responsive Design (alle Seiten Mobile-First)
 - [ ] Dashboard (Monatsstatistik, Provision, Tasks-Integration)
 - [ ] Kalkulation
-- [ ] Projekte (Gewonnen→Projekt Flow)
 - [ ] Rechnungen
 - [ ] Kommunikation
 - [ ] KI-Summary
@@ -107,9 +122,10 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - referenceId/referenceTitle: Verknuepfung zu Lead/Termin/Angebot/Projekt
 
 ## Tests
-- 181 Tests in 7 Dateien, alle gruen
+- 362 Tests in 14 Dateien, alle gruen
 - leads.test.ts (39), appointments.test.ts (28), deals.test.ts (27), settings.test.ts (14)
 - users.test.ts (19), pipelines.test.ts (16), admin.test.ts (38)
+- projects.test.ts, tasks.test.ts, provision.test.ts, dashboard.test.ts + weitere
 - admin.test.ts: CRM-Integrationstests (referenzielle Integritaet zwischen Modulen)
 
 ## Geplante Features (Backlog)
