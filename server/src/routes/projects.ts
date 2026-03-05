@@ -24,6 +24,16 @@ interface Kalkulation {
   ist: number | null;
 }
 
+type ActivityType = 'NOTE' | 'CALL' | 'EMAIL' | 'MEETING' | 'STATUS_CHANGE' | 'SYSTEM';
+
+interface Activity {
+  id: string;
+  type: ActivityType;
+  text: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 interface Project {
   id: string;
   name: string;
@@ -49,6 +59,7 @@ interface Project {
   appointmentId: string | null;
   dealId: string | null;
   notes: string | null;
+  activities: Activity[];
   createdAt: string;
   updatedAt: string;
   completedAt: string | null;
@@ -168,7 +179,7 @@ const mockProjects: Project[] = [
     phase: 'admin', priority: 'MEDIUM',
     progress: { admin: [1,1,1,1,1,1,0,0], montage: [0,0,0,0,0,0,0], elektro: [0,0,0,0,0,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: false, riskNote: null, startDate: '2026-01-12', kalkulation: { soll: 28400, ist: null }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2026-01-10T09:00:00Z', updatedAt: '2026-03-01T10:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2026-01-10T09:00:00Z', updatedAt: '2026-03-01T10:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-002', name: 'Schmid Bau AG', description: '18 kWp Industrieanlage', kWp: 18, value: 67500,
@@ -177,7 +188,7 @@ const mockProjects: Project[] = [
     phase: 'montage', priority: 'MEDIUM',
     progress: { admin: [1,1,1,1,1,1,1,1], montage: [1,1,1,0,0,0,0], elektro: [0,0,0,0,0,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: false, riskNote: null, startDate: '2026-01-05', kalkulation: { soll: 48200, ist: 46800 }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2026-01-03T09:00:00Z', updatedAt: '2026-03-02T14:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2026-01-03T09:00:00Z', updatedAt: '2026-03-02T14:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-003', name: 'Ammann Holding', description: '30 kWp + Speicher', kWp: 30, value: 107500,
@@ -186,7 +197,7 @@ const mockProjects: Project[] = [
     phase: 'montage', priority: 'HIGH',
     progress: { admin: [1,1,1,1,1,1,0,1], montage: [1,1,0,0,0,0,0], elektro: [0,0,0,0,0,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: true, riskNote: 'Lieferverzögerung Module – 2 Wochen Rückstand', startDate: '2025-12-15', kalkulation: { soll: 78500, ist: 82100 }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2025-12-13T09:00:00Z', updatedAt: '2026-03-03T08:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2025-12-13T09:00:00Z', updatedAt: '2026-03-03T08:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-004', name: 'Gerber Metallbau', description: '25 kWp + 2x Speicher', kWp: 25, value: 82300,
@@ -195,7 +206,7 @@ const mockProjects: Project[] = [
     phase: 'elektro', priority: 'MEDIUM',
     progress: { admin: [1,1,1,1,1,1,1,1], montage: [1,1,1,1,1,1,1], elektro: [1,1,1,0,0,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: false, riskNote: null, startDate: '2025-12-01', kalkulation: { soll: 59800, ist: 58200 }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2025-11-28T09:00:00Z', updatedAt: '2026-03-02T11:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2025-11-28T09:00:00Z', updatedAt: '2026-03-02T11:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-005', name: 'Zürcher Bau AG', description: '14 kWp + Speicher', kWp: 14, value: 48700,
@@ -204,7 +215,7 @@ const mockProjects: Project[] = [
     phase: 'abschluss', priority: 'MEDIUM',
     progress: { admin: [1,1,1,1,1,1,1,1], montage: [1,1,1,1,1,1,1], elektro: [1,1,1,1,1,1,1,1], abschluss: [1,1,0,0,0,0,0,0] },
     risk: false, riskNote: null, startDate: '2025-11-15', kalkulation: { soll: 34500, ist: 33800 }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2025-11-13T09:00:00Z', updatedAt: '2026-03-04T10:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2025-11-13T09:00:00Z', updatedAt: '2026-03-04T10:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-006', name: 'Fischer Technik', description: '20 kWp Halle', kWp: 20, value: 58200,
@@ -213,7 +224,7 @@ const mockProjects: Project[] = [
     phase: 'elektro', priority: 'MEDIUM',
     progress: { admin: [1,1,1,1,1,1,1,1], montage: [1,1,1,1,1,1,1], elektro: [1,1,1,1,1,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: false, riskNote: null, startDate: '2025-12-10', kalkulation: { soll: 42100, ist: 43500 }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2025-12-08T09:00:00Z', updatedAt: '2026-03-03T14:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2025-12-08T09:00:00Z', updatedAt: '2026-03-03T14:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-007', name: 'Roth Architektur', description: '10 kWp Neubau', kWp: 10, value: 37600,
@@ -222,7 +233,7 @@ const mockProjects: Project[] = [
     phase: 'admin', priority: 'MEDIUM',
     progress: { admin: [1,1,0,0,0,0,0,0], montage: [0,0,0,0,0,0,0], elektro: [0,0,0,0,0,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: true, riskNote: 'Baubewilligung noch ausstehend', startDate: '2026-03-01', kalkulation: { soll: 27200, ist: null }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2026-02-28T09:00:00Z', updatedAt: '2026-03-04T10:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2026-02-28T09:00:00Z', updatedAt: '2026-03-04T10:00:00Z', completedAt: null, deletedAt: null,
   },
   {
     id: 'proj-008', name: 'Müller Garage', description: '12 kWp Flachdach', kWp: 12, value: 42100,
@@ -231,7 +242,7 @@ const mockProjects: Project[] = [
     phase: 'admin', priority: 'LOW',
     progress: { admin: [1,1,1,1,0,0,0,0], montage: [0,0,0,0,0,0,0], elektro: [0,0,0,0,0,0,0,0], abschluss: [0,0,0,0,0,0,0,0] },
     risk: false, riskNote: null, startDate: '2026-02-20', kalkulation: { soll: 30500, ist: null }, rating: null,
-    leadId: null, appointmentId: null, dealId: null, notes: null, createdAt: '2026-02-18T09:00:00Z', updatedAt: '2026-03-02T10:00:00Z', completedAt: null, deletedAt: null,
+    leadId: null, appointmentId: null, dealId: null, notes: null, activities: [], createdAt: '2026-02-18T09:00:00Z', updatedAt: '2026-03-02T10:00:00Z', completedAt: null, deletedAt: null,
   },
 ];
 
@@ -518,6 +529,7 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       appointmentId: d.appointmentId ?? null,
       dealId: d.dealId ?? null,
       notes: d.notes ?? null,
+      activities: [],
       createdAt: now,
       updatedAt: now,
       completedAt: null,
@@ -639,6 +651,43 @@ router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
     project.deletedAt = new Date().toISOString();
     project.updatedAt = project.deletedAt;
     res.json({ message: 'Projekt gelöscht' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/projects/:id/activities – Add activity
+// ---------------------------------------------------------------------------
+
+let activitySeq = 1;
+
+router.post('/:id/activities', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const project = mockProjects.find((p) => p.id === req.params.id && p.deletedAt === null);
+    if (!project) throw new AppError('Projekt nicht gefunden', 404);
+
+    const schema = z.object({
+      type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM']).default('NOTE'),
+      text: z.string().min(1),
+      createdBy: z.string().default('System'),
+    });
+
+    const result = schema.safeParse(req.body);
+    if (!result.success) throw new AppError('Ungültige Daten', 400);
+
+    const activity: Activity = {
+      id: `pa-${String(activitySeq++).padStart(4, '0')}`,
+      type: result.data.type,
+      text: result.data.text,
+      createdBy: result.data.createdBy,
+      createdAt: new Date().toISOString(),
+    };
+
+    project.activities.push(activity);
+    project.updatedAt = activity.createdAt;
+
+    res.status(201).json({ data: activity });
   } catch (err) {
     next(err);
   }

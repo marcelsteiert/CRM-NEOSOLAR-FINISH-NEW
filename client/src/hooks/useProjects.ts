@@ -18,6 +18,16 @@ export interface Kalkulation {
   ist: number | null
 }
 
+export type ProjectActivityType = 'NOTE' | 'CALL' | 'EMAIL' | 'MEETING' | 'STATUS_CHANGE' | 'SYSTEM'
+
+export interface ProjectActivity {
+  id: string
+  type: ProjectActivityType
+  text: string
+  createdBy: string
+  createdAt: string
+}
+
 export interface Project {
   id: string
   name: string
@@ -43,6 +53,7 @@ export interface Project {
   appointmentId: string | null
   dealId: string | null
   notes: string | null
+  activities: ProjectActivity[]
   createdAt: string
   updatedAt: string
   completedAt: string | null
@@ -221,6 +232,18 @@ export function useDeleteProject() {
   })
 }
 
+export function useAddProjectActivity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, ...data }: { projectId: string; type?: ProjectActivityType; text: string; createdBy?: string }) =>
+      api.post<{ data: ProjectActivity }>(`/projects/${projectId}/activities`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['project'] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
+  })
+}
+
 // ── Display helpers ──
 
 export const phaseLabels: Record<ProjectPhase, string> = {
@@ -249,6 +272,24 @@ export const priorityColors: Record<ProjectPriority, string> = {
   MEDIUM: '#60A5FA',
   HIGH: '#F59E0B',
   URGENT: '#F87171',
+}
+
+export const activityTypeLabels: Record<ProjectActivityType, string> = {
+  NOTE: 'Notiz',
+  CALL: 'Anruf',
+  EMAIL: 'E-Mail',
+  MEETING: 'Meeting',
+  STATUS_CHANGE: 'Status',
+  SYSTEM: 'System',
+}
+
+export const activityTypeColors: Record<ProjectActivityType, string> = {
+  NOTE: '#94A3B8',
+  CALL: '#F59E0B',
+  EMAIL: '#60A5FA',
+  MEETING: '#A78BFA',
+  STATUS_CHANGE: '#34D399',
+  SYSTEM: '#64748B',
 }
 
 export function formatCHF(value: number): string {
