@@ -3510,3 +3510,433 @@ describe('E2E-V2: Error-Cases & Validierung', () => {
     expect([400, 422]).toContain(res.status)
   })
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// 43. SIDEBAR-LOGIK UNIT-TEST – Exakte Nachbildung der Frontend-Filterlogik
+//     Prueft fuer jede Rolle + Modul-Kombination ob die Sidebar korrekt filtert
+// ════════════════════════════════════════════════════════════════════════════
+
+// Exakte Kopie der Frontend-Sidebar-Logik (Sidebar.tsx Zeile 130-151)
+interface NavItem {
+  to: string; label: string; featureId?: string; adminOnly?: boolean; moduleId?: string
+}
+const allNavItems: NavItem[] = [
+  { to: '/', label: 'Dashboard', featureId: 'dashboard', moduleId: 'dashboard' },
+  { to: '/leads', label: 'Leads', featureId: 'leads', moduleId: 'leads' },
+  { to: '/appointments', label: 'Termine', featureId: 'appointments', moduleId: 'appointments' },
+  { to: '/deals', label: 'Angebote', featureId: 'deals', moduleId: 'deals' },
+  { to: '/provision', label: 'Provision', featureId: 'provision', moduleId: 'provision' },
+  { to: '/calculations', label: 'Kalkulation', featureId: 'calculations', moduleId: 'calculations' },
+  { to: '/projects', label: 'Projekte', featureId: 'projects', moduleId: 'projects' },
+  { to: '/communication', label: 'Kommunikation', featureId: 'communication', moduleId: 'communication' },
+  { to: '/ai', label: 'KI-Summary', featureId: 'ai' },
+  { to: '/tasks', label: 'Aufgaben', featureId: 'tasks', moduleId: 'tasks' },
+  { to: '/notifications', label: 'Meldungen', featureId: 'notifications' },
+  { to: '/admin', label: 'Admin', featureId: 'admin', adminOnly: true, moduleId: 'admin' },
+  { to: '/export', label: 'Export', featureId: 'export', moduleId: 'export' },
+  { to: '/documents', label: 'Dokumente', featureId: 'documents', moduleId: 'documents' },
+  { to: '/features', label: 'Features' },
+]
+
+// Feature-Flags: Standard-Werte aus useFeatureFlags.tsx
+const defaultFeatureFlags: Record<string, boolean> = {
+  dashboard: true, leads: true, appointments: true, deals: true, projects: true, admin: true,
+  provision: true, calculations: false, communication: false, ai: false, tasks: false,
+  documents: false, notifications: true, export: false,
+}
+
+function sidebarFilter(
+  items: NavItem[],
+  userModules: string[],
+  isAdmin: boolean,
+  flags: Record<string, boolean> = defaultFeatureFlags,
+): string[] {
+  return items
+    .filter((item) => {
+      if (item.adminOnly && !isAdmin) return false
+      if (isAdmin) return true
+      if (item.moduleId && userModules.includes(item.moduleId)) return true
+      if (!item.moduleId && item.featureId && !flags[item.featureId]) return false
+      if (item.moduleId && !userModules.includes(item.moduleId)) return false
+      return true
+    })
+    .map((i) => i.label)
+}
+
+describe('E2E-V2: Sidebar-Logik – Berechtigungen → Sichtbarkeit', () => {
+  // ── ADMIN sieht ALLES ──
+  it('ADMIN sieht alle 15 Sidebar-Eintraege', () => {
+    const visible = sidebarFilter(allNavItems, ALL_MODULES, true)
+    expect(visible).toContain('Dashboard')
+    expect(visible).toContain('Leads')
+    expect(visible).toContain('Termine')
+    expect(visible).toContain('Angebote')
+    expect(visible).toContain('Provision')
+    expect(visible).toContain('Kalkulation')
+    expect(visible).toContain('Projekte')
+    expect(visible).toContain('Kommunikation')
+    expect(visible).toContain('KI-Summary')
+    expect(visible).toContain('Aufgaben')
+    expect(visible).toContain('Meldungen')
+    expect(visible).toContain('Admin')
+    expect(visible).toContain('Export')
+    expect(visible).toContain('Dokumente')
+    expect(visible).toContain('Features')
+    expect(visible.length).toBe(15)
+  })
+
+  // ── VERTRIEB Standard (7 Module) ──
+  it('VERTRIEB Standard sieht genau seine Module + Meldungen/Features', () => {
+    const vtModules = ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents']
+    const visible = sidebarFilter(allNavItems, vtModules, false)
+    expect(visible).toContain('Dashboard')
+    expect(visible).toContain('Leads')
+    expect(visible).toContain('Termine')
+    expect(visible).toContain('Angebote')
+    expect(visible).toContain('Aufgaben')
+    expect(visible).toContain('Kommunikation')
+    expect(visible).toContain('Dokumente')
+    // Meldungen = kein moduleId, Feature-Flag=true → sichtbar
+    expect(visible).toContain('Meldungen')
+    // Features = kein moduleId, kein featureId → sichtbar
+    expect(visible).toContain('Features')
+    // NICHT sichtbar:
+    expect(visible).not.toContain('Provision')
+    expect(visible).not.toContain('Kalkulation')
+    expect(visible).not.toContain('Projekte')
+    expect(visible).not.toContain('Admin')
+    expect(visible).not.toContain('Export')
+    // KI-Summary: Feature-Flag ai=false → nicht sichtbar
+    expect(visible).not.toContain('KI-Summary')
+  })
+
+  // ── VERTRIEB + Provision (Admin gibt Recht) ──
+  it('VERTRIEB + Provision: Provision erscheint in Sidebar', () => {
+    const vtModules = ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents', 'provision']
+    const visible = sidebarFilter(allNavItems, vtModules, false)
+    expect(visible).toContain('Provision')
+    expect(visible).not.toContain('Admin')
+    expect(visible).not.toContain('Kalkulation')
+  })
+
+  // ── VERTRIEB + alle 12 Module ──
+  it('VERTRIEB mit allen 12 Modulen sieht alle ausser Admin', () => {
+    const visible = sidebarFilter(allNavItems, ALL_MODULES, false)
+    expect(visible).toContain('Dashboard')
+    expect(visible).toContain('Leads')
+    expect(visible).toContain('Provision')
+    expect(visible).toContain('Kalkulation')
+    expect(visible).toContain('Projekte')
+    expect(visible).toContain('Export')
+    expect(visible).toContain('Dokumente')
+    // Admin = adminOnly → nur fuer isAdmin=true
+    expect(visible).not.toContain('Admin')
+  })
+
+  // ── 0 Module → nur Meldungen + Features ──
+  it('User mit 0 Modulen sieht nur Meldungen + Features', () => {
+    const visible = sidebarFilter(allNavItems, [], false)
+    expect(visible).toContain('Meldungen')
+    expect(visible).toContain('Features')
+    expect(visible).not.toContain('Dashboard')
+    expect(visible).not.toContain('Leads')
+    expect(visible).not.toContain('Provision')
+    expect(visible.length).toBe(2)
+  })
+
+  // ── PROJEKTLEITUNG Standard (6 Module) ──
+  it('PROJEKTLEITUNG Standard sieht seine 6 Module', () => {
+    const plModules = ['dashboard', 'projects', 'calculations', 'tasks', 'appointments', 'documents']
+    const visible = sidebarFilter(allNavItems, plModules, false)
+    expect(visible).toContain('Dashboard')
+    expect(visible).toContain('Projekte')
+    expect(visible).toContain('Kalkulation')
+    expect(visible).toContain('Aufgaben')
+    expect(visible).toContain('Termine')
+    expect(visible).toContain('Dokumente')
+    expect(visible).not.toContain('Leads')
+    expect(visible).not.toContain('Angebote')
+    expect(visible).not.toContain('Provision')
+    expect(visible).not.toContain('Admin')
+  })
+
+  // ── BUCHHALTUNG Standard (5 Module) ──
+  it('BUCHHALTUNG Standard sieht seine 5 Module', () => {
+    const bhModules = ['dashboard', 'provision', 'deals', 'documents', 'export']
+    const visible = sidebarFilter(allNavItems, bhModules, false)
+    expect(visible).toContain('Dashboard')
+    expect(visible).toContain('Provision')
+    expect(visible).toContain('Angebote')
+    expect(visible).toContain('Dokumente')
+    expect(visible).toContain('Export')
+    expect(visible).not.toContain('Leads')
+    expect(visible).not.toContain('Termine')
+    expect(visible).not.toContain('Projekte')
+    expect(visible).not.toContain('Kalkulation')
+    expect(visible).not.toContain('Aufgaben')
+    expect(visible).not.toContain('Admin')
+  })
+
+  // ── Einzelne Module togglen: jedes der 12 Module einzeln ──
+  for (const mod of ALL_MODULES) {
+    it(`Nur Modul "${mod}" → genau dieses Modul sichtbar`, () => {
+      const visible = sidebarFilter(allNavItems, [mod], false)
+      const expectedLabel: Record<string, string> = {
+        dashboard: 'Dashboard', leads: 'Leads', appointments: 'Termine',
+        deals: 'Angebote', provision: 'Provision', calculations: 'Kalkulation',
+        projects: 'Projekte', tasks: 'Aufgaben', communication: 'Kommunikation',
+        documents: 'Dokumente', export: 'Export', admin: 'Admin',
+      }
+      if (mod === 'admin') {
+        // Admin ist adminOnly → nicht sichtbar fuer Nicht-Admins
+        expect(visible).not.toContain('Admin')
+      } else {
+        expect(visible).toContain(expectedLabel[mod])
+      }
+      // Andere Module-Items NICHT sichtbar (ausser Meldungen, Features)
+      for (const other of ALL_MODULES) {
+        if (other === mod) continue
+        if (other === 'admin') continue // sowieso nicht sichtbar
+        const otherLabel = expectedLabel[other]
+        expect(visible).not.toContain(otherLabel)
+      }
+    })
+  }
+
+  // ── Feature-Flags Override: allowedModules uebersteuert ──
+  it('Feature-Flag documents=false ABER allowedModules hat documents → sichtbar', () => {
+    const flags = { ...defaultFeatureFlags, documents: false }
+    const visible = sidebarFilter(allNavItems, ['dashboard', 'documents'], false, flags)
+    expect(visible).toContain('Dokumente')
+  })
+
+  it('Feature-Flag calculations=false ABER allowedModules hat calculations → sichtbar', () => {
+    const flags = { ...defaultFeatureFlags, calculations: false }
+    const visible = sidebarFilter(allNavItems, ['dashboard', 'calculations'], false, flags)
+    expect(visible).toContain('Kalkulation')
+  })
+
+  it('Feature-Flag export=false ABER allowedModules hat export → sichtbar', () => {
+    const flags = { ...defaultFeatureFlags, export: false }
+    const visible = sidebarFilter(allNavItems, ['dashboard', 'export'], false, flags)
+    expect(visible).toContain('Export')
+  })
+
+  it('Feature-Flag tasks=false ABER allowedModules hat tasks → sichtbar', () => {
+    const flags = { ...defaultFeatureFlags, tasks: false }
+    const visible = sidebarFilter(allNavItems, ['dashboard', 'tasks'], false, flags)
+    expect(visible).toContain('Aufgaben')
+  })
+
+  it('Feature-Flag communication=false ABER allowedModules hat communication → sichtbar', () => {
+    const flags = { ...defaultFeatureFlags, communication: false }
+    const visible = sidebarFilter(allNavItems, ['dashboard', 'communication'], false, flags)
+    expect(visible).toContain('Kommunikation')
+  })
+
+  it('Alle Feature-Flags=false → allowedModules zeigt trotzdem alle Module', () => {
+    const allFalse: Record<string, boolean> = {}
+    for (const k of Object.keys(defaultFeatureFlags)) allFalse[k] = false
+    const visible = sidebarFilter(allNavItems, ALL_MODULES, false, allFalse)
+    // Alle 12 Module sichtbar (ausser Admin wegen adminOnly)
+    expect(visible).toContain('Dashboard')
+    expect(visible).toContain('Leads')
+    expect(visible).toContain('Provision')
+    expect(visible).toContain('Dokumente')
+    expect(visible).toContain('Export')
+    expect(visible).not.toContain('Admin')
+    // KI-Summary + Meldungen: kein moduleId → Feature-Flag entscheidet → false
+    expect(visible).not.toContain('KI-Summary')
+    expect(visible).not.toContain('Meldungen')
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 44. VOLLSTAENDIGER BERECHTIGUNGS-FLOW – Admin vergibt → User sieht → Entzug
+//     Fuer JEDES der 12 Module und alle 4 Rollen
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Vollstaendiger Berechtigungs-Flow pro Modul', () => {
+  // Modul → API-Endpoint Mapping (GET-Zugriff pruefen)
+  const moduleToEndpoint: Record<string, string> = {
+    dashboard: '/api/v1/dashboard/stats',
+    leads: '/api/v1/leads',
+    appointments: '/api/v1/appointments',
+    deals: '/api/v1/deals',
+    provision: '/api/v1/dashboard/provision',
+    projects: '/api/v1/projects',
+    tasks: '/api/v1/tasks',
+    documents: '/api/v1/documents',
+    calculations: '/api/v1/projects/stats',
+    export: '/api/v1/admin/db-export/stats',
+    communication: '/api/v1/emails/templates',
+  }
+
+  // Fuer jedes Modul: Admin gibt Recht → /auth/me zeigt es → Endpoint erreichbar
+  for (const [mod, endpoint] of Object.entries(moduleToEndpoint)) {
+    it(`Admin gibt VERTRIEB "${mod}" → /auth/me hat es → GET ${endpoint} = 200`, async () => {
+      const adminTk = realUsers.admin?.token
+      const vtUser = realUsers.vertrieb
+      if (!adminTk || !vtUser?.token) return
+
+      // Schritt 1: Admin setzt NUR dieses Modul
+      const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+        .send({ allowedModules: [mod] })
+      expect(update.status).toBe(200)
+      expect(update.body.data.allowedModules).toContain(mod)
+
+      // Schritt 2: /auth/me zeigt das Modul
+      const me = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${vtUser.token}`)
+      expect(me.status).toBe(200)
+      expect(me.body.data.allowedModules).toContain(mod)
+
+      // Schritt 3: Endpoint erreichbar
+      const ep = await request(app)
+        .get(endpoint)
+        .set('Authorization', `Bearer ${vtUser.token}`)
+      expect(ep.status).toBe(200)
+    })
+  }
+
+  // Admin entzieht alle Module → /auth/me leer
+  it('Admin entzieht VERTRIEB alle Module → /auth/me hat leeres Array', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser?.token) return
+
+    await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: [] })
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    expect(me.body.data.allowedModules).toEqual([])
+  })
+
+  // Fuer jede Rolle: Admin gibt Provision → /auth/me zeigt es
+  const roleUsers: Record<string, string> = {
+    vertrieb: 'vertrieb',
+    pl: 'pl',
+    bh: 'bh',
+  }
+
+  for (const [key, label] of Object.entries(roleUsers)) {
+    it(`Admin gibt ${label.toUpperCase()} "provision" → sichtbar in /auth/me`, async () => {
+      const adminTk = realUsers.admin?.token
+      const targetUser = realUsers[key]
+      if (!adminTk || !targetUser?.token) return
+
+      // Aktuelle Module holen
+      const before = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${targetUser.token}`)
+      const currentModules: string[] = before.body.data.allowedModules ?? []
+
+      // Provision hinzufuegen
+      const newModules = [...new Set([...currentModules, 'provision'])]
+      await authPut(`/api/v1/users/${targetUser.id}`, adminTk)
+        .send({ allowedModules: newModules })
+
+      // Verifizieren
+      const after = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${targetUser.token}`)
+      expect(after.body.data.allowedModules).toContain('provision')
+    })
+  }
+
+  // Cleanup: Defaults wiederherstellen
+  it('Cleanup: Rollen-Defaults wiederherstellen', async () => {
+    const adminTk = realUsers.admin?.token
+    if (!adminTk) return
+
+    const defaults: Record<string, string[]> = {
+      vertrieb: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents'],
+      pl: ['dashboard', 'projects', 'calculations', 'tasks', 'appointments', 'documents'],
+      bh: ['dashboard', 'provision', 'deals', 'documents', 'export'],
+    }
+
+    for (const [key, mods] of Object.entries(defaults)) {
+      const user = realUsers[key]
+      if (user) {
+        await authPut(`/api/v1/users/${user.id}`, adminTk).send({ allowedModules: mods })
+      }
+    }
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 45. ModuleRoute GUARD – Simuliert Router-Schutz: Ohne Modul → Redirect
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: ModuleRoute Guard Simulation', () => {
+  // Exakte Nachbildung der ModuleRoute Logik aus App.tsx
+  function moduleRouteAllows(moduleId: string, allowedModules: string[], isAdmin: boolean): boolean {
+    if (isAdmin) return true
+    return allowedModules.includes(moduleId)
+  }
+
+  const routeModules: Record<string, string> = {
+    '/': 'dashboard',
+    '/leads': 'leads',
+    '/appointments': 'appointments',
+    '/deals': 'deals',
+    '/calculations': 'calculations',
+    '/projects': 'projects',
+    '/provision': 'provision',
+    '/communication': 'communication',
+    '/tasks': 'tasks',
+    '/export': 'export',
+    '/documents': 'documents',
+  }
+
+  // ADMIN kann alle Routen
+  it('ADMIN kann alle 11 ModuleRoutes betreten', () => {
+    for (const [, mod] of Object.entries(routeModules)) {
+      expect(moduleRouteAllows(mod, [], true)).toBe(true)
+    }
+  })
+
+  // VERTRIEB Standard: 7 Module erlaubt, 4 blockiert
+  it('VERTRIEB Standard: 7 Routen erlaubt, 4 blockiert', () => {
+    const vtModules = ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents']
+    const allowed = Object.entries(routeModules).filter(([, mod]) => moduleRouteAllows(mod, vtModules, false))
+    const blocked = Object.entries(routeModules).filter(([, mod]) => !moduleRouteAllows(mod, vtModules, false))
+    expect(allowed.length).toBe(7)
+    expect(blocked.length).toBe(4)
+    expect(blocked.map(([, m]) => m)).toContain('calculations')
+    expect(blocked.map(([, m]) => m)).toContain('projects')
+    expect(blocked.map(([, m]) => m)).toContain('provision')
+    expect(blocked.map(([, m]) => m)).toContain('export')
+  })
+
+  // BUCHHALTUNG Standard: 5 Module erlaubt, 6 blockiert
+  it('BUCHHALTUNG Standard: 5 Routen erlaubt, 6 blockiert', () => {
+    const bhModules = ['dashboard', 'provision', 'deals', 'documents', 'export']
+    const allowed = Object.entries(routeModules).filter(([, mod]) => moduleRouteAllows(mod, bhModules, false))
+    const blocked = Object.entries(routeModules).filter(([, mod]) => !moduleRouteAllows(mod, bhModules, false))
+    expect(allowed.length).toBe(5)
+    expect(blocked.length).toBe(6)
+    expect(blocked.map(([, m]) => m)).toContain('leads')
+    expect(blocked.map(([, m]) => m)).toContain('appointments')
+    expect(blocked.map(([, m]) => m)).toContain('projects')
+  })
+
+  // 0 Module → alle Routen blockiert
+  it('User mit 0 Modulen: alle 11 Routen blockiert', () => {
+    const blocked = Object.entries(routeModules).filter(([, mod]) => !moduleRouteAllows(mod, [], false))
+    expect(blocked.length).toBe(11)
+  })
+
+  // Einzelne Module togglen
+  for (const [route, mod] of Object.entries(routeModules)) {
+    it(`Nur "${mod}" erlaubt → Route ${route} offen, alle anderen blockiert`, () => {
+      expect(moduleRouteAllows(mod, [mod], false)).toBe(true)
+      for (const [, otherMod] of Object.entries(routeModules)) {
+        if (otherMod === mod) continue
+        expect(moduleRouteAllows(otherMod, [mod], false)).toBe(false)
+      }
+    })
+  }
+})
