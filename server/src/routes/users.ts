@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 
@@ -25,6 +26,7 @@ const createUserSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email(),
+  password: z.string().min(6).optional(),
   phone: z.string().default(''),
   role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
   allowedModules: z.array(z.string()).optional(),
@@ -128,7 +130,11 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const parsed = createUserSchema.safeParse(req.body)
     if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
 
-    const { firstName, lastName, email, phone, role, allowedModules } = parsed.data
+    const { firstName, lastName, email, password, phone, role, allowedModules } = parsed.data
+
+    const hashedPassword = password
+      ? await bcrypt.hash(password, 10)
+      : await bcrypt.hash('Neosolar2026!', 10)
 
     const { data, error } = await supabase
       .from('users')
@@ -136,7 +142,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         first_name: firstName,
         last_name: lastName,
         email,
-        password: '$2b$10$defaulthashplaceholder000000000000000000000000000',
+        password: hashedPassword,
         phone: phone ?? '',
         role,
         is_active: true,

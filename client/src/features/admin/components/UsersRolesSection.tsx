@@ -45,6 +45,7 @@ interface FormData {
   firstName: string
   lastName: string
   email: string
+  password: string
   phone: string
   role: UserRole
   allowedModules: string[]
@@ -54,6 +55,7 @@ const emptyForm: FormData = {
   firstName: '',
   lastName: '',
   email: '',
+  password: '',
   phone: '',
   role: 'VERTRIEB',
   allowedModules: [],
@@ -133,6 +135,7 @@ export default function UsersRolesSection() {
       firstName: createForm.firstName.trim(),
       lastName: createForm.lastName.trim(),
       email: createForm.email.trim(),
+      password: createForm.password.trim() || undefined,
       phone: createForm.phone.trim(),
       role: createForm.role,
       allowedModules: createForm.allowedModules,
@@ -185,208 +188,7 @@ export default function UsersRolesSection() {
     updateUser.mutate({ id: userId, isActive: true })
   }
 
-  // ── Shared Form Renderer ──
-
-  function UserForm({ form, setForm, onSave, onCancel, isPending }: {
-    form: FormData
-    setForm: (f: FormData) => void
-    onSave: () => void
-    onCancel: () => void
-    isPending: boolean
-  }) {
-    const color = roleColors[form.role]
-
-    const handleRoleChange = (role: UserRole) => {
-      setForm({ ...form, role, allowedModules: getDefaults(role) })
-    }
-
-    const toggleModule = (moduleId: string) => {
-      const modules = form.allowedModules.includes(moduleId)
-        ? form.allowedModules.filter((m) => m !== moduleId)
-        : [...form.allowedModules, moduleId]
-      setForm({ ...form, allowedModules: modules })
-    }
-
-    const loadDefaults = () => {
-      setForm({ ...form, allowedModules: getDefaults(form.role) })
-    }
-
-    return (
-      <div className="glass-card p-5 space-y-4" style={{ borderRadius: 'var(--radius-lg)' }}>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Vorname</label>
-            <input
-              type="text"
-              value={form.firstName}
-              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-              placeholder="Vorname"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Nachname</label>
-            <input
-              type="text"
-              value={form.lastName}
-              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-              placeholder="Nachname"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">E-Mail</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-              placeholder="email@neosolar.ch"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Telefon</label>
-            <input
-              type="text"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
-              placeholder="+41 71 555 00 00"
-            />
-          </div>
-        </div>
-
-        {/* Rolle */}
-        <div>
-          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Rolle</label>
-          <div className="flex gap-2 flex-wrap">
-            {ROLES.map((r) => {
-              const active = form.role === r
-              const rc = roleColors[r]
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => handleRoleChange(r)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all"
-                  style={{
-                    background: active ? `color-mix(in srgb, ${rc} 18%, transparent)` : 'rgba(255,255,255,0.03)',
-                    color: active ? rc : '#525E6F',
-                    border: `1px solid ${active ? `color-mix(in srgb, ${rc} 30%, transparent)` : 'transparent'}`,
-                    boxShadow: active ? `0 0 12px color-mix(in srgb, ${rc} 10%, transparent)` : 'none',
-                  }}
-                >
-                  <Shield size={11} strokeWidth={2} />
-                  {roleLabels[r]}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Module */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
-              Modul-Berechtigungen ({form.allowedModules.length}/{ALL_MODULES.length})
-            </label>
-            <button
-              type="button"
-              onClick={loadDefaults}
-              className="flex items-center gap-1 text-[10px] text-text-dim hover:text-amber transition-colors"
-            >
-              <RotateCcw size={10} strokeWidth={2} />
-              Standard laden
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {ALL_MODULES.map((mod) => {
-              const checked = form.allowedModules.includes(mod.id)
-              return (
-                <button
-                  key={mod.id}
-                  type="button"
-                  onClick={() => toggleModule(mod.id)}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-                  style={{
-                    background: checked
-                      ? `color-mix(in srgb, ${color} 12%, transparent)`
-                      : 'rgba(255,255,255,0.02)',
-                    color: checked ? color : '#94A3B8',
-                    border: `1px solid ${checked ? `color-mix(in srgb, ${color} 25%, transparent)` : 'transparent'}`,
-                  }}
-                >
-                  <div
-                    className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
-                    style={{ background: checked ? color : 'rgba(255,255,255,0.06)' }}
-                  >
-                    {checked && <Check size={9} strokeWidth={3} className="text-white" />}
-                  </div>
-                  {mod.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Spezial-Berechtigungen */}
-        <div>
-          <label className="text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-2 block">
-            Spezial-Berechtigungen
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {ALL_PERMISSIONS.map((perm) => {
-              const checked = form.allowedModules.includes(perm.id)
-              return (
-                <button
-                  key={perm.id}
-                  type="button"
-                  onClick={() => toggleModule(perm.id)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
-                  style={{
-                    background: checked
-                      ? 'color-mix(in srgb, #F87171 12%, transparent)'
-                      : 'rgba(255,255,255,0.02)',
-                    color: checked ? '#F87171' : '#94A3B8',
-                    border: `1px solid ${checked ? 'color-mix(in srgb, #F87171 25%, transparent)' : 'transparent'}`,
-                  }}
-                >
-                  <div
-                    className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
-                    style={{ background: checked ? '#F87171' : 'rgba(255,255,255,0.06)' }}
-                  >
-                    {checked && <Check size={9} strokeWidth={3} className="text-white" />}
-                  </div>
-                  {perm.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isPending || !form.firstName.trim() || !form.email.trim()}
-            className="btn-primary flex items-center gap-1.5 px-4 py-2 text-[12px] disabled:opacity-40"
-          >
-            <Check size={13} strokeWidth={2} /> Speichern
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-secondary px-4 py-2 text-[12px]"
-          >
-            Abbrechen
-          </button>
-        </div>
-      </div>
-    )
-  }
+  // UserForm ist ausserhalb definiert (siehe unten) um Re-Mount bei State-Updates zu vermeiden
 
   // ── Main Render ──
 
@@ -418,6 +220,8 @@ export default function UsersRolesSection() {
           onSave={handleCreate}
           onCancel={() => { setShowCreate(false); setCreateForm({ ...emptyForm }) }}
           isPending={createUser.isPending}
+          getDefaults={getDefaults}
+          showPassword
         />
       )}
 
@@ -438,6 +242,7 @@ export default function UsersRolesSection() {
                   onSave={handleSaveEdit}
                   onCancel={() => setEditingUser(null)}
                   isPending={updateUser.isPending}
+                  getDefaults={getDefaults}
                 />
               </div>
             )
@@ -848,6 +653,239 @@ export default function UsersRolesSection() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── UserForm als eigene Komponente (verhindert Re-Mount/Fokus-Verlust) ──
+
+function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, showPassword }: {
+  form: FormData
+  setForm: (f: FormData) => void
+  onSave: () => void
+  onCancel: () => void
+  isPending: boolean
+  getDefaults: (role: UserRole) => string[]
+  showPassword?: boolean
+}) {
+  const color = roleColors[form.role]
+
+  const handleRoleChange = (role: UserRole) => {
+    setForm({ ...form, role, allowedModules: getDefaults(role) })
+  }
+
+  const toggleModule = (moduleId: string) => {
+    const modules = form.allowedModules.includes(moduleId)
+      ? form.allowedModules.filter((m) => m !== moduleId)
+      : [...form.allowedModules, moduleId]
+    setForm({ ...form, allowedModules: modules })
+  }
+
+  const loadDefaults = () => {
+    setForm({ ...form, allowedModules: getDefaults(form.role) })
+  }
+
+  return (
+    <div className="glass-card p-5 space-y-4" style={{ borderRadius: 'var(--radius-lg)' }}>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Vorname</label>
+          <input
+            type="text"
+            value={form.firstName}
+            onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+            placeholder="Vorname"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Nachname</label>
+          <input
+            type="text"
+            value={form.lastName}
+            onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+            placeholder="Nachname"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">E-Mail</label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+            placeholder="email@neosolar.ch"
+          />
+        </div>
+        {showPassword ? (
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Passwort</label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="Mind. 6 Zeichen"
+              autoComplete="new-password"
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Telefon</label>
+            <input
+              type="text"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="+41 71 555 00 00"
+            />
+          </div>
+        )}
+      </div>
+      {showPassword && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Telefon</label>
+            <input
+              type="text"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+              placeholder="+41 71 555 00 00"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Rolle */}
+      <div>
+        <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Rolle</label>
+        <div className="flex gap-2 flex-wrap">
+          {ROLES.map((r) => {
+            const active = form.role === r
+            const rc = roleColors[r]
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => handleRoleChange(r)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all"
+                style={{
+                  background: active ? `color-mix(in srgb, ${rc} 18%, transparent)` : 'rgba(255,255,255,0.03)',
+                  color: active ? rc : '#525E6F',
+                  border: `1px solid ${active ? `color-mix(in srgb, ${rc} 30%, transparent)` : 'transparent'}`,
+                  boxShadow: active ? `0 0 12px color-mix(in srgb, ${rc} 10%, transparent)` : 'none',
+                }}
+              >
+                <Shield size={11} strokeWidth={2} />
+                {roleLabels[r]}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Module */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+            Modul-Berechtigungen ({form.allowedModules.length}/{ALL_MODULES.length})
+          </label>
+          <button
+            type="button"
+            onClick={loadDefaults}
+            className="flex items-center gap-1 text-[10px] text-text-dim hover:text-amber transition-colors"
+          >
+            <RotateCcw size={10} strokeWidth={2} />
+            Standard laden
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {ALL_MODULES.map((mod) => {
+            const checked = form.allowedModules.includes(mod.id)
+            return (
+              <button
+                key={mod.id}
+                type="button"
+                onClick={() => toggleModule(mod.id)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                style={{
+                  background: checked
+                    ? `color-mix(in srgb, ${color} 12%, transparent)`
+                    : 'rgba(255,255,255,0.02)',
+                  color: checked ? color : '#94A3B8',
+                  border: `1px solid ${checked ? `color-mix(in srgb, ${color} 25%, transparent)` : 'transparent'}`,
+                }}
+              >
+                <div
+                  className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
+                  style={{ background: checked ? color : 'rgba(255,255,255,0.06)' }}
+                >
+                  {checked && <Check size={9} strokeWidth={3} className="text-white" />}
+                </div>
+                {mod.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Spezial-Berechtigungen */}
+      <div>
+        <label className="text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-2 block">
+          Spezial-Berechtigungen
+        </label>
+        <div className="flex gap-2 flex-wrap">
+          {ALL_PERMISSIONS.map((perm) => {
+            const checked = form.allowedModules.includes(perm.id)
+            return (
+              <button
+                key={perm.id}
+                type="button"
+                onClick={() => toggleModule(perm.id)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-all"
+                style={{
+                  background: checked
+                    ? 'color-mix(in srgb, #F87171 12%, transparent)'
+                    : 'rgba(255,255,255,0.02)',
+                  color: checked ? '#F87171' : '#94A3B8',
+                  border: `1px solid ${checked ? 'color-mix(in srgb, #F87171 25%, transparent)' : 'transparent'}`,
+                }}
+              >
+                <div
+                  className="w-3.5 h-3.5 rounded flex items-center justify-center shrink-0"
+                  style={{ background: checked ? '#F87171' : 'rgba(255,255,255,0.06)' }}
+                >
+                  {checked && <Check size={9} strokeWidth={3} className="text-white" />}
+                </div>
+                {perm.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={isPending || !form.firstName.trim() || !form.email.trim()}
+          className="btn-primary flex items-center gap-1.5 px-4 py-2 text-[12px] disabled:opacity-40"
+        >
+          <Check size={13} strokeWidth={2} /> Speichern
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="btn-secondary px-4 py-2 text-[12px]"
+        >
+          Abbrechen
+        </button>
+      </div>
     </div>
   )
 }

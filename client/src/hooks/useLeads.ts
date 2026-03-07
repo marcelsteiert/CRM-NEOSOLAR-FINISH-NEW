@@ -308,7 +308,7 @@ export function useUpdateRoleDefaults() {
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { firstName: string; lastName: string; email: string; phone?: string; role: UserRole; allowedModules?: string[] }) =>
+    mutationFn: (data: { firstName: string; lastName: string; email: string; password?: string; phone?: string; role: UserRole; allowedModules?: string[] }) =>
       api.post<{ data: User }>('/users', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
