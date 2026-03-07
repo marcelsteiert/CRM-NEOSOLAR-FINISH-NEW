@@ -20,8 +20,10 @@ import {
   PanelLeft,
   Puzzle,
   X,
+  LogOut,
 } from 'lucide-react'
 import { useFeatureFlags, type FeatureFlag } from '@/hooks/useFeatureFlags'
+import { useAuth } from '@/hooks/useAuth'
 
 // ── Sidebar Context ──
 
@@ -107,6 +109,7 @@ export default function Sidebar() {
   const { pinned, setPinned, mobileOpen, setMobileOpen } = useSidebarPinned()
   const [hovered, setHovered] = useState(false)
   const { flags } = useFeatureFlags()
+  const { user, logout } = useAuth()
   const location = useLocation()
   const isMobile = useIsMobile()
 
@@ -154,14 +157,8 @@ export default function Sidebar() {
       >
         {/* Logo + Pin Toggle */}
         <div className="flex items-center w-full px-[15px] mb-5 shrink-0">
-          <div
-            className="w-[42px] h-[42px] rounded-[14px] flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #F59E0B, #F97316)',
-              boxShadow: '0 0 28px rgba(245, 158, 11, 0.2)',
-            }}
-          >
-            <span className="text-bg font-extrabold text-[13px] tracking-tight">NS</span>
+          <div className="w-[42px] h-[42px] rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden">
+            <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="w-full h-full object-cover" />
           </div>
           {(expanded || mobileOpen) && (
             <div className="flex items-center ml-3 flex-1 min-w-0 overflow-hidden">
@@ -275,6 +272,45 @@ export default function Sidebar() {
             </div>
           ))}
         </nav>
+
+        {/* User + Logout */}
+        {user && (
+          <div className="w-full px-[15px] pt-2 pb-1 shrink-0 border-t border-border mt-1">
+            {(expanded || mobileOpen) ? (
+              <div className="flex items-center gap-2.5 px-[10px] py-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-bg"
+                  style={{ background: user.avatar || '#F59E0B' }}
+                >
+                  {user.firstName?.[0]}{user.lastName?.[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-semibold text-text truncate">{user.firstName} {user.lastName}</p>
+                  <p className="text-[10px] text-text-dim truncate">{user.role}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-all shrink-0"
+                  aria-label="Abmelden"
+                  title="Abmelden"
+                >
+                  <LogOut size={14} strokeWidth={1.8} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={logout}
+                className="w-[44px] h-[44px] rounded-[12px] flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-all mx-auto"
+                aria-label="Abmelden"
+                title="Abmelden"
+              >
+                <LogOut size={20} strokeWidth={1.8} />
+              </button>
+            )}
+          </div>
+        )}
       </aside>
     </>
   )

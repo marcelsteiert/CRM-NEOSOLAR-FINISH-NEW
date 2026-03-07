@@ -1,3 +1,5 @@
+import { getAuthToken } from '@/hooks/useAuth'
+
 const API_BASE = '/api/v1'
 
 export class ApiError extends Error {
@@ -11,14 +13,34 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getAuthToken()
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers,
   })
+
+  // Bei 401: Token entfernen und zur Login-Seite weiterleiten
+  if (res.status === 401) {
+    localStorage.removeItem('crm_token')
+    localStorage.removeItem('crm_user')
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login'
+    }
+    throw new ApiError(401, 'Sitzung abgelaufen')
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: 'Unbekannter Fehler' }))
-    throw new ApiError(res.status, body.message || `HTTP ${res.status}`)
+    throw new ApiError(res.status, body.error?.message || body.message || `HTTP ${res.status}`)
   }
 
   return res.json()

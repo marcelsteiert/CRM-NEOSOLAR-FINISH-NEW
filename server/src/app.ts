@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import authRouter from './routes/auth.js'
 import healthRouter from './routes/health.js'
 import contactsRouter from './routes/contacts.js'
 import leadsRouter from './routes/leads.js'
@@ -27,6 +28,7 @@ import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
 import adminDbExportRouter from './routes/admin/dbExport.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { mapKeys } from './lib/caseMapper.js'
+import { authMiddleware } from './middleware/auth.js'
 
 export function createApp() {
   const app = express()
@@ -43,34 +45,37 @@ export function createApp() {
     next()
   })
 
-  // Routes
+  // Oeffentliche Routes (kein Auth noetig)
+  app.use('/api/v1/auth', authRouter)
   app.use('/api/v1/health', healthRouter)
-  app.use('/api/v1/contacts', contactsRouter)
-  app.use('/api/v1/leads', leadsRouter)
-  app.use('/api/v1/pipelines', pipelinesRouter)
-  app.use('/api/v1/tags', tagsRouter)
-  app.use('/api/v1/users', usersRouter)
-  app.use('/api/v1/activities', activitiesRouter)
-  app.use('/api/v1/reminders', remindersRouter)
-  app.use('/api/v1/emails', emailTemplatesRouter)
-  app.use('/api/v1/deals', dealsRouter)
-  app.use('/api/v1/appointments', appointmentsRouter)
-  app.use('/api/v1/settings', settingsRouter)
-  app.use('/api/v1/tasks', tasksRouter)
-  app.use('/api/v1/dashboard', dashboardRouter)
-  app.use('/api/v1/documents', documentsRouter)
-  app.use('/api/v1/projects', projectsRouter)
 
-  // Admin routes
-  app.use('/api/v1/admin/products', adminProductsRouter)
-  app.use('/api/v1/admin/integrations', adminIntegrationsRouter)
-  app.use('/api/v1/admin/webhooks', adminWebhooksRouter)
-  app.use('/api/v1/admin/audit-log', adminAuditLogRouter)
-  app.use('/api/v1/admin/branding', adminBrandingRouter)
-  app.use('/api/v1/admin/ai-settings', adminAiSettingsRouter)
-  app.use('/api/v1/admin/notification-settings', adminNotifSettingsRouter)
-  app.use('/api/v1/admin/doc-templates', adminDocTemplatesRouter)
-  app.use('/api/v1/admin/db-export', adminDbExportRouter)
+  // Geschuetzte Routes (authMiddleware pro Route)
+  app.use('/api/v1/contacts', authMiddleware, contactsRouter)
+  app.use('/api/v1/leads', authMiddleware, leadsRouter)
+  app.use('/api/v1/pipelines', authMiddleware, pipelinesRouter)
+  app.use('/api/v1/tags', authMiddleware, tagsRouter)
+  app.use('/api/v1/users', authMiddleware, usersRouter)
+  app.use('/api/v1/activities', authMiddleware, activitiesRouter)
+  app.use('/api/v1/reminders', authMiddleware, remindersRouter)
+  app.use('/api/v1/emails', authMiddleware, emailTemplatesRouter)
+  app.use('/api/v1/deals', authMiddleware, dealsRouter)
+  app.use('/api/v1/appointments', authMiddleware, appointmentsRouter)
+  app.use('/api/v1/settings', authMiddleware, settingsRouter)
+  app.use('/api/v1/tasks', authMiddleware, tasksRouter)
+  app.use('/api/v1/dashboard', authMiddleware, dashboardRouter)
+  app.use('/api/v1/documents', authMiddleware, documentsRouter)
+  app.use('/api/v1/projects', authMiddleware, projectsRouter)
+
+  // Admin routes (geschuetzt)
+  app.use('/api/v1/admin/products', authMiddleware, adminProductsRouter)
+  app.use('/api/v1/admin/integrations', authMiddleware, adminIntegrationsRouter)
+  app.use('/api/v1/admin/webhooks', authMiddleware, adminWebhooksRouter)
+  app.use('/api/v1/admin/audit-log', authMiddleware, adminAuditLogRouter)
+  app.use('/api/v1/admin/branding', authMiddleware, adminBrandingRouter)
+  app.use('/api/v1/admin/ai-settings', authMiddleware, adminAiSettingsRouter)
+  app.use('/api/v1/admin/notification-settings', authMiddleware, adminNotifSettingsRouter)
+  app.use('/api/v1/admin/doc-templates', authMiddleware, adminDocTemplatesRouter)
+  app.use('/api/v1/admin/db-export', authMiddleware, adminDbExportRouter)
 
   app.use(errorHandler)
 

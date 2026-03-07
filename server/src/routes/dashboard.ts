@@ -2,6 +2,7 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { getOwnerFilter } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -11,11 +12,13 @@ const router = Router()
 
 router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { assignedTo } = req.query
+    // Per-User Filter: Nicht-Admins sehen nur eigene Daten
+    const ownerFilter = getOwnerFilter(req)
+    const userFilter = (req.query.assignedTo as string) || ownerFilter || null
 
     // Deals stats
     let dealsQuery = supabase.from('deals').select('*').is('deleted_at', null)
-    if (assignedTo && typeof assignedTo === 'string') dealsQuery = dealsQuery.eq('assigned_to', assignedTo)
+    if (userFilter) dealsQuery = dealsQuery.eq('assigned_to', userFilter)
     const { data: deals } = await dealsQuery
     const allDeals = deals ?? []
 
@@ -41,7 +44,7 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
 
     // Appointments stats
     let apptQuery = supabase.from('appointments').select('*').is('deleted_at', null)
-    if (assignedTo && typeof assignedTo === 'string') apptQuery = apptQuery.eq('assigned_to', assignedTo)
+    if (userFilter) apptQuery = apptQuery.eq('assigned_to', userFilter)
     const { data: appointments } = await apptQuery
     const allAppts = appointments ?? []
 
@@ -55,7 +58,7 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
 
     // Tasks stats
     let tasksQuery = supabase.from('tasks').select('*').is('deleted_at', null)
-    if (assignedTo && typeof assignedTo === 'string') tasksQuery = tasksQuery.eq('assigned_to', assignedTo)
+    if (userFilter) tasksQuery = tasksQuery.eq('assigned_to', userFilter)
     const { data: tasks } = await tasksQuery
     const allTasks = tasks ?? []
 
@@ -107,14 +110,15 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
 
 router.get('/monthly', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { assignedTo } = req.query
+    const ownerFilter = getOwnerFilter(req)
+    const userFilter = (req.query.assignedTo as string) || ownerFilter || null
 
     let dealsQuery = supabase.from('deals').select('*').is('deleted_at', null)
-    if (assignedTo && typeof assignedTo === 'string') dealsQuery = dealsQuery.eq('assigned_to', assignedTo)
+    if (userFilter) dealsQuery = dealsQuery.eq('assigned_to', userFilter)
     const { data: deals } = await dealsQuery
 
     let apptQuery = supabase.from('appointments').select('*').is('deleted_at', null)
-    if (assignedTo && typeof assignedTo === 'string') apptQuery = apptQuery.eq('assigned_to', assignedTo)
+    if (userFilter) apptQuery = apptQuery.eq('assigned_to', userFilter)
     const { data: appointments } = await apptQuery
 
     const allDeals = deals ?? []

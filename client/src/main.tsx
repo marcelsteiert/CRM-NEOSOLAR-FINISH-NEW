@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App'
 import { FeatureFlagProvider } from './hooks/useFeatureFlags'
+import { AuthProvider } from './hooks/useAuth'
 
 // Error Boundary to catch render errors
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -36,9 +37,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <FeatureFlagProvider>
-          <App />
-        </FeatureFlagProvider>
+        <AuthProvider>
+          <FeatureFlagProvider>
+            <App />
+          </FeatureFlagProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

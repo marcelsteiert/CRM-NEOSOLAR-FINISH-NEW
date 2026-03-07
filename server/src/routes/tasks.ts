@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { getOwnerFilter } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -46,6 +47,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .is('deleted_at', null)
 
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
+
+    // Per-User Filter: Nicht-Admins sehen nur eigene Tasks
+    const ownerFilter = getOwnerFilter(req)
+    if (ownerFilter && !assignedTo) query = query.eq('assigned_to', ownerFilter)
+
     if (status && typeof status === 'string') query = query.eq('status', status)
     if (mod && typeof mod === 'string') query = query.eq('module', mod)
     if (priority && typeof priority === 'string') query = query.eq('priority', priority)
@@ -135,7 +141,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         reference_id: result.data.referenceId ?? null,
         reference_title: result.data.referenceTitle ?? null,
         assigned_to: result.data.assignedTo,
-        assigned_by: result.data.assignedBy,
+        assigned_by: result.data.assignedBy || req.user?.userId || 'u001',
         due_date: result.data.dueDate ?? null,
       })
       .select()

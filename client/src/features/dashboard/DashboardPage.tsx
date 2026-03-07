@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users,
@@ -19,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useDashboardStats, useMonthlyStats } from '@/hooks/useDashboard'
 import { useTasks, type Task, taskPriorityColors } from '@/hooks/useTasks'
+import { useAuth } from '@/hooks/useAuth'
 
 // ── Helpers ──
 
@@ -158,7 +158,8 @@ function TaskRow({ task, onNavigate }: { task: Task; onNavigate: () => void }) {
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const [currentUser] = useState('u001')
+  const { user } = useAuth()
+  const currentUser = user?.id ?? ''
 
   const { data: statsRes } = useDashboardStats()
   const { data: monthlyRes } = useMonthlyStats()

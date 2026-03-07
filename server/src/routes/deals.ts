@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
+import { getOwnerFilter } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -63,6 +64,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (stage && typeof stage === 'string') query = query.eq('stage', stage)
     if (priority && typeof priority === 'string') query = query.eq('priority', priority)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
+
+    // Per-User Filter: Nicht-Admins sehen nur eigene Deals
+    const ownerFilter = getOwnerFilter(req)
+    if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
 
     if (search && typeof search === 'string') {
       query = query.or(`title.ilike.%${search}%`)

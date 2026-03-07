@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
+import LoginPage from '@/features/auth/LoginPage'
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import LeadsPage from '@/features/leads/LeadsPage'
 import AppointmentsPage from '@/features/appointments/AppointmentsPage'
@@ -15,12 +16,67 @@ import AdminPage from '@/features/admin/AdminPage'
 import ExportPage from '@/features/export/ExportPage'
 import DocumentsPage from '@/features/documents/DocumentsPage'
 import FeaturesPage from '@/features/features/FeaturesPage'
+import { useAuth } from '@/hooks/useAuth'
+import { Loader2 } from 'lucide-react'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#06080C' }}>
+        <Loader2 size={32} className="animate-spin text-amber" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#06080C' }}>
+        <Loader2 size={32} className="animate-spin text-amber" />
+      </div>
+    )
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />
+  }
+
+  return <>{children}</>
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout />}>
+        {/* Login - oeffentlich */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+
+        {/* Geschuetzte Routes */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<DashboardPage />} />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="appointments" element={<AppointmentsPage />} />
