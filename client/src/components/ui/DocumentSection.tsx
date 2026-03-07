@@ -71,7 +71,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
 
   // Dokumente einem Ordnerbaum zuordnen
   const buildFolderTree = (phase: EntityType): FolderNode[] => {
-    const phaseDocs = allDocs.filter((d) => d.entity_type === phase)
+    const phaseDocs = allDocs.filter((d) => d.entityType === phase)
     const templateFolders = getPhaseTemplate(phase)
 
     const tree: FolderNode[] = templateFolders.map((folder) => {
@@ -82,14 +82,14 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           name: sub,
           path: subPath,
           subfolders: [],
-          docs: phaseDocs.filter((d) => d.folder_path === subPath),
+          docs: phaseDocs.filter((d) => d.folderPath === subPath),
         }
       })
       return {
         name: folder.name,
         path: folderPath,
         subfolders,
-        docs: phaseDocs.filter((d) => d.folder_path === folderPath),
+        docs: phaseDocs.filter((d) => d.folderPath === folderPath),
       }
     })
 
@@ -100,7 +100,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
       f.subfolders.forEach((sf) => assignedPaths.add(sf.path))
     })
     const unassigned = phaseDocs.filter(
-      (d) => !d.folder_path || !assignedPaths.has(d.folder_path),
+      (d) => !d.folderPath || !assignedPaths.has(d.folderPath),
     )
     if (unassigned.length > 0) {
       tree.push({
@@ -163,7 +163,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   const totalDocs = allDocs.length
 
   const renderDoc = (doc: Document) => {
-    const iconType = getFileIcon(doc.mime_type)
+    const iconType = getFileIcon(doc.mimeType)
     const IconComp = iconMap[iconType]
     const iconColor = iconColorMap[iconType]
 
@@ -179,13 +179,13 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           <IconComp size={12} strokeWidth={1.8} style={{ color: iconColor }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-medium text-text-sec truncate">{doc.file_name}</p>
+          <p className="text-[10px] font-medium text-text-sec truncate">{doc.fileName}</p>
           <div className="flex items-center gap-1.5 text-[8px] text-text-dim">
-            <span className="tabular-nums">{formatFileSize(doc.file_size)}</span>
+            <span className="tabular-nums">{formatFileSize(doc.fileSize)}</span>
             {doc.notes && <><span>·</span><span className="truncate">{doc.notes}</span></>}
             <span>·</span>
             <span className="tabular-nums">
-              {new Date(doc.created_at).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+              {new Date(doc.createdAt).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })}
             </span>
           </div>
         </div>
@@ -343,7 +343,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
         {sortedPhases.map((phase) => {
           const phaseColor = entityTypeColors[phase]
           const isExpanded = expandedPhases[phase] ?? false
-          const phaseDocs = allDocs.filter((d) => d.entity_type === phase)
+          const phaseDocs = allDocs.filter((d) => d.entityType === phase)
           const isCurrentPhase = phase === entityType
           const tree = buildFolderTree(phase)
 

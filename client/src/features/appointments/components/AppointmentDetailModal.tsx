@@ -506,7 +506,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
           {/* ────── TAB: Dokumente ────── */}
           {activeTab === 'documents' && (
-            <DocumentSection contactId={appt.contact_id} entityType="TERMIN" entityId={appt.id} />
+            <DocumentSection contactId={appt.contactId} entityType="TERMIN" entityId={appt.id} />
           )}
         </div>
 

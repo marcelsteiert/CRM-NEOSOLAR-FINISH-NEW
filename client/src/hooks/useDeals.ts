@@ -25,7 +25,7 @@ export interface Activity {
 
 export interface Deal {
   id: string
-  contact_id: string
+  contactId: string
   title: string
   leadId: string | null
   appointmentId: string | null

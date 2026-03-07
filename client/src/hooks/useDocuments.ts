@@ -7,18 +7,18 @@ export type EntityType = 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT'
 
 export interface Document {
   id: string
-  contact_id: string
-  file_name: string
-  file_size: number
-  mime_type: string
-  entity_type: EntityType
-  entity_id: string | null
-  folder_path: string | null
-  uploaded_by: string
+  contactId: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  entityType: EntityType
+  entityId: string | null
+  folderPath: string | null
+  uploadedBy: string
   notes: string | null
-  storage_path: string
+  storagePath: string
   downloadUrl: string | null
-  created_at: string
+  createdAt: string
 }
 
 // ── Response types ──

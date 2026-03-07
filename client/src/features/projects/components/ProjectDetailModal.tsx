@@ -761,7 +761,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
           {/* ────── TAB: Dokumente ────── */}
           {activeTab === 'documents' && (
             <div className="px-4 sm:px-6 py-5">
-              <DocumentSection contactId={project.contact_id} entityType="PROJEKT" entityId={project.id} />
+              <DocumentSection contactId={project.contactId} entityType="PROJEKT" entityId={project.id} />
             </div>
           )}
         </div>
