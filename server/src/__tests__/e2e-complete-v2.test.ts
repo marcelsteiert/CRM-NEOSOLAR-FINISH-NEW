@@ -2770,3 +2770,290 @@ describe('E2E-V2: Daten-Isolation zwischen Rollen', () => {
     expect(leads.body.data.length).toBeGreaterThan(0)
   })
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// 35. JEDES MODUL EINZELN TOGGLE – Admin schaltet jedes der 12 Module
+//     ein/aus und verifiziert via /auth/me
+// ════════════════════════════════════════════════════════════════════════════
+
+const ALL_MODULES = [
+  'dashboard', 'leads', 'appointments', 'deals', 'provision',
+  'calculations', 'projects', 'tasks', 'admin', 'communication',
+  'documents', 'export',
+]
+
+describe('E2E-V2: Jedes Modul einzeln togglen', () => {
+  // Fuer jeden der 12 Module: Admin schaltet NUR dieses Modul ein,
+  // User sieht nur dieses Modul in /auth/me
+  for (const mod of ALL_MODULES) {
+    it(`Toggle Modul "${mod}" einzeln → sichtbar in /auth/me`, async () => {
+      const adminTk = realUsers.admin?.token
+      const vtUser = realUsers.vertrieb
+      if (!adminTk || !vtUser?.token) return
+
+      // Nur dieses eine Modul setzen
+      const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+        .send({ allowedModules: [mod] })
+      expect(update.status).toBe(200)
+      expect(update.body.data.allowedModules).toEqual([mod])
+
+      // Via /auth/me verifizieren
+      const me = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${vtUser.token}`)
+      expect(me.status).toBe(200)
+      expect(me.body.data.allowedModules).toEqual([mod])
+      expect(me.body.data.allowedModules.length).toBe(1)
+    })
+  }
+
+  it('Alle 12 Module gleichzeitig aktiv → alle in /auth/me sichtbar', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser?.token) return
+
+    const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: ALL_MODULES })
+    expect(update.status).toBe(200)
+    expect(update.body.data.allowedModules.length).toBe(12)
+
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    for (const mod of ALL_MODULES) {
+      expect(me.body.data.allowedModules).toContain(mod)
+    }
+  })
+
+  it('0 Module → leeres Array in /auth/me', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser?.token) return
+
+    const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: [] })
+    expect(update.status).toBe(200)
+
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    expect(me.body.data.allowedModules).toEqual([])
+  })
+
+  // Am Ende: VERTRIEB-Defaults wiederherstellen
+  it('Cleanup: VERTRIEB-Defaults wiederherstellen', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser) return
+    await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents'] })
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 36. ROLLEN-DEFAULTS VOLLSTAENDIG – Jede Rolle bekommt korrekte Defaults
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Rollen-Defaults vollstaendig', () => {
+  it('ADMIN hat alle 12 Module', async () => {
+    const res = await authGet('/api/v1/users/role-defaults')
+    const { ADMIN } = res.body.data
+    expect(ADMIN.length).toBe(12)
+    for (const mod of ALL_MODULES) {
+      expect(ADMIN).toContain(mod)
+    }
+  })
+
+  it('VERTRIEB hat genau 7 Module (kein admin/provision/calculations/projects/export)', async () => {
+    const res = await authGet('/api/v1/users/role-defaults')
+    const { VERTRIEB } = res.body.data
+    expect(VERTRIEB.length).toBe(7)
+    expect(VERTRIEB).toContain('dashboard')
+    expect(VERTRIEB).toContain('leads')
+    expect(VERTRIEB).toContain('appointments')
+    expect(VERTRIEB).toContain('deals')
+    expect(VERTRIEB).toContain('tasks')
+    expect(VERTRIEB).toContain('communication')
+    expect(VERTRIEB).toContain('documents')
+    expect(VERTRIEB).not.toContain('admin')
+    expect(VERTRIEB).not.toContain('provision')
+    expect(VERTRIEB).not.toContain('calculations')
+    expect(VERTRIEB).not.toContain('projects')
+    expect(VERTRIEB).not.toContain('export')
+  })
+
+  it('PROJEKTLEITUNG hat genau 6 Module', async () => {
+    const res = await authGet('/api/v1/users/role-defaults')
+    const { PROJEKTLEITUNG } = res.body.data
+    expect(PROJEKTLEITUNG.length).toBe(6)
+    expect(PROJEKTLEITUNG).toContain('dashboard')
+    expect(PROJEKTLEITUNG).toContain('projects')
+    expect(PROJEKTLEITUNG).toContain('calculations')
+    expect(PROJEKTLEITUNG).toContain('tasks')
+    expect(PROJEKTLEITUNG).toContain('appointments')
+    expect(PROJEKTLEITUNG).toContain('documents')
+    expect(PROJEKTLEITUNG).not.toContain('leads')
+    expect(PROJEKTLEITUNG).not.toContain('deals')
+    expect(PROJEKTLEITUNG).not.toContain('admin')
+    expect(PROJEKTLEITUNG).not.toContain('provision')
+  })
+
+  it('BUCHHALTUNG hat genau 5 Module', async () => {
+    const res = await authGet('/api/v1/users/role-defaults')
+    const { BUCHHALTUNG } = res.body.data
+    expect(BUCHHALTUNG.length).toBe(5)
+    expect(BUCHHALTUNG).toContain('dashboard')
+    expect(BUCHHALTUNG).toContain('provision')
+    expect(BUCHHALTUNG).toContain('deals')
+    expect(BUCHHALTUNG).toContain('documents')
+    expect(BUCHHALTUNG).toContain('export')
+    expect(BUCHHALTUNG).not.toContain('leads')
+    expect(BUCHHALTUNG).not.toContain('admin')
+    expect(BUCHHALTUNG).not.toContain('projects')
+    expect(BUCHHALTUNG).not.toContain('tasks')
+  })
+
+  it('GL hat identische Module wie ADMIN (alle 12)', async () => {
+    const res = await authGet('/api/v1/users/role-defaults')
+    const { GL, ADMIN } = res.body.data
+    expect(GL.length).toBe(ADMIN.length)
+    for (const mod of ALL_MODULES) {
+      expect(GL).toContain(mod)
+    }
+  })
+
+  it('Neuer VERTRIEB User erhaelt exakt VERTRIEB-Defaults', async () => {
+    const user = await createUser({ role: 'VERTRIEB' })
+    const res = await authGet('/api/v1/users/role-defaults')
+    expect(user.allowedModules).toEqual(res.body.data.VERTRIEB)
+  })
+
+  it('Neuer PROJEKTLEITUNG User erhaelt exakt PL-Defaults', async () => {
+    const user = await createUser({ role: 'PROJEKTLEITUNG' })
+    const res = await authGet('/api/v1/users/role-defaults')
+    expect(user.allowedModules).toEqual(res.body.data.PROJEKTLEITUNG)
+  })
+
+  it('Neuer BUCHHALTUNG User erhaelt exakt BH-Defaults', async () => {
+    const user = await createUser({ role: 'BUCHHALTUNG' })
+    const res = await authGet('/api/v1/users/role-defaults')
+    expect(user.allowedModules).toEqual(res.body.data.BUCHHALTUNG)
+  })
+
+  it('Neuer ADMIN User erhaelt exakt ADMIN-Defaults', async () => {
+    const user = await createUser({ role: 'ADMIN' })
+    const res = await authGet('/api/v1/users/role-defaults')
+    expect(user.allowedModules).toEqual(res.body.data.ADMIN)
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 37. ROLLENWECHSEL KOMPLETT – Jeder Wechsel A→B prueft Module-Reset
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Rollenwechsel mit Module-Reset', () => {
+  it('VERTRIEB → ADMIN: Module wechseln auf ADMIN-Defaults', async () => {
+    const user = await createUser({ role: 'VERTRIEB' })
+    const res = await authPut(`/api/v1/users/${user.id}`).send({ role: 'ADMIN' })
+    expect(res.status).toBe(200)
+    expect(res.body.data.role).toBe('ADMIN')
+    const defaults = await authGet('/api/v1/users/role-defaults')
+    expect(res.body.data.allowedModules).toEqual(defaults.body.data.ADMIN)
+  })
+
+  it('VERTRIEB → BUCHHALTUNG: Module wechseln auf BH-Defaults', async () => {
+    const user = await createUser({ role: 'VERTRIEB' })
+    const res = await authPut(`/api/v1/users/${user.id}`).send({ role: 'BUCHHALTUNG' })
+    expect(res.status).toBe(200)
+    const defaults = await authGet('/api/v1/users/role-defaults')
+    expect(res.body.data.allowedModules).toEqual(defaults.body.data.BUCHHALTUNG)
+  })
+
+  it('PROJEKTLEITUNG → VERTRIEB: Module wechseln auf VT-Defaults', async () => {
+    const user = await createUser({ role: 'PROJEKTLEITUNG' })
+    const res = await authPut(`/api/v1/users/${user.id}`).send({ role: 'VERTRIEB' })
+    expect(res.status).toBe(200)
+    const defaults = await authGet('/api/v1/users/role-defaults')
+    expect(res.body.data.allowedModules).toEqual(defaults.body.data.VERTRIEB)
+  })
+
+  it('BUCHHALTUNG → PROJEKTLEITUNG: Module wechseln auf PL-Defaults', async () => {
+    const user = await createUser({ role: 'BUCHHALTUNG' })
+    const res = await authPut(`/api/v1/users/${user.id}`).send({ role: 'PROJEKTLEITUNG' })
+    expect(res.status).toBe(200)
+    const defaults = await authGet('/api/v1/users/role-defaults')
+    expect(res.body.data.allowedModules).toEqual(defaults.body.data.PROJEKTLEITUNG)
+  })
+
+  it('ADMIN → VERTRIEB: Verliert admin/provision/calculations/projects/export', async () => {
+    const user = await createUser({ role: 'ADMIN' })
+    expect(user.allowedModules).toContain('admin')
+    expect(user.allowedModules).toContain('provision')
+
+    const res = await authPut(`/api/v1/users/${user.id}`).send({ role: 'VERTRIEB' })
+    expect(res.body.data.allowedModules).not.toContain('admin')
+    expect(res.body.data.allowedModules).not.toContain('provision')
+    expect(res.body.data.allowedModules).not.toContain('calculations')
+    expect(res.body.data.allowedModules).not.toContain('export')
+    expect(res.body.data.allowedModules).toContain('leads')
+    expect(res.body.data.allowedModules).toContain('deals')
+  })
+
+  it('Rollenwechsel mit expliziten Modulen → Defaults werden NICHT gesetzt', async () => {
+    const user = await createUser({ role: 'VERTRIEB' })
+    const custom = ['dashboard', 'projects', 'provision', 'admin']
+    const res = await authPut(`/api/v1/users/${user.id}`)
+      .send({ role: 'PROJEKTLEITUNG', allowedModules: custom })
+    expect(res.status).toBe(200)
+    expect(res.body.data.role).toBe('PROJEKTLEITUNG')
+    expect(res.body.data.allowedModules).toEqual(custom)
+    expect(res.body.data.allowedModules).toContain('admin')
+    expect(res.body.data.allowedModules).toContain('provision')
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 38. MODULE → ENDPOINT ZUGRIFF – Prueft dass jedes Modul einen Endpoint hat
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Module-Endpoint Mapping', () => {
+  const moduleEndpoints: Record<string, string> = {
+    dashboard: '/api/v1/dashboard/stats',
+    leads: '/api/v1/leads',
+    appointments: '/api/v1/appointments',
+    deals: '/api/v1/deals',
+    provision: '/api/v1/dashboard/provision',
+    projects: '/api/v1/projects',
+    tasks: '/api/v1/tasks',
+    documents: '/api/v1/documents',
+  }
+
+  for (const [mod, endpoint] of Object.entries(moduleEndpoints)) {
+    it(`Modul "${mod}" → Endpoint ${endpoint} erreichbar`, async () => {
+      const adminTk = realUsers.admin?.token
+      if (!adminTk) return
+      const res = await authGet(endpoint, adminTk)
+      expect(res.status).toBe(200)
+    })
+  }
+
+  it('Alle 9 Admin-Endpunkte erreichbar', async () => {
+    const adminTk = realUsers.admin?.token
+    if (!adminTk) return
+    const adminEndpoints = [
+      '/api/v1/admin/integrations',
+      '/api/v1/admin/webhooks',
+      '/api/v1/admin/branding',
+      '/api/v1/admin/ai-settings',
+      '/api/v1/admin/notification-settings',
+      '/api/v1/admin/doc-templates',
+      '/api/v1/admin/audit-log',
+      '/api/v1/admin/db-export/stats',
+      '/api/v1/admin/products',
+    ]
+    for (const ep of adminEndpoints) {
+      const res = await authGet(ep, adminTk)
+      expect(res.status).toBe(200)
+    }
+  })
+})
