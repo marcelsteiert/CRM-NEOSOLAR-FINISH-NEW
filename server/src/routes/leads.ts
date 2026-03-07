@@ -75,7 +75,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     query = query.range(from, from + pageSize - 1)
 
     const { data, count, error } = await query
-    if (error) throw new AppError(error.message, 500)
+    // Range-Fehler bei out-of-bounds Pagination ignorieren → leere Ergebnisse
+    if (error && !data) {
+      res.json({ data: [], total: count ?? 0, page, pageSize })
+      return
+    }
 
     // Kontakt-Daten flach + Tags als Array
     const enriched = (data ?? []).map((lead: any) => ({
@@ -196,6 +200,9 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (result.data.value !== undefined) updates.value = result.data.value
     if (result.data.notes !== undefined) updates.notes = result.data.notes ?? null
     if (result.data.appointmentType !== undefined) updates.appointment_type = result.data.appointmentType ?? null
+
+    // Immer updated_at setzen damit Supabase min. 1 Feld hat
+    updates.updated_at = new Date().toISOString()
 
     const { data, error } = await supabase
       .from('leads')

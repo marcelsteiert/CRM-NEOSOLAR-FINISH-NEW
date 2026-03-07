@@ -13,6 +13,7 @@ export interface Document {
   mime_type: string
   entity_type: EntityType
   entity_id: string | null
+  folder_path: string | null
   uploaded_by: string
   notes: string | null
   storage_path: string
@@ -63,6 +64,7 @@ export function useUploadDocument() {
       mimeType: string
       entityType: EntityType
       entityId: string
+      folderPath?: string
       uploadedBy?: string
       notes?: string
       fileBase64: string

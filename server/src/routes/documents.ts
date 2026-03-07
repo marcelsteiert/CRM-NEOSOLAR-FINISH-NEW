@@ -14,6 +14,7 @@ const uploadDocSchema = z.object({
   contactId: z.string().min(1, 'Kontakt-ID ist erforderlich'),
   entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']),
   entityId: z.string().optional(),
+  folderPath: z.string().optional(), // z.B. "Fotos/Dach" oder "Offerte/Final"
   fileName: z.string().min(1, 'Dateiname ist erforderlich'),
   fileSize: z.number().min(1),
   mimeType: z.string().min(1),
@@ -102,6 +103,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         contact_id: d.contactId,
         entity_type: d.entityType,
         entity_id: d.entityId ?? null,
+        folder_path: d.folderPath ?? null,
         file_name: d.fileName,
         file_size: d.fileSize,
         mime_type: d.mimeType,

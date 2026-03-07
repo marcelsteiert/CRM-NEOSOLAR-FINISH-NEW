@@ -135,6 +135,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         first_name: firstName,
         last_name: lastName,
         email,
+        password: '$2b$10$defaulthashplaceholder000000000000000000000000000',
         phone: phone ?? '',
         role,
         is_active: true,

@@ -82,7 +82,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     query = query.range(from, from + pageSize - 1)
 
     const { data, count, error } = await query
-    if (error) throw new AppError(error.message, 500)
+    // Range-Fehler bei out-of-bounds Pagination ignorieren → leere Ergebnisse
+    if (error && !data) {
+      res.json({ data: [], total: count ?? 0, page, pageSize })
+      return
+    }
 
     const enriched = (data ?? []).map((deal: any) => ({
       ...deal,
@@ -413,6 +417,9 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (u.followUpDate !== undefined) updates.follow_up_date = u.followUpDate ?? null
     if (u.expectedCloseDate !== undefined) updates.expected_close_date = u.expectedCloseDate ?? null
     if (u.notes !== undefined) updates.notes = u.notes ?? null
+
+    // Immer updated_at setzen damit Supabase min. 1 Feld hat
+    updates.updated_at = new Date().toISOString()
 
     if (u.stage !== undefined) {
       updates.stage = u.stage

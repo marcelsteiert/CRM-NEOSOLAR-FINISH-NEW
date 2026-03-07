@@ -21,6 +21,8 @@ interface Props {
   onClose: () => void
 }
 
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents'
+
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
   const diffMin = Math.floor(diffMs / 60000)
@@ -54,6 +56,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const { data: usersResponse } = useUsers()
   const users = usersResponse?.data ?? []
 
+  const [activeTab, setActiveTab] = useState<DetailTab>('overview')
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editContactName, setEditContactName] = useState('')
@@ -80,7 +83,12 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const [activityText, setActivityText] = useState('')
   const [activityType, setActivityType] = useState<ActivityType>('NOTE')
 
+  // Notes (auto-save)
+  const [notesText, setNotesText] = useState('')
+  const [notesSavedAt, setNotesSavedAt] = useState<string | null>(null)
+
   const backdropRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (deal) {
@@ -97,6 +105,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
       setEditWinProb(deal.winProbability != null ? String(deal.winProbability) : '')
       setEditFollowUpDate(deal.followUpDate ?? '')
       setEditNotes(deal.notes ?? '')
+      setNotesText(deal.notes ?? '')
     }
   }, [deal])
 
@@ -113,6 +122,10 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose, isEditing, showDeleteConfirm, showWonConfirm, showLostConfirm])
+
+  useEffect(() => {
+    dialogRef.current?.focus()
+  }, [])
 
   const handleBackdropClick = (e: React.MouseEvent) => { if (e.target === backdropRef.current) onClose() }
 
@@ -132,63 +145,35 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     setTimeout(() => setSuccessMsg(''), 2000)
   }
 
+  const handleNotesBlur = () => {
+    if (!deal) return
+    if (notesText !== (deal.notes ?? '')) {
+      updateDeal.mutate({ id: deal.id, notes: notesText })
+      setNotesSavedAt(new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }))
+    }
+  }
+
   const handleMarkWon = async () => {
     if (!deal) return
     updateDeal.mutate({ id: deal.id, stage: 'GEWONNEN' as DealStage })
 
-    // Komplette Historie sammeln: Alle Deal-Aktivitäten + Konvertierungs-Events
     const now = new Date().toISOString()
     const historyActivities: Array<{ type: string; text: string; createdBy: string; createdAt: string }> = []
 
-    // 1. System-Event: Lead-Erstellung (falls vorhanden)
     if (deal.leadId) {
-      historyActivities.push({
-        type: 'SYSTEM',
-        text: `Lead erstellt (ID: ${deal.leadId})`,
-        createdBy: 'System',
-        createdAt: deal.createdAt, // Approximation
-      })
+      historyActivities.push({ type: 'SYSTEM', text: `Lead erstellt (ID: ${deal.leadId})`, createdBy: 'System', createdAt: deal.createdAt })
     }
-
-    // 2. System-Event: Termin (falls vorhanden)
     if (deal.appointmentId) {
-      historyActivities.push({
-        type: 'SYSTEM',
-        text: `Besichtigungstermin durchgeführt (ID: ${deal.appointmentId})`,
-        createdBy: 'System',
-        createdAt: deal.createdAt,
-      })
+      historyActivities.push({ type: 'SYSTEM', text: `Besichtigungstermin durchgeführt (ID: ${deal.appointmentId})`, createdBy: 'System', createdAt: deal.createdAt })
     }
-
-    // 3. Alle Aktivitäten vom Angebot übernehmen
     for (const act of deal.activities) {
-      historyActivities.push({
-        type: act.type,
-        text: `[Angebot] ${act.text}`,
-        createdBy: act.createdBy,
-        createdAt: act.createdAt,
-      })
+      historyActivities.push({ type: act.type, text: `[Angebot] ${act.text}`, createdBy: act.createdBy, createdAt: act.createdAt })
     }
-
-    // 4. Notizen vom Angebot als Aktivität
     if (deal.notes?.trim()) {
-      historyActivities.push({
-        type: 'NOTE',
-        text: `[Angebot-Notizen] ${deal.notes}`,
-        createdBy: 'System',
-        createdAt: now,
-      })
+      historyActivities.push({ type: 'NOTE', text: `[Angebot-Notizen] ${deal.notes}`, createdBy: 'System', createdAt: now })
     }
+    historyActivities.push({ type: 'SYSTEM', text: `Angebot "${deal.title}" als gewonnen markiert → Projekt erstellt`, createdBy: 'System', createdAt: now })
 
-    // 5. Konvertierungs-Event
-    historyActivities.push({
-      type: 'SYSTEM',
-      text: `Angebot "${deal.title}" als gewonnen markiert → Projekt erstellt`,
-      createdBy: 'System',
-      createdAt: now,
-    })
-
-    // Projekt erstellen mit kompletter Historie
     try {
       await createProject.mutateAsync({
         name: deal.company || deal.contactName,
@@ -206,7 +191,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         priority: deal.priority === 'URGENT' ? 'URGENT' : deal.priority === 'HIGH' ? 'HIGH' : 'MEDIUM',
         activities: historyActivities,
       })
-    } catch { /* project creation errors are non-blocking */ }
+    } catch { /* non-blocking */ }
 
     setShowWonConfirm(false)
     setSuccessMsg('Angebot als gewonnen markiert – Projekt erstellt!')
@@ -241,7 +226,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
   if (isLoading || !deal) {
     return (
-      <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }}>
+      <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
         <div className="w-12 h-12 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
       </div>
     )
@@ -250,371 +235,453 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const isClosed = deal.stage === 'GEWONNEN' || deal.stage === 'VERLOREN'
   const sortedActivities = [...deal.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
+  const tabs: { key: DetailTab; label: string }[] = [
+    { key: 'overview', label: 'Übersicht' },
+    { key: 'activities', label: `Aktivitäten (${deal.activities.length})` },
+    { key: 'notes', label: 'Notizen' },
+    { key: 'documents', label: 'Dokumente' },
+  ]
+
   return (
     <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-      <div role="dialog" aria-modal="true" className="outline-none w-full max-w-[700px] mx-4 max-h-[90vh] flex flex-col" style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
-          <div className="flex-1 min-w-0 pr-4">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Angebot Details"
+        tabIndex={-1}
+        className="outline-none w-[720px] max-h-[90vh] mx-4 flex flex-col"
+        style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}
+      >
+        {/* ── Header ── */}
+        <div className="flex items-center gap-3.5 px-6 py-5 border-b border-border shrink-0">
+          <div className="min-w-0 flex-1">
             {isEditing ? (
-              <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="glass-input w-full px-3 py-1 text-base font-bold" />
+              <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="glass-input w-full px-3 py-1 text-[15px] font-bold" />
             ) : (
-              <h2 className="text-base font-bold tracking-[-0.02em] truncate">{deal.title}</h2>
+              <h3 className="text-[15px] font-bold leading-snug truncate">{deal.title}</h3>
             )}
-            <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: `color-mix(in srgb, ${stageColors[deal.stage]} 12%, transparent)`, color: stageColors[deal.stage] }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] }} />
-                {stageLabels[deal.stage]}
+            {deal.company && !isEditing && <p className="text-[12px] text-text-sec truncate">{deal.company}</p>}
+          </div>
+
+          {/* Status badge + win % */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold" style={{ background: `color-mix(in srgb, ${stageColors[deal.stage]} 12%, transparent)`, color: stageColors[deal.stage] }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] }} />
+              {stageLabels[deal.stage]}
+            </span>
+            {deal.winProbability != null && (
+              <span className="text-[10px] font-bold tabular-nums" style={{ color: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171' }}>
+                {deal.winProbability}%
               </span>
-              {deal.winProbability != null && (
-                <span className="text-[10px] font-bold tabular-nums" style={{ color: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171' }}>
-                  {deal.winProbability}%
-                </span>
-              )}
-              <span className="text-[11px] text-text-dim">Erstellt {relativeTime(deal.createdAt)}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {(!isClosed || isAdmin) && (
-              <button type="button" onClick={() => { if (isEditing) handleSave(); else setIsEditing(true) }} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
-                {isEditing ? <Check size={16} strokeWidth={2} /> : <Pencil size={16} strokeWidth={1.8} />}
-              </button>
             )}
-            <button type="button" onClick={onClose} aria-label="Schliessen" className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
-              <X size={18} strokeWidth={1.8} />
-            </button>
           </div>
+
+          {/* Edit toggle */}
+          {(!isClosed || isAdmin) && (
+            <button type="button" onClick={() => { if (isEditing) handleSave(); else setIsEditing(true) }} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-200 shrink-0" aria-label={isEditing ? 'Speichern' : 'Bearbeiten'}>
+              {isEditing ? <Check size={16} strokeWidth={1.8} /> : <Pencil size={16} strokeWidth={1.8} />}
+            </button>
+          )}
+
+          {/* Close */}
+          <button type="button" onClick={onClose} aria-label="Schliessen" className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150 shrink-0">
+            <X size={18} strokeWidth={1.8} />
+          </button>
         </div>
 
+        {/* ── Success Message ── */}
         {successMsg && (
-          <div className="mx-6 mt-4 px-4 py-2.5 rounded-[10px] text-[12px] font-semibold text-emerald-400" style={{ background: 'color-mix(in srgb, #34D399 8%, transparent)', border: '1px solid color-mix(in srgb, #34D399 20%, transparent)' }}>
+          <div className="mx-6 mt-3 px-4 py-2.5 rounded-[10px] text-[12px] font-semibold text-center" style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)', color: '#34D399', border: '1px solid color-mix(in srgb, #34D399 20%, transparent)' }}>
             {successMsg}
           </div>
         )}
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          {/* Value + Win Probability row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Angebotswert</p>
-              {isEditing ? (
-                <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="glass-input px-3 py-1 text-lg font-bold tabular-nums w-full" />
-              ) : (
-                <p className="text-[22px] font-extrabold tabular-nums text-amber">{formatCHF(deal.value)}</p>
-              )}
-            </div>
-            <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #A78BFA 6%, transparent)', border: '1px solid color-mix(in srgb, #A78BFA 15%, transparent)' }}>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1 flex items-center gap-1">
-                <Percent size={10} strokeWidth={2} /> Abschlusswahrscheinlichkeit
-              </p>
-              {isEditing ? (
-                <div className="flex items-center gap-2">
-                  <input type="range" min="0" max="100" step="5" value={editWinProb || '50'} onChange={(e) => setEditWinProb(e.target.value)} className="flex-1 accent-violet-400" />
-                  <span className="text-lg font-extrabold tabular-nums text-violet-400 w-12 text-right">{editWinProb || '50'}%</span>
-                </div>
-              ) : (
-                <p className="text-[22px] font-extrabold tabular-nums" style={{ color: (deal.winProbability ?? 0) >= 70 ? '#34D399' : (deal.winProbability ?? 0) >= 40 ? '#F59E0B' : '#F87171' }}>
-                  {deal.winProbability != null ? `${deal.winProbability}%` : '\u2014'}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="space-y-2.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">Kontakt</p>
-            {[
-              { icon: Building2, ed: <input type="text" value={editCompany} onChange={(e) => setEditCompany(e.target.value)} placeholder="Unternehmen" className="glass-input px-3 py-1 text-[12px] flex-1" />, val: deal.company ?? '\u2014' },
-              { icon: Phone, ed: <input type="tel" value={editContactPhone} onChange={(e) => setEditContactPhone(e.target.value)} className="glass-input px-3 py-1 text-[12px] flex-1 tabular-nums" />, val: deal.contactPhone },
-              { icon: Mail, ed: <input type="email" value={editContactEmail} onChange={(e) => setEditContactEmail(e.target.value)} className="glass-input px-3 py-1 text-[12px] flex-1" />, val: deal.contactEmail },
-              { icon: MapPin, ed: <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="glass-input px-3 py-1 text-[12px] flex-1" />, val: deal.address },
-            ].map(({ icon: Icon, ed, val }, i) => (
-              <div key={i} className="flex items-center gap-2.5">
-                <Icon size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
-                {isEditing ? ed : <span className="text-[12px] text-text-sec">{val}</span>}
-              </div>
+        {/* ── Tabs ── */}
+        <div className="px-6 pt-4 pb-0 shrink-0">
+          <div className="flex items-center rounded-full p-0.5" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={[
+                  'flex-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                  activeTab === tab.key
+                    ? 'bg-amber-soft text-amber'
+                    : 'text-text-dim hover:text-text',
+                ].join(' ')}
+              >
+                {tab.label}
+              </button>
             ))}
-          </div>
-
-          {/* Stage & Priority */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Phase</p>
-              {isEditing ? (
-                <div className="relative">
-                  <select value={editStage} onChange={(e) => setEditStage(e.target.value as DealStage)} className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer">
-                    {Object.entries(stageLabels).map(([k, l]) => <option key={k} value={k} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{l}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-                </div>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${stageColors[deal.stage]} 12%, transparent)`, color: stageColors[deal.stage] }}>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] }} />
-                  {stageLabels[deal.stage]}
-                </span>
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Priorität</p>
-              {isEditing ? (
-                <div className="relative">
-                  <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as DealPriority)} className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer">
-                    {Object.entries(priorityLabels).map(([k, l]) => <option key={k} value={k} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{l}</option>)}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-                </div>
-              ) : (
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${priorityColors[deal.priority]} 12%, transparent)`, color: priorityColors[deal.priority] }}>
-                  {priorityLabels[deal.priority]}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Zugewiesen an */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Zugewiesen an</p>
-            {isAdmin && isEditing ? (
-              <div className="relative">
-                <select
-                  value={deal.assignedTo ?? ''}
-                  onChange={(e) => updateDeal.mutate({ id: deal.id, assignedTo: e.target.value || undefined })}
-                  className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer"
-                >
-                  <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Nicht zugewiesen</option>
-                  {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL' || u.role === 'GESCHAEFTSLEITUNG' || u.role === 'ADMIN').map((u) => (
-                    <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
-                      {u.firstName} {u.lastName}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-              </div>
-            ) : (() => {
-              const assignee = users.find((u) => u.id === deal.assignedTo)
-              if (!assignee) return <span className="text-[12px] text-text-dim">Nicht zugewiesen</span>
-              const initials = `${assignee.firstName?.[0] ?? ''}${assignee.lastName?.[0] ?? ''}`
-              return (
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg shrink-0" style={{ background: '#A78BFA' }}>
-                    {initials}
-                  </div>
-                  <span className="text-[12px] text-text-sec">{assignee.firstName} {assignee.lastName}</span>
-                </div>
-              )
-            })()}
-          </div>
-
-          {/* Expected Close + Follow-Up Date */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
-              {isEditing ? (
-                <input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-text-dim" strokeWidth={1.8} />
-                  <span className="text-[12px] text-text-sec tabular-nums">
-                    {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : '\u2014'}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5 flex items-center gap-1">
-                <CalendarClock size={10} strokeWidth={2} /> Naechstes Follow-Up
-              </p>
-              {isEditing ? (
-                <input type="date" value={editFollowUpDate} onChange={(e) => setEditFollowUpDate(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
-              ) : showFollowUpPicker ? (
-                <div className="space-y-2">
-                  <input
-                    type="date"
-                    defaultValue={deal.followUpDate ?? ''}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        updateDeal.mutate({ id: deal.id, followUpDate: e.target.value })
-                        setShowFollowUpPicker(false)
-                        setSuccessMsg('Follow-Up gesetzt')
-                        setTimeout(() => setSuccessMsg(''), 2000)
-                      }
-                    }}
-                    className="glass-input px-3 py-1.5 text-[12px] w-full"
-                    autoFocus
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { label: 'Morgen', days: 1 },
-                      { label: 'In 3 Tagen', days: 3 },
-                      { label: '1 Woche', days: 7 },
-                      { label: '2 Wochen', days: 14 },
-                    ].map(({ label, days }) => {
-                      const d = new Date(); d.setDate(d.getDate() + days)
-                      const dateStr = d.toISOString().slice(0, 10)
-                      return (
-                        <button
-                          key={days}
-                          type="button"
-                          onClick={() => {
-                            updateDeal.mutate({ id: deal.id, followUpDate: dateStr })
-                            setShowFollowUpPicker(false)
-                            setSuccessMsg('Follow-Up gesetzt')
-                            setTimeout(() => setSuccessMsg(''), 2000)
-                          }}
-                          className="px-2 py-1 rounded-md text-[10px] font-semibold text-amber hover:bg-amber/10 transition-colors"
-                          style={{ border: '1px solid rgba(245,158,11,0.2)' }}
-                        >
-                          {label}
-                        </button>
-                      )
-                    })}
-                    {deal.followUpDate && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateDeal.mutate({ id: deal.id, followUpDate: null })
-                          setShowFollowUpPicker(false)
-                          setSuccessMsg('Follow-Up entfernt')
-                          setTimeout(() => setSuccessMsg(''), 2000)
-                        }}
-                        className="px-2 py-1 rounded-md text-[10px] font-semibold text-red hover:bg-red/10 transition-colors"
-                        style={{ border: '1px solid rgba(248,113,113,0.2)' }}
-                      >
-                        Entfernen
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setShowFollowUpPicker(false)}
-                      className="px-2 py-1 rounded-md text-[10px] font-semibold text-text-dim hover:bg-surface-hover transition-colors"
-                      style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-                    >
-                      Abbrechen
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => !isClosed && setShowFollowUpPicker(true)}
-                  className="flex items-center gap-2 group"
-                  disabled={isClosed}
-                >
-                  <CalendarClock size={14} className="text-text-dim" strokeWidth={1.8} />
-                  <span className="text-[12px] tabular-nums" style={{
-                    color: deal.followUpDate
-                      ? new Date(deal.followUpDate) <= new Date() ? '#F87171' : '#F59E0B'
-                      : 'var(--color-text-sec)',
-                  }}>
-                    {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Nicht gesetzt'}
-                  </span>
-                  {!isClosed && (
-                    <Pencil size={11} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {deal.closedAt && (
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Abgeschlossen am</p>
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-text-dim" strokeWidth={1.8} />
-                <span className="text-[12px] text-text-sec tabular-nums">
-                  {new Date(deal.closedAt).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Notizen</p>
-            {isEditing ? (
-              <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} className="glass-input w-full px-3 py-2 text-[12px] resize-none" />
-            ) : (
-              <div className="flex items-start gap-2">
-                <FileText size={14} className="text-text-dim shrink-0 mt-0.5" strokeWidth={1.8} />
-                <p className="text-[12px] text-text-sec whitespace-pre-wrap">{deal.notes ?? 'Keine Notizen vorhanden.'}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Dokumente */}
-          <DocumentSection contactId={deal.contact_id} entityType="ANGEBOT" entityId={deal.id} />
-
-          {/* ── Activities Log ── */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">Aktivitäten ({deal.activities.length})</p>
-
-            {/* Add Activity */}
-            {(!isClosed || isAdmin) && (
-              <div className="flex items-start gap-2 mb-4">
-                <div className="relative shrink-0">
-                  <select
-                    value={activityType}
-                    onChange={(e) => setActivityType(e.target.value as ActivityType)}
-                    className="glass-input appearance-none pl-3 pr-7 py-2 text-[11px] font-medium cursor-pointer"
-                    style={{ minWidth: '90px' }}
-                  >
-                    {(['NOTE', 'CALL', 'EMAIL', 'MEETING'] as ActivityType[]).map((t) => (
-                      <option key={t} value={t} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
-                        {activityTypeLabels[t]}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
-                </div>
-                <input
-                  type="text"
-                  value={activityText}
-                  onChange={(e) => setActivityText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddActivity()}
-                  placeholder="Aktivität hinzufügen..."
-                  className="glass-input flex-1 px-3 py-2 text-[12px]"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddActivity}
-                  disabled={!activityText.trim()}
-                  className="shrink-0 w-8 h-8 rounded-[10px] flex items-center justify-center transition-all"
-                  style={{
-                    background: activityText.trim() ? 'color-mix(in srgb, #A78BFA 15%, transparent)' : 'transparent',
-                    color: activityText.trim() ? '#A78BFA' : 'var(--color-text-dim)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  <Send size={14} strokeWidth={2} />
-                </button>
-              </div>
-            )}
-
-            {/* Activity List */}
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-              {sortedActivities.map((act) => {
-                const ActIcon = activityIcons[act.type] ?? Zap
-                return (
-                  <div key={act.id} className="flex items-start gap-2.5 py-1.5">
-                    <div
-                      className="w-6 h-6 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5"
-                      style={{ background: `color-mix(in srgb, ${activityTypeColors[act.type]} 12%, transparent)` }}
-                    >
-                      <ActIcon size={12} strokeWidth={2} style={{ color: activityTypeColors[act.type] }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] text-text-sec">{act.text}</p>
-                      <p className="text-[10px] text-text-dim mt-0.5">{relativeTime(act.createdAt)}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* ── Tab Content (scrollable) ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+          {/* ────── TAB: Übersicht ────── */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Wert + Abschlusswahrscheinlichkeit */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Angebotswert</p>
+                  {isEditing ? (
+                    <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="glass-input px-3 py-1 text-lg font-bold tabular-nums w-full" />
+                  ) : (
+                    <p className="text-[22px] font-extrabold tabular-nums text-amber">{formatCHF(deal.value)}</p>
+                  )}
+                </div>
+                <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #A78BFA 6%, transparent)', border: '1px solid color-mix(in srgb, #A78BFA 15%, transparent)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1 flex items-center gap-1">
+                    <Percent size={10} strokeWidth={2} /> Abschlusswahrscheinlichkeit
+                  </p>
+                  {isEditing ? (
+                    <div className="flex items-center gap-2">
+                      <input type="range" min="0" max="100" step="5" value={editWinProb || '50'} onChange={(e) => setEditWinProb(e.target.value)} className="flex-1 accent-violet-400" />
+                      <span className="text-lg font-extrabold tabular-nums text-violet-400 w-12 text-right">{editWinProb || '50'}%</span>
+                    </div>
+                  ) : (
+                    <p className="text-[22px] font-extrabold tabular-nums" style={{ color: (deal.winProbability ?? 0) >= 70 ? '#34D399' : (deal.winProbability ?? 0) >= 40 ? '#F59E0B' : '#F87171' }}>
+                      {deal.winProbability != null ? `${deal.winProbability}%` : '\u2014'}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Kontaktdaten */}
+              <div className="p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">Kontaktdaten</h4>
+                <div className="space-y-2.5">
+                  {[
+                    { icon: Building2, ed: <input type="text" value={editCompany} onChange={(e) => setEditCompany(e.target.value)} placeholder="Unternehmen" className="glass-input px-3 py-1 text-[12px] flex-1" />, val: deal.company ?? '\u2014' },
+                    { icon: Phone, ed: <input type="tel" value={editContactPhone} onChange={(e) => setEditContactPhone(e.target.value)} className="glass-input px-3 py-1 text-[12px] flex-1 tabular-nums" />, val: deal.contactPhone },
+                    { icon: Mail, ed: <input type="email" value={editContactEmail} onChange={(e) => setEditContactEmail(e.target.value)} className="glass-input px-3 py-1 text-[12px] flex-1" />, val: deal.contactEmail },
+                    { icon: MapPin, ed: <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="glass-input px-3 py-1 text-[12px] flex-1" />, val: deal.address },
+                  ].map(({ icon: Icon, ed, val }, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <Icon size={14} className="text-text-dim shrink-0" strokeWidth={1.8} />
+                      {isEditing ? ed : <span className="text-[12px] text-text-sec">{val}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Phase & Priorität */}
+              <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Phase</p>
+                    {isEditing ? (
+                      <div className="relative">
+                        <select value={editStage} onChange={(e) => setEditStage(e.target.value as DealStage)} className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer">
+                          {Object.entries(stageLabels).map(([k, l]) => <option key={k} value={k} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{l}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${stageColors[deal.stage]} 12%, transparent)`, color: stageColors[deal.stage] }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] }} />
+                        {stageLabels[deal.stage]}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Priorität</p>
+                    {isEditing ? (
+                      <div className="relative">
+                        <select value={editPriority} onChange={(e) => setEditPriority(e.target.value as DealPriority)} className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer">
+                          {Object.entries(priorityLabels).map(([k, l]) => <option key={k} value={k} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{l}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${priorityColors[deal.priority]} 12%, transparent)`, color: priorityColors[deal.priority] }}>
+                        {priorityLabels[deal.priority]}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Zugewiesen an */}
+              <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Zugewiesen an</p>
+                {isAdmin && isEditing ? (
+                  <div className="relative">
+                    <select
+                      value={deal.assignedTo ?? ''}
+                      onChange={(e) => updateDeal.mutate({ id: deal.id, assignedTo: e.target.value || undefined })}
+                      className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer"
+                    >
+                      <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Nicht zugewiesen</option>
+                      {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL' || u.role === 'GESCHAEFTSLEITUNG' || u.role === 'ADMIN').map((u) => (
+                        <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                          {u.firstName} {u.lastName}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+                  </div>
+                ) : (() => {
+                  const assignee = users.find((u) => u.id === deal.assignedTo)
+                  if (!assignee) return <span className="text-[12px] text-text-dim">Nicht zugewiesen</span>
+                  const initials = `${assignee.firstName?.[0] ?? ''}${assignee.lastName?.[0] ?? ''}`
+                  return (
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg shrink-0" style={{ background: '#A78BFA' }}>
+                        {initials}
+                      </div>
+                      <span className="text-[12px] text-text-sec">{assignee.firstName} {assignee.lastName}</span>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Erwarteter Abschluss + Follow-Up */}
+              <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
+                    {isEditing ? (
+                      <input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-text-dim" strokeWidth={1.8} />
+                        <span className="text-[12px] text-text-sec tabular-nums">
+                          {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : '\u2014'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5 flex items-center gap-1">
+                      <CalendarClock size={10} strokeWidth={2} /> Naechstes Follow-Up
+                    </p>
+                    {isEditing ? (
+                      <input type="date" value={editFollowUpDate} onChange={(e) => setEditFollowUpDate(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
+                    ) : showFollowUpPicker ? (
+                      <div className="space-y-2">
+                        <input
+                          type="date"
+                          defaultValue={deal.followUpDate ?? ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              updateDeal.mutate({ id: deal.id, followUpDate: e.target.value })
+                              setShowFollowUpPicker(false)
+                              setSuccessMsg('Follow-Up gesetzt')
+                              setTimeout(() => setSuccessMsg(''), 2000)
+                            }
+                          }}
+                          className="glass-input px-3 py-1.5 text-[12px] w-full"
+                          autoFocus
+                        />
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { label: 'Morgen', days: 1 },
+                            { label: 'In 3 Tagen', days: 3 },
+                            { label: '1 Woche', days: 7 },
+                            { label: '2 Wochen', days: 14 },
+                          ].map(({ label, days }) => {
+                            const d = new Date(); d.setDate(d.getDate() + days)
+                            const dateStr = d.toISOString().slice(0, 10)
+                            return (
+                              <button
+                                key={days}
+                                type="button"
+                                onClick={() => {
+                                  updateDeal.mutate({ id: deal.id, followUpDate: dateStr })
+                                  setShowFollowUpPicker(false)
+                                  setSuccessMsg('Follow-Up gesetzt')
+                                  setTimeout(() => setSuccessMsg(''), 2000)
+                                }}
+                                className="px-2 py-1 rounded-md text-[10px] font-semibold text-amber hover:bg-amber/10 transition-colors"
+                                style={{ border: '1px solid rgba(245,158,11,0.2)' }}
+                              >
+                                {label}
+                              </button>
+                            )
+                          })}
+                          {deal.followUpDate && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateDeal.mutate({ id: deal.id, followUpDate: null })
+                                setShowFollowUpPicker(false)
+                                setSuccessMsg('Follow-Up entfernt')
+                                setTimeout(() => setSuccessMsg(''), 2000)
+                              }}
+                              className="px-2 py-1 rounded-md text-[10px] font-semibold text-red hover:bg-red/10 transition-colors"
+                              style={{ border: '1px solid rgba(248,113,113,0.2)' }}
+                            >
+                              Entfernen
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowFollowUpPicker(false)}
+                            className="px-2 py-1 rounded-md text-[10px] font-semibold text-text-dim hover:bg-surface-hover transition-colors"
+                            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                          >
+                            Abbrechen
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => !isClosed && setShowFollowUpPicker(true)}
+                        className="flex items-center gap-2 group"
+                        disabled={isClosed}
+                      >
+                        <CalendarClock size={14} className="text-text-dim" strokeWidth={1.8} />
+                        <span className="text-[12px] tabular-nums" style={{
+                          color: deal.followUpDate
+                            ? new Date(deal.followUpDate) <= new Date() ? '#F87171' : '#F59E0B'
+                            : 'var(--color-text-sec)',
+                        }}>
+                          {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Nicht gesetzt'}
+                        </span>
+                        {!isClosed && (
+                          <Pencil size={11} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {deal.closedAt && (
+                <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Abgeschlossen am</p>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-text-dim" strokeWidth={1.8} />
+                    <span className="text-[12px] text-text-sec tabular-nums">
+                      {new Date(deal.closedAt).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Erstellt */}
+              <div className="flex items-center gap-2 text-[11px] text-text-dim px-1">
+                <Clock size={12} strokeWidth={1.8} />
+                Erstellt {relativeTime(deal.createdAt)}
+              </div>
+            </>
+          )}
+
+          {/* ────── TAB: Aktivitäten ────── */}
+          {activeTab === 'activities' && (
+            <>
+              {/* Neue Aktivität */}
+              {(!isClosed || isAdmin) && (
+                <div className="p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">Neue Aktivität</h4>
+                  <div className="flex items-start gap-2">
+                    <div className="relative shrink-0">
+                      <select
+                        value={activityType}
+                        onChange={(e) => setActivityType(e.target.value as ActivityType)}
+                        className="glass-input appearance-none pl-3 pr-7 py-2 text-[11px] font-medium cursor-pointer"
+                        style={{ minWidth: '90px' }}
+                      >
+                        {(['NOTE', 'CALL', 'EMAIL', 'MEETING'] as ActivityType[]).map((t) => (
+                          <option key={t} value={t} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                            {activityTypeLabels[t]}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+                    </div>
+                    <input
+                      type="text"
+                      value={activityText}
+                      onChange={(e) => setActivityText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddActivity()}
+                      placeholder="Aktivität hinzufügen..."
+                      className="glass-input flex-1 px-3 py-2 text-[12px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddActivity}
+                      disabled={!activityText.trim()}
+                      className="shrink-0 w-8 h-8 rounded-[10px] flex items-center justify-center transition-all"
+                      style={{
+                        background: activityText.trim() ? 'color-mix(in srgb, #A78BFA 15%, transparent)' : 'transparent',
+                        color: activityText.trim() ? '#A78BFA' : 'var(--color-text-dim)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <Send size={14} strokeWidth={2} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Aktivitäten-Liste */}
+              {sortedActivities.length > 0 ? (
+                <div className="space-y-0.5">
+                  {sortedActivities.map((act) => {
+                    const ActIcon = activityIcons[act.type] ?? Zap
+                    return (
+                      <div key={act.id} className="flex items-start gap-3 p-3 rounded-[12px] hover:bg-surface-hover transition-colors duration-150">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: `color-mix(in srgb, ${activityTypeColors[act.type]} 12%, transparent)` }}>
+                          <ActIcon size={14} strokeWidth={1.8} style={{ color: activityTypeColors[act.type] }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[12px] text-text-sec">{act.text}</p>
+                            <span className="text-[10px] text-text-dim shrink-0 tabular-nums">{relativeTime(act.createdAt)}</span>
+                          </div>
+                          <p className="text-[10px] text-text-dim mt-0.5">{act.createdBy}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+                  <p className="text-text-dim text-[12px] font-medium">Noch keine Aktivitäten erfasst.</p>
+                  <p className="text-text-dim text-[11px] mt-1">Aktivitäten werden hier chronologisch angezeigt.</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ────── TAB: Notizen ────── */}
+          {activeTab === 'notes' && (
+            <div className="p-4 space-y-3" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">Notizen</h4>
+                {notesSavedAt && (
+                  <span className="text-[10px] text-text-dim flex items-center gap-1">
+                    <Clock size={10} strokeWidth={2} />
+                    Gespeichert um {notesSavedAt}
+                  </span>
+                )}
+              </div>
+              <textarea
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                onBlur={handleNotesBlur}
+                placeholder="Notizen hier eingeben..."
+                rows={12}
+                className="glass-input w-full px-4 py-3 text-[13px] leading-relaxed resize-none"
+                style={{ borderRadius: 'var(--radius-sm)' }}
+              />
+            </div>
+          )}
+
+          {/* ────── TAB: Dokumente ────── */}
+          {activeTab === 'documents' && (
+            <DocumentSection contactId={deal.contact_id} entityType="ANGEBOT" entityId={deal.id} />
+          )}
+        </div>
+
+        {/* ── Footer Actions ── */}
         <div className="px-6 py-4 border-t border-border shrink-0">
           {showDeleteConfirm && (
             <div className="flex items-center gap-2.5 mb-3">

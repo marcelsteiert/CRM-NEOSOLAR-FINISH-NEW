@@ -1,5 +1,8 @@
 import { useState, useRef } from 'react'
-import { FileText, Image, File, Upload, Trash2, Download, ChevronDown } from 'lucide-react'
+import {
+  FileText, Image, File, Upload, Trash2, Download, ChevronDown, ChevronRight,
+  Folder, FolderOpen, Plus,
+} from 'lucide-react'
 import {
   useContactDocuments,
   useUploadDocument,
@@ -11,6 +14,7 @@ import {
   type Document,
 } from '@/hooks/useDocuments'
 import { useAuth } from '@/hooks/useAuth'
+import { useDocTemplates } from '@/hooks/useAdmin'
 
 interface DocumentSectionProps {
   contactId: string
@@ -25,59 +29,121 @@ const entityTypeColors: Record<EntityType, string> = {
   PROJEKT: '#34D399',
 }
 
+interface FolderNode {
+  name: string
+  path: string
+  subfolders: FolderNode[]
+  docs: Document[]
+}
+
 export default function DocumentSection({ contactId, entityType, entityId }: DocumentSectionProps) {
   const { user } = useAuth()
   const { data: docsRes } = useContactDocuments(contactId)
+  const { data: templatesRes } = useDocTemplates()
   const uploadDoc = useUploadDocument()
   const deleteDoc = useDeleteDocument()
   const [notes, setNotes] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({})
+  const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({ [entityType]: true })
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
+  const [uploadTarget, setUploadTarget] = useState<{ phase: EntityType; folderPath: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allDocs = docsRes?.data ?? []
+  const templates = templatesRes?.data ?? []
 
-  // Gruppiert nach entity_type, aktuelle Phase zuerst
+  // Ordner-Phasen in richtiger Reihenfolge, aktuelle zuerst
   const phaseOrder: EntityType[] = ['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT']
-  const currentIdx = phaseOrder.indexOf(entityType)
-  const sortedPhases = [
-    entityType,
-    ...phaseOrder.filter((p) => p !== entityType),
-  ]
+  const sortedPhases = [entityType, ...phaseOrder.filter((p) => p !== entityType)]
 
-  const grouped = sortedPhases.reduce<Record<EntityType, Document[]>>((acc, phase) => {
+  const togglePhase = (phase: string) => {
+    setExpandedPhases((prev) => ({ ...prev, [phase]: !prev[phase] }))
+  }
+
+  const toggleFolder = (key: string) => {
+    setExpandedFolders((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  // Template-Ordner fuer eine Phase holen
+  const getPhaseTemplate = (phase: EntityType) => {
+    return templates.find((t) => t.entityType === phase)?.folders ?? []
+  }
+
+  // Dokumente einem Ordnerbaum zuordnen
+  const buildFolderTree = (phase: EntityType): FolderNode[] => {
     const phaseDocs = allDocs.filter((d) => d.entity_type === phase)
-    if (phaseDocs.length > 0) acc[phase] = phaseDocs
-    return acc
-  }, {} as Record<EntityType, Document[]>)
+    const templateFolders = getPhaseTemplate(phase)
 
-  const totalDocs = allDocs.length
+    const tree: FolderNode[] = templateFolders.map((folder) => {
+      const folderPath = folder.name
+      const subfolders: FolderNode[] = (folder.subfolders ?? []).map((sub) => {
+        const subPath = `${folderPath}/${sub}`
+        return {
+          name: sub,
+          path: subPath,
+          subfolders: [],
+          docs: phaseDocs.filter((d) => d.folder_path === subPath),
+        }
+      })
+      return {
+        name: folder.name,
+        path: folderPath,
+        subfolders,
+        docs: phaseDocs.filter((d) => d.folder_path === folderPath),
+      }
+    })
+
+    // Dokumente ohne Ordnerzuweisung als "Allgemein" anhaengen
+    const assignedPaths = new Set<string>()
+    tree.forEach((f) => {
+      assignedPaths.add(f.path)
+      f.subfolders.forEach((sf) => assignedPaths.add(sf.path))
+    })
+    const unassigned = phaseDocs.filter(
+      (d) => !d.folder_path || !assignedPaths.has(d.folder_path),
+    )
+    if (unassigned.length > 0) {
+      tree.push({
+        name: 'Allgemein',
+        path: '__allgemein__',
+        subfolders: [],
+        docs: unassigned,
+      })
+    }
+
+    return tree
+  }
+
+  const handleUploadToFolder = (phase: EntityType, folderPath: string) => {
+    setUploadTarget({ phase, folderPath })
+    fileRef.current?.click()
+  }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
+    const targetPhase = uploadTarget?.phase ?? entityType
+    const targetFolder = uploadTarget?.folderPath
+
     for (const file of Array.from(files)) {
-      // File zu Base64 konvertieren
       const base64 = await fileToBase64(file)
       uploadDoc.mutate({
         contactId,
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type || 'application/octet-stream',
-        entityType,
+        entityType: targetPhase,
         entityId,
+        folderPath: targetFolder || undefined,
         uploadedBy: user?.id,
         notes: notes.trim() || undefined,
         fileBase64: base64,
       })
     }
     setNotes('')
+    setUploadTarget(null)
     e.target.value = ''
-  }
-
-  const toggleGroup = (phase: EntityType) => {
-    setCollapsedGroups((prev) => ({ ...prev, [phase]: !prev[phase] }))
   }
 
   const iconMap = {
@@ -94,6 +160,135 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     file: '#94A3B8',
   }
 
+  const totalDocs = allDocs.length
+
+  const renderDoc = (doc: Document) => {
+    const iconType = getFileIcon(doc.mime_type)
+    const IconComp = iconMap[iconType]
+    const iconColor = iconColorMap[iconType]
+
+    return (
+      <div
+        key={doc.id}
+        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors group"
+      >
+        <div
+          className="w-6 h-6 rounded-[6px] flex items-center justify-center shrink-0"
+          style={{ background: `color-mix(in srgb, ${iconColor} 12%, transparent)` }}
+        >
+          <IconComp size={12} strokeWidth={1.8} style={{ color: iconColor }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-medium text-text-sec truncate">{doc.file_name}</p>
+          <div className="flex items-center gap-1.5 text-[8px] text-text-dim">
+            <span className="tabular-nums">{formatFileSize(doc.file_size)}</span>
+            {doc.notes && <><span>·</span><span className="truncate">{doc.notes}</span></>}
+            <span>·</span>
+            <span className="tabular-nums">
+              {new Date(doc.created_at).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+            </span>
+          </div>
+        </div>
+        {doc.downloadUrl && (
+          <a
+            href={doc.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-text-dim hover:text-amber transition-all shrink-0"
+            title="Herunterladen"
+          >
+            <Download size={11} strokeWidth={1.8} />
+          </a>
+        )}
+        {confirmDeleteId === doc.id ? (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => { deleteDoc.mutate(doc.id); setConfirmDeleteId(null) }}
+              className="px-1.5 py-0.5 rounded text-[8px] font-semibold text-red"
+              style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}
+            >
+              Ja
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteId(null)}
+              className="px-1.5 py-0.5 rounded text-[8px] text-text-dim"
+            >
+              Nein
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDeleteId(doc.id)}
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-text-dim hover:text-red transition-all shrink-0"
+          >
+            <Trash2 size={11} strokeWidth={1.8} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const renderFolder = (folder: FolderNode, phase: EntityType, depth: number) => {
+    const key = `${phase}:${folder.path}`
+    const isExpanded = expandedFolders[key] ?? false
+    const hasContent = folder.docs.length > 0 || folder.subfolders.some((sf) => sf.docs.length > 0)
+    const docCount = folder.docs.length + folder.subfolders.reduce((sum, sf) => sum + sf.docs.length, 0)
+    const FolderIcon = isExpanded ? FolderOpen : Folder
+    const paddingLeft = depth * 16
+
+    return (
+      <div key={folder.path}>
+        {/* Ordner-Header */}
+        <div
+          className="flex items-center gap-1.5 py-1 px-1 rounded-md hover:bg-surface-hover/50 transition-colors cursor-pointer group/folder"
+          style={{ paddingLeft: `${paddingLeft}px` }}
+          onClick={() => toggleFolder(key)}
+        >
+          {folder.subfolders.length > 0 || folder.docs.length > 0 ? (
+            <ChevronRight
+              size={10}
+              className={`text-text-dim shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            />
+          ) : (
+            <div className="w-[10px] shrink-0" />
+          )}
+          <FolderIcon size={13} className="text-text-dim shrink-0" strokeWidth={1.8} style={{ color: entityTypeColors[phase] }} />
+          <span className="text-[11px] font-medium text-text-sec flex-1">{folder.name}</span>
+          {docCount > 0 && (
+            <span className="text-[8px] text-text-dim tabular-nums mr-1">{docCount}</span>
+          )}
+          {/* Upload-Button pro Ordner */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleUploadToFolder(phase, folder.path)
+            }}
+            className="opacity-0 group-hover/folder:opacity-100 w-4 h-4 rounded flex items-center justify-center text-text-dim hover:text-amber transition-all shrink-0"
+            title={`In "${folder.name}" hochladen`}
+          >
+            <Plus size={10} strokeWidth={2} />
+          </button>
+        </div>
+
+        {/* Expanded content */}
+        {isExpanded && (
+          <div>
+            {/* Subfolders */}
+            {folder.subfolders.map((sf) => renderFolder(sf, phase, depth + 1))}
+            {/* Docs in this folder */}
+            <div style={{ paddingLeft: `${paddingLeft + 16}px` }}>
+              {folder.docs.map(renderDoc)}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -102,7 +297,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
         </h4>
       </div>
 
-      {/* Upload area */}
+      {/* Upload area (allgemein) */}
       <div
         className="rounded-xl p-3 mb-3 flex items-center gap-3"
         style={{
@@ -143,135 +338,66 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
         <p className="text-[10px] text-amber text-center py-1 mb-2">Wird hochgeladen...</p>
       )}
 
-      {/* Grouped document list */}
-      {totalDocs > 0 ? (
-        <div className="space-y-2">
-          {Object.entries(grouped).map(([phase, docs]) => {
-            const phaseColor = entityTypeColors[phase as EntityType]
-            const isCurrentPhase = phase === entityType
-            const isCollapsed = collapsedGroups[phase] ?? false
+      {/* Phasen-Ordnerstruktur */}
+      <div className="space-y-1">
+        {sortedPhases.map((phase) => {
+          const phaseColor = entityTypeColors[phase]
+          const isExpanded = expandedPhases[phase] ?? false
+          const phaseDocs = allDocs.filter((d) => d.entity_type === phase)
+          const isCurrentPhase = phase === entityType
+          const tree = buildFolderTree(phase)
 
-            return (
-              <div key={phase}>
-                {/* Phase Header */}
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(phase as EntityType)}
-                  className="w-full flex items-center gap-2 py-1.5 px-1 hover:bg-surface-hover/50 rounded-lg transition-colors"
-                >
-                  <div
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ background: phaseColor }}
-                  />
-                  <span className="text-[9px] font-bold uppercase tracking-[0.08em]" style={{ color: phaseColor }}>
-                    {entityTypeLabels[phase as EntityType]}
-                  </span>
-                  <span className="text-[9px] text-text-dim">({docs.length})</span>
-                  {isCurrentPhase && (
-                    <span className="text-[8px] px-1.5 py-0.5 rounded-full font-semibold"
-                      style={{ background: `color-mix(in srgb, ${phaseColor} 12%, transparent)`, color: phaseColor }}>
-                      Aktuell
-                    </span>
-                  )}
-                  <ChevronDown
-                    size={10}
-                    className={`ml-auto text-text-dim transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
-                  />
-                </button>
-
-                {/* Documents */}
-                {!isCollapsed && (
-                  <div className="space-y-1 ml-3">
-                    {docs.map((doc) => {
-                      const iconType = getFileIcon(doc.mime_type)
-                      const IconComp = iconMap[iconType]
-                      const iconColor = iconColorMap[iconType]
-
-                      return (
-                        <div
-                          key={doc.id}
-                          className="flex items-center gap-2.5 px-2 py-1.5 rounded-[10px] hover:bg-surface-hover transition-colors group"
-                        >
-                          <div
-                            className="w-7 h-7 rounded-[8px] flex items-center justify-center shrink-0"
-                            style={{ background: `color-mix(in srgb, ${iconColor} 12%, transparent)` }}
-                          >
-                            <IconComp size={13} strokeWidth={1.8} style={{ color: iconColor }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-medium text-text-sec truncate">{doc.file_name}</p>
-                            <div className="flex items-center gap-2 text-[9px] text-text-dim">
-                              <span className="tabular-nums">{formatFileSize(doc.file_size)}</span>
-                              {doc.notes && (
-                                <>
-                                  <span>·</span>
-                                  <span className="truncate">{doc.notes}</span>
-                                </>
-                              )}
-                              <span>·</span>
-                              <span className="tabular-nums">
-                                {new Date(doc.created_at).toLocaleDateString('de-CH', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: '2-digit',
-                                })}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Download */}
-                          {doc.downloadUrl && (
-                            <a
-                              href={doc.downloadUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-[6px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber/10 transition-all shrink-0"
-                              title="Herunterladen"
-                            >
-                              <Download size={12} strokeWidth={1.8} />
-                            </a>
-                          )}
-
-                          {/* Delete */}
-                          {confirmDeleteId === doc.id ? (
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => { deleteDoc.mutate(doc.id); setConfirmDeleteId(null) }}
-                                className="px-2 py-0.5 rounded text-[9px] font-semibold text-red"
-                                style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}
-                              >
-                                Ja
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-0.5 rounded text-[9px] text-text-dim"
-                              >
-                                Nein
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteId(doc.id)}
-                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-[6px] flex items-center justify-center text-text-dim hover:text-red hover:bg-red/10 transition-all shrink-0"
-                            >
-                              <Trash2 size={12} strokeWidth={1.8} />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
+          return (
+            <div
+              key={phase}
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.04)',
+              }}
+            >
+              {/* Phase Header */}
+              <button
+                type="button"
+                onClick={() => togglePhase(phase)}
+                className="w-full flex items-center gap-2.5 py-2.5 px-3 hover:bg-surface-hover/30 transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronDown size={12} style={{ color: phaseColor }} />
+                ) : (
+                  <ChevronRight size={12} style={{ color: phaseColor }} />
                 )}
-              </div>
-            )
-          })}
-        </div>
-      ) : (
-        <p className="text-[10px] text-text-dim text-center py-3">Noch keine Dokumente</p>
-      )}
+                <FolderOpen size={15} strokeWidth={1.8} style={{ color: phaseColor }} />
+                <span className="text-[12px] font-bold" style={{ color: phaseColor }}>
+                  {entityTypeLabels[phase]}
+                </span>
+                {phaseDocs.length > 0 && (
+                  <span className="text-[9px] text-text-dim">({phaseDocs.length})</span>
+                )}
+                {isCurrentPhase && (
+                  <span
+                    className="text-[8px] px-1.5 py-0.5 rounded-full font-semibold ml-auto"
+                    style={{ background: `color-mix(in srgb, ${phaseColor} 12%, transparent)`, color: phaseColor }}
+                  >
+                    Aktuell
+                  </span>
+                )}
+              </button>
+
+              {/* Ordner-Baum */}
+              {isExpanded && (
+                <div className="px-2 pb-2">
+                  {tree.length > 0 ? (
+                    tree.map((folder) => renderFolder(folder, phase, 1))
+                  ) : (
+                    <p className="text-[9px] text-text-dim text-center py-2 ml-6">Keine Ordner definiert</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -283,7 +409,6 @@ function fileToBase64(file: globalThis.File): Promise<string> {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
-      // data:mime;base64,XXXX → nur den Base64-Teil
       const base64 = result.split(',')[1]
       resolve(base64)
     }
