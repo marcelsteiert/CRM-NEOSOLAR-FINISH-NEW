@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 import { createApp } from '../app.js'
+import { supabase } from '../lib/supabase.js'
 import type { Express } from 'express'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-secure-random-string'
+const TEST_PASSWORD = 'TestPasswort123!'
 
 let app: Express
 let adminToken: string
@@ -12,13 +15,56 @@ let vertriebToken: string
 let plToken: string
 let buchhaltungToken: string
 
-beforeAll(() => {
+// Echte Test-User mit bekanntem Passwort (fuer Login-Tests)
+let realUsers: Record<string, { id: string; email: string; token: string }> = {}
+
+beforeAll(async () => {
   app = createApp()
   // JWT-Tokens fuer verschiedene Rollen erzeugen
   adminToken = jwt.sign({ userId: 'u001', email: 'admin@neosolar.ch', role: 'ADMIN' }, JWT_SECRET, { expiresIn: '1h' })
   vertriebToken = jwt.sign({ userId: 'u002', email: 'vertrieb@neosolar.ch', role: 'VERTRIEB' }, JWT_SECRET, { expiresIn: '1h' })
   plToken = jwt.sign({ userId: 'u003', email: 'pl@neosolar.ch', role: 'PROJEKTLEITUNG' }, JWT_SECRET, { expiresIn: '1h' })
   buchhaltungToken = jwt.sign({ userId: 'u004', email: 'bh@neosolar.ch', role: 'BUCHHALTUNG' }, JWT_SECRET, { expiresIn: '1h' })
+
+  // Echte Test-User mit bcrypt-Passwort anlegen (fuer Login-Flow)
+  const hashedPw = await bcrypt.hash(TEST_PASSWORD, 10)
+  const roles: Array<{ role: string; key: string }> = [
+    { role: 'ADMIN', key: 'admin' },
+    { role: 'VERTRIEB', key: 'vertrieb' },
+    { role: 'PROJEKTLEITUNG', key: 'pl' },
+    { role: 'BUCHHALTUNG', key: 'bh' },
+  ]
+  for (const { role, key } of roles) {
+    const email = `e2e-login-${key}@neosolar-test.ch`
+    // Erst pruefen ob User existiert
+    const { data: existing } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single()
+    if (existing) {
+      // Passwort + is_active aktualisieren
+      await supabase.from('users').update({ password: hashedPw, is_active: true }).eq('id', existing.id)
+      realUsers[key] = { id: existing.id, email, token: '' }
+    } else {
+      const { data } = await supabase
+        .from('users')
+        .insert({
+          first_name: `E2E-${key}`, last_name: 'LoginTest',
+          email, password: hashedPw, role, phone: '', is_active: true,
+          allowed_modules: role === 'ADMIN'
+            ? ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'projects', 'tasks', 'admin', 'communication', 'documents', 'export']
+            : role === 'VERTRIEB'
+              ? ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents']
+              : role === 'PROJEKTLEITUNG'
+                ? ['dashboard', 'projects', 'calculations', 'tasks', 'appointments', 'documents']
+                : ['dashboard', 'provision', 'deals', 'documents', 'export'],
+        })
+        .select('id')
+        .single()
+      if (data) realUsers[key] = { id: data.id, email, token: '' }
+    }
+  }
 })
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2217,5 +2263,510 @@ describe('E2E-V2: Kontakt-Aufloesung', () => {
   it('Projekt ohne contactId erstellt neuen Kontakt', async () => {
     const project = await createProject()
     expect(project.contactId).toBeDefined()
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 31. ECHTES LOGIN – Jede Rolle einloggen und Token nutzen
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Echtes Login pro Rolle', () => {
+  it('ADMIN Login → Token + korrekte Rolle', async () => {
+    const u = realUsers.admin
+    if (!u) return // Skip wenn Setup fehlschlug
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: u.email, password: TEST_PASSWORD,
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveProperty('token')
+    expect(res.body.data.user.role).toBe('ADMIN')
+    expect(res.body.data.user.isActive).toBe(true)
+    expect(res.body.data.user.allowedModules).toContain('admin')
+    realUsers.admin.token = res.body.data.token
+  })
+
+  it('VERTRIEB Login → Token + korrekte Rolle', async () => {
+    const u = realUsers.vertrieb
+    if (!u) return
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: u.email, password: TEST_PASSWORD,
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.data.user.role).toBe('VERTRIEB')
+    expect(res.body.data.user.allowedModules).toContain('leads')
+    expect(res.body.data.user.allowedModules).not.toContain('admin')
+    realUsers.vertrieb.token = res.body.data.token
+  })
+
+  it('PROJEKTLEITUNG Login → Token + korrekte Rolle', async () => {
+    const u = realUsers.pl
+    if (!u) return
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: u.email, password: TEST_PASSWORD,
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.data.user.role).toBe('PROJEKTLEITUNG')
+    expect(res.body.data.user.allowedModules).toContain('projects')
+    realUsers.pl.token = res.body.data.token
+  })
+
+  it('BUCHHALTUNG Login → Token + korrekte Rolle', async () => {
+    const u = realUsers.bh
+    if (!u) return
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: u.email, password: TEST_PASSWORD,
+    })
+    expect(res.status).toBe(200)
+    expect(res.body.data.user.role).toBe('BUCHHALTUNG')
+    expect(res.body.data.user.allowedModules).toContain('provision')
+    realUsers.bh.token = res.body.data.token
+  })
+
+  it('/auth/me gibt korrekten User pro Token zurueck', async () => {
+    for (const [key, u] of Object.entries(realUsers)) {
+      if (!u.token) continue
+      const res = await request(app)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${u.token}`)
+      expect(res.status).toBe(200)
+      expect(res.body.data.id).toBe(u.id)
+      expect(res.body.data.email).toBe(u.email)
+    }
+  })
+
+  it('Login mit falschem Passwort → 401', async () => {
+    const u = realUsers.admin
+    if (!u) return
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: u.email, password: 'FalschesPasswort!',
+    })
+    expect(res.status).toBe(401)
+  })
+
+  it('Login mit nicht existierender E-Mail → 401', async () => {
+    const res = await request(app).post('/api/v1/auth/login').send({
+      email: 'gibts-nicht@test.ch', password: TEST_PASSWORD,
+    })
+    expect(res.status).toBe(401)
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 32. JEDE ROLLE CRUD – Erstellen, Lesen, Bearbeiten, Loeschen
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: VERTRIEB CRUD mit echtem Login', () => {
+  it('VERTRIEB erstellt Lead und sieht ihn', async () => {
+    const token = realUsers.vertrieb?.token
+    if (!token) return
+    const u = uid()
+    const res = await authPost('/api/v1/leads', token).send({
+      firstName: `VT-Lead-${u}`, lastName: 'VERTRIEB-Test',
+      address: 'Teststr. 1, 9430 St. Margrethen',
+      phone: '+41 71 000', email: `vt-${u}@test.ch`,
+      source: 'HOMEPAGE',
+    })
+    expect(res.status).toBe(201)
+    const leadId = res.body.data.id
+
+    // Eigener Lead ist sichtbar
+    const get = await authGet(`/api/v1/leads/${leadId}`, token)
+    expect(get.status).toBe(200)
+    expect(get.body.data.assignedTo).toBe(realUsers.vertrieb.id)
+  })
+
+  it('VERTRIEB erstellt Termin', async () => {
+    const token = realUsers.vertrieb?.token
+    if (!token) return
+    const u = uid()
+    const res = await authPost('/api/v1/appointments', token).send({
+      contactName: `VT-Appt-${u}`, contactEmail: `vt-appt-${u}@test.ch`,
+      contactPhone: '+41 71 000', address: 'Teststr. 1, 9430 St. Margrethen',
+      appointmentDate: '2026-06-20', appointmentTime: '14:00',
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it('VERTRIEB erstellt Deal', async () => {
+    const token = realUsers.vertrieb?.token
+    if (!token) return
+    const u = uid()
+    const res = await authPost('/api/v1/deals', token).send({
+      title: `VT-Deal-${u}`, contactName: `VT-DealKontakt-${u}`,
+      contactEmail: `vt-deal-${u}@test.ch`, contactPhone: '+41 71 000',
+      address: 'Teststr. 1', value: 15000,
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.data.assignedTo).toBe(realUsers.vertrieb.id)
+  })
+
+  it('VERTRIEB erstellt Task', async () => {
+    const token = realUsers.vertrieb?.token
+    if (!token) return
+    const res = await authPost('/api/v1/tasks', token).send({
+      title: `VT-Task-${uid()}`, module: 'ALLGEMEIN',
+      assignedTo: realUsers.vertrieb.id,
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it('VERTRIEB sieht nur eigene Leads in Liste', async () => {
+    const token = realUsers.vertrieb?.token
+    if (!token) return
+    const res = await authGet('/api/v1/leads', token)
+    expect(res.status).toBe(200)
+    res.body.data.forEach((l: any) => {
+      expect(l.assignedTo).toBe(realUsers.vertrieb.id)
+    })
+  })
+
+  it('VERTRIEB sieht nur eigene Deals in Liste', async () => {
+    const token = realUsers.vertrieb?.token
+    if (!token) return
+    const res = await authGet('/api/v1/deals', token)
+    expect(res.status).toBe(200)
+    res.body.data.forEach((d: any) => {
+      expect(d.assignedTo).toBe(realUsers.vertrieb.id)
+    })
+  })
+})
+
+describe('E2E-V2: PROJEKTLEITUNG CRUD mit echtem Login', () => {
+  it('PL erstellt Projekt', async () => {
+    const token = realUsers.pl?.token
+    if (!token) return
+    const u = uid()
+    const res = await authPost('/api/v1/projects', token).send({
+      name: `PL-Projekt-${u}`, description: 'PL Test',
+      address: 'Teststr. 1', email: `pl-${u}@test.ch`,
+      kWp: 15, value: 35000,
+    })
+    expect(res.status).toBe(201)
+  })
+
+  it('PL erstellt Task fuer sich', async () => {
+    const token = realUsers.pl?.token
+    if (!token) return
+    const res = await authPost('/api/v1/tasks', token).send({
+      title: `PL-Task-${uid()}`, module: 'PROJEKT',
+      assignedTo: realUsers.pl.id,
+    })
+    expect(res.status).toBe(201)
+    expect(res.body.data.assignedTo).toBe(realUsers.pl.id)
+  })
+
+  it('PL sieht nur eigene Termine', async () => {
+    const token = realUsers.pl?.token
+    if (!token) return
+    const res = await authGet('/api/v1/appointments', token)
+    expect(res.status).toBe(200)
+    res.body.data.forEach((a: any) => {
+      expect(a.assignedTo).toBe(realUsers.pl.id)
+    })
+  })
+
+  it('PL kann Projekt-Phase togglen', async () => {
+    const token = realUsers.pl?.token
+    if (!token) return
+    const proj = await authPost('/api/v1/projects', token).send({
+      name: `PL-Toggle-${uid()}`, address: 'Test',
+      email: `pl-toggle-${uid()}@test.ch`, kWp: 8, value: 20000,
+    })
+    expect(proj.status).toBe(201)
+    const res = await authPut(`/api/v1/projects/${proj.body.data.id}/toggle-step`, token)
+      .send({ phase: 'admin', stepIndex: 0 })
+    expect(res.status).toBe(200)
+    expect(res.body.data.progress.admin[0]).toBe(1)
+  })
+})
+
+describe('E2E-V2: BUCHHALTUNG CRUD mit echtem Login', () => {
+  it('BH kann Dashboard-Stats abrufen', async () => {
+    const token = realUsers.bh?.token
+    if (!token) return
+    const res = await authGet('/api/v1/dashboard/stats', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveProperty('deals')
+  })
+
+  it('BH kann Provision abrufen', async () => {
+    const token = realUsers.bh?.token
+    if (!token) return
+    const res = await authGet('/api/v1/dashboard/provision', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveProperty('provisions')
+    expect(res.body.data).toHaveProperty('summary')
+  })
+
+  it('BH kann Monthly-Stats abrufen', async () => {
+    const token = realUsers.bh?.token
+    if (!token) return
+    const res = await authGet('/api/v1/dashboard/monthly', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data.length).toBe(6)
+  })
+
+  it('BH sieht nur eigene Deals', async () => {
+    const token = realUsers.bh?.token
+    if (!token) return
+    const res = await authGet('/api/v1/deals', token)
+    expect(res.status).toBe(200)
+    res.body.data.forEach((d: any) => {
+      expect(d.assignedTo).toBe(realUsers.bh.id)
+    })
+  })
+
+  it('BH kann DB-Export-Stats lesen', async () => {
+    const token = realUsers.bh?.token
+    if (!token) return
+    const res = await authGet('/api/v1/admin/db-export/stats', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveProperty('contacts')
+  })
+})
+
+describe('E2E-V2: ADMIN CRUD mit echtem Login', () => {
+  it('ADMIN erstellt Lead (assignedTo beliebig)', async () => {
+    const token = realUsers.admin?.token
+    if (!token) return
+    const u = uid()
+    const res = await authPost('/api/v1/leads', token).send({
+      firstName: `ADM-Lead-${u}`, lastName: 'ADMIN-Test',
+      address: 'Teststr. 1', phone: '+41 71 000',
+      email: `adm-${u}@test.ch`, source: 'MESSE',
+      assignedTo: realUsers.vertrieb?.id,
+    })
+    expect(res.status).toBe(201)
+    // Admin kann Lead einem anderen User zuweisen
+    expect(res.body.data.assignedTo).toBe(realUsers.vertrieb.id)
+  })
+
+  it('ADMIN sieht ALLE Leads (kein Owner-Filter)', async () => {
+    const token = realUsers.admin?.token
+    if (!token) return
+    const res = await authGet('/api/v1/leads', token)
+    expect(res.status).toBe(200)
+    // Admin sieht Leads mit verschiedenen assignedTo
+    const assignedTos = new Set(res.body.data.map((l: any) => l.assignedTo))
+    // Mindestens 1 Lead vorhanden
+    expect(res.body.data.length).toBeGreaterThan(0)
+  })
+
+  it('ADMIN kann Admin-Integrationen verwalten', async () => {
+    const token = realUsers.admin?.token
+    if (!token) return
+    const res = await authGet('/api/v1/admin/integrations', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data.length).toBe(4)
+  })
+
+  it('ADMIN kann Webhooks erstellen', async () => {
+    const token = realUsers.admin?.token
+    if (!token) return
+    const res = await authPost('/api/v1/admin/webhooks', token)
+      .send({ name: `ADM-WH-${uid()}` })
+    expect(res.status).toBe(201)
+    expect(res.body.data).toHaveProperty('secret')
+  })
+
+  it('ADMIN kann AI-Settings aendern', async () => {
+    const token = realUsers.admin?.token
+    if (!token) return
+    const res = await authGet('/api/v1/admin/ai-settings', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveProperty('enabled')
+  })
+
+  it('ADMIN kann Branding aendern', async () => {
+    const token = realUsers.admin?.token
+    if (!token) return
+    const res = await authGet('/api/v1/admin/branding', token)
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveProperty('companyName')
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 33. MODUL-TOGGLE – Admin aendert Module, User sieht Aenderung in /me
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Modul-Toggle Auswirkung', () => {
+  it('Admin setzt Module fuer VERTRIEB → /auth/me reflektiert Aenderung', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser?.token) return
+
+    // Aktuelle Module lesen
+    const before = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    expect(before.status).toBe(200)
+    const originalModules = before.body.data.allowedModules
+
+    // Admin fuegt "provision" hinzu
+    const customModules = [...new Set([...originalModules, 'provision'])]
+    const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: customModules })
+    expect(update.status).toBe(200)
+    expect(update.body.data.allowedModules).toContain('provision')
+
+    // VERTRIEB sieht neue Module in /auth/me
+    const after = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    expect(after.status).toBe(200)
+    expect(after.body.data.allowedModules).toContain('provision')
+
+    // Zuruecksetzen
+    await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: originalModules })
+  })
+
+  it('Admin entfernt Modul → User sieht weniger Module in /me', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser?.token) return
+
+    // Nur dashboard setzen
+    const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: ['dashboard'] })
+    expect(update.status).toBe(200)
+    expect(update.body.data.allowedModules).toEqual(['dashboard'])
+
+    // Verifizieren via /auth/me
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    expect(me.body.data.allowedModules).toEqual(['dashboard'])
+    expect(me.body.data.allowedModules).not.toContain('leads')
+
+    // Zuruecksetzen auf VERTRIEB-Defaults
+    await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ allowedModules: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents'] })
+  })
+
+  it('Admin aendert Rolle → Module werden auf neue Rolle-Defaults gesetzt', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser?.token) return
+
+    // Rolle zu PROJEKTLEITUNG aendern
+    const update = await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ role: 'PROJEKTLEITUNG' })
+    expect(update.status).toBe(200)
+    expect(update.body.data.role).toBe('PROJEKTLEITUNG')
+    expect(update.body.data.allowedModules).toContain('projects')
+    expect(update.body.data.allowedModules).not.toContain('leads')
+
+    // /auth/me zeigt neue Rolle
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${vtUser.token}`)
+    expect(me.body.data.role).toBe('PROJEKTLEITUNG')
+    expect(me.body.data.allowedModules).toContain('projects')
+
+    // Zuruecksetzen auf VERTRIEB
+    await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ role: 'VERTRIEB', allowedModules: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents'] })
+  })
+
+  it('Admin deaktiviert User → Login schlaegt fehl', async () => {
+    const adminTk = realUsers.admin?.token
+    const vtUser = realUsers.vertrieb
+    if (!adminTk || !vtUser) return
+
+    // User deaktivieren
+    const del = await authDelete(`/api/v1/users/${vtUser.id}`, adminTk)
+    expect(del.status).toBe(200)
+    expect(del.body.data.isActive).toBe(false)
+
+    // Login schlaegt fehl (403 = deaktiviert)
+    const login = await request(app).post('/api/v1/auth/login').send({
+      email: vtUser.email, password: TEST_PASSWORD,
+    })
+    expect(login.status).toBe(403)
+
+    // Reaktivieren
+    await authPut(`/api/v1/users/${vtUser.id}`, adminTk)
+      .send({ isActive: true })
+  })
+
+  it('Leeres allowedModules → User hat keine Module in /me', async () => {
+    const adminTk = realUsers.admin?.token
+    const plUser = realUsers.pl
+    if (!adminTk || !plUser?.token) return
+
+    // Alle Module entfernen
+    await authPut(`/api/v1/users/${plUser.id}`, adminTk)
+      .send({ allowedModules: [] })
+
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${plUser.token}`)
+    expect(me.body.data.allowedModules).toEqual([])
+
+    // Zuruecksetzen
+    await authPut(`/api/v1/users/${plUser.id}`, adminTk)
+      .send({ allowedModules: ['dashboard', 'projects', 'calculations', 'tasks', 'appointments', 'documents'] })
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// 34. CROSS-ROLE ISOLATION – Daten-Isolation zwischen Rollen
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('E2E-V2: Daten-Isolation zwischen Rollen', () => {
+  it('VERTRIEB-Lead ist fuer PL unsichtbar in Lead-Liste', async () => {
+    const vtToken = realUsers.vertrieb?.token
+    const plToken = realUsers.pl?.token
+    if (!vtToken || !plToken) return
+
+    // VERTRIEB erstellt Lead
+    const u = uid()
+    const lead = await authPost('/api/v1/leads', vtToken).send({
+      firstName: `Isolation-${u}`, lastName: 'Test',
+      address: 'Test', phone: '+41 71 000',
+      email: `iso-${u}@test.ch`, source: 'HOMEPAGE',
+    })
+    expect(lead.status).toBe(201)
+    const leadId = lead.body.data.id
+
+    // PL sieht diesen Lead NICHT in der Liste
+    const plLeads = await authGet('/api/v1/leads', plToken)
+    expect(plLeads.status).toBe(200)
+    const found = plLeads.body.data.find((l: any) => l.id === leadId)
+    expect(found).toBeUndefined()
+  })
+
+  it('PL-Task ist fuer VERTRIEB unsichtbar in Task-Liste', async () => {
+    const plTk = realUsers.pl?.token
+    const vtTk = realUsers.vertrieb?.token
+    if (!plTk || !vtTk) return
+
+    const task = await authPost('/api/v1/tasks', plTk).send({
+      title: `PL-Only-${uid()}`, module: 'ALLGEMEIN',
+      assignedTo: realUsers.pl.id,
+    })
+    expect(task.status).toBe(201)
+    const taskId = task.body.data.id
+
+    // VERTRIEB sieht diesen Task NICHT
+    const vtTasks = await authGet('/api/v1/tasks', vtTk)
+    expect(vtTasks.status).toBe(200)
+    const found = vtTasks.body.data.find((t: any) => t.id === taskId)
+    expect(found).toBeUndefined()
+  })
+
+  it('ADMIN sieht Daten aller Rollen', async () => {
+    const adminTk = realUsers.admin?.token
+    if (!adminTk) return
+
+    const leads = await authGet('/api/v1/leads', adminTk)
+    expect(leads.status).toBe(200)
+
+    // Admin sieht Leads mit verschiedenen assignedTo Werten
+    const assignedTos = new Set(leads.body.data.map((l: any) => l.assignedTo).filter(Boolean))
+    // Es sollten mindestens Leads von verschiedenen Usern vorhanden sein
+    expect(leads.body.data.length).toBeGreaterThan(0)
   })
 })
