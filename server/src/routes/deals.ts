@@ -307,7 +307,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         title: result.data.title,
         lead_id: result.data.leadId ?? null,
         appointment_id: result.data.appointmentId ?? null,
-        assigned_to: result.data.assignedTo ?? null,
+        assigned_to: result.data.assignedTo ?? req.user?.userId ?? null,
         value: result.data.value ?? 0,
         stage: result.data.stage ?? 'ERSTELLT',
         priority: result.data.priority ?? 'MEDIUM',

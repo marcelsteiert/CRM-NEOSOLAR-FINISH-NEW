@@ -8,8 +8,16 @@ import {
   formatCHF,
 } from '@/hooks/useDeals'
 
+interface UserInfo {
+  id: string
+  firstName: string
+  lastName: string
+  role: string
+}
+
 interface DealTableProps {
   deals: Deal[]
+  users?: UserInfo[]
   onSelectDeal: (deal: Deal) => void
   sortBy: string
   sortOrder: 'asc' | 'desc'
@@ -26,7 +34,7 @@ function SortIcon({ field, sortBy, sortOrder }: { field: string; sortBy: string;
   )
 }
 
-export default function DealTable({ deals, onSelectDeal, sortBy, sortOrder, onSort }: DealTableProps) {
+export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sortOrder, onSort }: DealTableProps) {
   if (deals.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
@@ -44,6 +52,7 @@ export default function DealTable({ deals, onSelectDeal, sortBy, sortOrder, onSo
     { key: 'value', label: 'Wert', sortField: 'value' },
     { key: 'stage', label: 'Phase' },
     { key: 'priority', label: 'Priorität' },
+    { key: 'assignedTo', label: 'Zugewiesen an', sortField: 'assignedTo' },
     { key: 'expectedCloseDate', label: 'Erwarteter Abschluss', sortField: 'expectedCloseDate' },
     { key: 'createdAt', label: 'Erstellt', sortField: 'createdAt' },
   ]
@@ -128,6 +137,28 @@ export default function DealTable({ deals, onSelectDeal, sortBy, sortOrder, onSo
                   >
                     {priorityLabels[deal.priority]}
                   </span>
+                </td>
+
+                {/* Zugewiesen an */}
+                <td className="px-6 py-3.5">
+                  {(() => {
+                    const assignee = users.find((u) => u.id === deal.assignedTo)
+                    if (!assignee) return <span className="text-[11px] text-text-dim">{'\u2014'}</span>
+                    const initials = `${assignee.firstName?.[0] ?? ''}${assignee.lastName?.[0] ?? ''}`
+                    return (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg shrink-0"
+                          style={{ background: '#A78BFA' }}
+                        >
+                          {initials}
+                        </div>
+                        <span className="text-[12px] text-text-sec truncate max-w-[120px]">
+                          {assignee.firstName} {assignee.lastName}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </td>
 
                 {/* Expected Close */}

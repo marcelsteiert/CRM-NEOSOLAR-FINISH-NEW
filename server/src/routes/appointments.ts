@@ -202,7 +202,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         status: result.data.status ?? 'GEPLANT',
         priority: result.data.priority ?? 'MEDIUM',
         appointment_type: result.data.appointmentType ?? 'VOR_ORT',
-        assigned_to: result.data.assignedTo ?? null,
+        assigned_to: result.data.assignedTo ?? req.user?.userId ?? null,
         appointment_date: result.data.appointmentDate ?? null,
         appointment_time: result.data.appointmentTime ?? null,
         preparation_notes: result.data.preparationNotes ?? null,

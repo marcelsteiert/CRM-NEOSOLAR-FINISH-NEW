@@ -360,6 +360,30 @@ export default function DealsPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
+            {/* Verkäufer Filter */}
+            {canViewAll && viewAll && (
+              <div className="relative">
+                <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+                <select
+                  value={assignedTo ?? 'ALL'}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    if (val === 'ALL') setViewAll(true)
+                  }}
+                  className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
+                  style={{ minWidth: '160px' }}
+                >
+                  <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
+                  {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL').map((u) => (
+                    <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                      {u.firstName} {u.lastName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+              </div>
+            )}
+
             <div className="relative">
               <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as DealPriority | 'ALL')} className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer" style={{ minWidth: '140px' }}>
                 {priorityOptions.map((opt) => <option key={opt.value} value={opt.value} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{opt.label}</option>)}
@@ -377,7 +401,7 @@ export default function DealsPage() {
         {isLoading ? <LoadingSkeleton /> : isError ? (
           <ErrorState message={error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.'} onRetry={() => refetch()} />
         ) : (
-          <DealTable deals={filteredDeals} onSelectDeal={(d) => setSelectedDealId(d.id)} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
+          <DealTable deals={filteredDeals} users={users} onSelectDeal={(d) => setSelectedDealId(d.id)} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
         )}
       </div>
 

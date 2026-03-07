@@ -12,6 +12,8 @@ import {
   type DealStage, type DealPriority, type ActivityType,
 } from '@/hooks/useDeals'
 import { useCreateProject } from '@/hooks/useProjects'
+import { useUsers } from '@/hooks/useLeads'
+import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 
 interface Props {
@@ -43,10 +45,14 @@ const activityIcons: Record<ActivityType, React.ComponentType<{ size?: number; s
 export default function DealDetailModal({ dealId, onClose }: Props) {
   const { data: dealResponse, isLoading } = useDeal(dealId)
   const deal = dealResponse?.data ?? null
+  const { isAdmin, user: authUser } = useAuth()
   const updateDeal = useUpdateDeal()
   const deleteDeal = useDeleteDeal()
   const addActivity = useAddActivity()
   const createProject = useCreateProject()
+
+  const { data: usersResponse } = useUsers()
+  const users = usersResponse?.data ?? []
 
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
@@ -269,7 +275,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            {!isClosed && (
+            {(!isClosed || isAdmin) && (
               <button type="button" onClick={() => { if (isEditing) handleSave(); else setIsEditing(true) }} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
                 {isEditing ? <Check size={16} strokeWidth={2} /> : <Pencil size={16} strokeWidth={1.8} />}
               </button>
@@ -364,6 +370,40 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 </span>
               )}
             </div>
+          </div>
+
+          {/* Zugewiesen an */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Zugewiesen an</p>
+            {isAdmin && isEditing ? (
+              <div className="relative">
+                <select
+                  value={deal.assignedTo ?? ''}
+                  onChange={(e) => updateDeal.mutate({ id: deal.id, assignedTo: e.target.value || undefined })}
+                  className="glass-input appearance-none w-full px-3 py-1.5 pr-8 text-[12px] cursor-pointer"
+                >
+                  <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Nicht zugewiesen</option>
+                  {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL' || u.role === 'GESCHAEFTSLEITUNG' || u.role === 'ADMIN').map((u) => (
+                    <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                      {u.firstName} {u.lastName}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+              </div>
+            ) : (() => {
+              const assignee = users.find((u) => u.id === deal.assignedTo)
+              if (!assignee) return <span className="text-[12px] text-text-dim">Nicht zugewiesen</span>
+              const initials = `${assignee.firstName?.[0] ?? ''}${assignee.lastName?.[0] ?? ''}`
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg shrink-0" style={{ background: '#A78BFA' }}>
+                    {initials}
+                  </div>
+                  <span className="text-[12px] text-text-sec">{assignee.firstName} {assignee.lastName}</span>
+                </div>
+              )
+            })()}
           </div>
 
           {/* Expected Close + Follow-Up Date */}
@@ -510,7 +550,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
             <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-3">Aktivitäten ({deal.activities.length})</p>
 
             {/* Add Activity */}
-            {!isClosed && (
+            {(!isClosed || isAdmin) && (
               <div className="flex items-start gap-2 mb-4">
                 <div className="relative shrink-0">
                   <select
@@ -610,7 +650,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
           {!showDeleteConfirm && !showWonConfirm && !showLostConfirm && (
             <div className="flex items-center gap-2">
-              {!isClosed && (
+              {(!isClosed || isAdmin) && (
                 <>
                   <button type="button" onClick={() => setShowWonConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(52,211,153,0.15)' }}>
                     <Trophy size={14} strokeWidth={1.8} />Gewonnen
@@ -627,9 +667,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 <Mail size={14} strokeWidth={1.8} />E-Mail
               </a>
               <div className="flex-1" />
-              <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>
-                <Trash2 size={14} strokeWidth={1.8} />Löschen
-              </button>
+              {(isAdmin || authUser?.allowedModules?.includes('canDelete')) && (
+                <button type="button" onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>
+                  <Trash2 size={14} strokeWidth={1.8} />Löschen
+                </button>
+              )}
             </div>
           )}
         </div>

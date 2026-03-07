@@ -150,7 +150,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         source: result.data.source,
         pipeline_id: result.data.pipelineId ?? null,
         bucket_id: result.data.bucketId ?? null,
-        assigned_to: result.data.assignedTo ?? null,
+        assigned_to: result.data.assignedTo ?? req.user?.userId ?? null,
         status: result.data.status ?? 'ACTIVE',
         value: result.data.value ?? 0,
         notes: result.data.notes ?? null,
