@@ -14,3 +14,11 @@ export function getOwnerFilter(req: Request): string | null {
   if (ADMIN_ROLES.includes(user.role)) return null
   return user.userId
 }
+
+/**
+ * Wandelt camelCase Spaltennamen in snake_case um
+ * z.B. createdAt → created_at, appointmentDate → appointment_date
+ */
+export function toSnakeCase(str: string): string {
+  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+}

@@ -19,14 +19,10 @@ import {
   priorityLabels,
 } from '@/hooks/useAppointments'
 import { useUsers } from '@/hooks/useLeads'
+import { useAuth } from '@/hooks/useAuth'
 import AppointmentTable from './components/AppointmentTable'
 import AppointmentDetailModal from './components/AppointmentDetailModal'
 import AppointmentCreateDialog from './components/AppointmentCreateDialog'
-
-/* ── Simulated current user ── */
-
-const CURRENT_USER_ID = 'u001'
-const CURRENT_USER_ROLE: 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' = 'VERTRIEB'
 
 /* ── Filter Types ── */
 
@@ -110,6 +106,7 @@ function StatCard({
 /* ── Main Component ── */
 
 export default function AppointmentsPage() {
+  const { user: authUser, isAdmin } = useAuth()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<AppointmentPriority | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -119,8 +116,8 @@ export default function AppointmentsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [viewAll, setViewAll] = useState(false)
 
-  const canViewAll = CURRENT_USER_ROLE === 'ADMIN' || CURRENT_USER_ROLE === 'GL'
-  const assignedTo = (canViewAll && viewAll) ? undefined : CURRENT_USER_ID
+  const canViewAll = isAdmin
+  const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
 
   // Map filter to API status
   const statusQueryMap: Record<StatusFilter, AppointmentStatus | undefined> = {
@@ -155,7 +152,7 @@ export default function AppointmentsPage() {
 
   const { data: usersResponse } = useUsers()
   const users = usersResponse?.data ?? []
-  const currentUser = users.find((u) => u.id === CURRENT_USER_ID)
+  const currentUser = users.find((u) => u.id === authUser?.id)
 
   const handleSelect = (a: Appointment) => setSelectedId(a.id)
   const handleSort = (field: string) => {
@@ -332,6 +329,7 @@ export default function AppointmentsPage() {
         ) : (
           <AppointmentTable
             appointments={filteredItems}
+            users={users}
             onSelect={handleSelect}
             sortBy={sortBy}
             sortOrder={sortOrder}

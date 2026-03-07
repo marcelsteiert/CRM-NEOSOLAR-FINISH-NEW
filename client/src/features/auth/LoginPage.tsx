@@ -51,11 +51,13 @@ export default function LoginPage() {
       >
         {/* Header */}
         <div className="flex flex-col items-center pt-10 pb-6 px-8">
-          <img
-            src="/neosolar-logo.jpeg"
-            alt="NeoSolar"
-            className="h-12 object-contain mb-5"
-          />
+          <div className="rounded-[12px] overflow-hidden mb-5" style={{ background: '#f0f0f0' }}>
+            <img
+              src="/neosolar-logo.jpeg"
+              alt="NeoSolar"
+              className="h-12 object-contain px-3 py-1.5"
+            />
+          </div>
           <h1 className="text-xl font-bold tracking-[-0.02em] text-text">NeoSolar CRM</h1>
           <p className="text-[12px] text-text-sec mt-1">Bitte melden Sie sich an</p>
         </div>

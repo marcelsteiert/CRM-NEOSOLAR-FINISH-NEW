@@ -31,14 +31,10 @@ import {
   formatCHF,
 } from '@/hooks/useDeals'
 import { useUsers } from '@/hooks/useLeads'
+import { useAuth } from '@/hooks/useAuth'
 import DealTable from './components/DealTable'
 import DealDetailModal from './components/DealDetailModal'
 import DealCreateDialog from './components/DealCreateDialog'
-
-/* ── Simulated current user ── */
-
-const CURRENT_USER_ID = 'u001'
-const CURRENT_USER_ROLE: 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' = 'VERTRIEB'
 
 /* ── Filter Types ── */
 
@@ -239,6 +235,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
 /* ── Main Component ── */
 
 export default function DealsPage() {
+  const { user: authUser, isAdmin } = useAuth()
   const [stageFilter, setStageFilter] = useState<StageFilter>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<DealPriority | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -248,8 +245,8 @@ export default function DealsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [viewAll, setViewAll] = useState(false)
 
-  const canViewAll = CURRENT_USER_ROLE === 'ADMIN' || CURRENT_USER_ROLE === 'GL'
-  const assignedTo = (canViewAll && viewAll) ? undefined : CURRENT_USER_ID
+  const canViewAll = isAdmin
+  const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
 
   const stageQueryMap: Record<StageFilter, DealStage | undefined> = {
     ALL: undefined,
@@ -276,12 +273,12 @@ export default function DealsPage() {
   const { data: statsResponse } = useDealStats(assignedTo)
   const stats = statsResponse?.data
 
-  const { data: followUpsResponse } = useFollowUps(CURRENT_USER_ID)
+  const { data: followUpsResponse } = useFollowUps(authUser?.id)
   const followUps = followUpsResponse?.data ?? []
 
   const { data: usersResponse } = useUsers()
   const users = usersResponse?.data ?? []
-  const currentUser = users.find((u) => u.id === CURRENT_USER_ID)
+  const currentUser = users.find((u) => u.id === authUser?.id)
 
   const handleSort = (field: string) => {
     if (sortBy === field) setSortOrder((p) => (p === 'asc' ? 'desc' : 'asc'))

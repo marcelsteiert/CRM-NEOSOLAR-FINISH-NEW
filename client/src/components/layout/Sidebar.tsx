@@ -54,6 +54,7 @@ interface NavItem {
   label: string
   hasNotification?: boolean
   featureId?: FeatureFlag
+  adminOnly?: boolean
 }
 
 interface NavGroup {
@@ -95,7 +96,7 @@ const allNavGroups: NavGroup[] = [
     label: 'System',
     items: [
       { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true, featureId: 'notifications' },
-      { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin' },
+      { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin', adminOnly: true },
       { to: '/export', icon: Download, label: 'Export', featureId: 'export' },
       { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents' },
       { to: '/features', icon: Puzzle, label: 'Features' },
@@ -120,15 +121,20 @@ export default function Sidebar() {
     setMobileOpen(false)
   }, [location.pathname, setMobileOpen])
 
-  // Filter nav groups based on enabled features
+  const isAdminUser = user?.role === 'ADMIN' || user?.role === 'GL' || user?.role === 'GESCHAEFTSLEITUNG'
+
+  // Filter nav groups based on enabled features + admin-only
   const navGroups = useMemo(() => {
     return allNavGroups
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => !item.featureId || flags[item.featureId]),
+        items: group.items.filter((item) => {
+          if (item.adminOnly && !isAdminUser) return false
+          return !item.featureId || flags[item.featureId]
+        }),
       }))
       .filter((group) => group.items.length > 0)
-  }, [flags])
+  }, [flags, isAdminUser])
 
   return (
     <>
@@ -157,8 +163,8 @@ export default function Sidebar() {
       >
         {/* Logo + Pin Toggle */}
         <div className="flex items-center w-full px-[15px] mb-5 shrink-0">
-          <div className="w-[42px] h-[42px] rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden">
-            <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="w-full h-full object-cover" />
+          <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center shrink-0 overflow-hidden" style={{ background: '#f0f0f0' }}>
+            <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="w-[38px] object-contain" />
           </div>
           {(expanded || mobileOpen) && (
             <div className="flex items-center ml-3 flex-1 min-w-0 overflow-hidden">

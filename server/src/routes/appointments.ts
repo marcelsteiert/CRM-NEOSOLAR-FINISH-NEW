@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
-import { getOwnerFilter } from '../lib/userFilter.js'
+import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -81,7 +81,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       query = query.or(`notes.ilike.%${search}%,status.ilike.%${search}%`)
     }
 
-    const sf = typeof sortBy === 'string' ? sortBy : 'appointment_date'
+    const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'appointment_date'
     query = query.order(sf, { ascending: sortOrder !== 'desc' })
 
     const page = Math.max(1, Number(pp) || 1)

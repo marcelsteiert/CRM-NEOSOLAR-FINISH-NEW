@@ -23,14 +23,11 @@ import LeadTable from './components/LeadTable'
 import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
 import LeadImportDialog from './components/LeadImportDialog'
+import { useAuth } from '@/hooks/useAuth'
 
 /* ── Filter Tab Type ── */
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'CONVERTED' | 'LOST' | 'AFTER_SALES'
-
-/* ── Simulated current user (until real auth) ── */
-
-const CURRENT_USER_ROLE: 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' = 'ADMIN'
 
 /* ── Loading Skeleton ── */
 
@@ -154,6 +151,7 @@ function exportLeadsCsv(leads: Lead[], sourceLabels: Record<string, string>) {
 /* ── Main Component ── */
 
 export default function LeadsPage() {
+  const { isAdmin } = useAuth()
   /* ── State ── */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
@@ -222,8 +220,8 @@ export default function LeadsPage() {
   }
 
   /* ── Permissions ── */
-  const canExport = CURRENT_USER_ROLE === 'ADMIN' || CURRENT_USER_ROLE === 'GL'
-  const canImport = CURRENT_USER_ROLE === 'ADMIN' || CURRENT_USER_ROLE === 'GL'
+  const canExport = isAdmin
+  const canImport = isAdmin
 
   /* ── Status filter tabs ── */
 

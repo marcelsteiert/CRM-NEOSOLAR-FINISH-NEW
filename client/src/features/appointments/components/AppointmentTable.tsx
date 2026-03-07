@@ -8,8 +8,16 @@ import {
   useUpdateAppointment,
 } from '@/hooks/useAppointments'
 
+interface UserInfo {
+  id: string
+  firstName: string
+  lastName: string
+  role: string
+}
+
 interface Props {
   appointments: Appointment[]
+  users?: UserInfo[]
   onSelect: (a: Appointment) => void
   sortBy: string
   sortOrder: 'asc' | 'desc'
@@ -22,7 +30,7 @@ function SortIcon({ field, sortBy, sortOrder }: { field: string; sortBy: string;
   return sortOrder === 'asc' ? <ArrowUp size={12} className="text-emerald-400" /> : <ArrowDown size={12} className="text-emerald-400" />
 }
 
-export default function AppointmentTable({ appointments, onSelect, sortBy, sortOrder, onSort }: Props) {
+export default function AppointmentTable({ appointments, users = [], onSelect, sortBy, sortOrder, onSort }: Props) {
   const updateAppt = useUpdateAppointment()
   if (appointments.length === 0) {
     return (
@@ -40,6 +48,7 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
     { key: 'date', label: 'Termin', sortField: 'appointmentDate' },
     { key: 'fahrzeit', label: 'Fahrzeit' },
     { key: 'status', label: 'Status' },
+    { key: 'assignedTo', label: 'Zugewiesen an', sortField: 'assignedTo' },
     { key: 'checklist', label: 'Checkliste' },
     { key: 'created', label: 'Erstellt', sortField: 'createdAt' },
   ]
@@ -156,6 +165,28 @@ export default function AppointmentTable({ appointments, onSelect, sortBy, sortO
                       <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColors[a.status] }} />
                       {statusLabels[a.status]}
                     </span>
+                  </td>
+
+                  {/* Zugewiesen an */}
+                  <td className="px-6 py-3.5">
+                    {(() => {
+                      const assignee = users.find((u) => u.id === a.assignedTo)
+                      if (!assignee) return <span className="text-[11px] text-text-dim">{'\u2014'}</span>
+                      const initials = `${assignee.firstName?.[0] ?? ''}${assignee.lastName?.[0] ?? ''}`
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-bg shrink-0"
+                            style={{ background: '#F59E0B' }}
+                          >
+                            {initials}
+                          </div>
+                          <span className="text-[12px] text-text-sec truncate max-w-[120px]">
+                            {assignee.firstName} {assignee.lastName}
+                          </span>
+                        </div>
+                      )
+                    })()}
                   </td>
 
                   {/* Checklist Progress */}

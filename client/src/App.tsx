@@ -37,6 +37,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return null
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'GL' || user?.role === 'GESCHAEFTSLEITUNG'
+  if (!isAdmin) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
 
@@ -88,7 +96,7 @@ export default function App() {
           <Route path="ai" element={<AiSummaryPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route path="admin" element={<AdminPage />} />
+          <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
           <Route path="export" element={<ExportPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="features" element={<FeaturesPage />} />

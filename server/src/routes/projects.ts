@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
-import { getOwnerFilter } from '../lib/userFilter.js'
+import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -114,15 +114,29 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (risk === 'true') query = query.eq('risk', true)
     if (projectManager && typeof projectManager === 'string') query = query.eq('project_manager_id', projectManager)
 
-    // Per-User Filter: Nicht-Admins sehen nur eigene Projekte
+    // Per-User Filter: Nicht-Admins sehen Projekte wo sie PL oder Deal-Owner sind
     const ownerFilter = getOwnerFilter(req)
-    if (ownerFilter) query = query.eq('project_manager_id', ownerFilter)
+    if (ownerFilter) {
+      // Zuerst: Deal-IDs finden, die diesem User gehoeren
+      const { data: userDeals } = await supabase
+        .from('deals')
+        .select('id')
+        .eq('assigned_to', ownerFilter)
+        .is('deleted_at', null)
+      const dealIds = (userDeals ?? []).map((d: any) => d.id)
+
+      if (dealIds.length > 0) {
+        query = query.or(`project_manager_id.eq.${ownerFilter},deal_id.in.(${dealIds.join(',')})`)
+      } else {
+        query = query.eq('project_manager_id', ownerFilter)
+      }
+    }
 
     if (search && typeof search === 'string') {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
-    const sf = typeof sortBy === 'string' ? sortBy : 'name'
+    const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'name'
     query = query.order(sf, { ascending: sortOrder !== 'desc' })
 
     const { data, count, error } = await query
@@ -251,7 +265,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         value: d.value ?? 0,
         montage_partner_id: d.montagePartnerId ?? null,
         elektro_partner_id: d.elektroPartnerId ?? null,
-        project_manager_id: d.projectManagerId ?? null,
+        project_manager_id: d.projectManagerId ?? req.user?.userId ?? null,
         phase: 'admin',
         priority: d.priority ?? 'MEDIUM',
         progress: defaultProgress,

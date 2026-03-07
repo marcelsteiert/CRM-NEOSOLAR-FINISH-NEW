@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { toSnakeCase } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -41,7 +42,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       )
     }
 
-    const sf = typeof sortBy === 'string' ? sortBy : 'last_name'
+    const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'last_name'
     const ascending = sortOrder !== 'desc'
     query = query.order(sf, { ascending })
 

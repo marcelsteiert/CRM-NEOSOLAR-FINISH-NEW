@@ -1,7 +1,9 @@
 import { useState, useEffect, memo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Search, Menu } from 'lucide-react'
+import { Search, Menu, Cloud, CloudOff } from 'lucide-react'
 import { useSidebarPinned } from './Sidebar'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -20,7 +22,7 @@ const pageTitles: Record<string, string> = {
 }
 
 const integrations = [
-  { name: 'Pexio', connected: false },
+  { name: 'Bexio', connected: false },
   { name: '3CX', connected: false },
   { name: 'Outlook', connected: false },
 ]
@@ -47,6 +49,38 @@ function getPageTitle(pathname: string): string {
   // Try base path for parameterized routes like /leads/123
   const basePath = '/' + pathname.split('/')[1]
   return pageTitles[basePath] || 'NeoSolar'
+}
+
+function SupabaseStatus() {
+  const { data, isError } = useQuery({
+    queryKey: ['health'],
+    queryFn: () => api.get<{ supabase: string }>('/health'),
+    refetchInterval: 30000,
+    retry: 1,
+  })
+
+  const connected = data?.supabase === 'connected'
+  const statusColor = isError ? 'text-red' : connected ? 'text-emerald' : 'text-text-dim'
+  const label = isError ? 'Offline' : connected ? 'Cloud Live' : 'Prüfe...'
+
+  return (
+    <div className="flex items-center gap-1.5" title={`Supabase: ${label}`}>
+      {connected ? (
+        <Cloud size={14} strokeWidth={1.8} className={statusColor} />
+      ) : (
+        <CloudOff size={14} strokeWidth={1.8} className={statusColor} />
+      )}
+      <span className={`text-[11px] font-semibold ${statusColor}`}>
+        {label}
+      </span>
+      {connected && (
+        <div
+          className="w-[6px] h-[6px] rounded-full bg-emerald"
+          style={{ boxShadow: '0 0 6px rgba(52, 211, 153, 0.5)' }}
+        />
+      )}
+    </div>
+  )
 }
 
 export default function TopBar() {
@@ -97,15 +131,21 @@ export default function TopBar() {
         </div>
       </div>
 
-      {/* Right: Integrations + Clock */}
+      {/* Right: Supabase Status + Integrations + Clock */}
       <div className="flex items-center gap-3 md:gap-5 shrink-0">
+        {/* Supabase Cloud Status */}
+        <SupabaseStatus />
+
+        {/* Integration status divider */}
+        <div className="hidden lg:block w-px h-5 bg-border" />
+
         {/* Integration status */}
         <div className="hidden lg:flex items-center gap-4">
           {integrations.map((integration) => (
             <div key={integration.name} className="flex items-center gap-1.5">
               <div
                 className={`w-[6px] h-[6px] rounded-full ${
-                  integration.connected ? 'bg-green' : 'bg-text-dim'
+                  integration.connected ? 'bg-emerald' : 'bg-text-dim'
                 }`}
                 style={integration.connected ? { boxShadow: '0 0 6px rgba(52, 211, 153, 0.5)' } : {}}
               />

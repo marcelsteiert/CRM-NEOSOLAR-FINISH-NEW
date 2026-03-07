@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
-import { getOwnerFilter } from '../lib/userFilter.js'
+import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 
 const router = Router()
 
@@ -59,7 +59,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,reference_title.ilike.%${search}%`)
     }
 
-    const sf = typeof sortBy === 'string' ? sortBy : 'due_date'
+    const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'due_date'
     query = query.order(sf, { ascending: sortOrder !== 'desc', nullsFirst: false })
 
     const { data, count, error } = await query

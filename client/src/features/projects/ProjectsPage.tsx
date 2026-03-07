@@ -9,6 +9,7 @@ import {
   phaseLabels, phaseColors, priorityColors, formatCHF, computePhaseProgress,
   type Project, type ProjectPhase,
 } from '@/hooks/useProjects'
+import { useAuth } from '@/hooks/useAuth'
 import ProjectDetailModal from './components/ProjectDetailModal'
 
 type ViewTab = 'kanban' | 'dashboard' | 'partner'
@@ -22,6 +23,7 @@ const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
 }
 
 export default function ProjectsPage() {
+  const { isAdmin } = useAuth()
   const [view, setView] = useState<ViewTab>('kanban')
   const [search, setSearch] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -31,6 +33,7 @@ export default function ProjectsPage() {
   const { data: partnersData } = usePartners()
   const { data: phasesData } = usePhaseDefinitions()
   const updateProject = useUpdateProject()
+  const canEdit = isAdmin
 
   const projects = projectsData?.data ?? []
   const stats = statsData?.data
@@ -107,7 +110,7 @@ export default function ProjectsPage() {
             <Loader2 size={24} className="animate-spin text-text-dim" />
           </div>
         ) : view === 'kanban' ? (
-          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={(projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase })} />
+          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined} />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
         ) : (
@@ -137,8 +140,9 @@ function KanbanView({
   projectsByPhase: Record<ProjectPhase, Project[]>
   phases: { id: string; name: string; color: string; steps: string[] }[]
   onSelect: (id: string) => void
-  onMoveProject: (projectId: string, targetPhase: ProjectPhase) => void
+  onMoveProject?: (projectId: string, targetPhase: ProjectPhase) => void
 }) {
+  const canDrag = !!onMoveProject
   const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
 
@@ -172,7 +176,7 @@ function KanbanView({
     if (projectId) {
       // Find the project's current phase
       const currentPhase = phaseOrder.find((ph) => projectsByPhase[ph].some((p) => p.id === projectId))
-      if (currentPhase !== targetPhase) {
+      if (currentPhase !== targetPhase && onMoveProject) {
         onMoveProject(projectId, targetPhase)
       }
     }
@@ -194,9 +198,9 @@ function KanbanView({
           <div
             key={phaseId}
             className="flex flex-col gap-3 h-full overflow-hidden transition-all duration-200"
-            onDragOver={(e) => handleDragOver(e, phaseId)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, phaseId)}
+            onDragOver={canDrag ? (e) => handleDragOver(e, phaseId) : undefined}
+            onDragLeave={canDrag ? handleDragLeave : undefined}
+            onDrop={canDrag ? (e) => handleDrop(e, phaseId) : undefined}
           >
             {/* Column Header */}
             <div
@@ -223,9 +227,10 @@ function KanbanView({
                   project={project}
                   phaseId={phaseId}
                   onClick={() => onSelect(project.id)}
-                  onDragStart={(e) => handleDragStart(e, project.id)}
-                  onDragEnd={handleDragEnd}
+                  onDragStart={canDrag ? (e) => handleDragStart(e, project.id) : undefined}
+                  onDragEnd={canDrag ? handleDragEnd : undefined}
                   isDragging={draggingId === project.id}
+                  draggable={canDrag}
                 />
               ))}
               {items.length === 0 && (
@@ -250,10 +255,10 @@ function KanbanView({
 }
 
 function ProjectCard({
-  project, phaseId, onClick, onDragStart, onDragEnd, isDragging,
+  project, phaseId, onClick, onDragStart, onDragEnd, isDragging, draggable = true,
 }: {
   project: Project; phaseId: ProjectPhase; onClick: () => void
-  onDragStart: (e: React.DragEvent) => void; onDragEnd: () => void; isDragging: boolean
+  onDragStart?: (e: React.DragEvent) => void; onDragEnd?: () => void; isDragging: boolean; draggable?: boolean
 }) {
   const color = phaseColors[phaseId]
   const pp = computePhaseProgress(project.progress, phaseId)
@@ -261,11 +266,11 @@ function ProjectCard({
 
   return (
     <div
-      draggable
+      draggable={draggable}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
-      className={`glass-card w-full text-left p-4 hover:border-[rgba(255,255,255,0.12)] transition-all duration-150 group cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40 scale-95' : ''}`}
+      className={`glass-card w-full text-left p-4 hover:border-[rgba(255,255,255,0.12)] transition-all duration-150 group ${draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${isDragging ? 'opacity-40 scale-95' : ''}`}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-start gap-1.5 flex-1 min-w-0">

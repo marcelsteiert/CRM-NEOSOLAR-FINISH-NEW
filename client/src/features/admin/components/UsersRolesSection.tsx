@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, useDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
-import { Shield, Pencil, Trash2, Check, X, UserPlus, ChevronDown, RotateCcw, Save } from 'lucide-react'
+import { Shield, Pencil, Trash2, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck } from 'lucide-react'
 
 const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']
 const roleLabels: Record<UserRole, string> = {
@@ -68,6 +68,10 @@ export default function UsersRolesSection() {
   const [editForm, setEditForm] = useState<FormData>({ ...emptyForm })
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [showInactive, setShowInactive] = useState(false)
+
+  const activeUsers = users.filter((u) => u.isActive)
+  const inactiveUsers = users.filter((u) => !u.isActive)
 
   // Editable role defaults matrix
   const [editableDefaults, setEditableDefaults] = useState<Record<string, string[]>>({})
@@ -163,10 +167,14 @@ export default function UsersRolesSection() {
     updateUser.mutate({ id: user.id, isActive: !user.isActive })
   }
 
-  const handleDelete = (userId: string) => {
-    deleteUser.mutate(userId, {
+  const handleDeactivate = (userId: string) => {
+    updateUser.mutate({ id: userId, isActive: false }, {
       onSuccess: () => setConfirmDelete(null),
     })
+  }
+
+  const handleReactivate = (userId: string) => {
+    updateUser.mutate({ id: userId, isActive: true })
   }
 
   // ── Shared Form Renderer ──
@@ -343,7 +351,7 @@ export default function UsersRolesSection() {
     <div className="space-y-4">
       {/* Header + Create Button */}
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-text-dim">{users.length} Benutzer</span>
+        <span className="text-[11px] text-text-dim">{activeUsers.length} aktive Benutzer{inactiveUsers.length > 0 ? ` · ${inactiveUsers.length} inaktiv` : ''}</span>
         <button
           type="button"
           onClick={() => {
@@ -370,9 +378,9 @@ export default function UsersRolesSection() {
         />
       )}
 
-      {/* Users List */}
+      {/* Active Users List */}
       <div className="space-y-2">
-        {users.map((user) => {
+        {activeUsers.map((user) => {
           const isEditing = editingUser?.id === user.id
           const isExpanded = expandedUser === user.id
           const color = roleColors[user.role] ?? '#94A3B8'
@@ -450,23 +458,14 @@ export default function UsersRolesSection() {
                   >
                     <Pencil size={13} strokeWidth={2} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(user)}
-                    className="p-1.5 rounded-lg hover:bg-surface-hover transition-colors"
-                    style={{ color: user.isActive ? '#34D399' : '#F87171' }}
-                    title={user.isActive ? 'Deaktivieren' : 'Aktivieren'}
-                  >
-                    {user.isActive ? <Check size={13} strokeWidth={2} /> : <X size={13} strokeWidth={2} />}
-                  </button>
                   {confirmDelete === user.id ? (
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => handleDeactivate(user.id)}
                         className="px-2 py-1 rounded-lg text-[10px] font-bold text-red hover:bg-red-soft transition-colors"
                       >
-                        Löschen
+                        Deaktivieren
                       </button>
                       <button
                         type="button"
@@ -481,9 +480,9 @@ export default function UsersRolesSection() {
                       type="button"
                       onClick={() => setConfirmDelete(user.id)}
                       className="p-1.5 rounded-lg hover:bg-surface-hover text-text-dim hover:text-red transition-colors"
-                      title="Löschen"
+                      title="Deaktivieren"
                     >
-                      <Trash2 size={13} strokeWidth={2} />
+                      <UserX size={13} strokeWidth={2} />
                     </button>
                   )}
                 </div>
@@ -540,6 +539,67 @@ export default function UsersRolesSection() {
           )
         })}
       </div>
+
+      {/* Inactive Users */}
+      {inactiveUsers.length > 0 && (
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setShowInactive(!showInactive)}
+            className="flex items-center gap-2 text-[11px] text-text-dim hover:text-text transition-colors"
+          >
+            <ChevronDown size={12} className={`transition-transform ${showInactive ? 'rotate-180' : ''}`} />
+            <UserX size={12} strokeWidth={2} />
+            {inactiveUsers.length} inaktive Benutzer
+          </button>
+
+          {showInactive && inactiveUsers.map((user) => {
+            const color = roleColors[user.role] ?? '#94A3B8'
+            return (
+              <div key={user.id} className="glass-card overflow-hidden opacity-60" style={{ borderRadius: 'var(--radius-lg)' }}>
+                <div className="flex items-center gap-4 px-5 py-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center text-[13px] font-bold shrink-0"
+                    style={{ background: `color-mix(in srgb, ${color} 10%, transparent)`, color: '#525E6F' }}
+                  >
+                    {user.firstName?.[0]}{user.lastName?.[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-semibold text-text-dim truncate">
+                        {user.firstName} {user.lastName}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
+                        style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)', color: '#F87171' }}>
+                        Inaktiv
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-text-dim">{user.email}</span>
+                  </div>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold shrink-0 opacity-50"
+                    style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+                  >
+                    <Shield size={10} strokeWidth={2} />
+                    {roleLabels[user.role] ?? user.role}
+                  </span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleReactivate(user.id)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-emerald hover:bg-surface-hover transition-colors"
+                      title="Reaktivieren"
+                    >
+                      <UserCheck size={12} strokeWidth={2} />
+                      Reaktivieren
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Editable Role Defaults Matrix */}
       {Object.keys(editableDefaults).length > 0 && (
