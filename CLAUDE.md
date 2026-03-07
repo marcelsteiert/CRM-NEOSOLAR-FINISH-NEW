@@ -14,7 +14,8 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - State: Zustand (global), React Query (server state)
 - API: `/api/v1/...`, api.ts Helpers (api.get, api.post, api.put, api.delete)
 - Auth: JWT (bcryptjs + jsonwebtoken), useAuth Hook mit Auto-Refresh
-- Tests: Vitest v4.0.18 + Supertest
+- Tests: Vitest v4.0.18 + Supertest (470 Tests in 2 E2E-Dateien)
+- caseMapper Middleware: Konvertiert alle DB snake_case Felder zu camelCase in API-Responses (server/src/lib/caseMapper.ts)
 
 ## Design-System
 - Dark Glassmorphism: #06080C Hintergrund, rgba(255,255,255,0.035) Glass-Cards
@@ -48,6 +49,17 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Error Boundary in main.tsx fuer App-weite Fehleranzeige
 - Express Route-Order: Statische Routen VOR parametrische (z.B. /reorder vor /:id)
 - Alle Entitaeten haben `contact_id` fuer Pipeline-uebergreifende Verknuepfung
+
+## Wichtig: API camelCase
+- Backend speichert in snake_case (PostgreSQL), caseMapper konvertiert zu camelCase fuer Frontend
+- Frontend-Interfaces MUESSEN camelCase verwenden: contactId, fileName, entityType, createdAt, etc.
+- NIEMALS snake_case in Frontend-TypeScript-Interfaces verwenden (contact_id, file_name, etc.)
+- Sidebar-Filter: allowedModules hat Prioritaet ueber Feature Flags (Sidebar.tsx:130-151)
+
+## Tests (470 Tests, alle gruen)
+- e2e-complete-v2.test.ts: 406 Backend-Tests (CRUD, Rollen, Berechtigungen, Edge Cases)
+- e2e-frontend-backend.test.ts: 64 Frontend-Backend-Kompatibilitaetstests (camelCase, User Flows, Regression)
+- snake_case Regression: 28 verbotene Feldnamen werden ueber 7 Endpoints geprueft
 
 ## Workflow
 - Aenderungen automatisch durchfuehren ohne Bestaetigung zu verlangen
@@ -90,7 +102,7 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 6. **Automations-Regeln** - Follow-Up + Vorbereitungs-Checkliste
 7. **Integrationen** - Outlook, 3CX, Zoom, Bexio Cards
 8. **Webhook-Verwaltung** - Lead-Quellen mit Secret/Endpoint
-9. **Dokumenten-Vorlagen** - Ordnerstruktur-Templates pro Entitaet
+9. **Dokumenten-Vorlagen** - Ordner CRUD + Rollen-Berechtigungen pro Ordner, persistent in Settings
 10. **Benachrichtigungen** - Event-Toggles, Kanaele (IN_APP/EMAIL)
 11. **Firmen-Branding** - Logo, Firmenname, Angebotsvorlage
 12. **KI-Einstellungen** - Toggle, Modell (Claude/GPT), Sprache, Features
@@ -105,7 +117,7 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - server/src/routes/admin/*.ts (9 Admin-Backend-Routen)
 
 ## Rollen & Berechtigungen
-- UserRole: ADMIN, VERTRIEB, PROJEKTLEITUNG, BUCHHALTUNG, GL
+- UserRole: ADMIN, VERTRIEB, PROJEKTLEITUNG, BUCHHALTUNG, GL, SUBUNTERNEHMEN
 - Jeder User hat `allowedModules: string[]` fuer individuelle Berechtigungen
 - Spezial-Berechtigungen: canDelete, canExport, canImport (auch in allowedModules)
 - `defaultModulesByRole` Map definiert Standards pro Rolle
@@ -125,6 +137,18 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - Backend: GET /documents?contactId=xxx, POST mit fileBase64 + contactId
 - Hooks: useContactDocuments(contactId), useUploadDocument(), useDeleteDocument()
 - Eingebaut in: LeadDetailModal, AppointmentDetailModal, DealDetailModal, ProjectDetailModal
+- Ordner-Berechtigungen: allowedRoles pro Ordner (leer = alle), Admin/GL sehen immer alles
+- Upload-Target: useRef fuer Race-Condition-freie Ordner-Zuweisung
+
+## Globale Suche
+- Backend: GET /api/v1/search?q=... – sucht Kontakte (Name, Email, Telefon, Firma, Adresse)
+- Liefert verknuepfte Leads, Projekte, Deals, Termine pro Kontakt
+- Frontend: TopBar.tsx – Cmd+K/Ctrl+K Overlay mit Live-Suche, Tastatur-Navigation
+- Sichtbar fuer: Admin, GL, Projektleitung + User mit search-Modul
+
+## Features-Seite
+- Nur Admins koennen Feature-Toggles aendern
+- Nicht-Admins sehen die Features read-only (abgeblendete Toggles)
 
 ## Angebote-Features (v2)
 - Aktivitaeten-Log: Persistent, Typ (NOTE/CALL/EMAIL/MEETING/STATUS_CHANGE/SYSTEM)
@@ -145,6 +169,14 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - Leads, Termine, Angebote: Bei Erstellung wird der eingeloggte User automatisch zugewiesen
 - Backend-Pattern: `assigned_to: result.data.assignedTo ?? req.user?.userId ?? null`
 - Admin kann Zuweisung in Detail-Modals aendern (Dropdown)
+
+## Supabase
+- Projekt-ID: tzoquorcgygmrougevgm (CRM-NEOSOLAR-FINISH-NEW)
+- Storage Bucket: documents (fuer Dokumenten-Upload)
+
+## User (Produktiv)
+- u006: Marcel Steiert (ADMIN) – marcel.steiert@neosolar.ch
+- u002: Lena Steiner (VERTRIEB) – lena.steiner@neosolar.ch
 
 ## Geplante Features (Backlog)
 - Lead: km-Entfernung und Fahrzeit zum Kunden anzeigen

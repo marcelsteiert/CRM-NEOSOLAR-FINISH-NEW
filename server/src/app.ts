@@ -26,6 +26,7 @@ import adminAiSettingsRouter from './routes/admin/aiSettings.js'
 import adminNotifSettingsRouter from './routes/admin/notifSettings.js'
 import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
 import adminDbExportRouter from './routes/admin/dbExport.js'
+import searchRouter from './routes/search.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { mapKeys } from './lib/caseMapper.js'
 import { authMiddleware } from './middleware/auth.js'
@@ -65,6 +66,7 @@ export function createApp() {
   app.use('/api/v1/dashboard', authMiddleware, dashboardRouter)
   app.use('/api/v1/documents', authMiddleware, documentsRouter)
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
+  app.use('/api/v1/search', authMiddleware, searchRouter)
 
   // Admin routes (geschuetzt)
   app.use('/api/v1/admin/products', authMiddleware, adminProductsRouter)

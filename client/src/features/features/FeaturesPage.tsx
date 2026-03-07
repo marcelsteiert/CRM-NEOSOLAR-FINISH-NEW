@@ -6,6 +6,7 @@ import {
   Zap, Star, Lock, Check,
 } from 'lucide-react'
 import { useFeatureFlags, type FeatureFlag } from '@/hooks/useFeatureFlags'
+import { useAuth } from '@/hooks/useAuth'
 
 interface FeatureInfo {
   id: FeatureFlag
@@ -64,6 +65,8 @@ const statusConfig = {
 
 export default function FeaturesPage() {
   const { flags, toggle } = useFeatureFlags()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'GL' || user?.role === 'GESCHAEFTSLEITUNG'
   const [filter, setFilter] = useState<'all' | 'core' | 'sales' | 'operations' | 'system'>('all')
 
   const filtered = filter === 'all' ? features : features.filter((f) => f.category === filter)
@@ -88,7 +91,7 @@ export default function FeaturesPage() {
           <div>
             <h1 className="text-xl font-bold tracking-[-0.02em]">Features</h1>
             <p className="text-[12px] text-text-sec mt-0.5">
-              {enabledCount} von {totalCount} Modulen aktiv · Sidebar wird automatisch angepasst
+              {enabledCount} von {totalCount} Modulen aktiv{isAdmin ? ' · Sidebar wird automatisch angepasst' : ' · Nur Admins koennen aendern'}
             </p>
           </div>
         </div>
@@ -154,13 +157,13 @@ export default function FeaturesPage() {
                     </div>
                   </div>
 
-                  {/* Toggle */}
+                  {/* Toggle (nur fuer Admins editierbar) */}
                   {feature.isCore ? (
                     <div className="flex items-center gap-1.5 text-[10px] text-text-dim mt-1 shrink-0">
                       <Lock size={10} />
                       <span className="font-semibold">Pflicht</span>
                     </div>
-                  ) : (
+                  ) : isAdmin ? (
                     <button
                       onClick={() => toggle(feature.id)}
                       className="shrink-0 mt-0.5 transition-transform hover:scale-105"
@@ -172,6 +175,14 @@ export default function FeaturesPage() {
                         <ToggleLeft size={28} className="text-text-dim" strokeWidth={1.5} />
                       )}
                     </button>
+                  ) : (
+                    <div className="shrink-0 mt-0.5">
+                      {enabled ? (
+                        <ToggleRight size={28} style={{ color: feature.color, opacity: 0.5 }} strokeWidth={1.5} />
+                      ) : (
+                        <ToggleLeft size={28} className="text-text-dim" style={{ opacity: 0.5 }} strokeWidth={1.5} />
+                      )}
+                    </div>
                   )}
                 </div>
 

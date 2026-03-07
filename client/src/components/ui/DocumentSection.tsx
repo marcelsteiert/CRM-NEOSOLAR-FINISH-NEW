@@ -47,6 +47,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({ [entityType]: true })
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   const [uploadTarget, setUploadTarget] = useState<{ phase: EntityType; folderPath: string } | null>(null)
+  const uploadTargetRef = useRef<{ phase: EntityType; folderPath: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allDocs = docsRes?.data ?? []
@@ -64,9 +65,17 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     setExpandedFolders((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  // Template-Ordner fuer eine Phase holen
+  const userRole = user?.role ?? ''
+
+  // Template-Ordner fuer eine Phase holen (gefiltert nach User-Rolle)
   const getPhaseTemplate = (phase: EntityType) => {
-    return templates.find((t) => t.entityType === phase)?.folders ?? []
+    const folders = templates.find((t) => t.entityType === phase)?.folders ?? []
+    // Admins sehen alles, sonst nur Ordner mit passender Rolle oder ohne Einschraenkung
+    if (userRole === 'ADMIN' || userRole === 'GESCHAEFTSLEITUNG' || userRole === 'GL') return folders
+    return folders.filter((f) => {
+      const roles = (f as any).allowedRoles as string[] | undefined
+      return !roles || roles.length === 0 || roles.includes(userRole)
+    })
   }
 
   // Dokumente einem Ordnerbaum zuordnen
@@ -76,7 +85,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
 
     const tree: FolderNode[] = templateFolders.map((folder) => {
       const folderPath = folder.name
-      const subfolders: FolderNode[] = (folder.subfolders ?? []).map((sub) => {
+      const subfolders: FolderNode[] = ((folder as any).subfolders ?? []).map((sub: string) => {
         const subPath = `${folderPath}/${sub}`
         return {
           name: sub,
@@ -115,7 +124,9 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   }
 
   const handleUploadToFolder = (phase: EntityType, folderPath: string) => {
-    setUploadTarget({ phase, folderPath })
+    const target = { phase, folderPath }
+    setUploadTarget(target)
+    uploadTargetRef.current = target
     fileRef.current?.click()
   }
 
@@ -123,8 +134,10 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    const targetPhase = uploadTarget?.phase ?? entityType
-    const targetFolder = uploadTarget?.folderPath
+    // Ref lesen statt State – vermeidet Race Condition bei setState + click()
+    const currentTarget = uploadTargetRef.current
+    const targetPhase = currentTarget?.phase ?? entityType
+    const targetFolder = currentTarget?.folderPath
 
     for (const file of Array.from(files)) {
       const base64 = await fileToBase64(file)
@@ -143,6 +156,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     }
     setNotes('')
     setUploadTarget(null)
+    uploadTargetRef.current = null
     e.target.value = ''
   }
 

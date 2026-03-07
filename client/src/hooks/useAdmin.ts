@@ -233,24 +233,62 @@ export function useUpdateNotificationSettings() {
 
 // ── Document Templates ──
 
+export interface FolderDef {
+  name: string
+  subfolders?: string[]
+  allowedRoles?: string[] // Leer = alle Rollen
+}
+
 export interface FolderTemplate {
   id: string
   entityType: string
-  folders: { name: string; subfolders?: string[] }[]
+  folders: FolderDef[]
+}
+
+export interface DocTemplatesResponse {
+  data: FolderTemplate[]
+  roles: string[]
 }
 
 export function useDocTemplates() {
   return useQuery({
     queryKey: ['docTemplates'],
-    queryFn: () => api.get<{ data: FolderTemplate[] }>('/admin/doc-templates'),
+    queryFn: () => api.get<DocTemplatesResponse>('/admin/doc-templates'),
   })
 }
 
 export function useUpdateDocTemplate() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ entityType, folders }: { entityType: string; folders: FolderTemplate['folders'] }) =>
+    mutationFn: ({ entityType, folders }: { entityType: string; folders: FolderDef[] }) =>
       api.put<{ data: FolderTemplate }>(`/admin/doc-templates/${entityType}`, { folders }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['docTemplates'] }),
+  })
+}
+
+export function useAddDocFolder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ entityType, name, subfolders, allowedRoles }: { entityType: string; name: string; subfolders?: string[]; allowedRoles?: string[] }) =>
+      api.post<{ data: FolderTemplate }>(`/admin/doc-templates/${entityType}/folders`, { name, subfolders, allowedRoles }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['docTemplates'] }),
+  })
+}
+
+export function useUpdateDocFolder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ entityType, folderName, ...data }: { entityType: string; folderName: string; name?: string; subfolders?: string[]; allowedRoles?: string[] }) =>
+      api.put<{ data: FolderTemplate }>(`/admin/doc-templates/${entityType}/folders/${encodeURIComponent(folderName)}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['docTemplates'] }),
+  })
+}
+
+export function useDeleteDocFolder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ entityType, folderName }: { entityType: string; folderName: string }) =>
+      api.delete<{ message: string }>(`/admin/doc-templates/${entityType}/folders/${encodeURIComponent(folderName)}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['docTemplates'] }),
   })
 }

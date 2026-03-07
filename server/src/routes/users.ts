@@ -8,7 +8,7 @@ const router = Router()
 
 // ── Standard-Berechtigungen pro Rolle ──
 
-type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL'
+type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' | 'SUBUNTERNEHMEN'
 
 const defaultModulesByRole: Record<UserRole, string[]> = {
   ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'projects', 'tasks', 'admin', 'communication', 'documents', 'export'],
@@ -16,6 +16,7 @@ const defaultModulesByRole: Record<UserRole, string[]> = {
   VERTRIEB: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents'],
   PROJEKTLEITUNG: ['dashboard', 'projects', 'calculations', 'tasks', 'appointments', 'documents'],
   BUCHHALTUNG: ['dashboard', 'provision', 'deals', 'documents', 'export'],
+  SUBUNTERNEHMEN: ['dashboard', 'projects', 'tasks', 'documents'],
 }
 
 // ── Validation ──
@@ -25,7 +26,7 @@ const createUserSchema = z.object({
   lastName: z.string().min(1),
   email: z.string().email(),
   phone: z.string().default(''),
-  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']),
+  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
   allowedModules: z.array(z.string()).optional(),
 })
 
@@ -34,7 +35,7 @@ const updateUserSchema = z.object({
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']).optional(),
+  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']).optional(),
   isActive: z.boolean().optional(),
   allowedModules: z.array(z.string()).optional(),
 })
@@ -78,7 +79,7 @@ router.get('/role-defaults', (_req: Request, res: Response) => {
 // PUT role defaults (in-memory only, could be stored in settings table later)
 router.put('/role-defaults', (req: Request, res: Response) => {
   const schema = z.record(
-    z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']),
+    z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
     z.array(z.string()),
   )
   const parsed = schema.safeParse(req.body)

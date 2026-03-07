@@ -267,7 +267,7 @@ export function useReorderBuckets() {
 
 // ── Users ──
 
-export type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL'
+export type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' | 'SUBUNTERNEHMEN'
 
 export interface User {
   id: string
