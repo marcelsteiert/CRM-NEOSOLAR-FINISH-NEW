@@ -20,7 +20,7 @@ const roleLabels: Record<string, string> = {
   VERTRIEB: 'Vertrieb',
   PROJEKTLEITUNG: 'Projektleitung',
   BUCHHALTUNG: 'Buchhaltung',
-  GESCHAEFTSLEITUNG: 'Geschäftsleitung',
+  GL: 'Geschäftsleitung',
   SUBUNTERNEHMEN: 'Subunternehmen',
 }
 
@@ -29,7 +29,7 @@ const roleColors: Record<string, string> = {
   VERTRIEB: '#34D399',
   PROJEKTLEITUNG: '#60A5FA',
   BUCHHALTUNG: '#F59E0B',
-  GESCHAEFTSLEITUNG: '#F87171',
+  GL: '#F87171',
   SUBUNTERNEHMEN: '#F472B6',
 }
 

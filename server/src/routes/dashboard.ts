@@ -56,6 +56,13 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
     const cancelledAppts = allAppts.filter((a: any) => a.status === 'ABGESAGT').length
     const apptTotalValue = allAppts.reduce((s: number, a: any) => s + (a.value ?? 0), 0)
 
+    // Status-Aggregation fuer Appointments
+    const apptStatuses: Record<string, number> = {}
+    for (const a of allAppts) {
+      const st = (a as any).status ?? 'UNBEKANNT'
+      apptStatuses[st] = (apptStatuses[st] ?? 0) + 1
+    }
+
     // Tasks stats
     let tasksQuery = supabase.from('tasks').select('*').is('deleted_at', null)
     if (userFilter) tasksQuery = tasksQuery.eq('assigned_to', userFilter)
@@ -86,6 +93,7 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
           total: allAppts.length,
           upcoming,
           totalValue: apptTotalValue,
+          statuses: apptStatuses,
           completed: completedAppts,
           cancelled: cancelledAppts,
           checklistProgress: 0,

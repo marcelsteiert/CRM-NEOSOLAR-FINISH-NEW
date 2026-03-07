@@ -102,4 +102,60 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 })
 
+// ---------------------------------------------------------------------------
+// GET /api/v1/settings/feature-flags
+// ---------------------------------------------------------------------------
+
+router.get('/feature-flags', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'feature_flags')
+      .single()
+
+    // Default-Flags falls noch nicht gespeichert
+    const defaultFlags: Record<string, boolean> = {
+      dashboard: true, leads: true, appointments: true, deals: true,
+      projects: true, admin: true, provision: true, calculations: false,
+      communication: false, ai: false, tasks: false,
+      documents: false, notifications: true, export: false,
+    }
+
+    const flags = data?.value ? { ...defaultFlags, ...(data.value as Record<string, boolean>) } : defaultFlags
+    res.json({ data: flags })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// PUT /api/v1/settings/feature-flags
+// ---------------------------------------------------------------------------
+
+router.put('/feature-flags', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Nur Admins duerfen Feature-Flags aendern
+    const userRole = (req as any).user?.role
+    if (!['ADMIN', 'GL', 'GESCHAEFTSLEITUNG'].includes(userRole)) {
+      throw new AppError('Nur Admins koennen Feature-Flags aendern', 403)
+    }
+
+    const flags = req.body
+    if (!flags || typeof flags !== 'object') {
+      throw new AppError('Ungueltige Daten', 400)
+    }
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key: 'feature_flags', value: flags }, { onConflict: 'key' })
+
+    if (error) throw new AppError(error.message, 500)
+
+    res.json({ data: flags })
+  } catch (err) {
+    next(err)
+  }
+})
+
 export default router

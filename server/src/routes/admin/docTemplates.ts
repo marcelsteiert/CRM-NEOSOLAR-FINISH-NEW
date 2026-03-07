@@ -7,7 +7,7 @@ const router = Router()
 
 // ── Types ──
 
-const ALL_ROLES = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GESCHAEFTSLEITUNG', 'SUBUNTERNEHMEN']
+const ALL_ROLES = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']
 
 interface FolderDef {
   name: string

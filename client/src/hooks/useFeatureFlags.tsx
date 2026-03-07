@@ -1,4 +1,6 @@
-import { useState, useCallback, useMemo, createContext, useContext } from 'react'
+import { useState, useCallback, useMemo, createContext, useContext, useEffect, useRef } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
 
 export type FeatureFlag =
   | 'dashboard' | 'leads' | 'appointments' | 'deals' | 'projects' | 'admin'
@@ -29,53 +31,90 @@ const defaultFlags: Record<FeatureFlag, boolean> = {
   export: false,
 }
 
-function loadFlags(): Record<FeatureFlag, boolean> {
+// localStorage als schneller Cache (bis API antwortet)
+function loadCachedFlags(): Record<FeatureFlag, boolean> {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      // Merge with defaults (in case new features were added)
-      return { ...defaultFlags, ...parsed }
-    }
+    if (stored) return { ...defaultFlags, ...JSON.parse(stored) }
   } catch { /* ignore */ }
   return { ...defaultFlags }
 }
 
-function saveFlags(flags: Record<FeatureFlag, boolean>) {
+function saveCachedFlags(flags: Record<FeatureFlag, boolean>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(flags))
   } catch { /* ignore */ }
 }
 
-// ── Context for global state ──
+// -- Context --
 
 interface FeatureFlagContextValue {
   flags: Record<FeatureFlag, boolean>
   toggle: (id: FeatureFlag) => void
   isEnabled: (id: FeatureFlag) => boolean
+  isLoading: boolean
 }
 
 const FeatureFlagContext = createContext<FeatureFlagContextValue>({
   flags: defaultFlags,
   toggle: () => {},
   isEnabled: () => false,
+  isLoading: true,
 })
 
 export function FeatureFlagProvider({ children }: { children: React.ReactNode }) {
-  const [flags, setFlags] = useState<Record<FeatureFlag, boolean>>(loadFlags)
+  const queryClient = useQueryClient()
+  const [flags, setFlags] = useState<Record<FeatureFlag, boolean>>(loadCachedFlags)
+  const initialLoadDone = useRef(false)
+
+  // Flags vom Server laden
+  const { data: serverFlags } = useQuery({
+    queryKey: ['feature-flags'],
+    queryFn: () => api.get<{ data: Record<FeatureFlag, boolean> }>('/settings/feature-flags'),
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  })
+
+  // Server-Daten in lokalen State uebernehmen
+  useEffect(() => {
+    if (serverFlags?.data) {
+      const merged = { ...defaultFlags, ...serverFlags.data }
+      // Core features immer true
+      for (const f of coreFeatures) merged[f] = true
+      setFlags(merged)
+      saveCachedFlags(merged)
+      initialLoadDone.current = true
+    }
+  }, [serverFlags])
+
+  // Mutation: Flags auf Server speichern
+  const mutation = useMutation({
+    mutationFn: (newFlags: Record<FeatureFlag, boolean>) =>
+      api.put<{ data: Record<FeatureFlag, boolean> }>('/settings/feature-flags', newFlags),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feature-flags'] })
+    },
+  })
 
   const toggle = useCallback((id: FeatureFlag) => {
-    if (coreFeatures.includes(id)) return // Core features cannot be toggled
+    if (coreFeatures.includes(id)) return
     setFlags((prev) => {
       const next = { ...prev, [id]: !prev[id] }
-      saveFlags(next)
+      saveCachedFlags(next)
+      mutation.mutate(next)
       return next
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const isEnabled = useCallback((id: FeatureFlag) => flags[id], [flags])
 
-  const value = useMemo(() => ({ flags, toggle, isEnabled }), [flags, toggle, isEnabled])
+  const value = useMemo(() => ({
+    flags,
+    toggle,
+    isEnabled,
+    isLoading: !initialLoadDone.current && !serverFlags,
+  }), [flags, toggle, isEnabled, serverFlags])
 
   return (
     <FeatureFlagContext.Provider value={value}>
