@@ -34,7 +34,24 @@ import { authMiddleware } from './middleware/auth.js'
 export function createApp() {
   const app = express()
 
-  app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:4173',
+    process.env.CLIENT_URL,
+  ].filter(Boolean) as string[]
+
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Kein Origin (z.B. Server-zu-Server, Postman) erlauben
+      if (!origin) return callback(null, true)
+      // Netlify Preview-Deployments + Custom Domain
+      if (allowedOrigins.includes(origin) || origin.endsWith('.netlify.app')) {
+        return callback(null, true)
+      }
+      callback(new Error('CORS nicht erlaubt'))
+    },
+    credentials: true,
+  }))
   app.use(express.json({ limit: '50mb' }))
 
   // Auto-convert snake_case → camelCase in all JSON responses

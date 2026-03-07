@@ -7,7 +7,7 @@ import {
 import {
   useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
   phaseLabels, phaseColors, priorityColors, formatCHF, computePhaseProgress,
-  type Project, type ProjectPhase,
+  type Project, type ProjectPhase, type Partner, type ProjectStats,
 } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
 import ProjectDetailModal from './components/ProjectDetailModal'
@@ -326,7 +326,7 @@ function DashboardView({
   projects,
   onSelect,
 }: {
-  stats: ReturnType<typeof useProjectStats>['data'] extends { data: infer T } ? T : undefined
+  stats: ProjectStats | undefined
   riskProjects: Project[]
   projects: Project[]
   onSelect: (id: string) => void
@@ -469,10 +469,7 @@ function DashboardView({
 
 // ─── Partner View ───
 
-function PartnerView({ partners }: { partners: ReturnType<typeof usePartners>['data'] extends { data: infer T } ? T : [] }) {
-  const montagePartners = partners.filter((p) => p.type === 'montage')
-  const elektroPartners = partners.filter((p) => p.type === 'elektro')
-
+function PartnerView({ partners }: { partners: Partner[] }) {
   return (
     <div className="h-full overflow-y-auto space-y-5 pr-1">
       {/* Partner Cards */}

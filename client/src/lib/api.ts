@@ -3,12 +3,12 @@ import { getAuthToken } from '@/hooks/useAuth'
 const API_BASE = '/api/v1'
 
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
+  status: number
+
+  constructor(status: number, message: string) {
     super(message)
     this.name = 'ApiError'
+    this.status = status
   }
 }
 
