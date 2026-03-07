@@ -55,6 +55,7 @@ interface NavItem {
   hasNotification?: boolean
   featureId?: FeatureFlag
   adminOnly?: boolean
+  moduleId?: string
 }
 
 interface NavGroup {
@@ -65,40 +66,40 @@ interface NavGroup {
 const allNavGroups: NavGroup[] = [
   {
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard', featureId: 'dashboard' },
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard', featureId: 'dashboard', moduleId: 'dashboard' },
     ],
   },
   {
     label: 'Vertrieb',
     items: [
-      { to: '/leads', icon: Users, label: 'Leads', featureId: 'leads' },
-      { to: '/appointments', icon: CalendarCheck, label: 'Termine', featureId: 'appointments' },
-      { to: '/deals', icon: FileText, label: 'Angebote', featureId: 'deals' },
-      { to: '/provision', icon: Coins, label: 'Provision', featureId: 'provision' },
+      { to: '/leads', icon: Users, label: 'Leads', featureId: 'leads', moduleId: 'leads' },
+      { to: '/appointments', icon: CalendarCheck, label: 'Termine', featureId: 'appointments', moduleId: 'appointments' },
+      { to: '/deals', icon: FileText, label: 'Angebote', featureId: 'deals', moduleId: 'deals' },
+      { to: '/provision', icon: Coins, label: 'Provision', featureId: 'provision', moduleId: 'provision' },
     ],
   },
   {
     label: 'Planung',
     items: [
-      { to: '/calculations', icon: Calculator, label: 'Kalkulation', featureId: 'calculations' },
-      { to: '/projects', icon: FolderKanban, label: 'Projekte', featureId: 'projects' },
+      { to: '/calculations', icon: Calculator, label: 'Kalkulation', featureId: 'calculations', moduleId: 'calculations' },
+      { to: '/projects', icon: FolderKanban, label: 'Projekte', featureId: 'projects', moduleId: 'projects' },
     ],
   },
   {
     label: 'Betrieb',
     items: [
-      { to: '/communication', icon: Mail, label: 'Kommunikation', featureId: 'communication' },
+      { to: '/communication', icon: Mail, label: 'Kommunikation', featureId: 'communication', moduleId: 'communication' },
       { to: '/ai', icon: Sparkles, label: 'KI-Summary', featureId: 'ai' },
-      { to: '/tasks', icon: ClipboardList, label: 'Aufgaben', featureId: 'tasks' },
+      { to: '/tasks', icon: ClipboardList, label: 'Aufgaben', featureId: 'tasks', moduleId: 'tasks' },
     ],
   },
   {
     label: 'System',
     items: [
       { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true, featureId: 'notifications' },
-      { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin', adminOnly: true },
-      { to: '/export', icon: Download, label: 'Export', featureId: 'export' },
-      { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents' },
+      { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin', adminOnly: true, moduleId: 'admin' },
+      { to: '/export', icon: Download, label: 'Export', featureId: 'export', moduleId: 'export' },
+      { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents', moduleId: 'documents' },
       { to: '/features', icon: Puzzle, label: 'Features' },
     ],
   },
@@ -122,19 +123,26 @@ export default function Sidebar() {
   }, [location.pathname, setMobileOpen])
 
   const isAdminUser = user?.role === 'ADMIN' || user?.role === 'GL' || user?.role === 'GESCHAEFTSLEITUNG'
+  const userModules = user?.allowedModules ?? []
+  // Stabiler Key fuer memo-Invalidierung bei Modul-Aenderungen
+  const userModulesKey = userModules.join(',')
 
-  // Filter nav groups based on enabled features + admin-only
+  // Filter nav groups based on enabled features + admin-only + allowedModules
   const navGroups = useMemo(() => {
     return allNavGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
           if (item.adminOnly && !isAdminUser) return false
-          return !item.featureId || flags[item.featureId]
+          if (item.featureId && !flags[item.featureId]) return false
+          // Admins sehen alles, andere nur erlaubte Module
+          if (item.moduleId && !isAdminUser && !userModules.includes(item.moduleId)) return false
+          return true
         }),
       }))
       .filter((group) => group.items.length > 0)
-  }, [flags, isAdminUser])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flags, isAdminUser, userModulesKey])
 
   return (
     <>

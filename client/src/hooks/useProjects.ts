@@ -30,6 +30,7 @@ export interface ProjectActivity {
 
 export interface Project {
   id: string
+  contact_id: string
   name: string
   description: string
   kWp: number

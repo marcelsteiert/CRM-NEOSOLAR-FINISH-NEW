@@ -45,6 +45,14 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function ModuleRoute({ moduleId, children }: { moduleId: string; children: React.ReactNode }) {
+  const { user, isAdmin, isLoading } = useAuth()
+  if (isLoading) return null
+  if (isAdmin) return <>{children}</>
+  if (!user?.allowedModules?.includes(moduleId)) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
 
@@ -85,20 +93,20 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
-          <Route path="leads" element={<LeadsPage />} />
-          <Route path="appointments" element={<AppointmentsPage />} />
-          <Route path="deals" element={<DealsPage />} />
-          <Route path="calculations" element={<CalculationsPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
-          <Route path="provision" element={<ProvisionPage />} />
-          <Route path="communication" element={<CommunicationPage />} />
+          <Route index element={<ModuleRoute moduleId="dashboard"><DashboardPage /></ModuleRoute>} />
+          <Route path="leads" element={<ModuleRoute moduleId="leads"><LeadsPage /></ModuleRoute>} />
+          <Route path="appointments" element={<ModuleRoute moduleId="appointments"><AppointmentsPage /></ModuleRoute>} />
+          <Route path="deals" element={<ModuleRoute moduleId="deals"><DealsPage /></ModuleRoute>} />
+          <Route path="calculations" element={<ModuleRoute moduleId="calculations"><CalculationsPage /></ModuleRoute>} />
+          <Route path="projects" element={<ModuleRoute moduleId="projects"><ProjectsPage /></ModuleRoute>} />
+          <Route path="provision" element={<ModuleRoute moduleId="provision"><ProvisionPage /></ModuleRoute>} />
+          <Route path="communication" element={<ModuleRoute moduleId="communication"><CommunicationPage /></ModuleRoute>} />
           <Route path="ai" element={<AiSummaryPage />} />
-          <Route path="tasks" element={<TasksPage />} />
+          <Route path="tasks" element={<ModuleRoute moduleId="tasks"><TasksPage /></ModuleRoute>} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-          <Route path="export" element={<ExportPage />} />
-          <Route path="documents" element={<DocumentsPage />} />
+          <Route path="export" element={<ModuleRoute moduleId="export"><ExportPage /></ModuleRoute>} />
+          <Route path="documents" element={<ModuleRoute moduleId="documents"><DocumentsPage /></ModuleRoute>} />
           <Route path="features" element={<FeaturesPage />} />
           {/* Catch-all: redirect to dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />

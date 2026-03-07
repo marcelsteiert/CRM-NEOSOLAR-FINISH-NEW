@@ -28,6 +28,10 @@ function formatCHF(value: number) {
   return `CHF ${value.toLocaleString('de-CH')}`
 }
 
+function formatCHFExact(value: number) {
+  return `CHF ${value.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+}
+
 // ── StatCard ──
 
 function StatCard({
@@ -401,7 +405,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-[24px] font-extrabold tabular-nums text-amber">
-                    {formatCHF(m.provision)}
+                    {formatCHFExact(m.provision)}
                   </span>
                   <span className="text-[11px] text-text-dim">Provision</span>
                 </div>
@@ -431,7 +435,7 @@ export default function DashboardPage() {
                       />
                     </div>
                     <span className="text-[11px] font-semibold tabular-nums w-[70px] text-right">
-                      {m.provision > 0 ? formatCHF(m.provision) : '–'}
+                      {m.provision > 0 ? formatCHFExact(m.provision) : '–'}
                     </span>
                   </div>
                 ))}

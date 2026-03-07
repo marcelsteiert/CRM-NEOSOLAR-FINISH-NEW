@@ -10,10 +10,11 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 
 ## Tech-Stack
 - Frontend: React 19 + Vite + TypeScript, Tailwind CSS v4, React Router v7, React Query v5
-- Backend: Express v5 + TypeScript (Mock-Daten, kein DB noch)
+- Backend: Express v5 + TypeScript, Supabase (PostgreSQL + Storage)
 - State: Zustand (global), React Query (server state)
 - API: `/api/v1/...`, api.ts Helpers (api.get, api.post, api.put, api.delete)
-- Tests: Vitest v4.0.18 + Supertest (362 Tests, 14 Dateien)
+- Auth: JWT (bcryptjs + jsonwebtoken), useAuth Hook mit Auto-Refresh
+- Tests: Vitest v4.0.18 + Supertest
 
 ## Design-System
 - Dark Glassmorphism: #06080C Hintergrund, rgba(255,255,255,0.035) Glass-Cards
@@ -38,7 +39,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Hooks in client/src/hooks/ (useXxx.ts Muster wie useLeads.ts)
 - Admin-Hooks: client/src/hooks/useAdmin.ts (Products, Integrations, Webhooks, etc.)
 - Features in client/src/features/{modul}/ mit Hauptseite + components/ Unterordner
-- Backend-Routen in server/src/routes/ mit In-Memory Mock-Daten
+- Backend-Routen in server/src/routes/ mit Supabase-Abfragen
 - Admin-Backend: server/src/routes/admin/ (products, integrations, webhooks, auditLog, branding, aiSettings, notifSettings, docTemplates, dbExport)
 - Alle Modals: fixed inset-0 z-[90], Backdrop blur, Escape-Handler
 - Formulare: glass-input Klasse, btn-primary / btn-secondary Buttons
@@ -46,12 +47,12 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - Mobile Sidebar: Drawer-Overlay mit Backdrop, translate-x Animation, md:translate-x-0 Desktop
 - Error Boundary in main.tsx fuer App-weite Fehleranzeige
 - Express Route-Order: Statische Routen VOR parametrische (z.B. /reorder vor /:id)
+- Alle Entitaeten haben `contact_id` fuer Pipeline-uebergreifende Verknuepfung
 
 ## Workflow
 - Aenderungen automatisch durchfuehren ohne Bestaetigung zu verlangen
 - Nach jedem abgeschlossenen Feature/Stand: Git commit
 - TypeScript mit `npx tsc --noEmit` pruefen vor Commit
-- Tests mit `npx vitest run` (181 Tests, 7 Dateien)
 
 ## Module (Status)
 - [x] Lead Hub (v2, After Sales Tab, Termin-Typ Filter, responsive)
@@ -59,13 +60,15 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [x] Angebote Hub (v2, Aktivitaeten-Log, winProbability %, Follow-Up, Dismiss, responsive)
 - [x] Projekte (Kanban, Dashboard, Partner, Detail-Modal, responsive)
 - [x] Deal→Projekt (Auto-Konvertierung bei Gewonnen)
-- [x] Provision (Monatsstatistiken, responsive)
+- [x] Provision (Monatsstatistiken, exakte CHF-Anzeige, responsive)
 - [x] Tasks-System Backend (moduluebergreifend, zuweisbar, CRUD + Stats)
-- [x] Sidebar (Expandable + Mobile Drawer)
+- [x] Sidebar (Expandable + Mobile Drawer + allowedModules Filter)
 - [x] Admin-Menue (15 Sektionen mit linker Tab-Navigation, responsive)
 - [x] Features-Seite (14 togglebare Module, responsive)
 - [x] Responsive Design (alle Seiten Mobile-First)
-- [ ] Dashboard (Monatsstatistik, Provision, Tasks-Integration)
+- [x] Dashboard (KPI, KI-Briefing, Tasks, Monatsstatistik, Provision)
+- [x] Modul-Berechtigungen (Sidebar + Routes + Admin-Matrix pro User)
+- [x] Dokumentenablage (Pipeline-uebergreifend, Supabase Storage, Base64 Upload)
 - [ ] Kalkulation
 - [ ] Rechnungen
 - [ ] Kommunikation
@@ -73,13 +76,13 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [ ] Aufgaben (Frontend-Seite)
 - [ ] Meldungen
 - [ ] Export
-- [ ] Dokumente
+- [ ] Dokumente (eigene Seite)
 
 ## Admin-Menue (14 Sektionen)
 Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 
 ### Sektionen
-1. **Benutzer & Rollen** - CRUD, individuelle Modul-Berechtigungen pro User, Rollen-Defaults
+1. **Benutzer & Rollen** - CRUD, individuelle Modul-Berechtigungen pro User (Tabelle), Rollen-Defaults
 2. **Firmenstandorte** - Multi-Standort, primaer fuer Fahrzeit
 3. **Pipeline-Verwaltung** - CRUD Pipelines + Buckets, Reorder, Delete
 4. **Stammdaten/Preisdatenbank** - PV-Module, Wechselrichter, Batterien, Installation, Partner (CHF)
@@ -104,9 +107,24 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 ## Rollen & Berechtigungen
 - UserRole: ADMIN, VERTRIEB, PROJEKTLEITUNG, BUCHHALTUNG, GL
 - Jeder User hat `allowedModules: string[]` fuer individuelle Berechtigungen
+- Spezial-Berechtigungen: canDelete, canExport, canImport (auch in allowedModules)
 - `defaultModulesByRole` Map definiert Standards pro Rolle
 - Bei Rollenwechsel: Module werden auf Defaults zurueckgesetzt (ausser explizit ueberschrieben)
 - Backend: GET /users/role-defaults liefert Standardberechtigungen
+- Sidebar filtert Nav-Items nach user.allowedModules (Admins sehen alles)
+- App.tsx: ModuleRoute Wrapper prueft allowedModules pro Route
+- useAuth: Auto-Refresh bei Window-Focus + alle 30s (Berechtigungsaenderungen greifen sofort)
+- Admin-Panel: Individuelle Berechtigungs-Matrix pro User (Tabelle mit Zugriff-Toggle + Standard-Vergleich)
+- Loeschen nur fuer Admins oder User mit canDelete-Berechtigung
+
+## Dokumentenablage (Pipeline-uebergreifend)
+- Alle Dokumente werden ueber `contact_id` verknuepft (nicht entity_id)
+- DocumentSection zeigt ALLE Dokumente eines Kontakts gruppiert nach Phase (Lead/Termin/Angebot/Projekt)
+- Upload: Base64-Konvertierung im Frontend, Supabase Storage im Backend
+- Storage-Pfad: `{contactId}/{entityType}/{timestamp}_{fileName}`
+- Backend: GET /documents?contactId=xxx, POST mit fileBase64 + contactId
+- Hooks: useContactDocuments(contactId), useUploadDocument(), useDeleteDocument()
+- Eingebaut in: LeadDetailModal, AppointmentDetailModal, DealDetailModal, ProjectDetailModal
 
 ## Angebote-Features (v2)
 - Aktivitaeten-Log: Persistent, Typ (NOTE/CALL/EMAIL/MEETING/STATUS_CHANGE/SYSTEM)
@@ -114,6 +132,8 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - followUpDate: Manuell setzbar + automatisches Follow-Up System
 - Follow-Up Dismiss: Pflicht-Notiz, updatedAt wird zurueckgesetzt
 - Gewonnen-Flow: Bestaetigung → Projekt (geplant: Checkliste + Upload)
+- Admin kann geschlossene Deals (GEWONNEN/VERLOREN) bearbeiten und Phasen zurueckschieben
+- Zugewiesen-an Spalte + Verkaufer-Filter (Admin)
 
 ## Tasks-System
 - Module: LEAD, TERMIN, ANGEBOT, PROJEKT, ALLGEMEIN
@@ -121,17 +141,14 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - Zuweisbar: assignedTo + assignedBy (an sich selbst oder andere)
 - referenceId/referenceTitle: Verknuepfung zu Lead/Termin/Angebot/Projekt
 
-## Tests
-- 362 Tests in 14 Dateien, alle gruen
-- leads.test.ts (39), appointments.test.ts (28), deals.test.ts (27), settings.test.ts (14)
-- users.test.ts (19), pipelines.test.ts (16), admin.test.ts (38)
-- projects.test.ts, tasks.test.ts, provision.test.ts, dashboard.test.ts + weitere
-- admin.test.ts: CRM-Integrationstests (referenzielle Integritaet zwischen Modulen)
+## Auto-Zuweisung
+- Leads, Termine, Angebote: Bei Erstellung wird der eingeloggte User automatisch zugewiesen
+- Backend-Pattern: `assigned_to: result.data.assignedTo ?? req.user?.userId ?? null`
+- Admin kann Zuweisung in Detail-Modals aendern (Dropdown)
 
 ## Geplante Features (Backlog)
 - Lead: km-Entfernung und Fahrzeit zum Kunden anzeigen
 - Lead: Outlook-Schnittstelle fuer Termine direkt eintragen und bestaetigen
-- Dashboard: Monatsstatistik (Termine, Abschluesse pro Monat)
 - Buchhaltung/Admin: 5% Provision auf Monatsabschluesse, druckbar
 - Aufgaben: Aus jedem Tab zuweisbar, Dashboard-Integration
 - Gewonnen → Projekt: Checkliste + Upload-Funktionen + Angaben pruefen

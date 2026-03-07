@@ -1246,7 +1246,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
           {/* ────────── TAB 4: Dokumente ────────── */}
           {activeTab === 'documents' && (
-            <DocumentSection entityType="LEAD" entityId={lead.id} />
+            <DocumentSection contactId={lead.contact_id} entityType="LEAD" entityId={lead.id} />
           )}
 
           {/* ────────── TAB 5: Erinnerungen ────────── */}

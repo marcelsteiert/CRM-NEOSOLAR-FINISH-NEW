@@ -629,7 +629,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
 
               {/* Dokumente */}
               <div className="glass-card p-4">
-                <DocumentSection entityType="PROJEKT" entityId={project.id} />
+                <DocumentSection contactId={project.contact_id} entityType="PROJEKT" entityId={project.id} />
               </div>
 
               {/* Aktivitäten */}

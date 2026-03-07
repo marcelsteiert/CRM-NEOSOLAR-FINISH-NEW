@@ -415,7 +415,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
           </div>
 
           {/* Dokumente */}
-          <DocumentSection entityType="TERMIN" entityId={appt.id} />
+          <DocumentSection contactId={appt.contact_id} entityType="TERMIN" entityId={appt.id} />
         </div>
 
         {/* Footer */}

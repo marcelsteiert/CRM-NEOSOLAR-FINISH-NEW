@@ -22,6 +22,7 @@ export interface ChecklistItem {
 
 export interface Appointment {
   id: string
+  contact_id: string
   leadId: string | null
   contactName: string
   contactEmail: string

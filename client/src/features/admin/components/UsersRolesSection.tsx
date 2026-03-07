@@ -534,84 +534,137 @@ export default function UsersRolesSection() {
                 />
               </div>
 
-              {/* Expanded: Module Permissions (direkt editierbar) */}
+              {/* Expanded: Berechtigungs-Matrix pro User */}
               {isExpanded && (
                 <div className="px-5 pb-4 pt-3 border-t border-border">
-                  <p className="text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-2">
-                    Module ({modules.filter((m) => ALL_MODULES.some((am) => am.id === m)).length}/{ALL_MODULES.length})
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {ALL_MODULES.map((mod) => {
-                      const has = modules.includes(mod.id)
-                      return (
-                        <button
-                          key={mod.id}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const next = has
-                              ? modules.filter((m) => m !== mod.id)
-                              : [...modules, mod.id]
-                            updateUser.mutate({ id: user.id, allowedModules: next })
-                          }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all hover:scale-105"
-                          style={{
-                            background: has
-                              ? `color-mix(in srgb, ${color} 12%, transparent)`
-                              : 'rgba(255,255,255,0.02)',
-                            color: has ? color : '#475569',
-                            border: `1px solid ${has ? `color-mix(in srgb, ${color} 20%, transparent)` : 'rgba(255,255,255,0.06)'}`,
-                          }}
-                        >
-                          <div
-                            className="w-3 h-3 rounded flex items-center justify-center shrink-0"
-                            style={{ background: has ? color : 'rgba(255,255,255,0.06)' }}
-                          >
-                            {has && <Check size={8} strokeWidth={3} className="text-white" />}
-                          </div>
-                          {mod.label}
-                        </button>
-                      )
-                    })}
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+                      Individuelle Berechtigungen ({modules.filter((m) => ALL_MODULES.some((am) => am.id === m)).length}/{ALL_MODULES.length} Module)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const defaults = getDefaults(user.role)
+                        updateUser.mutate({ id: user.id, allowedModules: defaults })
+                      }}
+                      className="flex items-center gap-1 text-[10px] text-text-dim hover:text-amber transition-colors"
+                    >
+                      <RotateCcw size={10} strokeWidth={2} />
+                      Standard laden
+                    </button>
                   </div>
 
-                  {/* Spezial-Berechtigungen */}
-                  <p className="text-[10px] font-semibold text-text-dim uppercase tracking-wider mt-3 mb-2">
-                    Spezial-Berechtigungen
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {ALL_PERMISSIONS.map((perm) => {
-                      const has = modules.includes(perm.id)
-                      return (
-                        <button
-                          key={perm.id}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            const next = has
-                              ? modules.filter((m) => m !== perm.id)
-                              : [...modules, perm.id]
-                            updateUser.mutate({ id: user.id, allowedModules: next })
-                          }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium cursor-pointer transition-all hover:scale-105"
-                          style={{
-                            background: has
-                              ? 'color-mix(in srgb, #F87171 12%, transparent)'
-                              : 'rgba(255,255,255,0.02)',
-                            color: has ? '#F87171' : '#475569',
-                            border: `1px solid ${has ? 'color-mix(in srgb, #F87171 20%, transparent)' : 'rgba(255,255,255,0.06)'}`,
-                          }}
-                        >
-                          <div
-                            className="w-3 h-3 rounded flex items-center justify-center shrink-0"
-                            style={{ background: has ? '#F87171' : 'rgba(255,255,255,0.06)' }}
-                          >
-                            {has && <Check size={8} strokeWidth={3} className="text-white" />}
-                          </div>
-                          {perm.label}
-                        </button>
-                      )
-                    })}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 py-1.5 w-[160px]">Modul</th>
+                          <th className="text-center text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 py-1.5 w-[80px]">Zugriff</th>
+                          <th className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 py-1.5">
+                            Standard ({roleLabels[user.role]})
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ALL_MODULES.map((mod) => {
+                          const has = modules.includes(mod.id)
+                          const isDefault = getDefaults(user.role).includes(mod.id)
+                          const isDifferent = has !== isDefault
+                          return (
+                            <tr key={mod.id} className="border-b border-border/50 hover:bg-surface-hover/50 transition-colors">
+                              <td className="px-3 py-1.5 text-[11px] text-text-sec">{mod.label}</td>
+                              <td className="text-center px-3 py-1.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const next = has
+                                      ? modules.filter((m) => m !== mod.id)
+                                      : [...modules, mod.id]
+                                    updateUser.mutate({ id: user.id, allowedModules: next })
+                                  }}
+                                  className="w-6 h-6 rounded-md mx-auto flex items-center justify-center cursor-pointer transition-all hover:scale-110"
+                                  style={{
+                                    background: has
+                                      ? `color-mix(in srgb, ${color} 18%, transparent)`
+                                      : 'rgba(255,255,255,0.03)',
+                                    border: `1px solid ${has ? `color-mix(in srgb, ${color} 25%, transparent)` : 'rgba(255,255,255,0.06)'}`,
+                                  }}
+                                >
+                                  {has && <Check size={13} strokeWidth={2.5} style={{ color }} />}
+                                </button>
+                              </td>
+                              <td className="px-3 py-1.5">
+                                {isDifferent && (
+                                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+                                    style={{
+                                      background: has ? 'color-mix(in srgb, #34D399 12%, transparent)' : 'color-mix(in srgb, #F87171 12%, transparent)',
+                                      color: has ? '#34D399' : '#F87171',
+                                    }}>
+                                    {has ? 'Zusätzlich' : 'Entfernt'}
+                                  </span>
+                                )}
+                                {!isDifferent && isDefault && (
+                                  <span className="text-[9px] text-text-dim">Standard</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                        {/* Spezial-Berechtigungen Separator */}
+                        <tr>
+                          <td colSpan={3} className="pt-2 pb-1 px-3">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-text-dim">Spezial-Berechtigungen</span>
+                          </td>
+                        </tr>
+                        {ALL_PERMISSIONS.map((perm) => {
+                          const has = modules.includes(perm.id)
+                          const isDefault = getDefaults(user.role).includes(perm.id)
+                          const isDifferent = has !== isDefault
+                          return (
+                            <tr key={perm.id} className="border-b border-border/50 hover:bg-surface-hover/50 transition-colors">
+                              <td className="px-3 py-1.5 text-[11px] text-red font-medium">{perm.label}</td>
+                              <td className="text-center px-3 py-1.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const next = has
+                                      ? modules.filter((m) => m !== perm.id)
+                                      : [...modules, perm.id]
+                                    updateUser.mutate({ id: user.id, allowedModules: next })
+                                  }}
+                                  className="w-6 h-6 rounded-md mx-auto flex items-center justify-center cursor-pointer transition-all hover:scale-110"
+                                  style={{
+                                    background: has
+                                      ? 'color-mix(in srgb, #F87171 18%, transparent)'
+                                      : 'rgba(255,255,255,0.03)',
+                                    border: `1px solid ${has ? 'color-mix(in srgb, #F87171 25%, transparent)' : 'rgba(255,255,255,0.06)'}`,
+                                  }}
+                                >
+                                  {has && <Check size={13} strokeWidth={2.5} style={{ color: '#F87171' }} />}
+                                </button>
+                              </td>
+                              <td className="px-3 py-1.5">
+                                {isDifferent && (
+                                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded"
+                                    style={{
+                                      background: has ? 'color-mix(in srgb, #34D399 12%, transparent)' : 'color-mix(in srgb, #F87171 12%, transparent)',
+                                      color: has ? '#34D399' : '#F87171',
+                                    }}>
+                                    {has ? 'Zusätzlich' : 'Entfernt'}
+                                  </span>
+                                )}
+                                {!isDifferent && isDefault && (
+                                  <span className="text-[9px] text-text-dim">Standard</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
 
                   <p className="text-[10px] text-text-dim mt-3">

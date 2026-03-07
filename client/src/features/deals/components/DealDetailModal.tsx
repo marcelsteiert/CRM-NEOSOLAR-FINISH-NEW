@@ -543,7 +543,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           </div>
 
           {/* Dokumente */}
-          <DocumentSection entityType="ANGEBOT" entityId={deal.id} />
+          <DocumentSection contactId={deal.contact_id} entityType="ANGEBOT" entityId={deal.id} />
 
           {/* ── Activities Log ── */}
           <div>

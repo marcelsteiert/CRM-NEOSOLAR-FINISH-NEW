@@ -15,6 +15,7 @@ export type LeadStatus = 'ACTIVE' | 'CONVERTED' | 'LOST' | 'ARCHIVED' | 'AFTER_S
 
 export interface Lead {
   id: string
+  contact_id: string
   firstName: string | null
   lastName: string | null
   company: string | null

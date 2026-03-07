@@ -38,6 +38,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
   const [isLoading, setIsLoading] = useState(true)
 
+  // User-Daten vom Server holen (frische allowedModules etc.)
+  const refreshUser = useCallback(() => {
+    if (!token) return
+    fetch(`${API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Token ungueltig')
+        const body = await res.json()
+        const userData = body.data
+        setUser(userData)
+        localStorage.setItem(USER_KEY, JSON.stringify(userData))
+      })
+      .catch(() => {
+        setToken(null)
+        setUser(null)
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(USER_KEY)
+      })
+  }, [token])
+
   // Token validieren beim Start
   useEffect(() => {
     if (!token) {
@@ -56,7 +77,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(USER_KEY, JSON.stringify(userData))
       })
       .catch(() => {
-        // Token ungueltig - ausloggen
         setToken(null)
         setUser(null)
         localStorage.removeItem(TOKEN_KEY)
@@ -64,6 +84,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => setIsLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Berechtigungen automatisch aktualisieren: bei Window-Focus + alle 30 Sekunden
+  useEffect(() => {
+    if (!token) return
+
+    const onFocus = () => refreshUser()
+    window.addEventListener('focus', onFocus)
+
+    const interval = setInterval(refreshUser, 30_000)
+
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      clearInterval(interval)
+    }
+  }, [token, refreshUser])
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await fetch(`${API_BASE}/auth/login`, {
