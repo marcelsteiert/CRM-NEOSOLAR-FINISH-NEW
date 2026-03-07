@@ -128,15 +128,21 @@ export default function Sidebar() {
   const userModulesKey = userModules.join(',')
 
   // Filter nav groups based on enabled features + admin-only + allowedModules
+  // Prioritaet: allowedModules uebersteuert Feature-Flags
   const navGroups = useMemo(() => {
     return allNavGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
           if (item.adminOnly && !isAdminUser) return false
-          if (item.featureId && !flags[item.featureId]) return false
-          // Admins sehen alles, andere nur erlaubte Module
-          if (item.moduleId && !isAdminUser && !userModules.includes(item.moduleId)) return false
+          // Admins sehen alles
+          if (isAdminUser) return true
+          // Wenn User dieses Modul explizit hat → anzeigen (Feature-Flag ignorieren)
+          if (item.moduleId && userModules.includes(item.moduleId)) return true
+          // Kein moduleId (z.B. KI-Summary, Features) → Feature-Flag entscheidet
+          if (!item.moduleId && item.featureId && !flags[item.featureId]) return false
+          // Modul nicht in allowedModules → ausblenden
+          if (item.moduleId && !userModules.includes(item.moduleId)) return false
           return true
         }),
       }))
