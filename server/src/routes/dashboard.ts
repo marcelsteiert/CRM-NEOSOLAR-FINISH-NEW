@@ -1,119 +1,155 @@
-import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { supabase } from '../lib/supabase.js'
+import { AppError } from '../middleware/errorHandler.js'
 
-const router = Router();
-
-// ---------------------------------------------------------------------------
-// Importiere Mock-Daten aus den anderen Routen (Re-Export Helpers)
-// In einer echten App wuerden diese aus einer Datenbank kommen.
-// Hier bauen wir die Dashboard-Aggregation direkt aus den API-Endpunkten.
-// ---------------------------------------------------------------------------
-
-// Wir nutzen interne Helper um die Daten direkt zu holen, ohne HTTP-Requests.
-// Da alle Mock-Daten in-memory sind, exportieren wir Accessor-Funktionen.
+const router = Router()
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/dashboard/stats
-// Aggregierte Statistiken für das Dashboard
 // ---------------------------------------------------------------------------
 
 router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const { assignedTo } = req.query;
-    const userQs = assignedTo ? `?assignedTo=${assignedTo}` : '';
+    const { assignedTo } = req.query
 
-    // Parallel interne API Calls
-    const [dealsRes, appointmentsRes, tasksRes] = await Promise.all([
-      fetch(`${baseUrl}/api/v1/deals/stats${userQs}`),
-      fetch(`${baseUrl}/api/v1/appointments/stats${userQs}`),
-      fetch(`${baseUrl}/api/v1/tasks/stats${userQs ? `?assignedTo=${assignedTo}` : ''}`),
-    ]);
+    // Deals stats
+    let dealsQuery = supabase.from('deals').select('*').is('deleted_at', null)
+    if (assignedTo && typeof assignedTo === 'string') dealsQuery = dealsQuery.eq('assigned_to', assignedTo)
+    const { data: deals } = await dealsQuery
+    const allDeals = deals ?? []
 
-    const dealsData = await dealsRes.json();
-    const appointmentsData = await appointmentsRes.json();
-    const tasksData = await tasksRes.json();
+    const openDeals = allDeals.filter((d: any) => !['GEWONNEN', 'VERLOREN'].includes(d.stage))
+    const wonDeals = allDeals.filter((d: any) => d.stage === 'GEWONNEN')
+    const lostDeals = allDeals.filter((d: any) => d.stage === 'VERLOREN')
+    const pipelineValue = openDeals.reduce((s: number, d: any) => s + (d.value ?? 0), 0)
+    const weightedPipelineValue = openDeals.reduce((s: number, d: any) => s + ((d.value ?? 0) * ((d.win_probability ?? 50) / 100)), 0)
+    const totalValue = allDeals.reduce((s: number, d: any) => s + (d.value ?? 0), 0)
+    const avgDealValue = allDeals.length > 0 ? Math.round(totalValue / allDeals.length) : 0
+    const winRate = (wonDeals.length + lostDeals.length) > 0
+      ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100)
+      : 0
+
+    // Stage-Aggregation
+    const stages: Record<string, { count: number; value: number }> = {}
+    for (const d of allDeals) {
+      const stage = (d as any).stage ?? 'UNBEKANNT'
+      if (!stages[stage]) stages[stage] = { count: 0, value: 0 }
+      stages[stage].count++
+      stages[stage].value += (d as any).value ?? 0
+    }
+
+    // Appointments stats
+    let apptQuery = supabase.from('appointments').select('*').is('deleted_at', null)
+    if (assignedTo && typeof assignedTo === 'string') apptQuery = apptQuery.eq('assigned_to', assignedTo)
+    const { data: appointments } = await apptQuery
+    const allAppts = appointments ?? []
+
+    const now = new Date()
+    const upcoming = allAppts.filter((a: any) =>
+      ['GEPLANT', 'BESTAETIGT'].includes(a.status) && a.appointment_date && new Date(a.appointment_date) >= now
+    ).length
+    const completedAppts = allAppts.filter((a: any) => a.status === 'DURCHGEFUEHRT').length
+    const cancelledAppts = allAppts.filter((a: any) => a.status === 'ABGESAGT').length
+    const apptTotalValue = allAppts.reduce((s: number, a: any) => s + (a.value ?? 0), 0)
+
+    // Tasks stats
+    let tasksQuery = supabase.from('tasks').select('*').is('deleted_at', null)
+    if (assignedTo && typeof assignedTo === 'string') tasksQuery = tasksQuery.eq('assigned_to', assignedTo)
+    const { data: tasks } = await tasksQuery
+    const allTasks = tasks ?? []
+
+    const openTasks = allTasks.filter((t: any) => t.status === 'OFFEN').length
+    const inProgress = allTasks.filter((t: any) => t.status === 'IN_BEARBEITUNG').length
+    const completedTasks = allTasks.filter((t: any) => t.status === 'ERLEDIGT').length
+    const overdue = allTasks.filter(
+      (t: any) => t.status !== 'ERLEDIGT' && t.due_date && new Date(t.due_date) < now
+    ).length
 
     res.json({
       data: {
-        deals: dealsData.data,
-        appointments: appointmentsData.data,
-        tasks: tasksData.data,
+        deals: {
+          totalDeals: allDeals.length,
+          totalValue,
+          pipelineValue,
+          weightedPipelineValue: Math.round(weightedPipelineValue),
+          stages,
+          avgDealValue,
+          wonDeals: wonDeals.length,
+          lostDeals: lostDeals.length,
+          winRate,
+        },
+        appointments: {
+          total: allAppts.length,
+          upcoming,
+          totalValue: apptTotalValue,
+          completed: completedAppts,
+          cancelled: cancelledAppts,
+          checklistProgress: 0,
+        },
+        tasks: {
+          open: openTasks,
+          inProgress,
+          completed: completedTasks,
+          overdue,
+          total: allTasks.length,
+        },
       },
-    });
+    })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/dashboard/monthly
-// Monatliche Statistiken: Abschlüsse + Termine pro Monat + Provision
 // ---------------------------------------------------------------------------
 
 router.get('/monthly', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const { assignedTo } = req.query;
-    const userQs = assignedTo ? `&assignedTo=${assignedTo}` : '';
+    const { assignedTo } = req.query
 
-    // Hole alle Deals und Termine
-    const [dealsRes, appointmentsRes] = await Promise.all([
-      fetch(`${baseUrl}/api/v1/deals?pageSize=1000${userQs}`),
-      fetch(`${baseUrl}/api/v1/appointments?pageSize=1000${userQs}`),
-    ]);
+    let dealsQuery = supabase.from('deals').select('*').is('deleted_at', null)
+    if (assignedTo && typeof assignedTo === 'string') dealsQuery = dealsQuery.eq('assigned_to', assignedTo)
+    const { data: deals } = await dealsQuery
 
-    const dealsBody = await dealsRes.json();
-    const appointmentsBody = await appointmentsRes.json();
+    let apptQuery = supabase.from('appointments').select('*').is('deleted_at', null)
+    if (assignedTo && typeof assignedTo === 'string') apptQuery = apptQuery.eq('assigned_to', assignedTo)
+    const { data: appointments } = await apptQuery
 
-    const deals = dealsBody.data || [];
-    const appointments = appointmentsBody.data || [];
+    const allDeals = deals ?? []
+    const allAppts = appointments ?? []
 
-    // Monats-Aggregation: letzte 12 Monate
-    const months: {
-      month: string; // YYYY-MM
-      label: string; // z.B. "Mär 2026"
-      wonDeals: number;
-      wonValue: number;
-      lostDeals: number;
-      totalAppointments: number;
-      completedAppointments: number;
-      provision: number; // 5% auf wonValue
-    }[] = [];
-
-    const now = new Date();
-    const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    const months: any[] = []
+    const now = new Date()
+    const monthNames = ['Jan', 'Feb', 'Maer', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = `${monthNames[d.getMonth()]} ${d.getFullYear()}`
 
-      // Gewonnene Deals in diesem Monat (basierend auf closedAt)
-      const wonInMonth = deals.filter((deal: { stage: string; closedAt: string | null }) => {
-        if (deal.stage !== 'GEWONNEN' || !deal.closedAt) return false;
-        const closed = new Date(deal.closedAt);
-        return closed.getFullYear() === d.getFullYear() && closed.getMonth() === d.getMonth();
-      });
+      const wonInMonth = allDeals.filter((deal: any) => {
+        if (deal.stage !== 'GEWONNEN' || !deal.closed_at) return false
+        const closed = new Date(deal.closed_at)
+        return closed.getFullYear() === d.getFullYear() && closed.getMonth() === d.getMonth()
+      })
 
-      const lostInMonth = deals.filter((deal: { stage: string; closedAt: string | null }) => {
-        if (deal.stage !== 'VERLOREN' || !deal.closedAt) return false;
-        const closed = new Date(deal.closedAt);
-        return closed.getFullYear() === d.getFullYear() && closed.getMonth() === d.getMonth();
-      });
+      const lostInMonth = allDeals.filter((deal: any) => {
+        if (deal.stage !== 'VERLOREN' || !deal.closed_at) return false
+        const closed = new Date(deal.closed_at)
+        return closed.getFullYear() === d.getFullYear() && closed.getMonth() === d.getMonth()
+      })
 
-      const wonValue = wonInMonth.reduce((s: number, deal: { value: number }) => s + deal.value, 0);
+      const wonValue = wonInMonth.reduce((s: number, deal: any) => s + (deal.value ?? 0), 0)
 
-      // Termine in diesem Monat
-      const appointmentsInMonth = appointments.filter((a: { appointmentDate: string | null }) => {
-        if (!a.appointmentDate) return false;
-        const ad = new Date(a.appointmentDate);
-        return ad.getFullYear() === d.getFullYear() && ad.getMonth() === d.getMonth();
-      });
+      const appointmentsInMonth = allAppts.filter((a: any) => {
+        if (!a.appointment_date) return false
+        const ad = new Date(a.appointment_date)
+        return ad.getFullYear() === d.getFullYear() && ad.getMonth() === d.getMonth()
+      })
 
-      const completedInMonth = appointmentsInMonth.filter(
-        (a: { status: string }) => a.status === 'DURCHGEFUEHRT',
-      );
+      const completedInMonth = appointmentsInMonth.filter((a: any) => a.status === 'DURCHGEFUEHRT')
 
       months.push({
         month: key,
@@ -124,102 +160,85 @@ router.get('/monthly', async (req: Request, res: Response, next: NextFunction) =
         totalAppointments: appointmentsInMonth.length,
         completedAppointments: completedInMonth.length,
         provision: Math.round(wonValue * 0.05 * 100) / 100,
-      });
+      })
     }
 
-    res.json({ data: months });
+    res.json({ data: months })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/dashboard/provision
-// Provisions-Berechnung pro Verkäufer für einen Monat
 // ---------------------------------------------------------------------------
 
 router.get('/provision', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const { month } = req.query; // Format: YYYY-MM
+    const { month } = req.query
 
-    // Hole alle Deals und User
     const [dealsRes, usersRes] = await Promise.all([
-      fetch(`${baseUrl}/api/v1/deals?pageSize=1000`),
-      fetch(`${baseUrl}/api/v1/users`),
-    ]);
+      supabase.from('deals').select('*').is('deleted_at', null),
+      supabase.from('users').select('*'),
+    ])
 
-    const dealsBody = await dealsRes.json();
-    const usersBody = await usersRes.json();
+    const allDeals = dealsRes.data ?? []
+    const allUsers = usersRes.data ?? []
 
-    const deals = dealsBody.data || [];
-    const users = usersBody.data || [];
+    const targetMonth = typeof month === 'string' ? month : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+    const [yearStr, monthStr] = targetMonth.split('-')
+    const targetYear = parseInt(yearStr, 10)
+    const targetMon = parseInt(monthStr, 10) - 1
 
-    // Ziel-Monat bestimmen
-    const targetMonth = typeof month === 'string' ? month : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    const [yearStr, monthStr] = targetMonth.split('-');
-    const targetYear = parseInt(yearStr, 10);
-    const targetMon = parseInt(monthStr, 10) - 1;
+    const wonDeals = allDeals.filter((deal: any) => {
+      if (deal.stage !== 'GEWONNEN' || !deal.closed_at) return false
+      const closed = new Date(deal.closed_at)
+      return closed.getFullYear() === targetYear && closed.getMonth() === targetMon
+    })
 
-    // Gewonnene Deals im Zielmonat
-    const wonDeals = deals.filter((deal: { stage: string; closedAt: string | null }) => {
-      if (deal.stage !== 'GEWONNEN' || !deal.closedAt) return false;
-      const closed = new Date(deal.closedAt);
-      return closed.getFullYear() === targetYear && closed.getMonth() === targetMon;
-    });
-
-    // Gruppierung nach Verkäufer
-    const byUser: Record<string, { deals: { title: string; value: number; closedAt: string }[]; totalValue: number; provision: number }> = {};
+    const byUser: Record<string, { deals: any[]; totalValue: number; provision: number }> = {}
 
     for (const deal of wonDeals) {
-      const userId = (deal as { assignedTo: string | null }).assignedTo || 'unassigned';
-      if (!byUser[userId]) {
-        byUser[userId] = { deals: [], totalValue: 0, provision: 0 };
-      }
+      const userId = (deal as any).assigned_to || 'unassigned'
+      if (!byUser[userId]) byUser[userId] = { deals: [], totalValue: 0, provision: 0 }
       byUser[userId].deals.push({
-        title: (deal as { title: string }).title,
-        value: (deal as { value: number }).value,
-        closedAt: (deal as { closedAt: string }).closedAt,
-      });
-      byUser[userId].totalValue += (deal as { value: number }).value;
+        title: (deal as any).title,
+        value: (deal as any).value ?? 0,
+        closedAt: (deal as any).closed_at,
+      })
+      byUser[userId].totalValue += (deal as any).value ?? 0
     }
 
-    // Provision berechnen (5%)
     for (const userId of Object.keys(byUser)) {
-      byUser[userId].provision = Math.round(byUser[userId].totalValue * 0.05 * 100) / 100;
+      byUser[userId].provision = Math.round(byUser[userId].totalValue * 0.05 * 100) / 100
     }
 
-    // User-Infos anreichern
     const provisions = Object.entries(byUser).map(([userId, data]) => {
-      const user = users.find((u: { id: string }) => u.id === userId);
+      const user = allUsers.find((u: any) => u.id === userId)
       return {
         userId,
-        userName: user ? `${(user as { firstName: string }).firstName} ${(user as { lastName: string }).lastName}` : 'Unbekannt',
-        userRole: user ? (user as { role: string }).role : '',
+        userName: user ? `${user.first_name} ${user.last_name}` : 'Unbekannt',
+        userRole: user ? user.role : '',
         deals: data.deals,
         totalValue: data.totalValue,
         provisionRate: 0.05,
         provision: data.provision,
-      };
-    });
+      }
+    })
 
-    const totalValue = provisions.reduce((s, p) => s + p.totalValue, 0);
-    const totalProvision = provisions.reduce((s, p) => s + p.provision, 0);
+    const totalValue = provisions.reduce((s, p) => s + p.totalValue, 0)
+    const totalProvision = provisions.reduce((s, p) => s + p.provision, 0)
 
     res.json({
       data: {
         month: targetMonth,
         provisions,
-        summary: {
-          totalValue,
-          totalProvision,
-          totalDeals: wonDeals.length,
-        },
+        summary: { totalValue, totalProvision, totalDeals: wonDeals.length },
       },
-    });
+    })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
-export default router;
+export default router

@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import healthRouter from './routes/health.js'
+import contactsRouter from './routes/contacts.js'
 import leadsRouter from './routes/leads.js'
 import pipelinesRouter from './routes/pipelines.js'
 import tagsRouter from './routes/tags.js'
@@ -25,15 +26,26 @@ import adminNotifSettingsRouter from './routes/admin/notifSettings.js'
 import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
 import adminDbExportRouter from './routes/admin/dbExport.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { mapKeys } from './lib/caseMapper.js'
 
 export function createApp() {
   const app = express()
 
   app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
-  app.use(express.json())
+  app.use(express.json({ limit: '50mb' }))
+
+  // Auto-convert snake_case → camelCase in all JSON responses
+  app.use((_req, res, next) => {
+    const originalJson = res.json.bind(res)
+    res.json = (body: any) => {
+      return originalJson(mapKeys(body))
+    }
+    next()
+  })
 
   // Routes
   app.use('/api/v1/health', healthRouter)
+  app.use('/api/v1/contacts', contactsRouter)
   app.use('/api/v1/leads', leadsRouter)
   app.use('/api/v1/pipelines', pipelinesRouter)
   app.use('/api/v1/tags', tagsRouter)

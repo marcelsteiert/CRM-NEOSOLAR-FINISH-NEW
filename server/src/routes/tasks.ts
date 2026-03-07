@@ -1,40 +1,17 @@
-import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AppError } from '../middleware/errorHandler.js';
+import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { z } from 'zod'
+import { supabase } from '../lib/supabase.js'
+import { AppError } from '../middleware/errorHandler.js'
 
-const router = Router();
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type TaskStatus = 'OFFEN' | 'IN_BEARBEITUNG' | 'ERLEDIGT';
-type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-type TaskModule = 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT' | 'ALLGEMEIN';
-
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  status: TaskStatus;
-  priority: TaskPriority;
-  module: TaskModule;
-  referenceId: string | null; // ID of related lead/appointment/deal/project
-  referenceTitle: string | null; // Display title of related entity
-  assignedTo: string;
-  assignedBy: string;
-  dueDate: string | null;
-  completedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+const router = Router()
 
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
 const createTaskSchema = z.object({
+  contactId: z.string().optional(),
   title: z.string().min(1, 'Titel ist erforderlich'),
   description: z.string().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional().default('MEDIUM'),
@@ -44,7 +21,7 @@ const createTaskSchema = z.object({
   assignedTo: z.string().min(1, 'Zugewiesener Benutzer ist erforderlich'),
   assignedBy: z.string().optional().default('u001'),
   dueDate: z.string().optional(),
-});
+})
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).optional(),
@@ -53,290 +30,182 @@ const updateTaskSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   assignedTo: z.string().optional(),
   dueDate: z.string().optional(),
-});
+})
 
 // ---------------------------------------------------------------------------
-// UUID helper
+// GET /api/v1/tasks
 // ---------------------------------------------------------------------------
 
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Mock Data
-// ---------------------------------------------------------------------------
-
-const mockTasks: Task[] = [
-  {
-    id: uuid(),
-    title: 'Rueckruf Hr. Mueller – Offerte besprechen',
-    description: 'Deal CHF 89K, Entscheidung diese Woche.',
-    status: 'OFFEN',
-    priority: 'HIGH',
-    module: 'ANGEBOT',
-    referenceId: null,
-    referenceTitle: 'Offerte 15kWp EFH Mueller',
-    assignedTo: 'u001',
-    assignedBy: 'u001',
-    dueDate: '2026-03-03',
-    completedAt: null,
-    createdAt: '2026-03-02T08:00:00.000Z',
-    updatedAt: '2026-03-02T08:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    title: 'Nachfass-Mail Fam. Weber senden',
-    description: 'Follow-up zur gesendeten Offerte.',
-    status: 'OFFEN',
-    priority: 'MEDIUM',
-    module: 'ANGEBOT',
-    referenceId: null,
-    referenceTitle: 'Offerte MFH-Sanierung Weber',
-    assignedTo: 'u001',
-    assignedBy: 'u002',
-    dueDate: '2026-03-04',
-    completedAt: null,
-    createdAt: '2026-03-02T09:00:00.000Z',
-    updatedAt: '2026-03-02T09:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    title: 'Vor-Ort-Termin Zuerich vorbereiten',
-    description: 'Unterlagen und Kalkulation bereitstellen.',
-    status: 'OFFEN',
-    priority: 'HIGH',
-    module: 'TERMIN',
-    referenceId: null,
-    referenceTitle: null,
-    assignedTo: 'u001',
-    assignedBy: 'u001',
-    dueDate: '2026-03-03',
-    completedAt: null,
-    createdAt: '2026-03-01T14:00:00.000Z',
-    updatedAt: '2026-03-01T14:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    title: 'Kalkulation Projekt Bern aktualisieren',
-    description: null,
-    status: 'IN_BEARBEITUNG',
-    priority: 'MEDIUM',
-    module: 'PROJEKT',
-    referenceId: null,
-    referenceTitle: null,
-    assignedTo: 'u002',
-    assignedBy: 'u001',
-    dueDate: '2026-03-05',
-    completedAt: null,
-    createdAt: '2026-03-01T10:00:00.000Z',
-    updatedAt: '2026-03-02T11:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    title: 'Follow-up Solar Aarau – Entscheid',
-    description: 'Kunde will sich bis Freitag entscheiden.',
-    status: 'ERLEDIGT',
-    priority: 'MEDIUM',
-    module: 'ANGEBOT',
-    referenceId: null,
-    referenceTitle: null,
-    assignedTo: 'u001',
-    assignedBy: 'u001',
-    dueDate: '2026-03-01',
-    completedAt: '2026-03-01T16:00:00.000Z',
-    createdAt: '2026-02-28T09:00:00.000Z',
-    updatedAt: '2026-03-01T16:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    title: 'Finanzierungsmodell Keller prüfen',
-    description: 'Grossprojekt 450kWp, ZKB-Finanzierung',
-    status: 'OFFEN',
-    priority: 'URGENT',
-    module: 'ANGEBOT',
-    referenceId: null,
-    referenceTitle: 'Offerte Industriedach Keller 450kWp',
-    assignedTo: 'u001',
-    assignedBy: 'u002',
-    dueDate: '2026-03-04',
-    completedAt: null,
-    createdAt: '2026-03-02T14:00:00.000Z',
-    updatedAt: '2026-03-02T14:00:00.000Z',
-  },
-];
-
-// ---------------------------------------------------------------------------
-// GET /api/v1/tasks – List
-// ---------------------------------------------------------------------------
-
-router.get('/', (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { assignedTo, status, module: mod, priority, search, sortBy = 'dueDate', sortOrder = 'asc' } = req.query;
+    const { assignedTo, status, module: mod, priority, search, sortBy = 'due_date', sortOrder = 'asc' } = req.query
 
-    let filtered = [...mockTasks];
+    let query = supabase
+      .from('tasks')
+      .select('*, contact:contacts(first_name, last_name, company)', { count: 'exact' })
+      .is('deleted_at', null)
 
-    if (assignedTo && typeof assignedTo === 'string') filtered = filtered.filter((t) => t.assignedTo === assignedTo);
-    if (status && typeof status === 'string') filtered = filtered.filter((t) => t.status === status);
-    if (mod && typeof mod === 'string') filtered = filtered.filter((t) => t.module === mod);
-    if (priority && typeof priority === 'string') filtered = filtered.filter((t) => t.priority === priority);
+    if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
+    if (status && typeof status === 'string') query = query.eq('status', status)
+    if (mod && typeof mod === 'string') query = query.eq('module', mod)
+    if (priority && typeof priority === 'string') query = query.eq('priority', priority)
     if (search && typeof search === 'string') {
-      const term = search.toLowerCase();
-      filtered = filtered.filter(
-        (t) =>
-          t.title.toLowerCase().includes(term) ||
-          (t.description?.toLowerCase().includes(term) ?? false) ||
-          (t.referenceTitle?.toLowerCase().includes(term) ?? false),
-      );
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,reference_title.ilike.%${search}%`)
     }
 
-    const sf = typeof sortBy === 'string' ? sortBy : 'dueDate';
-    const order = sortOrder === 'asc' ? 1 : -1;
-    filtered.sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sf];
-      const bVal = (b as unknown as Record<string, unknown>)[sf];
-      if (aVal == null && bVal == null) return 0;
-      if (aVal == null) return 1;
-      if (bVal == null) return -1;
-      if (typeof aVal === 'string' && typeof bVal === 'string') return aVal.localeCompare(bVal) * order;
-      return 0;
-    });
+    const sf = typeof sortBy === 'string' ? sortBy : 'due_date'
+    query = query.order(sf, { ascending: sortOrder !== 'desc', nullsFirst: false })
 
-    res.json({ data: filtered, total: filtered.length });
+    const { data, count, error } = await query
+    if (error) throw new AppError(error.message, 500)
+
+    res.json({ data: data ?? [], total: count ?? 0 })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/tasks/stats
 // ---------------------------------------------------------------------------
 
-router.get('/stats', (req: Request, res: Response, next: NextFunction) => {
+router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { assignedTo } = req.query;
-    let tasks = [...mockTasks];
-    if (assignedTo && typeof assignedTo === 'string') tasks = tasks.filter((t) => t.assignedTo === assignedTo);
+    let query = supabase.from('tasks').select('*').is('deleted_at', null)
+    const { assignedTo } = req.query
+    if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
-    const open = tasks.filter((t) => t.status === 'OFFEN').length;
-    const inProgress = tasks.filter((t) => t.status === 'IN_BEARBEITUNG').length;
-    const completed = tasks.filter((t) => t.status === 'ERLEDIGT').length;
-    const overdue = tasks.filter(
-      (t) => t.status !== 'ERLEDIGT' && t.dueDate && new Date(t.dueDate) < new Date(),
-    ).length;
+    const { data: tasks } = await query
+    const items = tasks ?? []
 
-    res.json({ data: { open, inProgress, completed, overdue, total: tasks.length } });
+    const open = items.filter((t: any) => t.status === 'OFFEN').length
+    const inProgress = items.filter((t: any) => t.status === 'IN_BEARBEITUNG').length
+    const completed = items.filter((t: any) => t.status === 'ERLEDIGT').length
+    const overdue = items.filter(
+      (t: any) => t.status !== 'ERLEDIGT' && t.due_date && new Date(t.due_date) < new Date()
+    ).length
+
+    res.json({ data: { open, inProgress, completed, overdue, total: items.length } })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
 // GET /api/v1/tasks/:id
 // ---------------------------------------------------------------------------
 
-router.get('/:id', (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const task = mockTasks.find((t) => t.id === req.params.id);
-    if (!task) throw new AppError('Aufgabe nicht gefunden', 404);
-    res.json({ data: task });
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*, contact:contacts(first_name, last_name, company)')
+      .eq('id', req.params.id)
+      .is('deleted_at', null)
+      .single()
+
+    if (error || !data) throw new AppError('Aufgabe nicht gefunden', 404)
+    res.json({ data })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
-// POST /api/v1/tasks – Create
+// POST /api/v1/tasks
 // ---------------------------------------------------------------------------
 
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = createTaskSchema.safeParse(req.body);
+    const result = createTaskSchema.safeParse(req.body)
     if (!result.success) {
-      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
-      throw new AppError(`Validierungsfehler: ${messages}`, 422);
+      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
+      throw new AppError(`Validierungsfehler: ${messages}`, 422)
     }
 
-    const now = new Date().toISOString();
-    const newTask: Task = {
-      id: uuid(),
-      title: result.data.title,
-      description: result.data.description ?? null,
-      status: 'OFFEN',
-      priority: result.data.priority,
-      module: result.data.module,
-      referenceId: result.data.referenceId ?? null,
-      referenceTitle: result.data.referenceTitle ?? null,
-      assignedTo: result.data.assignedTo,
-      assignedBy: result.data.assignedBy,
-      dueDate: result.data.dueDate ?? null,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        contact_id: result.data.contactId ?? null,
+        title: result.data.title,
+        description: result.data.description ?? null,
+        status: 'OFFEN',
+        priority: result.data.priority,
+        module: result.data.module,
+        reference_id: result.data.referenceId ?? null,
+        reference_title: result.data.referenceTitle ?? null,
+        assigned_to: result.data.assignedTo,
+        assigned_by: result.data.assignedBy,
+        due_date: result.data.dueDate ?? null,
+      })
+      .select()
+      .single()
 
-    mockTasks.push(newTask);
-    res.status(201).json({ data: newTask });
+    if (error) throw new AppError(error.message, 500)
+    res.status(201).json({ data })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
-// PUT /api/v1/tasks/:id – Update
+// PUT /api/v1/tasks/:id
 // ---------------------------------------------------------------------------
 
-router.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const task = mockTasks.find((t) => t.id === req.params.id);
-    if (!task) throw new AppError('Aufgabe nicht gefunden', 404);
-
-    const result = updateTaskSchema.safeParse(req.body);
+    const result = updateTaskSchema.safeParse(req.body)
     if (!result.success) {
-      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
-      throw new AppError(`Validierungsfehler: ${messages}`, 422);
+      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
+      throw new AppError(`Validierungsfehler: ${messages}`, 422)
     }
 
-    const u = result.data;
-    if (u.title !== undefined) task.title = u.title;
-    if (u.description !== undefined) task.description = u.description ?? null;
-    if (u.priority !== undefined) task.priority = u.priority;
-    if (u.assignedTo !== undefined) task.assignedTo = u.assignedTo;
-    if (u.dueDate !== undefined) task.dueDate = u.dueDate ?? null;
+    const updates: Record<string, unknown> = {}
+    const u = result.data
+    if (u.title !== undefined) updates.title = u.title
+    if (u.description !== undefined) updates.description = u.description ?? null
+    if (u.priority !== undefined) updates.priority = u.priority
+    if (u.assignedTo !== undefined) updates.assigned_to = u.assignedTo
+    if (u.dueDate !== undefined) updates.due_date = u.dueDate ?? null
 
     if (u.status !== undefined) {
-      task.status = u.status;
-      if (u.status === 'ERLEDIGT' && !task.completedAt) {
-        task.completedAt = new Date().toISOString();
-      } else if (u.status !== 'ERLEDIGT') {
-        task.completedAt = null;
-      }
+      updates.status = u.status
+      if (u.status === 'ERLEDIGT') updates.completed_at = new Date().toISOString()
+      else updates.completed_at = null
     }
 
-    task.updatedAt = new Date().toISOString();
-    res.json({ data: task });
+    const { data, error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', req.params.id)
+      .is('deleted_at', null)
+      .select()
+      .single()
+
+    if (error) throw new AppError('Aufgabe nicht gefunden', 404)
+    res.json({ data })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
 // DELETE /api/v1/tasks/:id
 // ---------------------------------------------------------------------------
 
-router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const idx = mockTasks.findIndex((t) => t.id === req.params.id);
-    if (idx === -1) throw new AppError('Aufgabe nicht gefunden', 404);
-    mockTasks.splice(idx, 1);
-    res.json({ message: 'Aufgabe erfolgreich gelöscht' });
-  } catch (err) {
-    next(err);
-  }
-});
+    const { error } = await supabase
+      .from('tasks')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .is('deleted_at', null)
 
-export default router;
+    if (error) throw new AppError('Aufgabe nicht gefunden', 404)
+    res.json({ message: 'Aufgabe erfolgreich geloescht' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+export default router

@@ -1,3 +1,19 @@
+// ── Contact Types (zentrale Kunden-/Kontakt-Tabelle) ──
+
+export interface Contact {
+  id: string
+  firstName: string
+  lastName: string
+  company?: string
+  email: string
+  phone: string
+  address: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+  deletedAt?: string
+}
+
 // ── Role & Auth Types ──
 
 export type Role = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GESCHAEFTSLEITUNG'
@@ -27,6 +43,7 @@ export type LeadStatus = 'ACTIVE' | 'CONVERTED' | 'LOST' | 'ARCHIVED'
 
 export interface Lead {
   id: string
+  contactId: string
   firstName?: string
   lastName?: string
   company?: string
@@ -51,6 +68,7 @@ export type AppointmentType = 'ONLINE' | 'VOR_ORT'
 
 export interface Deal {
   id: string
+  contactId: string
   title: string
   leadId?: string
   assignedTo?: string

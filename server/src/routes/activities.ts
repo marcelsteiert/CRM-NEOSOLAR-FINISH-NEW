@@ -1,81 +1,73 @@
-import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AppError } from '../middleware/errorHandler.js';
+import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { z } from 'zod'
+import { supabase } from '../lib/supabase.js'
+import { AppError } from '../middleware/errorHandler.js'
 
-const router = Router();
+const router = Router()
 
-type ActivityType = 'CALL' | 'EMAIL' | 'NOTE' | 'MEETING' | 'STATUS_CHANGE' | 'TASK' | 'DOCUMENT' | 'REMINDER' | 'DEAL_CREATED';
+// ---------------------------------------------------------------------------
+// GET /api/v1/activities?contactId=xxx oder ?leadId=xxx oder ?dealId=xxx
+// ---------------------------------------------------------------------------
 
-interface Activity {
-  id: string;
-  leadId: string;
-  type: ActivityType;
-  title: string;
-  description: string | null;
-  createdBy: string;
-  createdAt: string;
-}
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { contactId, leadId, dealId, projectId } = req.query
 
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+    let query = supabase.from('activities').select('*').order('created_at', { ascending: false }).limit(100)
 
-// Pre-seeded activities for demo
-const mockActivities: Activity[] = [
-  { id: uuid(), leadId: '*', type: 'CALL', title: 'Erstgespräch geführt', description: 'Interesse an 15kWp Anlage bestätigt. Termin für Dachbesichtigung vereinbart.', createdBy: 'Marco Bianchi', createdAt: '2026-02-15T11:00:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'EMAIL', title: 'Offerte versendet', description: 'Standard-Offerte für EFH mit 15kWp versendet.', createdBy: 'Laura Meier', createdAt: '2026-02-16T09:30:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'NOTE', title: 'Notiz hinzugefügt', description: 'Kunde bevorzugt Schweizer Panels. Budget ca. CHF 40k.', createdBy: 'Marco Bianchi', createdAt: '2026-02-17T14:15:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'MEETING', title: 'Vor-Ort-Besichtigung', description: 'Dachbesichtigung durchgeführt. Südausrichtung bestätigt, keine Verschattung.', createdBy: 'Simon Keller', createdAt: '2026-02-20T10:00:00.000Z' },
-  { id: uuid(), leadId: '*', type: 'STATUS_CHANGE', title: 'Status geändert: Qualifiziert', description: null, createdBy: 'System', createdAt: '2026-02-20T10:30:00.000Z' },
-];
+    if (contactId && typeof contactId === 'string') query = query.eq('contact_id', contactId)
+    if (leadId && typeof leadId === 'string') query = query.eq('lead_id', leadId)
+    if (dealId && typeof dealId === 'string') query = query.eq('deal_id', dealId)
+    if (projectId && typeof projectId === 'string') query = query.eq('project_id', projectId)
+
+    const { data, error } = await query
+    if (error) throw new AppError(error.message, 500)
+
+    res.json({ data: data ?? [] })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/activities
+// ---------------------------------------------------------------------------
 
 const createActivitySchema = z.object({
-  leadId: z.string(),
-  type: z.enum(['CALL', 'EMAIL', 'NOTE', 'MEETING', 'STATUS_CHANGE', 'TASK', 'DOCUMENT', 'REMINDER', 'DEAL_CREATED']),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  createdBy: z.string().optional(),
-});
+  contactId: z.string().optional(),
+  leadId: z.string().optional(),
+  dealId: z.string().optional(),
+  projectId: z.string().optional(),
+  type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM', 'DOCUMENT_UPLOAD']),
+  text: z.string().min(1),
+  createdBy: z.string().optional().default('u001'),
+})
 
-// GET /api/v1/activities?leadId=xxx
-router.get('/', (req: Request, res: Response) => {
-  const { leadId } = req.query;
-  let results = mockActivities;
-  if (leadId && typeof leadId === 'string') {
-    // Return activities for this lead (use * as wildcard for demo)
-    results = mockActivities.filter((a) => a.leadId === leadId || a.leadId === '*');
-  }
-  // Sort newest first
-  results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  res.json({ data: results });
-});
-
-// POST /api/v1/activities
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = createActivitySchema.safeParse(req.body);
-    if (!result.success) {
-      throw new AppError('Validierungsfehler', 422);
-    }
-    const activity: Activity = {
-      id: uuid(),
-      leadId: result.data.leadId,
-      type: result.data.type,
-      title: result.data.title,
-      description: result.data.description ?? null,
-      createdBy: result.data.createdBy ?? 'System',
-      createdAt: new Date().toISOString(),
-    };
-    mockActivities.unshift(activity);
-    res.status(201).json({ data: activity });
-  } catch (err) {
-    next(err);
-  }
-});
+    const result = createActivitySchema.safeParse(req.body)
+    if (!result.success) throw new AppError('Validierungsfehler', 422)
 
-export default router;
+    const { data, error } = await supabase
+      .from('activities')
+      .insert({
+        contact_id: result.data.contactId ?? null,
+        lead_id: result.data.leadId ?? null,
+        deal_id: result.data.dealId ?? null,
+        project_id: result.data.projectId ?? null,
+        type: result.data.type,
+        text: result.data.text,
+        created_by: result.data.createdBy,
+      })
+      .select()
+      .single()
+
+    if (error) throw new AppError(error.message, 500)
+    res.status(201).json({ data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+export default router

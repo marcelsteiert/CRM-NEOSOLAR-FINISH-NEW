@@ -1,51 +1,14 @@
-import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AppError } from '../middleware/errorHandler.js';
+import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { z } from 'zod'
+import { supabase } from '../lib/supabase.js'
+import { AppError } from '../middleware/errorHandler.js'
 
-const router = Router();
+const router = Router()
 
-interface Reminder {
-  id: string;
-  leadId: string;
-  title: string;
-  description: string | null;
-  dueAt: string;
-  dismissed: boolean;
-  createdBy: string;
-  createdAt: string;
-}
-
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
-const mockReminders: Reminder[] = [
-  {
-    id: uuid(),
-    leadId: '*',
-    title: 'Nachfassen bei Mueller Elektro',
-    description: 'Offerte nachfragen – 1 Woche seit Versand.',
-    dueAt: new Date(Date.now() + 5 * 60000).toISOString(), // 5 min from now (demo popup)
-    dismissed: false,
-    createdBy: 'Marco Bianchi',
-    createdAt: '2026-03-01T09:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    leadId: '*',
-    title: 'Dachbesichtigung planen',
-    description: 'Termin mit Kunde vereinbaren für Vor-Ort-Analyse.',
-    dueAt: new Date(Date.now() + 3600000).toISOString(), // 1h from now
-    dismissed: false,
-    createdBy: 'Laura Meier',
-    createdAt: '2026-03-02T10:00:00.000Z',
-  },
-];
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
 
 const createReminderSchema = z.object({
   leadId: z.string(),
@@ -53,77 +16,102 @@ const createReminderSchema = z.object({
   description: z.string().optional(),
   dueAt: z.string(),
   createdBy: z.string().optional(),
-});
+})
 
-// GET /api/v1/reminders?leadId=xxx&pending=true
-router.get('/', (req: Request, res: Response) => {
-  const { leadId, pending } = req.query;
-  let results = [...mockReminders];
+// ---------------------------------------------------------------------------
+// GET /api/v1/reminders
+// ---------------------------------------------------------------------------
 
-  if (leadId && typeof leadId === 'string') {
-    results = results.filter((r) => r.leadId === leadId || r.leadId === '*');
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { leadId, pending } = req.query
+
+    let query = supabase.from('reminders').select('*').order('due_at', { ascending: true })
+
+    if (leadId && typeof leadId === 'string') {
+      query = query.or(`lead_id.eq.${leadId},lead_id.is.null`)
+    }
+
+    if (pending === 'true') {
+      query = query.eq('dismissed', false).lte('due_at', new Date().toISOString())
+    }
+
+    const { data, error } = await query
+    if (error) throw new AppError(error.message, 500)
+    res.json({ data: data ?? [] })
+  } catch (err) {
+    next(err)
   }
+})
 
-  if (pending === 'true') {
-    const now = new Date().getTime();
-    results = results.filter((r) => !r.dismissed && new Date(r.dueAt).getTime() <= now);
-  }
-
-  results.sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
-  res.json({ data: results });
-});
-
+// ---------------------------------------------------------------------------
 // POST /api/v1/reminders
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
+// ---------------------------------------------------------------------------
+
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = createReminderSchema.safeParse(req.body);
+    const result = createReminderSchema.safeParse(req.body)
     if (!result.success) {
-      const msg = result.error.errors.map((e) => e.message).join('; ');
-      throw new AppError(`Validierungsfehler: ${msg}`, 422);
+      const msg = result.error.errors.map((e) => e.message).join('; ')
+      throw new AppError(`Validierungsfehler: ${msg}`, 422)
     }
-    const reminder: Reminder = {
-      id: uuid(),
-      leadId: result.data.leadId,
-      title: result.data.title,
-      description: result.data.description ?? null,
-      dueAt: result.data.dueAt,
-      dismissed: false,
-      createdBy: result.data.createdBy ?? 'System',
-      createdAt: new Date().toISOString(),
-    };
-    mockReminders.push(reminder);
-    res.status(201).json({ data: reminder });
-  } catch (err) {
-    next(err);
-  }
-});
 
+    const { data, error } = await supabase
+      .from('reminders')
+      .insert({
+        lead_id: result.data.leadId,
+        title: result.data.title,
+        description: result.data.description ?? null,
+        due_at: result.data.dueAt,
+        dismissed: false,
+        created_by: result.data.createdBy ?? 'System',
+      })
+      .select()
+      .single()
+
+    if (error) throw new AppError(error.message, 500)
+    res.status(201).json({ data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // PUT /api/v1/reminders/:id/dismiss
-router.put('/:id/dismiss', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const reminder = mockReminders.find((r) => r.id === req.params.id);
-    if (!reminder) {
-      throw new AppError('Erinnerung nicht gefunden', 404);
-    }
-    reminder.dismissed = true;
-    res.json({ data: reminder });
-  } catch (err) {
-    next(err);
-  }
-});
+// ---------------------------------------------------------------------------
 
+router.put('/:id/dismiss', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('reminders')
+      .update({ dismissed: true })
+      .eq('id', req.params.id)
+      .select()
+      .single()
+
+    if (error) throw new AppError('Erinnerung nicht gefunden', 404)
+    res.json({ data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // DELETE /api/v1/reminders/:id
-router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const idx = mockReminders.findIndex((r) => r.id === req.params.id);
-    if (idx === -1) {
-      throw new AppError('Erinnerung nicht gefunden', 404);
-    }
-    mockReminders.splice(idx, 1);
-    res.json({ message: 'Erinnerung gelöscht' });
-  } catch (err) {
-    next(err);
-  }
-});
+// ---------------------------------------------------------------------------
 
-export default router;
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { error } = await supabase
+      .from('reminders')
+      .delete()
+      .eq('id', req.params.id)
+
+    if (error) throw new AppError('Erinnerung nicht gefunden', 404)
+    res.json({ message: 'Erinnerung geloescht' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+export default router

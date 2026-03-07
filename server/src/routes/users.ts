@@ -1,27 +1,14 @@
 import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
-import { randomUUID } from 'crypto'
+import { supabase } from '../lib/supabase.js'
+import { AppError } from '../middleware/errorHandler.js'
 
 const router = Router()
 
-// ── Types ──
+// ── Standard-Berechtigungen pro Rolle ──
 
 type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL'
-
-interface User {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-  role: UserRole
-  avatar: string | null
-  isActive: boolean
-  allowedModules: string[]
-  createdAt: string
-}
-
-// ── Standard-Berechtigungen pro Rolle ──
 
 const defaultModulesByRole: Record<UserRole, string[]> = {
   ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'projects', 'tasks', 'admin', 'communication', 'documents', 'export'],
@@ -30,41 +17,6 @@ const defaultModulesByRole: Record<UserRole, string[]> = {
   PROJEKTLEITUNG: ['dashboard', 'projects', 'calculations', 'tasks', 'appointments', 'documents'],
   BUCHHALTUNG: ['dashboard', 'provision', 'deals', 'documents', 'export'],
 }
-
-// ── Mock Data ──
-
-const users: User[] = [
-  {
-    id: 'u001', firstName: 'Marco', lastName: 'Bianchi', email: 'marco.bianchi@neosolar.ch', phone: '+41 71 555 01 01',
-    role: 'VERTRIEB', avatar: null, isActive: true,
-    allowedModules: [...defaultModulesByRole.VERTRIEB],
-    createdAt: '2025-01-15T10:00:00Z',
-  },
-  {
-    id: 'u002', firstName: 'Laura', lastName: 'Meier', email: 'laura.meier@neosolar.ch', phone: '+41 71 555 02 02',
-    role: 'VERTRIEB', avatar: null, isActive: true,
-    allowedModules: [...defaultModulesByRole.VERTRIEB],
-    createdAt: '2025-02-01T10:00:00Z',
-  },
-  {
-    id: 'u003', firstName: 'Simon', lastName: 'Keller', email: 'simon.keller@neosolar.ch', phone: '+41 71 555 03 03',
-    role: 'PROJEKTLEITUNG', avatar: null, isActive: true,
-    allowedModules: [...defaultModulesByRole.PROJEKTLEITUNG],
-    createdAt: '2025-01-20T10:00:00Z',
-  },
-  {
-    id: 'u004', firstName: 'Nina', lastName: 'Fischer', email: 'nina.fischer@neosolar.ch', phone: '+41 71 555 04 04',
-    role: 'BUCHHALTUNG', avatar: null, isActive: true,
-    allowedModules: [...defaultModulesByRole.BUCHHALTUNG],
-    createdAt: '2025-03-01T10:00:00Z',
-  },
-  {
-    id: 'u005', firstName: 'Adrian', lastName: 'Brunner', email: 'adrian.brunner@neosolar.ch', phone: '+41 71 555 05 05',
-    role: 'GL', avatar: null, isActive: true,
-    allowedModules: [...defaultModulesByRole.GL],
-    createdAt: '2024-12-01T10:00:00Z',
-  },
-]
 
 // ── Validation ──
 
@@ -90,23 +42,47 @@ const updateUserSchema = z.object({
 // ── Routes ──
 
 // GET all users
-router.get('/', (_req, res) => {
-  res.json({ data: users })
+router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('last_name', { ascending: true })
+
+    if (error) throw new AppError(error.message, 500)
+
+    const mapped = (data ?? []).map((u: any) => ({
+      id: u.id,
+      firstName: u.first_name,
+      lastName: u.last_name,
+      email: u.email,
+      phone: u.phone ?? '',
+      role: u.role,
+      avatar: u.avatar_color ?? null,
+      isActive: u.is_active,
+      allowedModules: u.allowed_modules ?? defaultModulesByRole[u.role as UserRole] ?? [],
+      createdAt: u.created_at,
+    }))
+
+    res.json({ data: mapped })
+  } catch (err) {
+    next(err)
+  }
 })
 
 // GET role defaults
-router.get('/role-defaults', (_req, res) => {
+router.get('/role-defaults', (_req: Request, res: Response) => {
   res.json({ data: defaultModulesByRole })
 })
 
-// PUT role defaults
-router.put('/role-defaults', (req, res) => {
+// PUT role defaults (in-memory only, could be stored in settings table later)
+router.put('/role-defaults', (req: Request, res: Response) => {
   const schema = z.record(
     z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL']),
     z.array(z.string()),
   )
   const parsed = schema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ error: 'Ungültige Daten', details: parsed.error.issues })
+  if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
 
   for (const [role, modules] of Object.entries(parsed.data)) {
     defaultModulesByRole[role as UserRole] = modules
@@ -116,65 +92,159 @@ router.put('/role-defaults', (req, res) => {
 })
 
 // GET single user
-router.get('/:id', (req, res) => {
-  const user = users.find((u) => u.id === req.params.id)
-  if (!user) return res.status(404).json({ error: 'Benutzer nicht gefunden' })
-  res.json({ data: user })
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.params.id)
+      .single()
+
+    if (error || !data) throw new AppError('Benutzer nicht gefunden', 404)
+
+    res.json({
+      data: {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone ?? '',
+        role: data.role,
+        avatar: data.avatar_color ?? null,
+        isActive: data.is_active,
+        allowedModules: data.allowed_modules ?? defaultModulesByRole[data.role as UserRole] ?? [],
+        createdAt: data.created_at,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
 })
 
 // CREATE user
-router.post('/', (req, res) => {
-  const parsed = createUserSchema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ error: 'Ungültige Daten', details: parsed.error.issues })
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = createUserSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
 
-  const { firstName, lastName, email, phone, role, allowedModules } = parsed.data
+    const { firstName, lastName, email, phone, role, allowedModules } = parsed.data
 
-  if (users.some((u) => u.email === email)) {
-    return res.status(409).json({ error: 'E-Mail-Adresse bereits vergeben' })
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone: phone ?? '',
+        role,
+        is_active: true,
+        allowed_modules: allowedModules ?? defaultModulesByRole[role],
+      })
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505') throw new AppError('E-Mail-Adresse bereits vergeben', 409)
+      throw new AppError(error.message, 500)
+    }
+
+    res.status(201).json({
+      data: {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone ?? '',
+        role: data.role,
+        avatar: data.avatar_color ?? null,
+        isActive: data.is_active,
+        allowedModules: data.allowed_modules ?? [],
+        createdAt: data.created_at,
+      },
+    })
+  } catch (err) {
+    next(err)
   }
-
-  const user: User = {
-    id: `u${String(users.length + 1).padStart(3, '0')}-${randomUUID().slice(0, 4)}`,
-    firstName,
-    lastName,
-    email,
-    phone: phone ?? '',
-    role,
-    avatar: null,
-    isActive: true,
-    allowedModules: allowedModules ?? [...defaultModulesByRole[role]],
-    createdAt: new Date().toISOString(),
-  }
-
-  users.push(user)
-  res.status(201).json({ data: user })
 })
 
 // UPDATE user
-router.put('/:id', (req, res) => {
-  const idx = users.findIndex((u) => u.id === req.params.id)
-  if (idx === -1) return res.status(404).json({ error: 'Benutzer nicht gefunden' })
+router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parsed = updateUserSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
 
-  const parsed = updateUserSchema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ error: 'Ungültige Daten', details: parsed.error.issues })
+    const d = parsed.data
+    const updates: Record<string, unknown> = {}
 
-  const data = parsed.data
+    if (d.firstName !== undefined) updates.first_name = d.firstName
+    if (d.lastName !== undefined) updates.last_name = d.lastName
+    if (d.email !== undefined) updates.email = d.email
+    if (d.phone !== undefined) updates.phone = d.phone
+    if (d.isActive !== undefined) updates.is_active = d.isActive
+    if (d.allowedModules !== undefined) updates.allowed_modules = d.allowedModules
 
-  // If role changes and no explicit allowedModules provided, reset to role defaults
-  if (data.role && !data.allowedModules && data.role !== users[idx].role) {
-    data.allowedModules = [...defaultModulesByRole[data.role]]
+    if (d.role !== undefined) {
+      updates.role = d.role
+      // If role changes and no explicit allowedModules provided, reset to role defaults
+      if (!d.allowedModules) {
+        updates.allowed_modules = defaultModulesByRole[d.role]
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single()
+
+    if (error) throw new AppError('Benutzer nicht gefunden', 404)
+
+    res.json({
+      data: {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone ?? '',
+        role: data.role,
+        avatar: data.avatar_color ?? null,
+        isActive: data.is_active,
+        allowedModules: data.allowed_modules ?? [],
+        createdAt: data.created_at,
+      },
+    })
+  } catch (err) {
+    next(err)
   }
-
-  users[idx] = { ...users[idx], ...data }
-  res.json({ data: users[idx] })
 })
 
-// DELETE user (soft)
-router.delete('/:id', (req, res) => {
-  const idx = users.findIndex((u) => u.id === req.params.id)
-  if (idx === -1) return res.status(404).json({ error: 'Benutzer nicht gefunden' })
-  users[idx].isActive = false
-  res.json({ message: 'Benutzer deaktiviert', data: users[idx] })
+// DELETE user (soft – deactivate)
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ is_active: false })
+      .eq('id', req.params.id)
+      .select()
+      .single()
+
+    if (error) throw new AppError('Benutzer nicht gefunden', 404)
+
+    res.json({
+      message: 'Benutzer deaktiviert',
+      data: {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        role: data.role,
+        isActive: data.is_active,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
 })
 
 export default router

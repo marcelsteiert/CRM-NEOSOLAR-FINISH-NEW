@@ -1,162 +1,188 @@
-import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { AppError } from '../middleware/errorHandler.js';
+import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { z } from 'zod'
+import { supabase } from '../lib/supabase.js'
+import { AppError } from '../middleware/errorHandler.js'
 
-const router = Router();
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface Document {
-  id: string;
-  fileName: string;
-  fileSize: number; // bytes
-  mimeType: string;
-  entityType: 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT';
-  entityId: string;
-  uploadedBy: string;
-  notes: string | null;
-  createdAt: string;
-}
-
-// ---------------------------------------------------------------------------
-// UUID helper
-// ---------------------------------------------------------------------------
-
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+const router = Router()
 
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
 const uploadDocSchema = z.object({
+  contactId: z.string().min(1, 'Kontakt-ID ist erforderlich'),
+  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']),
+  entityId: z.string().optional(),
   fileName: z.string().min(1, 'Dateiname ist erforderlich'),
   fileSize: z.number().min(1),
   mimeType: z.string().min(1),
-  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT']),
-  entityId: z.string().min(1),
   uploadedBy: z.string().optional().default('u001'),
   notes: z.string().optional(),
-});
+  fileBase64: z.string().min(1, 'Dateiinhalt ist erforderlich'),
+})
 
 // ---------------------------------------------------------------------------
-// Mock Data
+// GET /api/v1/documents?contactId=xxx oder ?entityType=LEAD&entityId=xxx
 // ---------------------------------------------------------------------------
 
-const mockDocuments: Document[] = [
-  {
-    id: uuid(),
-    fileName: 'Dach-Foto-Vorderseite.jpg',
-    fileSize: 2_400_000,
-    mimeType: 'image/jpeg',
-    entityType: 'LEAD',
-    entityId: 'l001',
-    uploadedBy: 'u001',
-    notes: 'Foto vom Satteldach, Suedausrichtung',
-    createdAt: '2026-02-20T10:30:00.000Z',
-  },
-  {
-    id: uuid(),
-    fileName: 'Stromrechnung-2025.pdf',
-    fileSize: 450_000,
-    mimeType: 'application/pdf',
-    entityType: 'LEAD',
-    entityId: 'l001',
-    uploadedBy: 'u001',
-    notes: 'Jahresverbrauch 8500 kWh',
-    createdAt: '2026-02-20T11:00:00.000Z',
-  },
-  {
-    id: uuid(),
-    fileName: 'Grundriss-Dach.pdf',
-    fileSize: 1_200_000,
-    mimeType: 'application/pdf',
-    entityType: 'TERMIN',
-    entityId: 't001',
-    uploadedBy: 'u002',
-    notes: null,
-    createdAt: '2026-02-25T14:00:00.000Z',
-  },
-];
-
-// ---------------------------------------------------------------------------
-// GET /api/v1/documents?entityType=LEAD&entityId=xxx
-// ---------------------------------------------------------------------------
-
-router.get('/', (req: Request, res: Response, next: NextFunction) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { entityType, entityId } = req.query;
+    const { contactId, entityType, entityId } = req.query
 
-    let filtered = [...mockDocuments];
+    let query = supabase.from('documents').select('*')
 
+    if (contactId && typeof contactId === 'string') {
+      query = query.eq('contact_id', contactId)
+    }
     if (entityType && typeof entityType === 'string') {
-      filtered = filtered.filter((d) => d.entityType === entityType);
+      query = query.eq('entity_type', entityType)
     }
     if (entityId && typeof entityId === 'string') {
-      filtered = filtered.filter((d) => d.entityId === entityId);
+      query = query.eq('entity_id', entityId)
     }
 
-    // Sortiert nach neueste zuerst
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    query = query.order('created_at', { ascending: false })
 
-    res.json({ data: filtered, total: filtered.length });
+    const { data, error } = await query
+    if (error) throw new AppError(error.message, 500)
+
+    // Signierte URLs fuer Download generieren
+    const enriched = await Promise.all(
+      (data ?? []).map(async (doc: any) => {
+        const { data: urlData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(doc.storage_path, 3600) // 1 Stunde gueltig
+        return { ...doc, downloadUrl: urlData?.signedUrl ?? null }
+      })
+    )
+
+    res.json({ data: enriched, total: enriched.length })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
-// POST /api/v1/documents – Upload (Mock: speichert nur Metadaten)
+// POST /api/v1/documents – Upload mit echtem Supabase Storage
 // ---------------------------------------------------------------------------
 
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
+router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = uploadDocSchema.safeParse(req.body);
+    const result = uploadDocSchema.safeParse(req.body)
     if (!result.success) {
-      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
-      throw new AppError(`Validierungsfehler: ${messages}`, 422);
+      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
+      throw new AppError(`Validierungsfehler: ${messages}`, 422)
     }
 
-    const newDoc: Document = {
-      id: uuid(),
-      fileName: result.data.fileName,
-      fileSize: result.data.fileSize,
-      mimeType: result.data.mimeType,
-      entityType: result.data.entityType,
-      entityId: result.data.entityId,
-      uploadedBy: result.data.uploadedBy,
-      notes: result.data.notes ?? null,
-      createdAt: new Date().toISOString(),
-    };
+    const d = result.data
 
-    mockDocuments.push(newDoc);
-    res.status(201).json({ data: newDoc });
+    // Base64 → Buffer
+    const fileBuffer = Buffer.from(d.fileBase64, 'base64')
+
+    // Storage-Pfad: contacts/{contactId}/{entityType}/{timestamp}_{fileName}
+    const timestamp = Date.now()
+    const safeName = d.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const storagePath = `${d.contactId}/${d.entityType.toLowerCase()}/${timestamp}_${safeName}`
+
+    // In Supabase Storage hochladen
+    const { error: storageError } = await supabase.storage
+      .from('documents')
+      .upload(storagePath, fileBuffer, {
+        contentType: d.mimeType,
+        upsert: false,
+      })
+
+    if (storageError) throw new AppError(`Upload fehlgeschlagen: ${storageError.message}`, 500)
+
+    // Metadaten in DB speichern
+    const { data: doc, error: dbError } = await supabase
+      .from('documents')
+      .insert({
+        contact_id: d.contactId,
+        entity_type: d.entityType,
+        entity_id: d.entityId ?? null,
+        file_name: d.fileName,
+        file_size: d.fileSize,
+        mime_type: d.mimeType,
+        storage_path: storagePath,
+        uploaded_by: d.uploadedBy,
+        notes: d.notes ?? null,
+      })
+      .select()
+      .single()
+
+    if (dbError) throw new AppError(dbError.message, 500)
+
+    // Activity erstellen
+    await supabase.from('activities').insert({
+      contact_id: d.contactId,
+      type: 'DOCUMENT_UPLOAD',
+      text: `Dokument hochgeladen: ${d.fileName}`,
+      created_by: d.uploadedBy,
+    })
+
+    // Signierte URL mitgeben
+    const { data: urlData } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600)
+
+    res.status(201).json({ data: { ...doc, downloadUrl: urlData?.signedUrl ?? null } })
   } catch (err) {
-    next(err);
+    next(err)
   }
-});
+})
 
 // ---------------------------------------------------------------------------
-// DELETE /api/v1/documents/:id
+// GET /api/v1/documents/:id/download – Download-URL generieren
 // ---------------------------------------------------------------------------
 
-router.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id/download', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const idx = mockDocuments.findIndex((d) => d.id === req.params.id);
-    if (idx === -1) throw new AppError('Dokument nicht gefunden', 404);
-    mockDocuments.splice(idx, 1);
-    res.json({ message: 'Dokument gelöscht' });
-  } catch (err) {
-    next(err);
-  }
-});
+    const { data: doc, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', req.params.id)
+      .single()
 
-export default router;
+    if (error || !doc) throw new AppError('Dokument nicht gefunden', 404)
+
+    const { data: urlData } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(doc.storage_path, 3600)
+
+    if (!urlData?.signedUrl) throw new AppError('Download-URL konnte nicht erstellt werden', 500)
+
+    res.json({ data: { ...doc, downloadUrl: urlData.signedUrl } })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// DELETE /api/v1/documents/:id – Loescht Datei + Metadaten
+// ---------------------------------------------------------------------------
+
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data: doc, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', req.params.id)
+      .single()
+
+    if (error || !doc) throw new AppError('Dokument nicht gefunden', 404)
+
+    // Aus Storage loeschen
+    await supabase.storage.from('documents').remove([doc.storage_path])
+
+    // Aus DB loeschen (hard delete – Dokumente haben kein soft delete)
+    await supabase.from('documents').delete().eq('id', req.params.id)
+
+    res.json({ message: 'Dokument geloescht' })
+  } catch (err) {
+    next(err)
+  }
+})
+
+export default router
