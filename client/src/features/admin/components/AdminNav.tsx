@@ -14,6 +14,7 @@ import {
   ScrollText,
   HardDrive,
   ClipboardList,
+  KeyRound,
 } from 'lucide-react'
 
 export type AdminSection =
@@ -32,6 +33,7 @@ export type AdminSection =
   | 'ai'
   | 'audit'
   | 'database'
+  | 'passwords'
 
 interface AdminNavItem {
   id: AdminSection
@@ -84,6 +86,7 @@ const navGroups: AdminNavGroup[] = [
       { id: 'ai', icon: Sparkles, label: 'KI-Einstellungen', color: '#A78BFA' },
       { id: 'audit', icon: ScrollText, label: 'Audit-Log', color: '#94A3B8' },
       { id: 'database', icon: HardDrive, label: 'Datenbank & Export', color: '#94A3B8' },
+      { id: 'passwords', icon: KeyRound, label: 'Geteilte Passwörter', color: '#F59E0B' },
     ],
   },
 ]

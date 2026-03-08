@@ -16,6 +16,7 @@ import AdminPage from '@/features/admin/AdminPage'
 import ExportPage from '@/features/export/ExportPage'
 import DocumentsPage from '@/features/documents/DocumentsPage'
 import FeaturesPage from '@/features/features/FeaturesPage'
+import PasswordsPage from '@/features/passwords/PasswordsPage'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
 
@@ -107,6 +108,7 @@ export default function App() {
           <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
           <Route path="export" element={<ModuleRoute moduleId="export"><ExportPage /></ModuleRoute>} />
           <Route path="documents" element={<ModuleRoute moduleId="documents"><DocumentsPage /></ModuleRoute>} />
+          <Route path="passwords" element={<ModuleRoute moduleId="passwords"><PasswordsPage /></ModuleRoute>} />
           <Route path="features" element={<FeaturesPage />} />
           {/* Catch-all: redirect to dashboard */}
           <Route path="*" element={<Navigate to="/" replace />} />

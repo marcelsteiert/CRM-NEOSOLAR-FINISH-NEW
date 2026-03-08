@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users,
@@ -15,9 +16,16 @@ import {
   BarChart3,
   CalendarCheck,
   FileText,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react'
 import { useDashboardStats, useMonthlyStats } from '@/hooks/useDashboard'
 import { useTasks, type Task, taskPriorityColors } from '@/hooks/useTasks'
+import { useSharedPasswords, type PasswordEntry } from '@/hooks/usePasswords'
 import { useAuth } from '@/hooks/useAuth'
 
 // ── Helpers ──
@@ -155,6 +163,68 @@ function TaskRow({ task, onNavigate }: { task: Task; onNavigate: () => void }) {
         </div>
       </div>
     </button>
+  )
+}
+
+// ── Shared Passwords Widget ──
+
+function SharedPasswordsWidget() {
+  const { data: response } = useSharedPasswords()
+  const passwords = response?.data ?? []
+  const [visibleId, setVisibleId] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleCopy = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 1500)
+  }
+
+  if (passwords.length === 0) return null
+
+  return (
+    <div className="glass-card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <KeyRound size={16} className="text-amber" />
+          <h3 className="text-sm font-bold tracking-[-0.01em]">Team-Passwörter</h3>
+        </div>
+        <span className="text-[11px] font-semibold text-text-dim">{passwords.length} Zugänge</span>
+      </div>
+      <div className="space-y-1.5">
+        {passwords.slice(0, 8).map((pw) => {
+          const isVisible = visibleId === pw.id
+          const isCopied = copiedId === pw.id
+          return (
+            <div key={pw.id} className="flex items-center gap-3 p-2.5 rounded-[10px] hover:bg-surface-hover transition-all group">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, #F59E0B 10%, transparent)' }}>
+                <KeyRound size={14} className="text-amber" strokeWidth={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-semibold truncate">{pw.title}</p>
+                {pw.username && <p className="text-[10px] text-text-dim truncate">{pw.username}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <code className="text-[10px] font-mono w-[70px] truncate" style={{ color: isVisible ? '#F59E0B' : '#525E6F' }}>
+                  {isVisible ? pw.password : '••••••'}
+                </code>
+                <button onClick={() => setVisibleId(isVisible ? null : pw.id)} className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:text-text transition-colors">
+                  {isVisible ? <EyeOff size={11} /> : <Eye size={11} />}
+                </button>
+                <button onClick={() => handleCopy(pw.password, pw.id)} className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:text-amber transition-colors">
+                  {isCopied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                </button>
+                {pw.url && (
+                  <a href={pw.url} target="_blank" rel="noopener noreferrer" className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:text-blue-400 transition-colors">
+                    <ExternalLink size={11} />
+                  </a>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -507,6 +577,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ── Geteilte Passwörter ── */}
+      <SharedPasswordsWidget />
     </div>
   )
 }

@@ -16,6 +16,7 @@ import AuditLogSection from './components/AuditLogSection'
 import CompanyBrandingSection from './components/CompanyBrandingSection'
 import DatabaseExportSection from './components/DatabaseExportSection'
 import ProjectPhasesSection from './components/ProjectPhasesSection'
+import SharedPasswordsSection from './components/SharedPasswordsSection'
 
 const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   users: { title: 'Benutzer & Rollen', desc: 'Benutzer verwalten, Rollen und Modul-Berechtigungen zuweisen' },
@@ -33,6 +34,7 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   ai: { title: 'KI-Einstellungen', desc: 'AI Summary konfigurieren – Modell, Sprache, Aktivierung' },
   audit: { title: 'Audit-Log', desc: 'Systemweites Protokoll aller Änderungen' },
   database: { title: 'Datenbank & Export', desc: 'Backup, Massenexport und API-Zugriff' },
+  passwords: { title: 'Geteilte Passwörter', desc: 'Team-Passwörter verwalten und Rollen-Berechtigungen setzen' },
 }
 
 const sectionComponents: Record<AdminSection, React.ComponentType> = {
@@ -51,6 +53,7 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   ai: AiSettingsSection,
   audit: AuditLogSection,
   database: DatabaseExportSection,
+  passwords: SharedPasswordsSection,
 }
 
 export default function AdminPage() {

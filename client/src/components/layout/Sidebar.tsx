@@ -19,6 +19,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Puzzle,
+  KeyRound,
   X,
   LogOut,
 } from 'lucide-react'
@@ -100,6 +101,7 @@ const allNavGroups: NavGroup[] = [
       { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin', adminOnly: true, moduleId: 'admin' },
       { to: '/export', icon: Download, label: 'Export', featureId: 'export', moduleId: 'export' },
       { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents', moduleId: 'documents' },
+      { to: '/passwords', icon: KeyRound, label: 'Passwörter', moduleId: 'passwords' },
       { to: '/features', icon: Puzzle, label: 'Features' },
     ],
   },
