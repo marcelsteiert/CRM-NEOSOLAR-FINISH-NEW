@@ -74,24 +74,88 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
 })
 
 // GET role defaults
-router.get('/role-defaults', (_req: Request, res: Response) => {
-  res.json({ data: defaultModulesByRole })
+router.get('/role-defaults', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Aus Supabase settings laden, Fallback auf In-Memory Defaults
+    const { data } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'role_defaults')
+      .single()
+
+    if (data?.value && typeof data.value === 'object') {
+      // In-Memory synchronisieren
+      for (const [role, modules] of Object.entries(data.value as Record<string, string[]>)) {
+        if (role in defaultModulesByRole) {
+          defaultModulesByRole[role as UserRole] = modules
+        }
+      }
+    }
+
+    res.json({ data: defaultModulesByRole })
+  } catch (err) {
+    next(err)
+  }
 })
 
-// PUT role defaults (in-memory only, could be stored in settings table later)
-router.put('/role-defaults', (req: Request, res: Response) => {
-  const schema = z.record(
-    z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
-    z.array(z.string()),
-  )
-  const parsed = schema.safeParse(req.body)
-  if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
+// PUT role defaults – persistiert in Supabase + optional auf bestehende User anwenden
+router.put('/role-defaults', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const schema = z.object({
+      defaults: z.record(
+        z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
+        z.array(z.string()),
+      ),
+      applyToUsers: z.boolean().optional(),
+    })
 
-  for (const [role, modules] of Object.entries(parsed.data)) {
-    defaultModulesByRole[role as UserRole] = modules
+    // Abwaertskompatibel: altes Format (direkt Record) oder neues { defaults, applyToUsers }
+    const body = req.body
+    const isNewFormat = body && typeof body === 'object' && 'defaults' in body
+    const parsed = isNewFormat
+      ? schema.safeParse(body)
+      : schema.safeParse({ defaults: body })
+
+    if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
+
+    const { defaults, applyToUsers } = parsed.data
+
+    // In-Memory aktualisieren
+    for (const [role, modules] of Object.entries(defaults)) {
+      defaultModulesByRole[role as UserRole] = modules
+    }
+
+    // In Supabase persistieren
+    await supabase
+      .from('settings')
+      .upsert({ key: 'role_defaults', value: defaultModulesByRole }, { onConflict: 'key' })
+
+    // Optional: Berechtigungen auf alle User der jeweiligen Rollen anwenden
+    let updatedUsers = 0
+    if (applyToUsers) {
+      for (const [role, modules] of Object.entries(defaults)) {
+        const { data: usersOfRole } = await supabase
+          .from('users')
+          .select('id')
+          .eq('role', role)
+          .eq('is_active', true)
+
+        if (usersOfRole && usersOfRole.length > 0) {
+          const ids = usersOfRole.map((u: any) => u.id)
+          const { count } = await supabase
+            .from('users')
+            .update({ allowed_modules: modules })
+            .in('id', ids)
+
+          updatedUsers += count ?? usersOfRole.length
+        }
+      }
+    }
+
+    res.json({ data: defaultModulesByRole, updatedUsers })
+  } catch (err) {
+    next(err)
   }
-
-  res.json({ data: defaultModulesByRole })
 })
 
 // GET single user

@@ -86,6 +86,7 @@ export default function UsersRolesSection() {
   // Editable role defaults matrix
   const [editableDefaults, setEditableDefaults] = useState<Record<string, string[]>>({})
   const [defaultsDirty, setDefaultsDirty] = useState(false)
+  const [applyToUsers, setApplyToUsers] = useState(true)
 
   // Sync from server when loaded
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function UsersRolesSection() {
   }
 
   const saveDefaults = () => {
-    updateRoleDefaults.mutate(editableDefaults, {
+    updateRoleDefaults.mutate({ defaults: editableDefaults, applyToUsers }, {
       onSuccess: () => setDefaultsDirty(false),
     })
   }
@@ -582,17 +583,51 @@ export default function UsersRolesSection() {
           <p className="text-[10px] text-text-dim mb-3">
             Klicke auf die Felder um die Standard-Module pro Rolle zu ändern. Neue Benutzer erhalten diese Berechtigungen automatisch.
           </p>
+
+          {/* Apply to existing users checkbox */}
+          <label className="flex items-center gap-2 mb-4 cursor-pointer group">
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                applyToUsers
+                  ? 'bg-accent border-accent'
+                  : 'border-border bg-transparent group-hover:border-text-dim'
+              }`}
+              onClick={() => setApplyToUsers(!applyToUsers)}
+            >
+              {applyToUsers && <Check size={10} strokeWidth={3} className="text-black" />}
+            </div>
+            <input
+              type="checkbox"
+              checked={applyToUsers}
+              onChange={(e) => setApplyToUsers(e.target.checked)}
+              className="sr-only"
+            />
+            <span className="text-[11px] text-text-sec">
+              Änderungen auch auf bestehende Benutzer anwenden
+            </span>
+            <span className="text-[10px] text-text-dim">
+              ({activeUsers.length} aktive Benutzer)
+            </span>
+          </label>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 py-2">Modul</th>
-                  {ROLES.map((r) => (
-                    <th key={r} className="text-center text-[10px] font-bold uppercase tracking-[0.08em] px-3 py-2"
-                      style={{ color: roleColors[r] }}>
-                      {roleLabels[r]}
-                    </th>
-                  ))}
+                  {ROLES.map((r) => {
+                    const count = activeUsers.filter((u) => u.role === r).length
+                    return (
+                      <th key={r} className="text-center text-[10px] font-bold uppercase tracking-[0.08em] px-3 py-2"
+                        style={{ color: roleColors[r] }}>
+                        <div>{roleLabels[r]}</div>
+                        {applyToUsers && count > 0 && (
+                          <div className="text-[9px] font-normal normal-case tracking-normal text-text-dim mt-0.5">
+                            {count} Benutzer
+                          </div>
+                        )}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>

@@ -299,9 +299,12 @@ export function useRoleDefaults() {
 export function useUpdateRoleDefaults() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Record<string, string[]>) =>
-      api.put<{ data: Record<UserRole, string[]> }>('/users/role-defaults', data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleDefaults'] }),
+    mutationFn: (data: { defaults: Record<string, string[]>; applyToUsers?: boolean }) =>
+      api.put<{ data: Record<UserRole, string[]>; updatedUsers: number }>('/users/role-defaults', data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['roleDefaults'] })
+      qc.invalidateQueries({ queryKey: ['users'] })
+    },
   })
 }
 
