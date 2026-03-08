@@ -94,6 +94,7 @@ const updateProjectSchema = createProjectSchema.partial().extend({
   progress: z.record(z.array(z.number())).optional(),
   rating: z.number().nullable().optional(),
   kalkulationIst: z.number().nullable().optional(),
+  archivedAt: z.string().nullable().optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -102,12 +103,19 @@ const updateProjectSchema = createProjectSchema.partial().extend({
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phase, priority, risk, search, projectManager, sortBy = 'name', sortOrder = 'asc' } = req.query
+    const { phase, priority, risk, search, projectManager, archived, sortBy = 'name', sortOrder = 'asc' } = req.query
 
     let query = supabase
       .from('projects')
       .select('*, contact:contacts(*)', { count: 'exact' })
       .is('deleted_at', null)
+
+    // Archiv-Filter: archived=true zeigt nur archivierte, sonst nur aktive
+    if (archived === 'true') {
+      query = query.not('archived_at', 'is', null)
+    } else {
+      query = query.is('archived_at', null)
+    }
 
     if (phase && typeof phase === 'string') query = query.eq('phase', phase)
     if (priority && typeof priority === 'string') query = query.eq('priority', priority)
@@ -330,6 +338,8 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (u.rating !== undefined) updates.rating = u.rating
     if (u.notes !== undefined) updates.notes = u.notes ?? null
 
+    if (u.archivedAt !== undefined) updates.archived_at = u.archivedAt
+
     if (u.progress !== undefined) {
       updates.progress = u.progress
       updates.phase = determinePhase(u.progress)
@@ -410,6 +420,39 @@ router.post('/:id/activities', async (req: Request, res: Response, next: NextFun
     await supabase.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', req.params.id)
 
     res.status(201).json({ data: activity })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// PUT /api/v1/projects/:id/archive
+// ---------------------------------------------------------------------------
+
+router.put('/:id/archive', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data: project } = await supabase.from('projects').select('progress, archived_at').eq('id', req.params.id).is('deleted_at', null).single()
+    if (!project) throw new AppError('Projekt nicht gefunden', 404)
+
+    // Toggle: Archivieren / Wiederherstellen
+    const isArchived = !!project.archived_at
+    const archivedAt = isArchived ? null : new Date().toISOString()
+
+    // Nur archivieren wenn 100% fertig (oder Wiederherstellen immer erlaubt)
+    if (!isArchived) {
+      const prog = computeProgress(project.progress ?? {})
+      if (prog.percent < 100) throw new AppError('Projekt kann nur archiviert werden wenn alle Schritte abgeschlossen sind', 400)
+    }
+
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ archived_at: archivedAt })
+      .eq('id', req.params.id)
+      .select('*, contact:contacts(*)')
+      .single()
+
+    if (error) throw new AppError(error.message, 500)
+    res.json({ data: enrichProject(data), archived: !isArchived })
   } catch (err) {
     next(err)
   }

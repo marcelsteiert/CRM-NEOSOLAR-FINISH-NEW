@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, AlertTriangle, MapPin, Phone, Mail, Building2, Sun, Zap, CheckCircle2,
-  FolderKanban, Check, Loader2, Pencil, Save, XCircle,
+  FolderKanban, Check, Loader2, Pencil, Save, XCircle, Trash2, Archive, ArchiveRestore,
   ExternalLink, FileText, TrendingUp, MessageSquare, PhoneCall,
   Users as UsersIcon, Send, GitBranch, Calendar, FileCheck, Clock,
 } from 'lucide-react'
 import {
   useProject, usePhaseDefinitions, useToggleStep, useUpdateProject, useAddProjectActivity,
+  useDeleteProject, useArchiveProject,
   phaseLabels, phaseColors, priorityLabels, priorityColors, formatCHF, computePhaseProgress,
   activityTypeLabels, activityTypeColors,
   type ProjectPhase, type ProjectPriority, type ProjectActivityType,
 } from '@/hooks/useProjects'
 import { usePartners } from '@/hooks/useProjects'
+import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
@@ -51,12 +53,15 @@ interface Props {
 }
 
 export default function ProjectDetailModal({ projectId, onClose }: Props) {
+  const { isAdmin } = useAuth()
   const { data: projectData, isLoading } = useProject(projectId)
   const { data: phasesData } = usePhaseDefinitions()
   const { data: partnersData } = usePartners()
   const toggleStep = useToggleStep()
   const updateProject = useUpdateProject()
   const addActivity = useAddProjectActivity()
+  const deleteProject = useDeleteProject()
+  const archiveProject = useArchiveProject()
 
   const project = projectData?.data
   const phases = phasesData?.data ?? []
@@ -96,6 +101,9 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
   // Notes (auto-save)
   const [notesText, setNotesText] = useState('')
   const [notesSavedAt, setNotesSavedAt] = useState<string | null>(null)
+
+  // Delete/Archive confirmation
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const backdropRef = useRef<HTMLDivElement>(null)
 
@@ -208,6 +216,19 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     setActivityType('NOTE')
   }
 
+  const handleDelete = () => {
+    deleteProject.mutate(projectId, { onSuccess: () => onClose() })
+  }
+
+  const handleArchive = () => {
+    archiveProject.mutate(projectId, {
+      onSuccess: () => {
+        setSuccessMsg(project?.archivedAt ? 'Wiederhergestellt' : 'Archiviert')
+        setTimeout(() => setSuccessMsg(''), 2000)
+      },
+    })
+  }
+
   if (isLoading || !project) {
     return (
       <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }}>
@@ -261,6 +282,11 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
               ) : (
                 <h2 className="text-[18px] font-bold tracking-[-0.02em] truncate">{project.name}</h2>
               )}
+              {project.archivedAt && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0" style={{ background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>
+                  <Archive size={10} /> Archiviert
+                </span>
+              )}
               {project.risk && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0" style={{ background: 'rgba(248,113,113,0.12)', color: '#F87171' }}>
                   <AlertTriangle size={10} /> Risiko
@@ -283,16 +309,58 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
             )}
             {successMsg && <p className="text-[11px] text-emerald-400 mt-1">{successMsg}</p>}
           </div>
-          <div className="flex items-center gap-2 ml-4 shrink-0">
+          <div className="flex items-center gap-1.5 ml-4 shrink-0">
             {isEditing ? (
               <>
                 <button onClick={() => setIsEditing(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Abbrechen</button>
                 <button onClick={handleSaveEdit} className="btn-primary px-3 py-1.5 text-[11px] flex items-center gap-1"><Save size={12} /> Speichern</button>
               </>
             ) : (
-              <button onClick={startEditing} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
-                <Pencil size={14} strokeWidth={1.8} />
-              </button>
+              <>
+                {/* Archiv-Button: nur wenn 100% fertig oder bereits archiviert */}
+                {(totalPercent === 100 || project.archivedAt) && (
+                  <button
+                    onClick={handleArchive}
+                    disabled={archiveProject.isPending}
+                    className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-emerald-400 hover:bg-surface-hover transition-all"
+                    title={project.archivedAt ? 'Wiederherstellen' : 'Archivieren'}
+                  >
+                    {project.archivedAt ? <ArchiveRestore size={14} strokeWidth={1.8} /> : <Archive size={14} strokeWidth={1.8} />}
+                  </button>
+                )}
+                {/* Bearbeiten */}
+                <button onClick={startEditing} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
+                  <Pencil size={14} strokeWidth={1.8} />
+                </button>
+                {/* Löschen (nur Admin) */}
+                {isAdmin && (
+                  confirmDelete ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleteProject.isPending}
+                        className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-red bg-red-soft hover:bg-red/20 transition-all"
+                      >
+                        {deleteProject.isPending ? 'Lösche...' : 'Bestätigen'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all"
+                      >
+                        <XCircle size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-all"
+                      title="Projekt löschen"
+                    >
+                      <Trash2 size={14} strokeWidth={1.8} />
+                    </button>
+                  )
+                )}
+              </>
             )}
             <button type="button" onClick={onClose} aria-label="Dialog schliessen" className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150">
               <X size={18} strokeWidth={1.8} />

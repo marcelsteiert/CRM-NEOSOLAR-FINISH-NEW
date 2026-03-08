@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useCallback } from 'react'
 import {
   FolderKanban, LayoutDashboard, Users2, Search, AlertTriangle, ChevronRight,
   TrendingUp, Sun, Zap, CheckCircle2, Clock, Star, ArrowUpRight, Loader2, Building2,
-  GripVertical,
+  GripVertical, Archive,
 } from 'lucide-react'
 import {
   useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
@@ -12,7 +12,7 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import ProjectDetailModal from './components/ProjectDetailModal'
 
-type ViewTab = 'kanban' | 'dashboard' | 'partner'
+type ViewTab = 'kanban' | 'dashboard' | 'partner' | 'archiv'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
 const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
@@ -28,7 +28,8 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
 
-  const { data: projectsData, isLoading } = useProjects({ search: search || undefined })
+  const isArchivView = view === 'archiv'
+  const { data: projectsData, isLoading } = useProjects({ search: search || undefined, archived: isArchivView })
   const { data: statsData } = useProjectStats()
   const { data: partnersData } = usePartners()
   const { data: phasesData } = usePhaseDefinitions()
@@ -54,6 +55,7 @@ export default function ProjectsPage() {
     { id: 'kanban', label: 'Kanban', icon: FolderKanban },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'partner', label: 'Partner', icon: Users2 },
+    { id: 'archiv', label: 'Archiv', icon: Archive },
   ]
 
   return (
@@ -113,6 +115,8 @@ export default function ProjectsPage() {
           <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined} />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
+        ) : view === 'archiv' ? (
+          <ArchivView projects={projects} onSelect={setSelectedProjectId} />
         ) : (
           <PartnerView partners={partners} />
         )}
@@ -565,6 +569,72 @@ function PartnerView({ partners }: { partners: Partner[] }) {
           </table>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Archiv View ───
+
+function ArchivView({
+  projects,
+  onSelect,
+}: {
+  projects: Project[]
+  onSelect: (id: string) => void
+}) {
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full py-20">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'color-mix(in srgb, #34D399 10%, transparent)' }}>
+          <Archive size={28} className="text-emerald-400" strokeWidth={1.5} />
+        </div>
+        <p className="text-[14px] font-semibold text-text-sec">Kein archiviertes Projekt</p>
+        <p className="text-[12px] text-text-dim mt-1">Abgeschlossene Projekte (100%) können archiviert werden</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-y-auto h-full space-y-3 pb-4">
+      {projects.map((p) => {
+        const archivedDate = p.archivedAt ? new Date(p.archivedAt).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
+        return (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onSelect(p.id)}
+            className="w-full glass-card p-4 sm:p-5 text-left hover:bg-surface-hover transition-all group"
+            style={{ borderRadius: 'var(--radius-lg)' }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)' }}>
+                  <CheckCircle2 size={18} className="text-emerald-400" strokeWidth={1.8} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold truncate">{p.name}</p>
+                  <p className="text-[11px] text-text-dim truncate">{p.description}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 sm:gap-6 text-right shrink-0 pl-13 sm:pl-0">
+                <div>
+                  <p className="text-[10px] text-text-dim uppercase">Wert</p>
+                  <p className="text-[13px] font-bold tabular-nums text-amber">{formatCHF(p.value)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-text-dim uppercase">kWp</p>
+                  <p className="text-[13px] font-bold tabular-nums">{p.kWp}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-text-dim uppercase">Archiviert</p>
+                  <p className="text-[12px] font-medium text-emerald-400">{archivedDate}</p>
+                </div>
+                <ChevronRight size={16} className="text-text-dim group-hover:text-text transition-colors" />
+              </div>
+            </div>
+          </button>
+        )
+      })}
     </div>
   )
 }

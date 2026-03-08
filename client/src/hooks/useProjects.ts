@@ -59,6 +59,7 @@ export interface Project {
   updatedAt: string
   completedAt: string | null
   deletedAt: string | null
+  archivedAt: string | null
   // computed
   total?: number
   done?: number
@@ -124,6 +125,7 @@ export interface ProjectFilters {
   phase?: ProjectPhase | 'ALL'
   priority?: ProjectPriority | 'ALL'
   risk?: boolean
+  archived?: boolean
   search?: string
   projectManager?: string
   sortBy?: string
@@ -138,6 +140,7 @@ export function useProjects(filters: ProjectFilters = {}) {
   if (filters.phase && filters.phase !== 'ALL') params.set('phase', filters.phase)
   if (filters.priority && filters.priority !== 'ALL') params.set('priority', filters.priority)
   if (filters.risk) params.set('risk', 'true')
+  if (filters.archived) params.set('archived', 'true')
   if (filters.search) params.set('search', filters.search)
   if (filters.projectManager) params.set('projectManager', filters.projectManager)
   if (filters.sortBy) params.set('sortBy', filters.sortBy)
@@ -228,6 +231,18 @@ export function useDeleteProject() {
     mutationFn: (id: string) => api.delete<{ message: string }>(`/projects/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['projectStats'] })
+    },
+  })
+}
+
+export function useArchiveProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.put<{ data: Project; archived: boolean }>(`/projects/${id}/archive`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project'] })
       qc.invalidateQueries({ queryKey: ['projectStats'] })
     },
   })
