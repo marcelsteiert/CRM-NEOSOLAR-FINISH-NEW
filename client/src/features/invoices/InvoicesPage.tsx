@@ -46,7 +46,7 @@ function ProvisionTable({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3 print:gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print:gap-2 print:grid-cols-3">
         <div
           className="glass-card p-4 print:border print:border-gray-300 print:bg-white"
           style={{ border: '1px solid color-mix(in srgb, #34D399 10%, transparent)' }}
@@ -239,10 +239,10 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             style={{
               background: 'linear-gradient(135deg, color-mix(in srgb, #A78BFA 14%, transparent), color-mix(in srgb, #A78BFA 5%, transparent))',
             }}
@@ -251,12 +251,12 @@ export default function InvoicesPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight">Rechnungen & Provision</h1>
-            <p className="text-[12px] text-text-sec">5% Provision auf Monatsabschlüsse</p>
+            <p className="text-[12px] text-text-sec hidden sm:block">5% Provision auf Monatsabschlüsse</p>
           </div>
         </div>
 
         {/* Month Navigation + Print */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
           <div className="flex items-center gap-1 glass-card px-1 py-1">
             <button
               type="button"
@@ -265,7 +265,7 @@ export default function InvoicesPage() {
             >
               <ChevronLeft size={16} className="text-text-sec" />
             </button>
-            <span className="text-[13px] font-bold px-3 min-w-[130px] text-center">{monthLabel}</span>
+            <span className="text-[12px] sm:text-[13px] font-bold px-2 sm:px-3 min-w-[110px] sm:min-w-[130px] text-center">{monthLabel}</span>
             <button
               type="button"
               onClick={() => navigateMonth(1)}
@@ -277,10 +277,10 @@ export default function InvoicesPage() {
           <button
             type="button"
             onClick={handlePrint}
-            className="btn-secondary flex items-center gap-2 px-4 py-2 text-[12px] font-semibold print:hidden"
+            className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2 text-[12px] font-semibold print:hidden"
           >
             <Printer size={14} strokeWidth={1.8} />
-            Drucken
+            <span className="hidden sm:inline">Drucken</span>
           </button>
         </div>
       </div>

@@ -25,12 +25,12 @@ export default function AuditLogSection() {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative">
           <select
             value={userFilter}
             onChange={(e) => setUserFilter(e.target.value)}
-            className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
+            className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer w-full sm:w-auto"
             style={{ minWidth: '160px' }}
           >
             <option value="" style={{ background: '#0B0F15' }}>Alle Benutzer</option>
@@ -60,8 +60,8 @@ export default function AuditLogSection() {
       </div>
 
       {/* Log Table */}
-      <div className="glass-card overflow-hidden">
-        <table className="w-full">
+      <div className="glass-card overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead>
             <tr className="border-b border-border">
               {['Zeitpunkt', 'Benutzer', 'Aktion', 'Bereich', 'Beschreibung'].map((h) => (

@@ -99,7 +99,7 @@ export default function AppointmentCreateDialog({ onClose, prefill }: Props) {
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
             {/* Contact Row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Kontaktperson *</label>
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Vor- und Nachname" className="glass-input w-full px-4 py-2.5 text-[13px]" autoFocus />
@@ -111,7 +111,7 @@ export default function AppointmentCreateDialog({ onClose, prefill }: Props) {
             </div>
 
             {/* Email + Phone */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">E-Mail *</label>
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="email@beispiel.ch" className="glass-input w-full px-4 py-2.5 text-[13px]" />
@@ -129,7 +129,7 @@ export default function AppointmentCreateDialog({ onClose, prefill }: Props) {
             </div>
 
             {/* Date + Time + Value */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Datum</label>
                 <input type="date" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} className="glass-input w-full px-4 py-2.5 text-[13px]" />
@@ -145,7 +145,7 @@ export default function AppointmentCreateDialog({ onClose, prefill }: Props) {
             </div>
 
             {/* Status + Priority */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value as AppointmentStatus)} className="glass-input w-full appearance-none px-4 py-2.5 text-[13px] cursor-pointer">

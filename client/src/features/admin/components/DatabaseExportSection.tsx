@@ -18,7 +18,7 @@ export default function DatabaseExportSection() {
     <div className="space-y-4">
       {/* DB Stats */}
       {stats && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div className="glass-card px-5 py-4 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'color-mix(in srgb, #60A5FA 12%, transparent)' }}>
               <Database size={16} className="text-blue-400" strokeWidth={1.8} />

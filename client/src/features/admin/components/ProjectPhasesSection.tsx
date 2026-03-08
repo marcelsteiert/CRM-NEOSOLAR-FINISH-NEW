@@ -93,7 +93,7 @@ export default function ProjectPhasesSection() {
               <div className="w-8 h-8 rounded-[10px] flex items-center justify-center" style={{ background: `color-mix(in srgb, ${phase.color} 12%, transparent)` }}>
                 <Icon size={16} style={{ color: phase.color }} />
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-3">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-[0.06em] text-text-dim mb-1">Phase-Name</label>
                   <input

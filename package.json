@@ -3,11 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "NeoSolar PV-CRM/ERP – Vertikal integriertes Betriebssystem",
-  "workspaces": [
-    "client",
-    "server",
-    "shared"
-  ],
   "scripts": {
     "dev": "npm run dev --workspace=client",
     "dev:server": "npm run dev --workspace=server",
@@ -20,5 +15,10 @@
   },
   "dependencies": {
     "@netlify/functions": "^5.1.2"
-  }
+  },
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ]
 }

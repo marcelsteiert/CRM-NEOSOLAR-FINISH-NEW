@@ -66,7 +66,7 @@ export default function AiSettingsSection() {
       </div>
 
       {/* Model & Language */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
           <div className="flex items-center gap-2 mb-3">
             <Brain size={14} className="text-violet-400" strokeWidth={2} />

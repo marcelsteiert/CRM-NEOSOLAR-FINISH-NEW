@@ -722,7 +722,7 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
 
   return (
     <div className="glass-card p-5 space-y-4" style={{ borderRadius: 'var(--radius-lg)' }}>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Vorname</label>
           <input
@@ -744,7 +744,7 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">E-Mail</label>
           <input
@@ -781,7 +781,7 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
         )}
       </div>
       {showPassword && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Telefon</label>
             <input
@@ -838,7 +838,7 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
             Standard laden
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
           {ALL_MODULES.map((mod) => {
             const checked = form.allowedModules.includes(mod.id)
             return (

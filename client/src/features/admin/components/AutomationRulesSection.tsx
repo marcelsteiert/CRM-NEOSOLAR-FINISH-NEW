@@ -127,7 +127,7 @@ export default function AutomationRulesSection() {
                 <span className="text-[13px] font-bold">{stageLabelsMap[rule.stage] ?? rule.stage}</span>
               </div>
 
-              <div className="grid grid-cols-[1fr_1fr_2fr] gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_2fr] gap-3">
                 <div>
                   <label className="block text-[10px] font-semibold text-text-dim mb-1">Max. Tage</label>
                   <input

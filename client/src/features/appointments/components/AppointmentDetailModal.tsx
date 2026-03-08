@@ -275,7 +275,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
           {activeTab === 'overview' && (
             <>
               {/* Termin + Fahrzeit */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #34D399 6%, transparent)', border: '1px solid color-mix(in srgb, #34D399 15%, transparent)' }}>
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Termin</p>
                   {isEditing ? (
@@ -327,7 +327,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
               {/* Status, Priorität, Typ */}
               <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Status</p>
                     {isEditing ? (

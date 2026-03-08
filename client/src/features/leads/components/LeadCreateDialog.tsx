@@ -126,7 +126,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
           )}
 
           {/* Name row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-text-sec mb-1.5">Vorname</label>
               <input
@@ -177,7 +177,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
           </div>
 
           {/* Phone + Email row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
                 Telefon <span className="text-amber">*</span>
@@ -207,7 +207,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
           </div>
 
           {/* Source + Value row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] font-semibold text-text-sec mb-1.5">Quelle</label>
               <div className="relative">

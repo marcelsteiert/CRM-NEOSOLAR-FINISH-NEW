@@ -73,8 +73,8 @@ export default function AdminPage() {
           <Settings size={20} className="text-violet-400" strokeWidth={1.8} />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-[-0.02em]">Administration</h1>
-          <p className="text-[12px] text-text-sec mt-0.5">Systemkonfiguration und Einstellungen</p>
+          <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Administration</h1>
+          <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Systemkonfiguration und Einstellungen</p>
         </div>
       </div>
 
@@ -84,8 +84,8 @@ export default function AdminPage() {
         <div className="flex-1 min-w-0 space-y-4">
           {/* Section Title */}
           <div>
-            <h2 className="text-[16px] font-bold tracking-[-0.01em]">{info.title}</h2>
-            <p className="text-[12px] text-text-sec mt-0.5">{info.desc}</p>
+            <h2 className="text-[14px] sm:text-[16px] font-bold tracking-[-0.01em]">{info.title}</h2>
+            <p className="text-[11px] sm:text-[12px] text-text-sec mt-0.5 hidden sm:block">{info.desc}</p>
           </div>
           {/* Section Content */}
           <SectionComponent />

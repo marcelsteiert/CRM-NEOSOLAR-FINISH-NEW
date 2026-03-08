@@ -50,7 +50,7 @@ export default function CompanyBrandingSection() {
       </div>
 
       {/* Form */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
           <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">Firmenname</label>
           <input
@@ -95,7 +95,7 @@ export default function CompanyBrandingSection() {
       {/* Offer Template */}
       <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
         <label className="block text-[10px] font-semibold text-text-dim mb-3 uppercase tracking-wider">Angebotsvorlage</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {TEMPLATES.map((t) => (
             <button
               key={t.id}

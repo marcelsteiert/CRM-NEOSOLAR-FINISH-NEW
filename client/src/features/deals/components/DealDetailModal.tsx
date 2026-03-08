@@ -325,7 +325,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           {activeTab === 'overview' && (
             <>
               {/* Wert + Abschlusswahrscheinlichkeit */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}>
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1">Angebotswert</p>
                   {isEditing ? (
@@ -371,7 +371,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
               {/* Phase & Priorität */}
               <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Phase</p>
                     {isEditing ? (
@@ -442,7 +442,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
               {/* Erwarteter Abschluss + Follow-Up */}
               <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
                     {isEditing ? (

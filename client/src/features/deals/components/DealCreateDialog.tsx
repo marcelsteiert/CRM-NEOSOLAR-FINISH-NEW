@@ -137,7 +137,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
             </div>
 
             {/* Contact Row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">
                   Kontaktperson *
@@ -165,7 +165,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
             </div>
 
             {/* Email + Phone */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">
                   E-Mail *
@@ -207,7 +207,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
             </div>
 
             {/* Value + Stage + Priority */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">
                   Wert (CHF)

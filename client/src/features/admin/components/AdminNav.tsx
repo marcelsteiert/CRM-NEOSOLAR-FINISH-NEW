@@ -95,14 +95,11 @@ interface Props {
 
 export default function AdminNav({ active, onChange }: Props) {
   return (
-    <div className="w-full lg:w-[220px] shrink-0 space-y-1 overflow-x-auto">
-      {navGroups.map((group, gi) => (
-        <div key={group.label}>
-          {gi > 0 && <div className="h-px my-2" style={{ background: 'rgba(255,255,255,0.06)' }} />}
-          <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-text-dim px-3 mb-1">
-            {group.label}
-          </p>
-          {group.items.map((item) => {
+    <>
+      {/* Mobile: Horizontal scrollable chips */}
+      <div className="lg:hidden w-full overflow-x-auto pb-1">
+        <div className="flex gap-1.5 min-w-max px-1">
+          {navGroups.flatMap((g) => g.items).map((item) => {
             const isActive = active === item.id
             return (
               <button
@@ -110,7 +107,7 @@ export default function AdminNav({ active, onChange }: Props) {
                 type="button"
                 onClick={() => onChange(item.id)}
                 className={[
-                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-all duration-150',
+                  'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-medium transition-all duration-150 whitespace-nowrap shrink-0',
                   isActive
                     ? 'text-text'
                     : 'text-text-dim hover:text-text hover:bg-surface-hover',
@@ -125,16 +122,59 @@ export default function AdminNav({ active, onChange }: Props) {
                 }
               >
                 <item.icon
-                  size={16}
+                  size={14}
                   strokeWidth={1.8}
                   style={{ color: isActive ? item.color : undefined }}
                 />
-                <span className="truncate">{item.label}</span>
+                <span>{item.label}</span>
               </button>
             )
           })}
         </div>
-      ))}
-    </div>
+      </div>
+
+      {/* Desktop: Vertical sidebar nav */}
+      <div className="hidden lg:block w-[220px] shrink-0 space-y-1">
+        {navGroups.map((group, gi) => (
+          <div key={group.label}>
+            {gi > 0 && <div className="h-px my-2" style={{ background: 'rgba(255,255,255,0.06)' }} />}
+            <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-text-dim px-3 mb-1">
+              {group.label}
+            </p>
+            {group.items.map((item) => {
+              const isActive = active === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onChange(item.id)}
+                  className={[
+                    'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-all duration-150',
+                    isActive
+                      ? 'text-text'
+                      : 'text-text-dim hover:text-text hover:bg-surface-hover',
+                  ].join(' ')}
+                  style={
+                    isActive
+                      ? {
+                          background: `color-mix(in srgb, ${item.color} 10%, transparent)`,
+                          border: `1px solid color-mix(in srgb, ${item.color} 15%, transparent)`,
+                        }
+                      : { border: '1px solid transparent' }
+                  }
+                >
+                  <item.icon
+                    size={16}
+                    strokeWidth={1.8}
+                    style={{ color: isActive ? item.color : undefined }}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }

@@ -118,7 +118,7 @@ export default function CompanyLocationsSection() {
               </div>
 
               <div className="flex-1 space-y-2">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-semibold text-text-dim mb-1">Name</label>
                     <input

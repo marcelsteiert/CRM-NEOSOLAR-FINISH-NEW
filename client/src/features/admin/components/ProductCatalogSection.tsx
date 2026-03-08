@@ -78,8 +78,8 @@ export default function ProductCatalogSection() {
       </div>
 
       {/* Products Table */}
-      <div className="glass-card overflow-hidden">
-        <table className="w-full">
+      <div className="glass-card overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-[500px]">
           <thead>
             <tr className="border-b border-border">
               {['Produkt', 'Hersteller', 'Preis (CHF)', 'Einheit', ''].map((h) => (
@@ -150,7 +150,7 @@ export default function ProductCatalogSection() {
       {/* Add Product */}
       {adding ? (
         <div className="glass-card p-4" style={{ borderRadius: 'var(--radius-lg)' }}>
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-3">
             <div>
               <label className="block text-[10px] font-semibold text-text-dim mb-1">Produktname</label>
               <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="z.B. SunPower Maxeon 6"

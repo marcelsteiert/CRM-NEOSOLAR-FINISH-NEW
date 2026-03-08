@@ -32,8 +32,8 @@ export default function NotificationSettingsSection() {
 
   return (
     <div className="space-y-4">
-      <div className="glass-card overflow-hidden">
-        <table className="w-full">
+      <div className="glass-card overflow-hidden overflow-x-auto">
+        <table className="w-full min-w-[500px]">
           <thead>
             <tr className="border-b border-border">
               {['Ereignis', 'Aktiv', 'In-App', 'E-Mail', 'Erinnerung (Min.)'].map((h) => (
