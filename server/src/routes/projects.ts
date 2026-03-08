@@ -122,14 +122,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (risk === 'true') query = query.eq('risk', true)
     if (projectManager && typeof projectManager === 'string') query = query.eq('project_manager_id', projectManager)
 
-    // Subunternehmen: nur Projekte in Phase montage/elektro
+    // Subunternehmen: alle Projekte sichtbar (ohne Preise im Frontend)
     const userRole = (req as any).user?.role ?? ''
-    if (userRole === 'SUBUNTERNEHMEN') {
-      query = query.in('phase', ['montage', 'elektro'])
-    }
 
     // Per-User Filter: Nicht-Admins sehen Projekte wo sie PL oder Deal-Owner sind
-    const ownerFilter = getOwnerFilter(req)
+    // Subunternehmen sehen ALLE Projekte (kein Owner-Filter)
+    const ownerFilter = userRole === 'SUBUNTERNEHMEN' ? null : getOwnerFilter(req)
     if (ownerFilter) {
       // Zuerst: Deal-IDs finden, die diesem User gehoeren
       const { data: userDeals } = await supabase
@@ -191,11 +189,7 @@ router.get('/partners', async (_req: Request, res: Response, next: NextFunction)
 
 router.get('/stats', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    let statsQuery = supabase.from('projects').select('*').is('deleted_at', null)
-    const statsRole = (req as any).user?.role ?? ''
-    if (statsRole === 'SUBUNTERNEHMEN') {
-      statsQuery = statsQuery.in('phase', ['montage', 'elektro'])
-    }
+    let statsQuery = supabase.from('projects').select('*').is('deleted_at', null).is('archived_at', null)
     const { data: active } = await statsQuery
     const items = active ?? []
 

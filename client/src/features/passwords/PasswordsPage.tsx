@@ -4,7 +4,7 @@ import {
   ExternalLink, Search, X, Shield, Loader2,
 } from 'lucide-react'
 import {
-  usePasswords, useCreatePassword, useUpdatePassword, useDeletePassword,
+  usePasswords, useSharedPasswords, useCreatePassword, useUpdatePassword, useDeletePassword,
   type PasswordEntry,
 } from '@/hooks/usePasswords'
 
@@ -34,11 +34,13 @@ const emptyForm: FormData = { title: '', username: '', password: '', url: '', no
 
 export default function PasswordsPage() {
   const { data: response, isLoading } = usePasswords()
+  const { data: sharedResponse } = useSharedPasswords()
   const createPw = useCreatePassword()
   const updatePw = useUpdatePassword()
   const deletePw = useDeletePassword()
 
   const passwords = response?.data ?? []
+  const sharedPasswords = sharedResponse?.data ?? []
 
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -164,6 +166,67 @@ export default function PasswordsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Team-Passwörter (geteilte) */}
+      {sharedPasswords.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <KeyRound size={14} className="text-amber" />
+            <h2 className="text-[13px] font-bold">Team-Passwörter</h2>
+            <span className="text-[10px] text-text-dim">({sharedPasswords.length})</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sharedPasswords.filter((p) => {
+              if (!search) return true
+              const q = search.toLowerCase()
+              return p.title.toLowerCase().includes(q) || p.username.toLowerCase().includes(q) || p.url.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)
+            }).map((pw) => {
+              const isVisible = visiblePasswords.has(pw.id)
+              const isCopied = copiedId === pw.id
+              return (
+                <div key={pw.id} className="glass-card p-4 group" style={{ borderRadius: 'var(--radius-lg)', border: '1px solid color-mix(in srgb, #F59E0B 8%, transparent)' }}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[13px] font-bold truncate">{pw.title}</p>
+                        <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)', color: '#F59E0B' }}>Team</span>
+                      </div>
+                      {pw.username && <p className="text-[11px] text-text-sec truncate mt-0.5">{pw.username}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-lg mb-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <code className="flex-1 text-[12px] font-mono truncate" style={{ color: isVisible ? '#F59E0B' : '#525E6F' }}>
+                      {isVisible ? pw.password : '••••••••••'}
+                    </code>
+                    <button onClick={() => toggleVisible(pw.id)} className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:text-text transition-colors shrink-0">
+                      {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </button>
+                    <button onClick={() => handleCopy(pw.password, pw.id)} className="w-6 h-6 rounded flex items-center justify-center text-text-dim hover:text-amber transition-colors shrink-0">
+                      {isCopied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                  {pw.url && (
+                    <a href={pw.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] text-blue-400 hover:text-blue-300 truncate transition-colors">
+                      <ExternalLink size={10} className="shrink-0" />
+                      <span className="truncate">{pw.url.replace(/^https?:\/\//, '')}</span>
+                    </a>
+                  )}
+                  {pw.notes && <p className="text-[10px] text-text-dim mt-2 line-clamp-2">{pw.notes}</p>}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Meine Passwörter */}
+      {sharedPasswords.length > 0 && passwords.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Shield size={14} className="text-text-dim" />
+          <h2 className="text-[13px] font-bold">Meine Passwörter</h2>
+          <span className="text-[10px] text-text-dim">({passwords.length})</span>
         </div>
       )}
 
