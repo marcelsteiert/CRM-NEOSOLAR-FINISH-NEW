@@ -1253,7 +1253,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
           {/* ────────── TAB 5: E-Mail ────────── */}
           {activeTab === 'emails' && (
-            <EmailSection contactId={lead.contactId} entityType="LEAD" entityId={lead.id} />
+            <EmailSection contactId={lead.contactId} contactEmail={lead.email} contactName={[lead.firstName, lead.lastName].filter(Boolean).join(' ')} entityType="LEAD" entityId={lead.id} />
           )}
 
           {/* ────────── TAB 6: Erinnerungen ────────── */}

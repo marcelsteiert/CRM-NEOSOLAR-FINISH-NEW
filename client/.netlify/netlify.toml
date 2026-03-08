@@ -1,0 +1,58 @@
+functionsDirectory = "C:\\Users\\SVK05\\crm-neosolar\\netlify\\functions"
+functionsDirectoryOrigin = "config-v1"
+redirectsOrigin = "config"
+plugins = []
+headers = []
+
+[build]
+publish = "C:\\Users\\SVK05\\crm-neosolar\\client\\dist"
+publishOrigin = "config"
+commandOrigin = "config"
+base = "C:\\Users\\SVK05\\crm-neosolar"
+command = "npm install && cd client && npm run build"
+functions = "C:\\Users\\SVK05\\crm-neosolar\\netlify\\functions"
+
+[build.environment]
+NODE_VERSION = "20"
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]
+included_files = ["server/src/**"]
+node_bundler = "esbuild"
+
+[[redirects]]
+from = "/api/*"
+to = "/.netlify/functions/api/:splat"
+status = 200.0
+force = true
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]

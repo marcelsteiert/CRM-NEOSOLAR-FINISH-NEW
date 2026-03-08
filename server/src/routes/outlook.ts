@@ -181,7 +181,20 @@ router.get('/emails', async (req: Request, res: Response, next: NextFunction) =>
       .select('*', { count: 'exact' })
       .eq('connection_id', conn.id)
 
-    if (folder && folder !== 'all') query = query.eq('folder', String(folder))
+    // Folder-Mapping: Frontend sendet 'inbox'/'sentitems', DB hat evtl. deutsche Namen
+    const folderMap: Record<string, string[]> = {
+      inbox: ['inbox', 'posteingang'],
+      sentitems: ['sentitems', 'sent items', 'gesendete elemente', 'gesendete objekte'],
+      drafts: ['drafts', 'entwürfe', 'entwuerfe'],
+      deleted: ['deleted items', 'gelöschte elemente', 'geloeschte elemente', 'deleteditems'],
+      junk: ['junk email', 'junk-e-mail', 'junk', 'spam'],
+      archive: ['archive', 'archiv'],
+    }
+    if (folder && folder !== 'all') {
+      const key = String(folder).toLowerCase()
+      const variants = folderMap[key] ?? [key]
+      query = query.in('folder', variants)
+    }
     if (contactId) query = query.eq('contact_id', String(contactId))
     if (dealId) query = query.eq('deal_id', String(dealId))
     if (projectId) query = query.eq('project_id', String(projectId))

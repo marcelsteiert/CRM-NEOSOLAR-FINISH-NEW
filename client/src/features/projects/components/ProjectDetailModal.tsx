@@ -839,7 +839,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
           {/* ────── TAB: E-Mail ────── */}
           {activeTab === 'emails' && (
             <div className="px-4 sm:px-6 py-5">
-              <EmailSection contactId={project.contactId} entityType="PROJEKT" entityId={project.id} />
+              <EmailSection contactId={project.contactId} contactEmail={project.email} contactName={project.name} entityType="PROJEKT" entityId={project.id} />
             </div>
           )}
         </div>

@@ -513,7 +513,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
           {/* ────── TAB: E-Mail ────── */}
           {activeTab === 'emails' && (
-            <EmailSection contactId={appt.contactId} entityType="TERMIN" entityId={appt.id} />
+            <EmailSection contactId={appt.contactId} contactEmail={appt.contactEmail} contactName={appt.contactName} entityType="TERMIN" entityId={appt.id} />
           )}
         </div>
 

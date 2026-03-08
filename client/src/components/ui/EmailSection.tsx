@@ -3,93 +3,249 @@
 import { useState } from 'react'
 import {
   Mail, Send, Inbox, ChevronDown, ChevronUp, Paperclip,
-  Clock, ArrowUpRight, ArrowDownLeft, Eye, Reply, Forward,
-  AlertCircle, Loader2,
+  Clock, ArrowUpRight, ArrowDownLeft, Reply,
+  Loader2, Plus, X, PenLine,
 } from 'lucide-react'
 import { useOutlookEmails, useOutlookStatus, useSendEmail, type OutlookEmail } from '@/hooks/useOutlook'
 
 interface EmailSectionProps {
   contactId: string
+  contactEmail?: string
+  contactName?: string
   entityType?: 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT'
   entityId?: string
 }
 
-export default function EmailSection({ contactId }: EmailSectionProps) {
+export default function EmailSection({ contactId, contactEmail, contactName }: EmailSectionProps) {
   const { data: statusRes } = useOutlookStatus()
   const status = statusRes?.data
-  const { data: emailsRes, isLoading } = useOutlookEmails({ contactId, limit: 100 })
-  const emails = emailsRes?.data ?? []
+  const { data: emailsRes, isLoading } = useOutlookEmails(
+    status?.connected ? { contactId, limit: 100 } : {},
+  )
+  const emails = status?.connected ? (emailsRes?.data ?? []) : []
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<OutlookEmail | null>(null)
-
-  // Nicht verbunden
-  if (!status?.connected) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: 'rgba(245,158,11,0.1)' }}>
-          <Mail size={20} className="text-amber-500" />
-        </div>
-        <p className="text-sm text-white/50 mb-1">Outlook nicht verbunden</p>
-        <p className="text-xs text-white/30">
-          Verbinde Outlook unter Kommunikation, um E-Mails hier zu sehen.
-        </p>
-      </div>
-    )
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 size={20} className="animate-spin text-amber-500" />
-        <span className="ml-2 text-sm text-white/50">E-Mails laden...</span>
-      </div>
-    )
-  }
-
-  if (emails.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: 'rgba(255,255,255,0.035)' }}>
-          <Inbox size={20} className="text-white/30" />
-        </div>
-        <p className="text-sm text-white/50 mb-1">Keine E-Mails vorhanden</p>
-        <p className="text-xs text-white/30">
-          Sobald E-Mails mit diesem Kontakt synchronisiert werden, erscheinen sie hier.
-        </p>
-      </div>
-    )
-  }
+  const [showCompose, setShowCompose] = useState(false)
 
   return (
     <div className="space-y-2">
-      {/* Header */}
+      {/* Header mit Neue E-Mail Button */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
-          E-Mail-Verlauf ({emails.length})
+          E-Mail-Verlauf {emails.length > 0 ? `(${emails.length})` : ''}
         </span>
+        <button
+          type="button"
+          onClick={() => setShowCompose(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-amber-500 hover:bg-amber-500/10 transition-colors"
+          style={{ border: '1px solid rgba(245,158,11,0.2)' }}
+        >
+          <Plus size={13} strokeWidth={2} />
+          Neue E-Mail
+        </button>
       </div>
+
+      {/* Compose Dialog */}
+      {showCompose && (
+        <ComposeEmail
+          contactEmail={contactEmail}
+          contactName={contactName}
+          contactId={contactId}
+          isConnected={!!status?.connected}
+          onClose={() => setShowCompose(false)}
+        />
+      )}
+
+      {/* Status-Hinweis wenn nicht verbunden */}
+      {!status?.connected && (
+        <div className="rounded-lg p-3 mb-3 flex items-start gap-2.5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+          <Mail size={14} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] text-white/60">Outlook ist nicht verbunden.</p>
+            <p className="text-[10px] text-white/35 mt-0.5">
+              E-Mails koennen manuell erfasst werden. Fuer automatische Synchronisierung Outlook unter Kommunikation verbinden.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Loading */}
+      {isLoading && status?.connected && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={20} className="animate-spin text-amber-500" />
+          <span className="ml-2 text-sm text-white/50">E-Mails laden...</span>
+        </div>
+      )}
+
+      {/* Leerer Zustand */}
+      {!isLoading && emails.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4" style={{ background: 'rgba(255,255,255,0.035)' }}>
+            <Inbox size={20} className="text-white/30" />
+          </div>
+          <p className="text-sm text-white/50 mb-1">Keine E-Mails vorhanden</p>
+          <p className="text-xs text-white/30">
+            {status?.connected
+              ? 'Sobald E-Mails mit diesem Kontakt synchronisiert werden, erscheinen sie hier.'
+              : 'Erfasse E-Mails manuell mit dem Button oben.'}
+          </p>
+        </div>
+      )}
 
       {/* E-Mail-Liste */}
-      <div className="space-y-1.5">
-        {emails.map((email) => (
-          <EmailItem
-            key={email.id}
-            email={email}
-            isExpanded={expandedId === email.id}
-            onToggle={() => setExpandedId(expandedId === email.id ? null : email.id)}
-            onReply={() => setReplyTo(email)}
-            connectedEmail={status.email}
-          />
-        ))}
-      </div>
+      {emails.length > 0 && (
+        <div className="space-y-1.5">
+          {emails.map((email) => (
+            <EmailItem
+              key={email.id}
+              email={email}
+              isExpanded={expandedId === email.id}
+              onToggle={() => setExpandedId(expandedId === email.id ? null : email.id)}
+              onReply={() => setReplyTo(email)}
+              connectedEmail={status?.email}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Reply Modal */}
+      {/* Reply Inline */}
       {replyTo && (
         <ReplyComposer
           email={replyTo}
           onClose={() => setReplyTo(null)}
         />
       )}
+    </div>
+  )
+}
+
+// ── Neue E-Mail verfassen ──
+
+function ComposeEmail({
+  contactEmail,
+  contactName,
+  contactId,
+  isConnected,
+  onClose,
+}: {
+  contactEmail?: string
+  contactName?: string
+  contactId: string
+  isConnected: boolean
+  onClose: () => void
+}) {
+  const [to, setTo] = useState(contactEmail ?? '')
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
+  const sendEmail = useSendEmail()
+
+  const handleSend = async () => {
+    if (!to.trim() || !subject.trim()) return
+    try {
+      await sendEmail.mutateAsync({
+        to: [{ email: to.trim(), name: contactName }],
+        subject: subject.trim(),
+        bodyHtml: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+        contactId,
+        trackingEnabled: true,
+      })
+      setSuccessMsg('E-Mail wurde gesendet!')
+      setTimeout(() => {
+        setSuccessMsg('')
+        onClose()
+      }, 2000)
+    } catch {
+      // Fehler wird von React Query gehandelt
+    }
+  }
+
+  return (
+    <div className="rounded-lg overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center gap-2">
+          <PenLine size={14} className="text-amber-500" />
+          <span className="text-[12px] font-semibold text-white/90">Neue E-Mail</span>
+          {!isConnected && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-medium">Manuell</span>
+          )}
+        </div>
+        <button type="button" onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">
+          <X size={16} />
+        </button>
+      </div>
+
+      {/* Form */}
+      <div className="p-4 space-y-3">
+        {/* Empfaenger */}
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">An</label>
+          <input
+            type="email"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="email@beispiel.ch"
+            className="glass-input w-full text-[12px]"
+          />
+        </div>
+
+        {/* Betreff */}
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Betreff</label>
+          <input
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Betreff eingeben..."
+            className="glass-input w-full text-[12px]"
+          />
+        </div>
+
+        {/* Nachricht */}
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Nachricht</label>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="Nachricht schreiben..."
+            className="glass-input w-full h-32 text-[12px] resize-none"
+          />
+        </div>
+
+        {/* Erfolg */}
+        {successMsg && (
+          <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            {successMsg}
+          </div>
+        )}
+
+        {/* Fehler */}
+        {sendEmail.isError && (
+          <div className="text-[11px] text-red-400 font-medium">
+            {!isConnected
+              ? 'Outlook ist nicht verbunden. Verbinde Outlook unter Kommunikation.'
+              : 'Fehler beim Senden. Bitte versuche es erneut.'}
+          </div>
+        )}
+
+        {/* Aktionen */}
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn-secondary text-[11px] px-3 py-1.5">
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!to.trim() || !subject.trim() || sendEmail.isPending}
+            className="btn-primary text-[11px] px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
+          >
+            {sendEmail.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            {isConnected ? 'Senden' : 'Erfassen'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -306,7 +462,6 @@ function formatSize(bytes: number): string {
 }
 
 function sanitizeHtml(html: string): string {
-  // Einfache Sanitierung: Script-Tags entfernen
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+="[^"]*"/gi, '')

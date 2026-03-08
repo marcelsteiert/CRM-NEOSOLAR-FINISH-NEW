@@ -684,7 +684,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
           {/* ────── TAB: E-Mail ────── */}
           {activeTab === 'emails' && (
-            <EmailSection contactId={deal.contactId} entityType="ANGEBOT" entityId={deal.id} />
+            <EmailSection contactId={deal.contactId} contactEmail={deal.contactEmail} contactName={deal.contactName} entityType="ANGEBOT" entityId={deal.id} />
           )}
         </div>
 
