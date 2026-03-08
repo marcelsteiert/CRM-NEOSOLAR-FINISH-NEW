@@ -52,60 +52,64 @@ export async function syncEmails(connectionId: string): Promise<{ synced: number
   const startTime = Date.now()
 
   try {
-    // Delta Link holen (wenn vorhanden)
+    // Delta Links holen (Inbox + Sent)
     const { data: conn } = await supabase
       .from('outlook_connections')
-      .select('delta_link')
+      .select('delta_link, sent_delta_link')
       .eq('id', connectionId)
       .single()
 
-    let url = conn?.delta_link || `/me/mailFolders/inbox/messages/delta?$select=${EMAIL_SELECT}&$top=50`
-    let deltaLink: string | null = null
+    // Beide Ordner synchronisieren: Inbox + Gesendete Elemente
+    const folders = [
+      { deltaKey: 'delta_link' as const, savedDelta: conn?.delta_link, path: '/me/mailFolders/inbox/messages/delta' },
+      { deltaKey: 'sent_delta_link' as const, savedDelta: conn?.sent_delta_link, path: '/me/mailFolders/sentitems/messages/delta' },
+    ]
 
-    // Alle Seiten abrufen
-    while (url) {
-      const isFullUrl = url.startsWith('https://')
-      let data: DeltaResponse<GraphMessage>
+    for (const folder of folders) {
+      let url = folder.savedDelta || `${folder.path}?$select=${EMAIL_SELECT}&$top=50`
+      let deltaLink: string | null = null
 
-      if (isFullUrl) {
-        // Delta/Next Link ist volle URL – direkt abrufen
-        const token = await getTokenForConnection(connectionId)
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        })
-        if (!res.ok) throw new Error(`Delta sync failed: ${res.statusText}`)
-        data = await res.json()
-      } else {
-        data = await graphGet<DeltaResponse<GraphMessage>>(connectionId, url)
-      }
+      while (url) {
+        const isFullUrl = url.startsWith('https://')
+        let data: DeltaResponse<GraphMessage>
 
-      // Messages verarbeiten
-      for (const msg of data.value) {
-        try {
-          await upsertEmail(connectionId, msg)
-          synced++
-        } catch (err: any) {
-          errors.push(`Message ${msg.id}: ${err.message}`)
+        if (isFullUrl) {
+          const token = await getTokenForConnection(connectionId)
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          })
+          if (!res.ok) throw new Error(`Delta sync failed: ${res.statusText}`)
+          data = await res.json()
+        } else {
+          data = await graphGet<DeltaResponse<GraphMessage>>(connectionId, url)
+        }
+
+        for (const msg of data.value) {
+          try {
+            await upsertEmail(connectionId, msg)
+            synced++
+          } catch (err: any) {
+            errors.push(`Message ${msg.id}: ${err.message}`)
+          }
+        }
+
+        if (data['@odata.nextLink']) {
+          url = data['@odata.nextLink']
+        } else if (data['@odata.deltaLink']) {
+          deltaLink = data['@odata.deltaLink']
+          url = ''
+        } else {
+          url = ''
         }
       }
 
-      // Naechste Seite oder Delta Link
-      if (data['@odata.nextLink']) {
-        url = data['@odata.nextLink']
-      } else if (data['@odata.deltaLink']) {
-        deltaLink = data['@odata.deltaLink']
-        url = ''
-      } else {
-        url = ''
+      // Delta Link fuer diesen Ordner speichern
+      if (deltaLink) {
+        await supabase
+          .from('outlook_connections')
+          .update({ [folder.deltaKey]: deltaLink, last_sync_at: new Date().toISOString() })
+          .eq('id', connectionId)
       }
-    }
-
-    // Delta Link speichern
-    if (deltaLink) {
-      await supabase
-        .from('outlook_connections')
-        .update({ delta_link: deltaLink, last_sync_at: new Date().toISOString() })
-        .eq('id', connectionId)
     }
 
     // Auto-Matching laufen lassen
