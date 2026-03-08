@@ -28,6 +28,7 @@ import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
 import adminDbExportRouter from './routes/admin/dbExport.js'
 import searchRouter from './routes/search.js'
 import passwordsRouter from './routes/passwords.js'
+import outlookRouter from './routes/outlook.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { mapKeys } from './lib/caseMapper.js'
 import { authMiddleware } from './middleware/auth.js'
@@ -67,6 +68,9 @@ export function createApp() {
   // Oeffentliche Routes (kein Auth noetig)
   app.use('/api/v1/auth', authRouter)
   app.use('/api/v1/health', healthRouter)
+  // Outlook OAuth Callback + Tracking Pixel (kein Auth)
+  app.get('/api/v1/outlook/callback', outlookRouter)
+  app.get('/api/v1/outlook/track/:trackingId/open.gif', outlookRouter)
 
   // Geschuetzte Routes (authMiddleware pro Route)
   app.use('/api/v1/contacts', authMiddleware, contactsRouter)
@@ -86,6 +90,7 @@ export function createApp() {
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
   app.use('/api/v1/search', authMiddleware, searchRouter)
   app.use('/api/v1/passwords', authMiddleware, passwordsRouter)
+  app.use('/api/v1/outlook', authMiddleware, outlookRouter)
 
   // Admin routes (geschuetzt)
   app.use('/api/v1/admin/products', authMiddleware, adminProductsRouter)
