@@ -15,13 +15,14 @@ import { useCreateProject } from '@/hooks/useProjects'
 import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
+import EmailSection from '@/components/ui/EmailSection'
 
 interface Props {
   dealId: string
   onClose: () => void
 }
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -240,6 +241,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     { key: 'activities', label: `Aktivitäten (${deal.activities.length})` },
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
+    { key: 'emails', label: 'E-Mail' },
   ]
 
   return (
@@ -678,6 +680,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           {/* ────── TAB: Dokumente ────── */}
           {activeTab === 'documents' && (
             <DocumentSection contactId={deal.contactId} entityType="ANGEBOT" entityId={deal.id} />
+          )}
+
+          {/* ────── TAB: E-Mail ────── */}
+          {activeTab === 'emails' && (
+            <EmailSection contactId={deal.contactId} entityType="ANGEBOT" entityId={deal.id} />
           )}
         </div>
 

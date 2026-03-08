@@ -15,6 +15,7 @@ import {
 import { usePartners } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
+import EmailSection from '@/components/ui/EmailSection'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
 const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
@@ -33,7 +34,7 @@ const activityIcons: Record<ProjectActivityType, React.ComponentType<{ size?: nu
   SYSTEM: Zap,
 }
 
-type ProjectTab = 'overview' | 'activities' | 'notes' | 'documents'
+type ProjectTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -263,6 +264,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     { key: 'activities', label: `Aktivitäten (${sortedActivities.length})` },
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
+    { key: 'emails', label: 'E-Mail' },
   ]
 
   return (
@@ -831,6 +833,13 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
           {activeTab === 'documents' && (
             <div className="px-4 sm:px-6 py-5">
               <DocumentSection contactId={project.contactId} entityType="PROJEKT" entityId={project.id} />
+            </div>
+          )}
+
+          {/* ────── TAB: E-Mail ────── */}
+          {activeTab === 'emails' && (
+            <div className="px-4 sm:px-6 py-5">
+              <EmailSection contactId={project.contactId} entityType="PROJEKT" entityId={project.id} />
             </div>
           )}
         </div>

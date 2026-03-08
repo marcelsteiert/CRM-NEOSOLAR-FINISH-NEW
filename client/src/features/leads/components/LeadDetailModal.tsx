@@ -49,6 +49,7 @@ import {
 } from '@/hooks/useLeads'
 import { useCreateAppointment } from '@/hooks/useAppointments'
 import DocumentSection from '@/components/ui/DocumentSection'
+import EmailSection from '@/components/ui/EmailSection'
 
 /* ── Props ── */
 
@@ -121,7 +122,7 @@ const activityTypeConfig: Record<ActivityType, { icon: typeof Phone; color: stri
 
 /* ── Tab Type ── */
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'reminders'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'reminders'
 
 /* ── Mock Documents ── */
 
@@ -465,6 +466,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     { key: 'activities', label: 'Aktivitäten' },
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
+    { key: 'emails', label: 'E-Mail' },
     { key: 'reminders', label: 'Erinnerungen' },
   ]
 
@@ -1249,7 +1251,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             <DocumentSection contactId={lead.contactId} entityType="LEAD" entityId={lead.id} />
           )}
 
-          {/* ────────── TAB 5: Erinnerungen ────────── */}
+          {/* ────────── TAB 5: E-Mail ────────── */}
+          {activeTab === 'emails' && (
+            <EmailSection contactId={lead.contactId} entityType="LEAD" entityId={lead.id} />
+          )}
+
+          {/* ────────── TAB 6: Erinnerungen ────────── */}
           {activeTab === 'reminders' && (
             <>
               {/* Add reminder button */}

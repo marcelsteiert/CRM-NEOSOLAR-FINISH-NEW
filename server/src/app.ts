@@ -68,10 +68,6 @@ export function createApp() {
   // Oeffentliche Routes (kein Auth noetig)
   app.use('/api/v1/auth', authRouter)
   app.use('/api/v1/health', healthRouter)
-  // Outlook OAuth Callback + Tracking Pixel (kein Auth)
-  app.get('/api/v1/outlook/callback', outlookRouter)
-  app.get('/api/v1/outlook/track/:trackingId/open.gif', outlookRouter)
-
   // Geschuetzte Routes (authMiddleware pro Route)
   app.use('/api/v1/contacts', authMiddleware, contactsRouter)
   app.use('/api/v1/leads', authMiddleware, leadsRouter)
@@ -90,7 +86,14 @@ export function createApp() {
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
   app.use('/api/v1/search', authMiddleware, searchRouter)
   app.use('/api/v1/passwords', authMiddleware, passwordsRouter)
-  app.use('/api/v1/outlook', authMiddleware, outlookRouter)
+  // Outlook: callback + tracking pixel sind oeffentlich, Rest braucht Auth
+  app.use('/api/v1/outlook', (req, res, next) => {
+    // Oeffentliche Pfade ohne Auth
+    if (req.path === '/callback' || req.path.startsWith('/track/')) {
+      return next()
+    }
+    return authMiddleware(req, res, next)
+  }, outlookRouter)
 
   // Admin routes (geschuetzt)
   app.use('/api/v1/admin/products', authMiddleware, adminProductsRouter)

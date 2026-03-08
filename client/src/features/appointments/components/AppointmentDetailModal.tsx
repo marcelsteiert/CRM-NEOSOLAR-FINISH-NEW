@@ -14,13 +14,14 @@ import { useCreateDeal } from '@/hooks/useDeals'
 import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
+import EmailSection from '@/components/ui/EmailSection'
 
 interface Props {
   appointmentId: string
   onClose: () => void
 }
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'checklist'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'checklist'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -201,6 +202,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     { key: 'checklist', label: `Checkliste (${checkedCount}/${totalCount})` },
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
+    { key: 'emails', label: 'E-Mail' },
   ]
 
   return (
@@ -507,6 +509,11 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
           {/* ────── TAB: Dokumente ────── */}
           {activeTab === 'documents' && (
             <DocumentSection contactId={appt.contactId} entityType="TERMIN" entityId={appt.id} />
+          )}
+
+          {/* ────── TAB: E-Mail ────── */}
+          {activeTab === 'emails' && (
+            <EmailSection contactId={appt.contactId} entityType="TERMIN" entityId={appt.id} />
           )}
         </div>
 
