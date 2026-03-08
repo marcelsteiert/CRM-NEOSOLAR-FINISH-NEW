@@ -53,7 +53,8 @@ interface Props {
 }
 
 export default function ProjectDetailModal({ projectId, onClose }: Props) {
-  const { isAdmin } = useAuth()
+  const { isAdmin, isSubunternehmen } = useAuth()
+  const hidePrice = isSubunternehmen
   const { data: projectData, isLoading } = useProject(projectId)
   const { data: phasesData } = usePhaseDefinitions()
   const { data: partnersData } = usePartners()
@@ -440,10 +441,10 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                           <span className="text-[10px] text-text-dim w-12 shrink-0">kWp</span>
                           <input type="number" value={editKwp} onChange={(e) => setEditKwp(e.target.value)} className="glass-input flex-1 px-2 py-1 text-[12px] tabular-nums" />
                         </div>
-                        <div className="flex items-center gap-2">
+                        {!hidePrice && <div className="flex items-center gap-2">
                           <span className="text-[10px] text-text-dim w-12 shrink-0">CHF</span>
                           <input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} className="glass-input flex-1 px-2 py-1 text-[12px] tabular-nums" />
-                        </div>
+                        </div>}
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-text-dim w-12 shrink-0">Start</span>
                           <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="glass-input flex-1 px-2 py-1 text-[12px]" />
@@ -459,10 +460,10 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                           <span className="text-text-dim">Leistung</span>
                           <span className="font-bold">{project.kWp} kWp</span>
                         </div>
-                        <div className="flex items-center justify-between text-[12px]">
+                        {!hidePrice && <div className="flex items-center justify-between text-[12px]">
                           <span className="text-text-dim">Auftragswert</span>
                           <span className="font-bold" style={{ color: '#F59E0B' }}>{formatCHF(project.value)}</span>
-                        </div>
+                        </div>}
                         <div className="flex items-center justify-between text-[12px]">
                           <span className="text-text-dim">Start</span>
                           <span className="font-mono text-[11px]">{new Date(project.startDate).toLocaleDateString('de-CH')}</span>
@@ -591,8 +592,8 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                 </div>
 
                 {/* Nachkalkulation + Risiko */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="glass-card p-5">
+                <div className={`grid grid-cols-1 ${hidePrice ? '' : 'sm:grid-cols-2'} gap-4`}>
+                  {!hidePrice && <div className="glass-card p-5">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <TrendingUp size={14} style={{ color: '#34D399' }} />
@@ -645,7 +646,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                         )}
                       </div>
                     )}
-                  </div>
+                  </div>}
 
                   <div className="glass-card p-5">
                     <div className="flex items-center justify-between mb-3">

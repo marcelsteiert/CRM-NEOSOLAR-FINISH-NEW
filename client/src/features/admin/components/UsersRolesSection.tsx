@@ -32,6 +32,7 @@ const ALL_MODULES = [
   { id: 'admin', label: 'Administration' },
   { id: 'communication', label: 'Kommunikation' },
   { id: 'documents', label: 'Dokumente' },
+  { id: 'passwords', label: 'Passwörter' },
   { id: 'export', label: 'Export' },
 ]
 

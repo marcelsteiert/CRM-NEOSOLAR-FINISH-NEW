@@ -23,7 +23,7 @@ const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
 }
 
 export default function ProjectsPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, isSubunternehmen } = useAuth()
   const [view, setView] = useState<ViewTab>('kanban')
   const [search, setSearch] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -51,12 +51,14 @@ export default function ProjectsPage() {
 
   const riskProjects = useMemo(() => projects.filter((p) => p.risk), [projects])
 
-  const views: { id: ViewTab; label: string; icon: typeof FolderKanban }[] = [
+  const allViews: { id: ViewTab; label: string; icon: typeof FolderKanban }[] = [
     { id: 'kanban', label: 'Kanban', icon: FolderKanban },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'partner', label: 'Partner', icon: Users2 },
     { id: 'archiv', label: 'Archiv', icon: Archive },
   ]
+  // Subunternehmen: nur Kanban (keine Preise/Stats)
+  const views = isSubunternehmen ? allViews.filter((v) => v.id === 'kanban') : allViews
 
   return (
     <div className="flex-1 flex flex-col gap-4 sm:gap-5 overflow-hidden">
@@ -65,7 +67,7 @@ export default function ProjectsPage() {
         <div>
           <h1 className="text-lg sm:text-[22px] font-bold tracking-[-0.03em]">Projekte</h1>
           <p className="text-[12px] sm:text-[13px] text-text-sec mt-0.5">
-            {projects.length} aktive Projekte · {stats ? formatCHF(stats.totalValue) : '–'} Auftragsvolumen
+            {projects.length} aktive Projekte{!isSubunternehmen && stats ? ` · ${formatCHF(stats.totalValue)} Auftragsvolumen` : ''}
           </p>
         </div>
 
@@ -112,7 +114,7 @@ export default function ProjectsPage() {
             <Loader2 size={24} className="animate-spin text-text-dim" />
           </div>
         ) : view === 'kanban' ? (
-          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined} />
+          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined} hidePrice={isSubunternehmen} />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
         ) : view === 'archiv' ? (
@@ -140,11 +142,13 @@ function KanbanView({
   phases,
   onSelect,
   onMoveProject,
+  hidePrice = false,
 }: {
   projectsByPhase: Record<ProjectPhase, Project[]>
   phases: { id: string; name: string; color: string; steps: string[] }[]
   onSelect: (id: string) => void
   onMoveProject?: (projectId: string, targetPhase: ProjectPhase) => void
+  hidePrice?: boolean
 }) {
   const canDrag = !!onMoveProject
   const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null)
@@ -217,7 +221,7 @@ function KanbanView({
                 <span className="text-[13px] font-bold">{phaseDef?.name ?? phaseLabels[phaseId]}</span>
                 <span className="ml-auto text-[11px] text-text-dim font-mono">{items.length}</span>
               </div>
-              <p className="text-[11px] text-text-dim">{formatCHF(totalValue)}</p>
+              {!hidePrice && <p className="text-[11px] text-text-dim">{formatCHF(totalValue)}</p>}
             </div>
 
             {/* Cards */}
@@ -235,6 +239,7 @@ function KanbanView({
                   onDragEnd={canDrag ? handleDragEnd : undefined}
                   isDragging={draggingId === project.id}
                   draggable={canDrag}
+                  hidePrice={hidePrice}
                 />
               ))}
               {items.length === 0 && (
@@ -259,10 +264,10 @@ function KanbanView({
 }
 
 function ProjectCard({
-  project, phaseId, onClick, onDragStart, onDragEnd, isDragging, draggable = true,
+  project, phaseId, onClick, onDragStart, onDragEnd, isDragging, draggable = true, hidePrice = false,
 }: {
   project: Project; phaseId: ProjectPhase; onClick: () => void
-  onDragStart?: (e: React.DragEvent) => void; onDragEnd?: () => void; isDragging: boolean; draggable?: boolean
+  onDragStart?: (e: React.DragEvent) => void; onDragEnd?: () => void; isDragging: boolean; draggable?: boolean; hidePrice?: boolean
 }) {
   const color = phaseColors[phaseId]
   const pp = computePhaseProgress(project.progress, phaseId)
@@ -305,7 +310,7 @@ function ProjectCard({
       {/* Meta */}
       <div className="flex items-center justify-between text-[11px]">
         <span className="text-text-dim">{project.kWp} kWp</span>
-        <span className="font-mono tabular-nums" style={{ color: '#F59E0B' }}>{formatCHF(project.value)}</span>
+        {!hidePrice && <span className="font-mono tabular-nums" style={{ color: '#F59E0B' }}>{formatCHF(project.value)}</span>}
       </div>
 
       {/* Total progress */}
