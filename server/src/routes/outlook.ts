@@ -162,8 +162,6 @@ router.post('/sync', async (req: Request, res: Response, next: NextFunction) => 
 router.get('/emails', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId } = getUser(req)
-    const conn = await getUserConnection(userId)
-    if (!conn) throw new AppError('Keine Outlook-Verbindung', 400)
 
     const {
       folder = 'inbox',
@@ -179,7 +177,16 @@ router.get('/emails', async (req: Request, res: Response, next: NextFunction) =>
     let query = supabase
       .from('outlook_emails')
       .select('*', { count: 'exact' })
-      .eq('connection_id', conn.id)
+
+    // Wenn contactId gesetzt → Team-weiter E-Mail-Verlauf (alle Connections)
+    // Ohne contactId → nur eigene E-Mails (Kommunikationsseite)
+    if (contactId) {
+      query = query.eq('contact_id', String(contactId))
+    } else {
+      const conn = await getUserConnection(userId)
+      if (!conn) throw new AppError('Keine Outlook-Verbindung', 400)
+      query = query.eq('connection_id', conn.id)
+    }
 
     // Folder-Mapping: Frontend sendet 'inbox'/'sentitems', DB hat evtl. deutsche Namen
     const folderMap: Record<string, string[]> = {
@@ -190,12 +197,12 @@ router.get('/emails', async (req: Request, res: Response, next: NextFunction) =>
       junk: ['junk email', 'junk-e-mail', 'junk', 'spam'],
       archive: ['archive', 'archiv'],
     }
-    if (folder && folder !== 'all') {
+    // Nur Folder-Filter wenn KEIN contactId (bei contactId alle Ordner zeigen)
+    if (!contactId && folder && folder !== 'all') {
       const key = String(folder).toLowerCase()
       const variants = folderMap[key] ?? [key]
       query = query.in('folder', variants)
     }
-    if (contactId) query = query.eq('contact_id', String(contactId))
     if (dealId) query = query.eq('deal_id', String(dealId))
     if (projectId) query = query.eq('project_id', String(projectId))
     if (unreadOnly === 'true') query = query.eq('is_read', false)

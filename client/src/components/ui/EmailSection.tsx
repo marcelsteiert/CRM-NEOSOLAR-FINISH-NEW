@@ -19,10 +19,9 @@ interface EmailSectionProps {
 export default function EmailSection({ contactId, contactEmail, contactName }: EmailSectionProps) {
   const { data: statusRes } = useOutlookStatus()
   const status = statusRes?.data
-  const { data: emailsRes, isLoading } = useOutlookEmails(
-    status?.connected ? { contactId, limit: 100 } : {},
-  )
-  const emails = status?.connected ? (emailsRes?.data ?? []) : []
+  // Immer E-Mails laden wenn contactId vorhanden (Team-weiter Verlauf)
+  const { data: emailsRes, isLoading } = useOutlookEmails({ contactId, limit: 100 })
+  const emails = emailsRes?.data ?? []
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<OutlookEmail | null>(null)
   const [showCompose, setShowCompose] = useState(false)
@@ -56,21 +55,8 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
         />
       )}
 
-      {/* Status-Hinweis wenn nicht verbunden */}
-      {!status?.connected && (
-        <div className="rounded-lg p-3 mb-3 flex items-start gap-2.5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
-          <Mail size={14} className="text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[11px] text-white/60">Outlook ist nicht verbunden.</p>
-            <p className="text-[10px] text-white/35 mt-0.5">
-              E-Mails koennen manuell erfasst werden. Fuer automatische Synchronisierung Outlook unter Kommunikation verbinden.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Loading */}
-      {isLoading && status?.connected && (
+      {isLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 size={20} className="animate-spin text-amber-500" />
           <span className="ml-2 text-sm text-white/50">E-Mails laden...</span>

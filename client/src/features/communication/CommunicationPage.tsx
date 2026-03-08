@@ -334,19 +334,24 @@ function EmailDetailView({
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
-        <div className="rounded-xl p-5" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-          {email.bodyHtml ? (
+        {email.bodyHtml ? (
+          <div
+            className="rounded-xl overflow-hidden shadow-lg"
+            style={{ background: '#ffffff', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
             <div
-              className="prose prose-invert prose-sm max-w-none text-[13px] leading-relaxed"
-              style={{ color: 'rgba(255,255,255,0.65)' }}
+              className="prose prose-sm max-w-none text-[13px] leading-relaxed p-6"
+              style={{ color: '#1a1a1a' }}
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.bodyHtml) }}
             />
-          ) : (
-            <pre className="text-[13px] text-white/55 whitespace-pre-wrap font-sans leading-relaxed">
+          </div>
+        ) : (
+          <div className="rounded-xl p-6" style={{ background: '#ffffff', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <pre className="text-[13px] text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">
               {email.bodyText || email.bodyPreview}
             </pre>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Attachments */}
         {email.attachments && email.attachments.length > 0 && (
