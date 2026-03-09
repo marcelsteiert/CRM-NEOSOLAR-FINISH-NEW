@@ -358,7 +358,7 @@ function ComposeEmail({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Nachricht schreiben..."
-            className="glass-input w-full text-[12px] resize-none"
+            className="glass-input w-full px-4 py-3 text-[12px] resize-none" style={{ borderRadius: 'var(--radius-md)', lineHeight: '1.6' }}
             rows={8}
             style={{ lineHeight: '1.6' }}
           />
@@ -631,7 +631,7 @@ function ReplyComposer({ email, contactId, onClose }: { email: OutlookEmail; con
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Antwort schreiben..."
-          className="glass-input w-full text-[12px] resize-none mb-3"
+          className="glass-input w-full px-4 py-3 text-[12px] resize-none mb-3" style={{ borderRadius: 'var(--radius-md)', lineHeight: '1.6' }}
           rows={5}
           style={{ lineHeight: '1.6' }}
         />
