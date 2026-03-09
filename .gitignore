@@ -12,3 +12,5 @@ prisma/*.db
 prisma/*.db-journal
 coverage/
 .turbo/
+.claude/settings.local.json
+package.json.tmp
