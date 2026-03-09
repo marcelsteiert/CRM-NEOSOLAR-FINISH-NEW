@@ -104,7 +104,7 @@ body {
 }
 
 textarea.glass-input {
-  border-radius: var(--radius-md);
+  border-radius: 10px !important;
 }
 
 .glass-input:focus {
