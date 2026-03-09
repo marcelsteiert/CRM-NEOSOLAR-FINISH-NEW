@@ -16,6 +16,8 @@ import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
+import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
+import { useGenerateDealSummary } from '@/hooks/useAi'
 
 interface Props {
   dealId: string
@@ -49,6 +51,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const { data: dealResponse, isLoading } = useDeal(dealId)
   const deal = dealResponse?.data ?? null
   const { isAdmin, user: authUser } = useAuth()
+  const generateDealSummary = useGenerateDealSummary()
   const updateDeal = useUpdateDeal()
   const deleteDeal = useDeleteDeal()
   const addActivity = useAddActivity()
@@ -572,6 +575,14 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 <Clock size={12} strokeWidth={1.8} />
                 Erstellt {relativeTime(deal.createdAt)}
               </div>
+
+              {/* KI-Analyse */}
+              <AiSummaryCard
+                summary={deal.aiSummary}
+                isGenerating={generateDealSummary.isPending}
+                onGenerate={() => generateDealSummary.mutate(deal.id)}
+                compact
+              />
             </>
           )}
 

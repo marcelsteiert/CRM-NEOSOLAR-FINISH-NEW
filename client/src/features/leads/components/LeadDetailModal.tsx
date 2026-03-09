@@ -48,6 +48,8 @@ import {
 import { useCreateAppointment } from '@/hooks/useAppointments'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
+import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
+import { useGenerateLeadSummary } from '@/hooks/useAi'
 
 /* ── Props ── */
 
@@ -131,6 +133,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const { data: leadResponse, isLoading } = useLead(leadId)
   const lead = leadResponse?.data ?? null
 
+  const generateLeadSummary = useGenerateLeadSummary()
   const updateLead = useUpdateLead()
   const deleteLead = useDeleteLead()
   const { data: usersResponse } = useUsers()
@@ -1055,6 +1058,14 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   </p>
                 </div>
               </div>
+
+              {/* KI-Zusammenfassung */}
+              <AiSummaryCard
+                summary={lead.aiSummary}
+                isGenerating={generateLeadSummary.isPending}
+                onGenerate={() => generateLeadSummary.mutate(lead.id)}
+                compact
+              />
             </>
           )}
 

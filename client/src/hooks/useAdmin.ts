@@ -182,6 +182,7 @@ export interface AiSettingsData {
   language: string
   maxTokens: number
   systemPrompt: string
+  apiKey: string
   features: {
     leadSummary: boolean
     dealAnalysis: boolean

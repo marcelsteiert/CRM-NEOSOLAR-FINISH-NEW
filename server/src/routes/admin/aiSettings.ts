@@ -1,46 +1,32 @@
 import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { getAiSettings, saveAiSettings } from '../../lib/aiService.js'
 
 const router = Router()
 
-interface AiSettings {
-  enabled: boolean
-  model: string
-  language: string
-  maxTokens: number
-  systemPrompt: string
-  features: {
-    leadSummary: boolean
-    dealAnalysis: boolean
-    emailDraft: boolean
+router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAiSettings()
+    // API-Key maskieren (nur letzte 4 Zeichen zeigen)
+    const maskedKey = settings.apiKey
+      ? `****${settings.apiKey.slice(-4)}`
+      : ''
+    res.json({ data: { ...settings, apiKey: maskedKey } })
+  } catch (err) {
+    next(err)
   }
-}
-
-let aiSettings: AiSettings = {
-  enabled: true,
-  model: 'claude-sonnet-4-6',
-  language: 'de',
-  maxTokens: 2048,
-  systemPrompt: 'Du bist ein Assistent für ein Schweizer Solar-Unternehmen. Antworte immer auf Deutsch und beziehe dich auf den Schweizer PV-Markt.',
-  features: {
-    leadSummary: true,
-    dealAnalysis: true,
-    emailDraft: false,
-  },
-}
-
-router.get('/', (_req, res) => {
-  res.json({ data: aiSettings })
 })
 
-router.put('/', (req, res) => {
-  const { enabled, model, language, maxTokens, systemPrompt, features } = req.body
-  if (enabled !== undefined) aiSettings.enabled = enabled
-  if (model !== undefined) aiSettings.model = model
-  if (language !== undefined) aiSettings.language = language
-  if (maxTokens !== undefined) aiSettings.maxTokens = maxTokens
-  if (systemPrompt !== undefined) aiSettings.systemPrompt = systemPrompt
-  if (features !== undefined) aiSettings.features = { ...aiSettings.features, ...features }
-  res.json({ data: aiSettings })
+router.put('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const updated = await saveAiSettings(req.body)
+    const maskedKey = updated.apiKey
+      ? `****${updated.apiKey.slice(-4)}`
+      : ''
+    res.json({ data: { ...updated, apiKey: maskedKey } })
+  } catch (err) {
+    next(err)
+  }
 })
 
 export default router

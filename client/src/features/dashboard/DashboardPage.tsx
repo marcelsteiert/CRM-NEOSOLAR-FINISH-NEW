@@ -27,6 +27,7 @@ import { useDashboardStats, useMonthlyStats } from '@/hooks/useDashboard'
 import { useTasks, type Task, taskPriorityColors } from '@/hooks/useTasks'
 import { useSharedPasswords, type PasswordEntry } from '@/hooks/usePasswords'
 import { useAuth } from '@/hooks/useAuth'
+import { useGenerateBriefing } from '@/hooks/useAi'
 
 // ── Helpers ──
 
@@ -235,6 +236,8 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const currentUser = user?.id ?? ''
 
+  const generateBriefing = useGenerateBriefing()
+  const [aiBriefing, setAiBriefing] = useState<string | null>(null)
   const { data: statsRes } = useDashboardStats()
   const { data: monthlyRes } = useMonthlyStats()
   const { data: tasksRes } = useTasks({ assignedTo: currentUser, status: 'OFFEN', sortBy: 'dueDate', sortOrder: 'asc' })
@@ -309,9 +312,27 @@ export default function DashboardPage() {
                 <span className="text-[11px] font-extrabold tracking-[0.08em] uppercase text-amber">
                   KI-Briefing
                 </span>
-                <span className="text-[10px] text-text-dim ml-auto">Heute</span>
+                <button
+                  onClick={async () => {
+                    const res = await generateBriefing.mutateAsync()
+                    if (res?.data?.summary) setAiBriefing(res.data.summary)
+                  }}
+                  disabled={generateBriefing.isPending}
+                  className="ml-auto flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-md transition-all"
+                  style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}
+                >
+                  {generateBriefing.isPending ? (
+                    <><Sparkles size={9} className="animate-spin" /> Generiert...</>
+                  ) : (
+                    <><Sparkles size={9} /> {aiBriefing ? 'Aktualisieren' : 'KI-Briefing generieren'}</>
+                  )}
+                </button>
               </div>
-              {stats ? (
+
+              {/* KI-generiertes Briefing */}
+              {aiBriefing ? (
+                <p className="text-[13px] text-text-sec leading-[1.7] whitespace-pre-line">{aiBriefing}</p>
+              ) : stats ? (
                 <p className="text-[13px] text-text-sec leading-[1.7]">
                   {stats.deals.pipelineValue > 0 && (
                     <>
@@ -330,7 +351,7 @@ export default function DashboardPage() {
                   )}
                   {stats.tasks.overdue > 0 && (
                     <>
-                      <span className="text-red font-semibold">{stats.tasks.overdue} Aufgabe(n) überfällig</span> – bitte priorisieren.{' '}
+                      <span className="text-red font-semibold">{stats.tasks.overdue} Aufgabe(n) ueberfaellig</span> – bitte priorisieren.{' '}
                     </>
                   )}
                   {stats.appointments.upcoming > 0 && (
@@ -342,6 +363,7 @@ export default function DashboardPage() {
               ) : (
                 <p className="text-[13px] text-text-dim">Lade Daten...</p>
               )}
+
               {stats && (
                 <div className="flex flex-wrap items-center gap-2 mt-5">
                   {stats.deals.wonDeals > 0 && (
@@ -351,7 +373,7 @@ export default function DashboardPage() {
                   )}
                   {stats.tasks.overdue > 0 && (
                     <span className="px-3 py-1 rounded-full bg-red-soft text-red text-[11px] font-semibold">
-                      {stats.tasks.overdue} überfällig
+                      {stats.tasks.overdue} ueberfaellig
                     </span>
                   )}
                   <span className="px-3 py-1 rounded-full bg-amber-soft text-amber text-[11px] font-semibold">

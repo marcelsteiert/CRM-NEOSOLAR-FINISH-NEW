@@ -27,6 +27,7 @@ import adminNotifSettingsRouter from './routes/admin/notifSettings.js'
 import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
 import adminDbExportRouter from './routes/admin/dbExport.js'
 import searchRouter from './routes/search.js'
+import aiRouter from './routes/ai.js'
 import passwordsRouter from './routes/passwords.js'
 import outlookRouter from './routes/outlook.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -94,6 +95,9 @@ export function createApp() {
     }
     return authMiddleware(req, res, next)
   }, outlookRouter)
+
+  // AI routes (geschuetzt)
+  app.use('/api/v1/ai', authMiddleware, aiRouter)
 
   // Admin routes (geschuetzt)
   app.use('/api/v1/admin/products', authMiddleware, adminProductsRouter)

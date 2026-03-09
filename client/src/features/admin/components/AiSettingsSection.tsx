@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Save, Sparkles, Brain, Globe, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Save, Sparkles, Brain, Globe, ToggleLeft, ToggleRight, Key, Zap, CheckCircle2, XCircle } from 'lucide-react'
 import { useAiSettings, useUpdateAiSettings, type AiSettingsData } from '@/hooks/useAdmin'
+import { useTestAiConnection } from '@/hooks/useAi'
 
 const MODELS = [
   { id: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
@@ -19,11 +20,17 @@ const LANGUAGES = [
 export default function AiSettingsSection() {
   const { data: aiResponse } = useAiSettings()
   const updateAi = useUpdateAiSettings()
+  const testConnection = useTestAiConnection()
   const [settings, setSettings] = useState<AiSettingsData | null>(null)
   const [saved, setSaved] = useState(false)
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
   useEffect(() => {
-    if (aiResponse?.data) setSettings({ ...aiResponse.data })
+    if (aiResponse?.data) {
+      setSettings({ ...aiResponse.data })
+      setApiKeyInput(aiResponse.data.apiKey || '')
+    }
   }, [aiResponse])
 
   if (!settings) return (
@@ -33,9 +40,22 @@ export default function AiSettingsSection() {
   )
 
   const handleSave = async () => {
-    await updateAi.mutateAsync(settings)
+    const payload: any = { ...settings }
+    // Nur den API-Key senden wenn er geaendert wurde (nicht maskiert)
+    if (apiKeyInput && !apiKeyInput.startsWith('****')) {
+      payload.apiKey = apiKeyInput
+    } else {
+      delete payload.apiKey
+    }
+    await updateAi.mutateAsync(payload)
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
+  }
+
+  const handleTest = async () => {
+    setTestResult(null)
+    const result = await testConnection.mutateAsync()
+    setTestResult(result?.data || { success: false, message: 'Keine Antwort' })
   }
 
   return (
@@ -63,6 +83,46 @@ export default function AiSettingsSection() {
             ? <ToggleRight size={32} className="text-violet-400" strokeWidth={1.5} />
             : <ToggleLeft size={32} className="text-text-dim" strokeWidth={1.5} />}
         </button>
+      </div>
+
+      {/* API Key */}
+      <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Key size={14} className="text-amber-500" strokeWidth={2} />
+          <label className="text-[11px] font-semibold text-text-sec uppercase tracking-wider">API-Schluessel</label>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={apiKeyInput}
+            onChange={(e) => setApiKeyInput(e.target.value)}
+            placeholder="sk-ant-api03-..."
+            className="flex-1 px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber-500/50"
+          />
+          <button
+            type="button"
+            onClick={handleTest}
+            disabled={testConnection.isPending}
+            className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all"
+            style={{
+              background: 'rgba(245,158,11,0.12)',
+              color: '#F59E0B',
+              border: '1px solid rgba(245,158,11,0.2)',
+            }}
+          >
+            <Zap size={12} className={testConnection.isPending ? 'animate-pulse' : ''} />
+            {testConnection.isPending ? 'Teste...' : 'Testen'}
+          </button>
+        </div>
+        {testResult && (
+          <div className={`flex items-center gap-1.5 mt-2 text-[11px] ${testResult.success ? 'text-emerald-400' : 'text-red-400'}`}>
+            {testResult.success ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+            {testResult.message}
+          </div>
+        )}
+        <p className="text-[9px] text-text-dim mt-2">
+          Anthropic API Key fuer Claude-Modelle. Wird verschluesselt gespeichert und nie im Frontend angezeigt.
+        </p>
       </div>
 
       {/* Model & Language */}
@@ -107,7 +167,7 @@ export default function AiSettingsSection() {
           {[
             { key: 'leadSummary' as const, label: 'Lead-Zusammenfassung', desc: 'Automatische Zusammenfassung neuer Leads' },
             { key: 'dealAnalysis' as const, label: 'Angebots-Analyse', desc: 'Win-Probability und Empfehlungen' },
-            { key: 'emailDraft' as const, label: 'E-Mail-Entwurf', desc: 'KI-generierte E-Mail-Vorschläge' },
+            { key: 'emailDraft' as const, label: 'E-Mail-Entwurf', desc: 'KI-generierte E-Mail-Vorschlaege' },
           ].map((feat) => (
             <div key={feat.key} className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)' }}>
               <div>
