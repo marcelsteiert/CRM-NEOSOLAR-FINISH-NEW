@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx'
 
 interface LeadImportDialogProps {
   onClose: () => void
+  defaultStatus?: 'ACTIVE' | 'AFTER_SALES'
 }
 
 interface ParsedLead {
@@ -309,7 +310,7 @@ function downloadTemplate() {
 
 type Step = 'upload' | 'mapping' | 'preview' | 'importing' | 'done'
 
-export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
+export default function LeadImportDialog({ onClose, defaultStatus = 'ACTIVE' }: LeadImportDialogProps) {
   const [step, setStep] = useState<Step>('upload')
   const [file, setFile] = useState<File | null>(null)
   const [headers, setHeaders] = useState<string[]>([])
@@ -425,7 +426,7 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
         continue
       }
       try {
-        await createLead.mutateAsync({ ...parsed[i], skipDuplicateCheck: true } as Record<string, unknown>)
+        await createLead.mutateAsync({ ...parsed[i], status: defaultStatus, skipDuplicateCheck: true } as Record<string, unknown>)
       } catch (err) {
         errs.push(`Zeile ${i + 2}: ${err instanceof Error ? err.message : 'Fehler'}`)
       }
@@ -479,7 +480,9 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
           <div>
-            <h2 className="text-base font-bold tracking-[-0.02em]">Leads importieren</h2>
+            <h2 className="text-base font-bold tracking-[-0.02em]">
+              {defaultStatus === 'AFTER_SALES' ? 'After-Sales importieren' : 'Leads importieren'}
+            </h2>
             <p className="text-[12px] text-text-sec mt-0.5">
               {step === 'upload' && 'Schritt 1/3 – Datei hochladen'}
               {step === 'mapping' && 'Schritt 2/3 – Spalten zuordnen'}

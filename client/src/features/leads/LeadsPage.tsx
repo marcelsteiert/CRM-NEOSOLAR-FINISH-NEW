@@ -519,7 +519,10 @@ export default function LeadsPage() {
 
       {/* ── Import Dialog ── */}
       {importDialogOpen && (
-        <LeadImportDialog onClose={() => setImportDialogOpen(false)} />
+        <LeadImportDialog
+          onClose={() => setImportDialogOpen(false)}
+          defaultStatus={statusFilter === 'AFTER_SALES' ? 'AFTER_SALES' : 'ACTIVE'}
+        />
       )}
     </>
   )
