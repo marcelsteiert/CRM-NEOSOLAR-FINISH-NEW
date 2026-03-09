@@ -20,7 +20,7 @@ const createTaskSchema = z.object({
   referenceId: z.string().optional(),
   referenceTitle: z.string().optional(),
   assignedTo: z.string().min(1, 'Zugewiesener Benutzer ist erforderlich'),
-  assignedBy: z.string().optional().default('u001'),
+  assignedBy: z.string().optional(),
   dueDate: z.string().optional(),
 })
 
@@ -141,7 +141,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         reference_id: result.data.referenceId ?? null,
         reference_title: result.data.referenceTitle ?? null,
         assigned_to: result.data.assignedTo,
-        assigned_by: result.data.assignedBy || req.user?.userId || 'u001',
+        assigned_by: result.data.assignedBy || req.user?.userId || null,
         due_date: result.data.dueDate ?? null,
       })
       .select()

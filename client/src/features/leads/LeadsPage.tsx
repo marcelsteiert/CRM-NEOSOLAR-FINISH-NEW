@@ -9,10 +9,12 @@ import {
   Upload,
   Download,
   Tag as TagIcon,
+  Trash2,
 } from 'lucide-react'
 import {
   useLeads,
   useTags,
+  useDeleteAllLeads,
   type Lead,
   type LeadSource,
   type LeadStatus,
@@ -163,6 +165,7 @@ export default function LeadsPage() {
   const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
 
   /* ── Preferences (custom source labels) ── */
   const { prefs } = useTablePreferences()
@@ -184,6 +187,7 @@ export default function LeadsPage() {
     pageSize: 100,
   })
 
+  const deleteAllLeads = useDeleteAllLeads()
   const allLeads: Lead[] = leadsResponse?.data ?? []
 
   const { data: tagsData } = useTags()
@@ -285,6 +289,42 @@ export default function LeadsPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+            {/* Alle loeschen Button (nur Admin) */}
+            {isAdmin && allLeads.length > 0 && !confirmDeleteAll && (
+              <button
+                type="button"
+                className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[12px] text-red hover:bg-red/10"
+                onClick={() => setConfirmDeleteAll(true)}
+              >
+                <Trash2 size={14} strokeWidth={2} />
+                <span className="hidden sm:inline">Alle löschen</span>
+              </button>
+            )}
+            {isAdmin && confirmDeleteAll && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  className="px-3 py-2.5 rounded-lg text-[12px] font-semibold text-red"
+                  style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}
+                  onClick={() => {
+                    deleteAllLeads.mutate(undefined, {
+                      onSuccess: () => setConfirmDeleteAll(false),
+                    })
+                  }}
+                  disabled={deleteAllLeads.isPending}
+                >
+                  {deleteAllLeads.isPending ? 'Lösche...' : 'Ja, alle löschen!'}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary px-3 py-2.5 text-[12px]"
+                  onClick={() => setConfirmDeleteAll(false)}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            )}
+
             {/* Import button */}
             {canImport && (
               <button

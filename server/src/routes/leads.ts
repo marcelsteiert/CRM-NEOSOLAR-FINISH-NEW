@@ -65,7 +65,19 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       query = query.or(`notes.ilike.%${search}%,source.ilike.%${search}%`)
     }
 
-    const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'created_at'
+    // Whitelist gültiger Sort-Felder (nur Spalten die in leads/contacts existieren)
+    const allowedSortFields: Record<string, string> = {
+      created_at: 'created_at',
+      createdAt: 'created_at',
+      updated_at: 'updated_at',
+      updatedAt: 'updated_at',
+      source: 'source',
+      status: 'status',
+      lastName: 'created_at', // Kontakt-Feld – Fallback auf created_at (JOIN-Sort nicht moeglich)
+      company: 'created_at',  // Kontakt-Feld – Fallback
+    }
+    const rawSort = typeof sortBy === 'string' ? sortBy : 'created_at'
+    const sf = allowedSortFields[rawSort] ?? allowedSortFields[toSnakeCase(rawSort)] ?? 'created_at'
     const ascending = sortOrder !== 'desc'
     query = query.order(sf, { ascending })
 
@@ -204,6 +216,24 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     // Immer updated_at setzen damit Supabase min. 1 Feld hat
     updates.updated_at = new Date().toISOString()
 
+    // Kontaktdaten in contacts-Tabelle aktualisieren
+    const contactUpdates: Record<string, unknown> = {}
+    if (result.data.firstName !== undefined) contactUpdates.first_name = result.data.firstName ?? null
+    if (result.data.lastName !== undefined) contactUpdates.last_name = result.data.lastName ?? null
+    if (result.data.email !== undefined) contactUpdates.email = result.data.email ?? null
+    if (result.data.phone !== undefined) contactUpdates.phone = result.data.phone ?? null
+    if (result.data.address !== undefined) contactUpdates.address = result.data.address ?? null
+    if (result.data.company !== undefined) contactUpdates.company = result.data.company ?? null
+
+    if (Object.keys(contactUpdates).length > 0) {
+      // contact_id vom Lead holen
+      const { data: leadRow } = await supabase.from('leads').select('contact_id').eq('id', req.params.id).single()
+      if (leadRow?.contact_id) {
+        contactUpdates.updated_at = new Date().toISOString()
+        await supabase.from('contacts').update(contactUpdates).eq('id', leadRow.contact_id)
+      }
+    }
+
     const { data, error } = await supabase
       .from('leads')
       .update(updates)
@@ -231,6 +261,30 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
         lead_tags: undefined,
       },
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// DELETE /api/v1/leads/all – Alle Leads loeschen (nur Admin)
+// ---------------------------------------------------------------------------
+
+router.delete('/all', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (req.user?.role !== 'ADMIN') {
+      throw new AppError('Nur Admins koennen alle Leads loeschen', 403)
+    }
+
+    const now = new Date().toISOString()
+    const { count, error } = await supabase
+      .from('leads')
+      .update({ deleted_at: now }, { count: 'exact' })
+      .is('deleted_at', null)
+
+    if (error) throw new AppError(error.message, 500)
+
+    res.json({ message: `${count ?? 0} Leads erfolgreich geloescht`, count: count ?? 0 })
   } catch (err) {
     next(err)
   }

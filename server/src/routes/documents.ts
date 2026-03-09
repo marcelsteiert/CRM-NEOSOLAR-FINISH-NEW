@@ -18,7 +18,7 @@ const uploadDocSchema = z.object({
   fileName: z.string().min(1, 'Dateiname ist erforderlich'),
   fileSize: z.number().min(1),
   mimeType: z.string().min(1),
-  uploadedBy: z.string().optional().default('u001'),
+  uploadedBy: z.string().optional(),
   notes: z.string().optional(),
   fileBase64: z.string().min(1, 'Dateiinhalt ist erforderlich'),
 })
@@ -108,7 +108,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         file_size: d.fileSize,
         mime_type: d.mimeType,
         storage_path: storagePath,
-        uploaded_by: d.uploadedBy,
+        uploaded_by: d.uploadedBy || req.user?.userId || null,
         notes: d.notes ?? null,
       })
       .select()

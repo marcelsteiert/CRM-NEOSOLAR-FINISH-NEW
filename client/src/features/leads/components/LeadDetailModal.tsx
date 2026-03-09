@@ -271,23 +271,39 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   }
 
   /* ── Save edits ── */
+  const [saveError, setSaveError] = useState('')
   const handleSave = useCallback(() => {
     if (!lead) return
-    updateLead.mutate({
-      id: lead.id,
-      firstName: editFirstName || null,
-      lastName: editLastName || null,
-      company: editCompany || null,
-      address: editAddress,
-      phone: editPhone,
-      email: editEmail,
-      source: editSource,
-      pipelineId: editPipelineId || null,
-      bucketId: editBucketId || null,
-      assignedTo: editAssignedTo || null,
-      value: editValue ? Number(editValue) : undefined,
-    })
-    setIsEditing(false)
+    setSaveError('')
+    updateLead.mutate(
+      {
+        id: lead.id,
+        firstName: editFirstName || null,
+        lastName: editLastName || null,
+        company: editCompany || null,
+        address: editAddress,
+        phone: editPhone,
+        email: editEmail,
+        source: editSource,
+        pipelineId: editPipelineId || null,
+        bucketId: editBucketId || null,
+        assignedTo: editAssignedTo || null,
+        value: editValue ? Number(editValue) : undefined,
+      },
+      {
+        onSuccess: () => {
+          setIsEditing(false)
+          setSaveError('')
+          setSuccessMsg('Gespeichert')
+          setTimeout(() => setSuccessMsg(''), 2000)
+        },
+        onError: (err) => {
+          setSuccessMsg('')
+          setSaveError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen')
+          setTimeout(() => setSaveError(''), 5000)
+        },
+      },
+    )
   }, [lead, editFirstName, editLastName, editCompany, editAddress, editPhone, editEmail, editSource, editPipelineId, editBucketId, editAssignedTo, editValue, updateLead])
 
   /* ── Notes auto-save on blur ── */
@@ -603,6 +619,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
           {/* Edit / Save toggle */}
           <button
             type="button"
+            disabled={updateLead.isPending}
             onClick={() => {
               if (isEditing) {
                 handleSave()
@@ -610,10 +627,17 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 setIsEditing(true)
               }
             }}
-            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all duration-200 shrink-0"
+            className={[
+              'w-8 h-8 rounded-[10px] flex items-center justify-center transition-all duration-200 shrink-0',
+              updateLead.isPending
+                ? 'text-text-dim opacity-50 cursor-wait'
+                : 'text-text-dim hover:text-amber hover:bg-amber-soft',
+            ].join(' ')}
             aria-label={isEditing ? 'Speichern' : 'Bearbeiten'}
           >
-            {isEditing ? (
+            {updateLead.isPending ? (
+              <span className="w-4 h-4 border-2 border-amber/40 border-t-amber rounded-full animate-spin" />
+            ) : isEditing ? (
               <Check size={16} strokeWidth={1.8} />
             ) : (
               <Pencil size={16} strokeWidth={1.8} />
@@ -642,6 +666,20 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             }}
           >
             {successMsg}
+          </div>
+        )}
+
+        {/* ── Error Message ── */}
+        {saveError && (
+          <div
+            className="mx-6 mt-3 px-4 py-2.5 rounded-[10px] text-[12px] font-semibold text-center"
+            style={{
+              background: 'color-mix(in srgb, #F87171 12%, transparent)',
+              color: '#F87171',
+              border: '1px solid color-mix(in srgb, #F87171 20%, transparent)',
+            }}
+          >
+            {saveError}
           </div>
         )}
 

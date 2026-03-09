@@ -173,6 +173,16 @@ export function useDeleteLead() {
   })
 }
 
+export function useDeleteAllLeads() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete<{ message: string; count: number }>('/leads/all'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] })
+    },
+  })
+}
+
 export function useMoveLead() {
   const qc = useQueryClient()
   return useMutation({

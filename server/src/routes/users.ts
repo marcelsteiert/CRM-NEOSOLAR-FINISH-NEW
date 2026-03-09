@@ -246,6 +246,20 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (!parsed.success) return res.status(400).json({ error: 'Ungueltige Daten', details: parsed.error.issues })
 
     const d = parsed.data
+
+    // Duplikat-Check: Pruefen ob E-Mail bereits von anderem User verwendet wird
+    if (d.email) {
+      const { data: existing } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', d.email)
+        .neq('id', req.params.id)
+        .limit(1)
+      if (existing && existing.length > 0) {
+        throw new AppError('E-Mail-Adresse bereits vergeben', 409)
+      }
+    }
+
     const updates: Record<string, unknown> = {}
 
     if (d.firstName !== undefined) updates.first_name = d.firstName
@@ -270,7 +284,10 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .select()
       .single()
 
-    if (error) throw new AppError('Benutzer nicht gefunden', 404)
+    if (error) {
+      if (error.code === '23505') throw new AppError('E-Mail-Adresse bereits vergeben', 409)
+      throw new AppError('Benutzer nicht gefunden', 404)
+    }
 
     res.json({
       data: {

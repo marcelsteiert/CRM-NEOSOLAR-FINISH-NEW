@@ -301,7 +301,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         project_id: project.id,
         type: 'SYSTEM',
         text: 'Projekt erstellt',
-        created_by: d.projectManagerId ?? 'u001',
+        created_by: d.projectManagerId ?? req.user?.userId ?? null,
       })
     }
 

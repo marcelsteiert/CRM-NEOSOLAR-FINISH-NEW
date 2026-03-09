@@ -41,7 +41,7 @@ const createActivitySchema = z.object({
   projectId: z.string().optional(),
   type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM', 'DOCUMENT_UPLOAD']),
   text: z.string().min(1),
-  createdBy: z.string().optional().default('u001'),
+  createdBy: z.string().optional(),
 })
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
@@ -58,7 +58,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         project_id: result.data.projectId ?? null,
         type: result.data.type,
         text: result.data.text,
-        created_by: result.data.createdBy,
+        created_by: result.data.createdBy || req.user?.userId || null,
       })
       .select()
       .single()

@@ -40,12 +40,12 @@ const updateDealSchema = createDealSchema.partial()
 const addActivitySchema = z.object({
   type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM']).optional().default('NOTE'),
   text: z.string().min(1, 'Aktivitaetstext ist erforderlich'),
-  createdBy: z.string().optional().default('u001'),
+  createdBy: z.string().optional(),
 })
 
 const dismissFollowUpSchema = z.object({
   note: z.string().min(1, 'Begruendung ist erforderlich'),
-  dismissedBy: z.string().optional().default('u001'),
+  dismissedBy: z.string().optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -239,7 +239,7 @@ router.post('/follow-ups/:id/dismiss', async (req: Request, res: Response, next:
       deal_id: dealId,
       type: 'NOTE',
       text: `Follow-Up erledigt: ${result.data.note}`,
-      created_by: result.data.dismissedBy,
+      created_by: result.data.dismissedBy || req.user?.userId || null,
     })
 
     await supabase.from('deals').update({ updated_at: new Date().toISOString() }).eq('id', dealId)
@@ -332,7 +332,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         deal_id: deal.id,
         type: 'SYSTEM',
         text: 'Angebot erstellt',
-        created_by: result.data.assignedTo ?? 'u001',
+        created_by: result.data.assignedTo ?? req.user?.userId ?? null,
       })
     }
 
@@ -375,7 +375,7 @@ router.post('/:id/activities', async (req: Request, res: Response, next: NextFun
         deal_id: req.params.id,
         type: result.data.type,
         text: result.data.text,
-        created_by: result.data.createdBy,
+        created_by: result.data.createdBy || req.user?.userId || null,
       })
       .select()
       .single()
@@ -448,7 +448,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
         deal_id: req.params.id,
         type: 'STATUS_CHANGE',
         text: `Phase geaendert: ${oldDeal.stage} → ${u.stage}`,
-        created_by: 'u001',
+        created_by: req.user?.userId ?? null,
       })
     }
 
