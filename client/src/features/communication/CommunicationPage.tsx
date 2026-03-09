@@ -817,7 +817,7 @@ function TemplatesView() {
                 placeholder={"Guten Tag {{firstName}} {{lastName}}\n\nIhre Nachricht hier...\n\nFreundliche Grüsse\n{{absender}}\nNEOSOLAR AG"}
                 className="glass-input w-full px-4 py-3 text-[12px] resize-none"
                 rows={12}
-                style={{ lineHeight: '1.7', borderRadius: 'var(--radius-md)' }}
+                style={{ lineHeight: '1.7' }}
               />
               <p className="text-[9px] text-white/20 mt-1.5">
                 Verfuegbare Platzhalter: {'{{firstName}}'} {'{{lastName}}'} {'{{datum}}'} {'{{absender}}'}

@@ -360,7 +360,7 @@ function ComposeEmail({
             placeholder="Nachricht schreiben..."
             className="glass-input w-full px-4 py-3 text-[12px] resize-none"
             rows={8}
-            style={{ borderRadius: 'var(--radius-md)', lineHeight: '1.6' }}
+            style={{ lineHeight: '1.6' }}
           />
         </div>
 
@@ -633,7 +633,7 @@ function ReplyComposer({ email, contactId, onClose }: { email: OutlookEmail; con
           placeholder="Antwort schreiben..."
           className="glass-input w-full px-4 py-3 text-[12px] resize-none mb-3"
           rows={5}
-          style={{ borderRadius: 'var(--radius-md)', lineHeight: '1.6' }}
+          style={{ lineHeight: '1.6' }}
         />
 
         {successMsg && (
