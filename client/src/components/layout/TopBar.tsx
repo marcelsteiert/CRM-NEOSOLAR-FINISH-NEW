@@ -5,6 +5,7 @@ import { useSidebarPinned } from './Sidebar'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
+import { useIntegrations } from '@/hooks/useAdmin'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -22,10 +23,10 @@ const pageTitles: Record<string, string> = {
   '/documents': 'Dokumente',
 }
 
-const integrations = [
-  { name: 'Bexio', connected: false },
-  { name: '3CX', connected: false },
-  { name: 'Outlook', connected: false },
+const defaultIntegrations = [
+  { name: 'Bexio', service: 'bexio' },
+  { name: '3CX', service: '3cx' },
+  { name: 'Outlook', service: 'outlook' },
 ]
 
 // ── Search Result Types ──
@@ -320,6 +321,15 @@ export default function TopBar() {
   const { setMobileOpen } = useSidebarPinned()
   const { user } = useAuth()
   const [searchOpen, setSearchOpen] = useState(false)
+  const { data: intData } = useIntegrations()
+  const integrationsList = intData?.data ?? []
+
+  const integrations = defaultIntegrations.map((di) => {
+    const match = integrationsList.find(
+      (i) => i.service.toLowerCase() === di.service || i.displayName.toLowerCase() === di.name.toLowerCase()
+    )
+    return { name: di.name, connected: match?.status === 'CONNECTED' }
+  })
 
   // Update document title
   useEffect(() => {
