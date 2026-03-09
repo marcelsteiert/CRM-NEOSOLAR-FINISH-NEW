@@ -48,20 +48,11 @@ router.post('/lead-summary/:id', async (req: Request, res: Response, next: NextF
     const { data: activities } = await supabase
       .from('activities')
       .select('*')
-      .eq('entity_type', 'LEAD')
-      .eq('entity_id', id)
+      .eq('lead_id', id)
       .order('created_at', { ascending: false })
       .limit(10)
 
-    const { data: notes } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('entity_type', 'LEAD')
-      .eq('entity_id', id)
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    const prompt = buildLeadSummaryPrompt(lead, contact, activities ?? [], notes ?? [])
+    const prompt = buildLeadSummaryPrompt(lead, contact, activities ?? [], [])
     const completion = await generateCompletion(prompt)
 
     // Update lead ai_summary
@@ -106,8 +97,7 @@ router.post('/deal-summary/:id', async (req: Request, res: Response, next: NextF
     const { data: activities } = await supabase
       .from('activities')
       .select('*')
-      .eq('entity_type', 'DEAL')
-      .eq('entity_id', id)
+      .eq('deal_id', id)
       .order('created_at', { ascending: false })
       .limit(10)
 

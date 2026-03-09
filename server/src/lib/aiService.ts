@@ -114,23 +114,19 @@ export function buildLeadSummaryPrompt(lead: any, contact: any, activities: any[
   const leadInfo = `Lead: "${lead.title}", Status: ${lead.status}, Quelle: ${lead.source || 'k.A.'}, Wert: CHF ${lead.value ?? 0}, Erstellt: ${lead.created_at}`
 
   const activityList = activities.length > 0
-    ? activities.slice(0, 10).map((a: any) => `- ${a.type}: ${a.description || a.note || 'k.A.'} (${a.created_at})`).join('\n')
+    ? activities.slice(0, 10).map((a: any) => `- ${a.type}: ${a.text || a.description || 'k.A.'} (${a.created_at})`).join('\n')
     : 'Keine Aktivitaeten'
 
-  const noteList = notes.length > 0
-    ? notes.slice(0, 5).map((n: any) => `- ${n.content} (${n.created_at})`).join('\n')
-    : 'Keine Notizen'
+  const leadNotes = lead.notes ? `Notizen: ${lead.notes}` : 'Keine Notizen'
 
   return `Erstelle eine kurze, praegnante Zusammenfassung dieses Leads fuer einen Vertriebsmitarbeiter.
 
 ${contactInfo}
 ${leadInfo}
+${leadNotes}
 
 Aktivitaeten:
 ${activityList}
-
-Notizen:
-${noteList}
 
 Fasse zusammen: Wer ist der Kunde, was will er, wie ist der aktuelle Stand, und was sollte als naechstes getan werden? Maximal 4-5 Saetze.`
 }
@@ -143,7 +139,7 @@ export function buildDealSummaryPrompt(deal: any, contact: any, activities: any[
   const dealInfo = `Angebot: "${deal.title}", Phase: ${deal.stage}, Wert: CHF ${deal.value ?? 0}, Win-Probability: ${deal.win_probability ?? 50}%, Erstellt: ${deal.created_at}, Follow-Up: ${deal.follow_up_date || 'keins'}`
 
   const activityList = activities.length > 0
-    ? activities.slice(0, 10).map((a: any) => `- ${a.type}: ${a.description || a.note || 'k.A.'} (${a.created_at})`).join('\n')
+    ? activities.slice(0, 10).map((a: any) => `- ${a.type}: ${a.text || a.description || 'k.A.'} (${a.created_at})`).join('\n')
     : 'Keine Aktivitaeten'
 
   return `Erstelle eine Analyse dieses Angebots fuer den Vertrieb.
@@ -247,7 +243,7 @@ export function buildEmailDraftPrompt(context: {
   senderName: string
 }): string {
   const activityList = context.activities.length > 0
-    ? context.activities.slice(0, 5).map((a: any) => `- ${a.type}: ${a.description || a.note || 'k.A.'} (${a.created_at})`).join('\n')
+    ? context.activities.slice(0, 5).map((a: any) => `- ${a.type}: ${a.text || a.description || 'k.A.'} (${a.created_at})`).join('\n')
     : 'Keine bisherigen Aktivitaeten'
 
   return `Schreibe eine professionelle E-Mail fuer einen Vertriebsmitarbeiter der NEOSOLAR AG (Photovoltaik, Schweiz).
