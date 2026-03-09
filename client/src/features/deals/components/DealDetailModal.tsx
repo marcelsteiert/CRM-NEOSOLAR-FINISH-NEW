@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
+import TaskSection from '@/components/ui/TaskSection'
 import { useGenerateDealSummary } from '@/hooks/useAi'
 
 interface Props {
@@ -24,7 +25,7 @@ interface Props {
   onClose: () => void
 }
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -245,6 +246,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
     { key: 'emails', label: 'E-Mail' },
+    { key: 'tasks', label: 'Aufgaben' },
   ]
 
   return (
@@ -697,6 +699,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           {/* ────── TAB: E-Mail ────── */}
           {activeTab === 'emails' && (
             <EmailSection contactId={deal.contactId} contactEmail={deal.contactEmail} contactName={deal.contactName} entityType="ANGEBOT" entityId={deal.id} />
+          )}
+
+          {/* ────── TAB: Aufgaben ────── */}
+          {activeTab === 'tasks' && (
+            <TaskSection module="ANGEBOT" referenceId={deal.id} referenceTitle={deal.title || 'Angebot'} />
           )}
         </div>
 

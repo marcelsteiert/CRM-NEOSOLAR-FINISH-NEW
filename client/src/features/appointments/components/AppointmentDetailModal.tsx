@@ -15,13 +15,14 @@ import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
+import TaskSection from '@/components/ui/TaskSection'
 
 interface Props {
   appointmentId: string
   onClose: () => void
 }
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'checklist'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'checklist' | 'tasks'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -203,6 +204,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     { key: 'notes', label: 'Notizen' },
     { key: 'documents', label: 'Dokumente' },
     { key: 'emails', label: 'E-Mail' },
+    { key: 'tasks', label: 'Aufgaben' },
   ]
 
   return (
@@ -514,6 +516,11 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
           {/* ────── TAB: E-Mail ────── */}
           {activeTab === 'emails' && (
             <EmailSection contactId={appt.contactId} contactEmail={appt.contactEmail} contactName={appt.contactName} entityType="TERMIN" entityId={appt.id} />
+          )}
+
+          {/* ────── TAB: Aufgaben ────── */}
+          {activeTab === 'tasks' && (
+            <TaskSection module="TERMIN" referenceId={appt.id} referenceTitle={appt.contactName || 'Termin'} />
           )}
         </div>
 
