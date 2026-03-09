@@ -444,6 +444,35 @@ router.post('/send', async (req: Request, res: Response, next: NextFunction) => 
       })
     }
 
+    // Gesendete Email sofort lokal speichern (vor Sync)
+    const now = new Date().toISOString()
+    await supabase.from('outlook_emails').insert({
+      connection_id: conn.id,
+      message_id: `local-${crypto.randomUUID()}`,
+      subject: d.subject,
+      body_html: bodyHtml,
+      body_preview: d.bodyHtml.replace(/<[^>]*>/g, '').slice(0, 200),
+      sender_email: conn.email,
+      sender_name: conn.display_name,
+      to_recipients: d.to.map((r) => ({ name: r.name ?? r.email, email: r.email })),
+      cc_recipients: (d.cc ?? []).map((r) => ({ name: r.name ?? r.email, email: r.email })),
+      bcc_recipients: (d.bcc ?? []).map((r) => ({ name: r.name ?? r.email, email: r.email })),
+      received_at: now,
+      sent_at: now,
+      is_read: true,
+      is_draft: false,
+      has_attachments: false,
+      importance: d.importance ?? 'normal',
+      folder: 'sentitems',
+      categories: [],
+      contact_id: d.contactId ?? null,
+      deal_id: d.dealId ?? null,
+      project_id: d.projectId ?? null,
+      is_matched: !!d.contactId,
+      matched_at: d.contactId ? now : null,
+      tracking_id: trackingId,
+    })
+
     // Activity erstellen (falls Kontakt verknuepft)
     if (d.contactId) {
       await supabase.from('activities').insert({
@@ -455,6 +484,9 @@ router.post('/send', async (req: Request, res: Response, next: NextFunction) => 
         created_by: userId,
       })
     }
+
+    // Hintergrund-Sync triggern (async, nicht blockierend)
+    syncEmails(conn.id).catch(() => {})
 
     res.json({ message: 'Email gesendet', trackingId })
   } catch (err) {

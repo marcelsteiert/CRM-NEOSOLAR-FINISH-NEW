@@ -172,8 +172,30 @@ async function upsertEmail(connectionId: string, msg: GraphMessage) {
     .upsert(emailData, { onConflict: 'connection_id,message_id' })
 }
 
-// Folder-ID → lesbarer Name
+// Folder-ID → normalisierter englischer Name
 const folderCache = new Map<string, string>()
+
+// Deutsche Outlook-Ordnernamen → englische Standard-Namen
+const folderNormalize: Record<string, string> = {
+  posteingang: 'inbox',
+  inbox: 'inbox',
+  'gesendete elemente': 'sentitems',
+  'gesendete objekte': 'sentitems',
+  'sent items': 'sentitems',
+  sentitems: 'sentitems',
+  'entwürfe': 'drafts',
+  entwuerfe: 'drafts',
+  drafts: 'drafts',
+  'gelöschte elemente': 'deleted',
+  'geloeschte elemente': 'deleted',
+  'deleted items': 'deleted',
+  'junk-e-mail': 'junk',
+  'junk email': 'junk',
+  junk: 'junk',
+  spam: 'junk',
+  archiv: 'archive',
+  archive: 'archive',
+}
 
 async function resolveFolder(connectionId: string, folderId: string): Promise<string> {
   const cacheKey = `${connectionId}:${folderId}`
@@ -181,9 +203,10 @@ async function resolveFolder(connectionId: string, folderId: string): Promise<st
 
   try {
     const folder = await graphGet<{ displayName: string }>(connectionId, `/me/mailFolders/${folderId}`)
-    const name = folder.displayName?.toLowerCase() ?? 'unknown'
-    folderCache.set(cacheKey, name)
-    return name
+    const raw = folder.displayName?.toLowerCase() ?? 'unknown'
+    const normalized = folderNormalize[raw] ?? raw
+    folderCache.set(cacheKey, normalized)
+    return normalized
   } catch {
     return 'inbox'
   }

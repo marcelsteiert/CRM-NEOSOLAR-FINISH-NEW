@@ -37,8 +37,6 @@ import {
   useReminders,
   useCreateReminder,
   useDismissReminder,
-  useEmailTemplates,
-  useSendEmail,
   useAddLeadTags,
   useRemoveLeadTag,
   sourceLabels,
@@ -144,8 +142,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const { data: remindersResponse } = useReminders(leadId)
   const createReminder = useCreateReminder()
   const dismissReminder = useDismissReminder()
-  const { data: templatesResponse } = useEmailTemplates()
-  const sendEmail = useSendEmail()
   const addLeadTags = useAddLeadTags()
   const removeLeadTag = useRemoveLeadTag()
 
@@ -154,8 +150,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const pipelines = pipelinesResponse?.data ?? []
   const activities = activitiesResponse?.data ?? []
   const reminders = remindersResponse?.data ?? []
-  const emailTemplates = templatesResponse?.data ?? []
-
   /* ── Local state ── */
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
   const [isEditing, setIsEditing] = useState(false)
@@ -192,12 +186,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
   // Tags dropdown
   const [showTagDropdown, setShowTagDropdown] = useState(false)
-
-  // Email sub-dialog
-  const [showEmailDialog, setShowEmailDialog] = useState(false)
-  const [emailTemplateId, setEmailTemplateId] = useState('')
-  const [emailSubject, setEmailSubject] = useState('')
-  const [emailBody, setEmailBody] = useState('')
 
   // Confirmations
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -240,9 +228,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (showEmailDialog) {
-          setShowEmailDialog(false)
-        } else if (showDeleteConfirm) {
+        if (showDeleteConfirm) {
           setShowDeleteConfirm(false)
         } else if (showDealConfirm) {
           setShowDealConfirm(false)
@@ -256,7 +242,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose, showEmailDialog, showDeleteConfirm, showDealConfirm, showLostConfirm])
+  }, [onClose, showDeleteConfirm, showDealConfirm, showLostConfirm])
 
   /* ── Focus dialog on mount ── */
   useEffect(() => {
@@ -358,39 +344,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     removeLeadTag.mutate({ id: leadId, tagId })
   }
 
-  /* ── Email template selection ── */
-  const handleSelectTemplate = (templateId: string) => {
-    setEmailTemplateId(templateId)
-    const tpl = emailTemplates.find((t) => t.id === templateId)
-    if (tpl && lead) {
-      const firstName = lead.firstName ?? ''
-      const lastName = lead.lastName ?? ''
-      setEmailSubject(
-        tpl.subject.replace(/\{\{firstName\}\}/g, firstName).replace(/\{\{lastName\}\}/g, lastName),
-      )
-      setEmailBody(
-        tpl.body.replace(/\{\{firstName\}\}/g, firstName).replace(/\{\{lastName\}\}/g, lastName),
-      )
-    }
-  }
-
-  /* ── Send email ── */
-  const handleSendEmail = () => {
-    if (!lead || !emailSubject.trim()) return
-    sendEmail.mutate({
-      leadId: lead.id,
-      to: lead.email,
-      subject: emailSubject.trim(),
-      body: emailBody.trim(),
-      templateId: emailTemplateId || undefined,
-    })
-    setShowEmailDialog(false)
-    setEmailSubject('')
-    setEmailBody('')
-    setEmailTemplateId('')
-    setSuccessMsg('E-Mail wurde gesendet')
-    setTimeout(() => setSuccessMsg(''), 3000)
-  }
 
   /* ── Termin erstellen (Lead → Termin) ── */
   const handleCreateDeal = async () => {
@@ -1495,7 +1448,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
           <button
             type="button"
             className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold"
-            onClick={() => setShowEmailDialog(true)}
+            onClick={() => setActiveTab('emails')}
           >
             <Send size={14} strokeWidth={1.8} />
             E-Mail
@@ -1534,133 +1487,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             Löschen
           </button>
         </div>
-
-        {/* ── Email Sub-Dialog ── */}
-        {showEmailDialog && (
-          <div
-            className="absolute inset-0 z-10 flex items-center justify-center"
-            style={{
-              background: 'rgba(6, 8, 12, 0.6)',
-              backdropFilter: 'blur(4px)',
-              borderRadius: 'var(--radius-lg)',
-            }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setShowEmailDialog(false)
-            }}
-          >
-            <div
-              className="w-[520px] mx-4"
-              style={{
-                background: 'rgba(11, 15, 21, 0.98)',
-                backdropFilter: 'blur(24px)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-              }}
-            >
-              {/* Email header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                <div>
-                  <h3 className="text-[14px] font-bold">E-Mail senden</h3>
-                  <p className="text-[11px] text-text-sec mt-0.5">
-                    An: {lead.email}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowEmailDialog(false)}
-                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150"
-                >
-                  <X size={16} strokeWidth={1.8} />
-                </button>
-              </div>
-
-              {/* Email form */}
-              <div className="px-5 py-4 space-y-3">
-                {/* Template selector */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-sec mb-1">
-                    Vorlage
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={emailTemplateId}
-                      onChange={(e) => handleSelectTemplate(e.target.value)}
-                      className="glass-input appearance-none w-full px-3 py-2 pr-8 text-[12px] cursor-pointer"
-                    >
-                      <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>
-                        Keine Vorlage
-                      </option>
-                      {emailTemplates.map((tpl) => (
-                        <option
-                          key={tpl.id}
-                          value={tpl.id}
-                          style={{ background: '#0B0F15', color: '#F0F2F5' }}
-                        >
-                          {tpl.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={12}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
-                      strokeWidth={2}
-                    />
-                  </div>
-                </div>
-
-                {/* Subject */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-sec mb-1">
-                    Betreff
-                  </label>
-                  <input
-                    type="text"
-                    value={emailSubject}
-                    onChange={(e) => setEmailSubject(e.target.value)}
-                    placeholder="Betreff eingeben..."
-                    className="glass-input w-full px-3 py-2 text-[12px]"
-                  />
-                </div>
-
-                {/* Body */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-sec mb-1">
-                    Nachricht
-                  </label>
-                  <textarea
-                    value={emailBody}
-                    onChange={(e) => setEmailBody(e.target.value)}
-                    placeholder="Nachricht eingeben..."
-                    rows={8}
-                    className="glass-input w-full px-3 py-2 text-[12px] leading-relaxed resize-none"
-                    style={{ borderRadius: 'var(--radius-sm)' }}
-                  />
-                </div>
-              </div>
-
-              {/* Email actions */}
-              <div className="flex items-center gap-2.5 px-5 py-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowEmailDialog(false)}
-                  className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSendEmail}
-                  className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center flex items-center justify-center gap-2"
-                  disabled={!emailSubject.trim()}
-                >
-                  <Send size={14} strokeWidth={1.8} />
-                  Senden
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── Delete Confirmation ── */}
         {showDeleteConfirm && (

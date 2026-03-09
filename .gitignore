@@ -14,3 +14,7 @@ coverage/
 .turbo/
 .claude/settings.local.json
 package.json.tmp
+.netlify/
+.netlify-build/
+netlify-functions-dist/
+deploy.js

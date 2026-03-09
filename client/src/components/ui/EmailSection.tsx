@@ -1,12 +1,17 @@
 // EmailSection – Wiederverwendbare E-Mail-Timeline fuer Detail-Modals
 // Zeigt alle E-Mails zwischen Mitarbeitern und dem Kontakt (ueber contactId)
-import { useState } from 'react'
+// Integriert Outlook-Vorlagen, Absender-Info und Team-weite Verlaeufe
+import { useState, useEffect } from 'react'
 import {
   Mail, Send, Inbox, ChevronDown, ChevronUp, Paperclip,
-  Clock, ArrowUpRight, ArrowDownLeft, Reply,
-  Loader2, Plus, X, PenLine,
+  Clock, ArrowUpRight, ArrowDownLeft, Reply, Forward,
+  Loader2, Plus, X, PenLine, FileText, User2,
+  Eye, MousePointerClick,
 } from 'lucide-react'
-import { useOutlookEmails, useOutlookStatus, useSendEmail, type OutlookEmail } from '@/hooks/useOutlook'
+import {
+  useOutlookEmails, useOutlookStatus, useSendEmail,
+  useOutlookTemplates, type OutlookEmail, type OutlookTemplate,
+} from '@/hooks/useOutlook'
 
 interface EmailSectionProps {
   contactId: string
@@ -16,10 +21,9 @@ interface EmailSectionProps {
   entityId?: string
 }
 
-export default function EmailSection({ contactId, contactEmail, contactName }: EmailSectionProps) {
+export default function EmailSection({ contactId, contactEmail, contactName, entityType, entityId }: EmailSectionProps) {
   const { data: statusRes } = useOutlookStatus()
   const status = statusRes?.data
-  // Immer E-Mails laden wenn contactId vorhanden (Team-weiter Verlauf)
   const { data: emailsRes, isLoading } = useOutlookEmails({ contactId, limit: 100 })
   const emails = emailsRes?.data ?? []
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -28,14 +32,29 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
 
   return (
     <div className="space-y-2">
-      {/* Header mit Neue E-Mail Button */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
-          E-Mail-Verlauf {emails.length > 0 ? `(${emails.length})` : ''}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
+            E-Mail-Verlauf {emails.length > 0 ? `(${emails.length})` : ''}
+          </span>
+          {/* Verbindungsstatus */}
+          {status?.connected && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="text-[10px] text-white/30 truncate max-w-[180px]">{status.email}</span>
+            </div>
+          )}
+          {!status?.connected && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
+              <span className="text-[10px] text-white/25">Outlook nicht verbunden</span>
+            </div>
+          )}
+        </div>
         <button
           type="button"
-          onClick={() => setShowCompose(true)}
+          onClick={() => { setShowCompose(true); setReplyTo(null) }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-amber-500 hover:bg-amber-500/10 transition-colors"
           style={{ border: '1px solid rgba(245,158,11,0.2)' }}
         >
@@ -50,7 +69,11 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
           contactEmail={contactEmail}
           contactName={contactName}
           contactId={contactId}
+          entityType={entityType}
+          entityId={entityId}
           isConnected={!!status?.connected}
+          senderEmail={status?.email}
+          senderName={status?.displayName}
           onClose={() => setShowCompose(false)}
         />
       )}
@@ -73,7 +96,7 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
           <p className="text-xs text-white/30">
             {status?.connected
               ? 'Sobald E-Mails mit diesem Kontakt synchronisiert werden, erscheinen sie hier.'
-              : 'Erfasse E-Mails manuell mit dem Button oben.'}
+              : 'Verbinde Outlook unter Admin → Integrationen, um E-Mails automatisch zu synchronisieren.'}
           </p>
         </div>
       )}
@@ -87,7 +110,7 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
               email={email}
               isExpanded={expandedId === email.id}
               onToggle={() => setExpandedId(expandedId === email.id ? null : email.id)}
-              onReply={() => setReplyTo(email)}
+              onReply={() => { setReplyTo(email); setShowCompose(false) }}
               connectedEmail={status?.email}
             />
           ))}
@@ -98,6 +121,7 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
       {replyTo && (
         <ReplyComposer
           email={replyTo}
+          contactId={contactId}
           onClose={() => setReplyTo(null)}
         />
       )}
@@ -105,68 +129,181 @@ export default function EmailSection({ contactId, contactEmail, contactName }: E
   )
 }
 
-// ── Neue E-Mail verfassen ──
+// ── Neue E-Mail verfassen (mit Vorlagen) ──
 
 function ComposeEmail({
   contactEmail,
   contactName,
   contactId,
+  entityType,
+  entityId,
   isConnected,
+  senderEmail,
+  senderName,
   onClose,
 }: {
   contactEmail?: string
   contactName?: string
   contactId: string
+  entityType?: string
+  entityId?: string
   isConnected: boolean
+  senderEmail?: string
+  senderName?: string
   onClose: () => void
 }) {
   const [to, setTo] = useState(contactEmail ?? '')
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
+  const [showCc, setShowCc] = useState(false)
+  const [cc, setCc] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
   const sendEmail = useSendEmail()
+  const { data: templatesRes } = useOutlookTemplates()
+  const templates = templatesRes?.data ?? []
+
+  // Template anwenden
+  const handleSelectTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    if (!templateId) return
+
+    const tpl = templates.find((t) => t.id === templateId)
+    if (!tpl) return
+
+    // Platzhalter ersetzen
+    let subj = tpl.subject || ''
+    let bodyText = tpl.bodyHtml || ''
+
+    const replacements: Record<string, string> = {
+      '{{firstName}}': contactName?.split(' ')[0] || '',
+      '{{lastName}}': contactName?.split(' ').slice(1).join(' ') || '',
+      '{{name}}': contactName || '',
+      '{{email}}': contactEmail || '',
+      '{{datum}}': new Date().toLocaleDateString('de-CH'),
+      '{{absender}}': senderName || '',
+    }
+
+    for (const [key, value] of Object.entries(replacements)) {
+      subj = subj.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value)
+      bodyText = bodyText.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), value)
+    }
+
+    setSubject(subj)
+    // HTML Tags entfernen fuer Textarea
+    setBody(bodyText.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''))
+  }
 
   const handleSend = async () => {
     if (!to.trim() || !subject.trim()) return
+    setErrorMsg('')
     try {
+      const ccRecipients = cc.trim()
+        ? cc.split(',').map(e => ({ email: e.trim(), name: '' })).filter(r => r.email)
+        : undefined
+
       await sendEmail.mutateAsync({
         to: [{ email: to.trim(), name: contactName }],
+        cc: ccRecipients,
         subject: subject.trim(),
         bodyHtml: `<p>${body.replace(/\n/g, '<br>')}</p>`,
         contactId,
         trackingEnabled: true,
       })
-      setSuccessMsg('E-Mail wurde gesendet!')
+      setSuccessMsg('E-Mail wurde erfolgreich gesendet!')
       setTimeout(() => {
         setSuccessMsg('')
         onClose()
       }, 2000)
-    } catch {
-      // Fehler wird von React Query gehandelt
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Fehler beim Senden')
     }
   }
 
   return (
-    <div className="rounded-lg overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}>
+    <div
+      className="rounded-xl overflow-hidden mb-3"
+      style={{
+        background: 'rgba(11, 15, 21, 0.95)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      }}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-2">
-          <PenLine size={14} className="text-amber-500" />
-          <span className="text-[12px] font-semibold text-white/90">Neue E-Mail</span>
-          {!isConnected && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-medium">Manuell</span>
-          )}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="flex items-center gap-2.5">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: 'rgba(245,158,11,0.12)' }}
+          >
+            <PenLine size={13} className="text-amber-500" />
+          </div>
+          <div>
+            <span className="text-[12px] font-semibold text-white/90">Neue E-Mail</span>
+            {isConnected && senderEmail && (
+              <p className="text-[10px] text-white/35 flex items-center gap-1 mt-0.5">
+                <User2 size={9} /> Von: {senderName || senderEmail}
+              </p>
+            )}
+            {!isConnected && (
+              <p className="text-[10px] text-amber-500/70 mt-0.5">Outlook nicht verbunden – manueller Modus</p>
+            )}
+          </div>
         </div>
-        <button type="button" onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">
+        <button type="button" onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors p-1">
           <X size={16} />
         </button>
       </div>
 
       {/* Form */}
       <div className="p-4 space-y-3">
+        {/* Vorlage */}
+        {templates.length > 0 && (
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">
+              Vorlage
+            </label>
+            <div className="relative">
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => handleSelectTemplate(e.target.value)}
+                className="glass-input appearance-none w-full text-[12px] pr-8 cursor-pointer"
+              >
+                <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                  Keine Vorlage
+                </option>
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                    {tpl.name} {tpl.category ? `(${tpl.category})` : ''}
+                  </option>
+                ))}
+              </select>
+              <FileText
+                size={12}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Empfaenger */}
         <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">An</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40">An</label>
+            {!showCc && (
+              <button
+                type="button"
+                onClick={() => setShowCc(true)}
+                className="text-[10px] text-amber-500/60 hover:text-amber-500 transition-colors"
+              >
+                + CC
+              </button>
+            )}
+          </div>
           <input
             type="email"
             value={to}
@@ -175,6 +312,20 @@ function ComposeEmail({
             className="glass-input w-full text-[12px]"
           />
         </div>
+
+        {/* CC */}
+        {showCc && (
+          <div>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">CC</label>
+            <input
+              type="text"
+              value={cc}
+              onChange={(e) => setCc(e.target.value)}
+              placeholder="Kommagetrennt: a@b.ch, c@d.ch"
+              className="glass-input w-full text-[12px]"
+            />
+          </div>
+        )}
 
         {/* Betreff */}
         <div>
@@ -195,41 +346,51 @@ function ComposeEmail({
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Nachricht schreiben..."
-            className="glass-input w-full h-32 text-[12px] resize-none"
+            className="glass-input w-full text-[12px] resize-none"
+            rows={8}
+            style={{ lineHeight: '1.6' }}
           />
         </div>
 
         {/* Erfolg */}
         {successMsg && (
-          <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-emerald-400" style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.15)' }}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             {successMsg}
           </div>
         )}
 
         {/* Fehler */}
-        {sendEmail.isError && (
-          <div className="text-[11px] text-red-400 font-medium">
-            {!isConnected
-              ? 'Outlook ist nicht verbunden. Verbinde Outlook unter Kommunikation.'
-              : 'Fehler beim Senden. Bitte versuche es erneut.'}
+        {(errorMsg || sendEmail.isError) && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-red-400" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)' }}>
+            {errorMsg || (!isConnected
+              ? 'Outlook ist nicht verbunden. Verbinde Outlook unter Admin → Integrationen.'
+              : 'Fehler beim Senden. Bitte versuche es erneut.')}
           </div>
         )}
 
         {/* Aktionen */}
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="btn-secondary text-[11px] px-3 py-1.5">
-            Abbrechen
-          </button>
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!to.trim() || !subject.trim() || sendEmail.isPending}
-            className="btn-primary text-[11px] px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
-          >
-            {sendEmail.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-            {isConnected ? 'Senden' : 'Erfassen'}
-          </button>
+        <div
+          className="flex items-center justify-between pt-2"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}
+        >
+          <div className="text-[10px] text-white/20">
+            {isConnected ? 'Wird ueber Outlook gesendet' : 'Wird manuell erfasst'}
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onClose} className="btn-secondary text-[11px] px-3 py-1.5">
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={!to.trim() || !subject.trim() || sendEmail.isPending}
+              className="btn-primary text-[11px] px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
+            >
+              {sendEmail.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+              {isConnected ? 'Senden' : 'Erfassen'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -304,6 +465,12 @@ function EmailItem({
             {email.hasAttachments && (
               <Paperclip size={11} className="shrink-0 text-white/30" />
             )}
+            {/* Tracking-Info */}
+            {isSent && email.openCount > 0 && (
+              <span className="shrink-0 flex items-center gap-0.5 text-[9px] text-emerald-400/70">
+                <Eye size={9} /> {email.openCount}×
+              </span>
+            )}
           </div>
           <p className="text-[11px] font-medium text-white/70 truncate">{email.subject || '(Kein Betreff)'}</p>
           {!isExpanded && (
@@ -331,6 +498,21 @@ function EmailItem({
             <p className="flex items-center gap-1">
               <Clock size={10} /> {date.toLocaleDateString('de-CH')} {date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}
             </p>
+            {/* Tracking-Details bei gesendeten Mails */}
+            {isSent && (email.openCount > 0 || email.clickCount > 0) && (
+              <div className="flex items-center gap-3 mt-1 pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                {email.openCount > 0 && (
+                  <span className="flex items-center gap-1 text-emerald-400/60">
+                    <Eye size={10} /> {email.openCount}× geoeffnet
+                  </span>
+                )}
+                {email.clickCount > 0 && (
+                  <span className="flex items-center gap-1 text-blue-400/60">
+                    <MousePointerClick size={10} /> {email.clickCount}× geklickt
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Body */}
@@ -388,8 +570,9 @@ function EmailItem({
 
 // ── Reply Composer (Inline) ──
 
-function ReplyComposer({ email, onClose }: { email: OutlookEmail; onClose: () => void }) {
+function ReplyComposer({ email, contactId, onClose }: { email: OutlookEmail; contactId: string; onClose: () => void }) {
   const [body, setBody] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
   const sendEmail = useSendEmail()
 
   const handleSend = async () => {
@@ -400,40 +583,74 @@ function ReplyComposer({ email, onClose }: { email: OutlookEmail; onClose: () =>
         subject: email.subject?.startsWith('Re:') ? email.subject : `Re: ${email.subject}`,
         bodyHtml: `<p>${body.replace(/\n/g, '<br>')}</p>`,
         replyToMessageId: email.messageId,
+        contactId,
+        trackingEnabled: true,
       })
-      onClose()
+      setSuccessMsg('Antwort gesendet!')
+      setTimeout(() => onClose(), 1500)
     } catch {
       // Error wird von React Query gehandelt
     }
   }
 
   return (
-    <div className="mt-3 rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-medium text-white/70">
-          <Reply size={12} className="inline mr-1" />
+    <div
+      className="mt-3 rounded-xl overflow-hidden"
+      style={{
+        background: 'rgba(11, 15, 21, 0.95)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <span className="text-[11px] font-medium text-white/70 flex items-center gap-1.5">
+          <Reply size={12} className="text-amber-500" />
           Antwort an {email.senderName || email.senderEmail}
         </span>
-        <button type="button" onClick={onClose} className="text-[10px] text-white/30 hover:text-white/60">
-          Abbrechen
+        <button type="button" onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors p-1">
+          <X size={14} />
         </button>
       </div>
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Antwort schreiben..."
-        className="glass-input w-full h-24 text-[12px] resize-none mb-2"
-      />
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={!body.trim() || sendEmail.isPending}
-          className="btn-primary text-[11px] px-3 py-1.5 flex items-center gap-1.5"
-        >
-          {sendEmail.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-          Senden
-        </button>
+      <div className="p-4">
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Antwort schreiben..."
+          className="glass-input w-full text-[12px] resize-none mb-3"
+          rows={5}
+          style={{ lineHeight: '1.6' }}
+        />
+
+        {successMsg && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-emerald-400 mb-3" style={{ background: 'rgba(52,211,153,0.08)' }}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            {successMsg}
+          </div>
+        )}
+
+        {sendEmail.isError && (
+          <div className="text-[11px] text-red-400 font-medium mb-3">
+            Fehler beim Senden. Bitte versuche es erneut.
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary text-[11px] px-3 py-1.5">
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!body.trim() || sendEmail.isPending}
+            className="btn-primary text-[11px] px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
+          >
+            {sendEmail.isPending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            Senden
+          </button>
+        </div>
       </div>
     </div>
   )
