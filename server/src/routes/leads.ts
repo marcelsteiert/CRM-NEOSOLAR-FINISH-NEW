@@ -13,22 +13,23 @@ const router = Router()
 // ---------------------------------------------------------------------------
 
 const createLeadSchema = z.object({
-  contactId: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-  company: z.string().optional(),
+  contactId: z.string().nullable().optional(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  company: z.string().nullable().optional(),
   source: z.enum(['HOMEPAGE', 'LANDINGPAGE', 'MESSE', 'EMPFEHLUNG', 'KALTAKQUISE', 'SONSTIGE']),
-  pipelineId: z.string().optional(),
-  bucketId: z.string().optional(),
-  assignedTo: z.string().optional(),
+  pipelineId: z.string().nullable().optional(),
+  bucketId: z.string().nullable().optional(),
+  assignedTo: z.string().nullable().optional(),
   status: z.enum(['ACTIVE', 'CONVERTED', 'LOST', 'ARCHIVED', 'AFTER_SALES']).optional(),
-  value: z.number().min(0).optional(),
-  notes: z.string().optional(),
-  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).optional(),
+  value: z.number().min(0).nullable().optional(),
+  notes: z.string().nullable().optional(),
+  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).nullable().optional(),
   tags: z.array(z.string()).optional(),
+  skipDuplicateCheck: z.boolean().optional(),
 })
 
 const updateLeadSchema = createLeadSchema.partial()
@@ -393,7 +394,8 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       const { data: leadRow } = await supabase.from('leads').select('contact_id').eq('id', req.params.id).single()
       if (leadRow?.contact_id) {
         contactUpdates.updated_at = new Date().toISOString()
-        await supabase.from('contacts').update(contactUpdates).eq('id', leadRow.contact_id)
+        const { error: contactError } = await supabase.from('contacts').update(contactUpdates).eq('id', leadRow.contact_id)
+        if (contactError) throw new AppError(`Kontakt-Update fehlgeschlagen: ${contactError.message}`, 500)
       }
     }
 

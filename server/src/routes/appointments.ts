@@ -33,22 +33,22 @@ function estimateTravelMinutes(address: string): number | null {
 // ---------------------------------------------------------------------------
 
 const createAppointmentSchema = z.object({
-  contactId: z.string().optional(),
-  contactName: z.string().optional(),
-  contactEmail: z.string().optional(),
-  contactPhone: z.string().optional(),
-  company: z.string().optional(),
-  address: z.string().optional(),
-  leadId: z.string().optional(),
-  value: z.number().min(0).optional(),
-  status: z.enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'ABGESAGT']).optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
-  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).optional(),
-  assignedTo: z.string().optional(),
-  appointmentDate: z.string().optional(),
-  appointmentTime: z.string().optional(),
-  preparationNotes: z.string().optional(),
-  notes: z.string().optional(),
+  contactId: z.string().nullable().optional(),
+  contactName: z.string().nullable().optional(),
+  contactEmail: z.string().nullable().optional(),
+  contactPhone: z.string().nullable().optional(),
+  company: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  leadId: z.string().nullable().optional(),
+  value: z.number().min(0).nullable().optional(),
+  status: z.enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'ABGESAGT']).nullable().optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).nullable().optional(),
+  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).nullable().optional(),
+  assignedTo: z.string().nullable().optional(),
+  appointmentDate: z.string().nullable().optional(),
+  appointmentTime: z.string().nullable().optional(),
+  preparationNotes: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
 })
 
 const updateAppointmentSchema = createAppointmentSchema.partial().extend({

@@ -4,16 +4,16 @@
 import { supabase } from './supabase.js'
 
 interface ContactInput {
-  contactId?: string
-  firstName?: string
-  lastName?: string
-  contactName?: string // "Vorname Nachname" combined
-  email?: string
-  contactEmail?: string
-  phone?: string
-  contactPhone?: string
-  address?: string
-  company?: string
+  contactId?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  contactName?: string | null // "Vorname Nachname" combined
+  email?: string | null
+  contactEmail?: string | null
+  phone?: string | null
+  contactPhone?: string | null
+  address?: string | null
+  company?: string | null
 }
 
 /**
