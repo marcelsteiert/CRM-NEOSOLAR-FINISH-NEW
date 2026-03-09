@@ -232,3 +232,85 @@ ${apptList}
 
 Schreibe ein motivierendes, konkretes Briefing: Was steht heute an, worauf sollte der Fokus liegen, welche Prioritaeten. Maximal 4-5 Saetze. Beginne mit einer Begruessung.`
 }
+
+// ── E-Mail Prompts ──
+
+export function buildEmailDraftPrompt(context: {
+  contactName: string
+  contactCompany?: string
+  entityType: string
+  entityTitle: string
+  entityStatus: string
+  entityValue?: number
+  activities: any[]
+  purpose?: string
+  senderName: string
+}): string {
+  const activityList = context.activities.length > 0
+    ? context.activities.slice(0, 5).map((a: any) => `- ${a.type}: ${a.description || a.note || 'k.A.'} (${a.created_at})`).join('\n')
+    : 'Keine bisherigen Aktivitaeten'
+
+  return `Schreibe eine professionelle E-Mail fuer einen Vertriebsmitarbeiter der NEOSOLAR AG (Photovoltaik, Schweiz).
+
+Empfaenger: ${context.contactName}${context.contactCompany ? ` (${context.contactCompany})` : ''}
+Bezug: ${context.entityType} "${context.entityTitle}" – Status: ${context.entityStatus}${context.entityValue ? `, Wert: CHF ${context.entityValue}` : ''}
+Absender: ${context.senderName}, NEOSOLAR AG
+${context.purpose ? `Zweck: ${context.purpose}` : ''}
+
+Bisherige Interaktionen:
+${activityList}
+
+Regeln:
+- Foermliche Anrede: "Guten Tag ${context.contactName.split(' ')[0]}"
+- Professionell, freundlich, auf den Punkt
+- Schluss mit: "Freundliche Gruesse" + Absender-Name + NEOSOLAR AG
+- Nur den E-Mail-Body (kein Betreff)
+- Keine Platzhalter oder [Eckige Klammern]
+- Maximal 6-8 Saetze
+- Sprache: Schweizer Hochdeutsch`
+}
+
+export function buildEmailReplyPrompt(context: {
+  originalSubject: string
+  originalBody: string
+  originalSender: string
+  contactName: string
+  entityType?: string
+  entityTitle?: string
+  senderName: string
+}): string {
+  // Originaltext kuerzen auf max 500 Zeichen
+  const truncBody = context.originalBody.length > 500
+    ? context.originalBody.substring(0, 500) + '...'
+    : context.originalBody
+
+  return `Schreibe eine professionelle Antwort auf folgende E-Mail fuer einen Vertriebsmitarbeiter der NEOSOLAR AG.
+
+Original von ${context.originalSender}:
+Betreff: ${context.originalSubject}
+"${truncBody}"
+
+${context.entityType ? `Bezug: ${context.entityType} "${context.entityTitle}"` : ''}
+Antwort-Absender: ${context.senderName}, NEOSOLAR AG
+
+Regeln:
+- Gehe konkret auf den Inhalt der E-Mail ein
+- Professionell, loesungsorientiert, freundlich
+- Foermliche Anrede: "Guten Tag ${context.contactName.split(' ')[0]}"
+- Schluss mit: "Freundliche Gruesse" + ${context.senderName} + NEOSOLAR AG
+- Nur den Antwort-Text (kein Betreff, kein Original zitieren)
+- Maximal 5-7 Saetze
+- Sprache: Schweizer Hochdeutsch`
+}
+
+export function buildFollowUpCheckPrompt(overdueItems: any[]): string {
+  const items = overdueItems.slice(0, 10).map((item: any) =>
+    `- ${item.type}: "${item.title}" – Kontakt: ${item.contactName}, Faellig seit: ${item.dueDate}, Wert: CHF ${item.value ?? 0}`
+  ).join('\n')
+
+  return `Du bist der KI-Assistent fuer NEOSOLAR AG. Hier sind ueberfaellige Follow-Ups die dringend bearbeitet werden muessen:
+
+${items}
+
+Erstelle fuer jeden Eintrag eine kurze, konkrete Handlungsempfehlung (1 Satz pro Eintrag). Priorisiere nach Wert und Dringlichkeit. Beginne mit dem wichtigsten.`
+}
