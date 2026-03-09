@@ -218,9 +218,9 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const backdropRef = useRef<HTMLDivElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
 
-  /* ── Sync lead data to edit state ── */
+  /* ── Sync lead data to edit state (nur wenn NICHT im Bearbeitungsmodus) ── */
   useEffect(() => {
-    if (lead) {
+    if (lead && !isEditing) {
       setEditFirstName(lead.firstName ?? '')
       setEditLastName(lead.lastName ?? '')
       setEditCompany(lead.company ?? '')
@@ -234,7 +234,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
       setEditValue(lead.value != null ? String(lead.value) : '')
       setNotesText(lead.notes ?? '')
     }
-  }, [lead])
+  }, [lead, isEditing])
 
   /* ── Escape key handler ── */
   useEffect(() => {
@@ -299,8 +299,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         },
         onError: (err) => {
           setSuccessMsg('')
-          setSaveError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen')
-          setTimeout(() => setSaveError(''), 5000)
+          const msg = err instanceof Error ? err.message : 'Speichern fehlgeschlagen'
+          setSaveError(msg)
         },
       },
     )
