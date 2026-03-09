@@ -16,6 +16,8 @@ import { usePartners } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
+import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
+import { useGenerateContactSummary } from '@/hooks/useAi'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
 const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
@@ -64,6 +66,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
   const addActivity = useAddProjectActivity()
   const deleteProject = useDeleteProject()
   const archiveProject = useArchiveProject()
+  const generateContactSummary = useGenerateContactSummary()
 
   const project = projectData?.data
   const phases = phasesData?.data ?? []
@@ -732,6 +735,18 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                   </div>
                 )}
               </div>
+
+              {/* KI-Zusammenfassung (kontaktbasiert) */}
+              {project.contactId && (
+                <div className="mt-5">
+                  <AiSummaryCard
+                    summary={(generateContactSummary.data as any)?.data?.summary}
+                    isGenerating={generateContactSummary.isPending}
+                    onGenerate={() => generateContactSummary.mutate(project.contactId)}
+                    error={generateContactSummary.error?.message || (generateContactSummary.data as any)?.data?.error}
+                  />
+                </div>
+              )}
             </div>
           )}
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Sparkles, User, FileText, Briefcase, Clock, Zap, ChevronDown, RefreshCw, History } from 'lucide-react'
-import { useGenerateLeadSummary, useGenerateDealSummary, useGenerateContactSummary, useGenerateBriefing, useAiHistory } from '@/hooks/useAi'
+import { Sparkles, User, FileText, Briefcase, Clock, Zap, ChevronDown, RefreshCw, History, AlertTriangle } from 'lucide-react'
+import { useGenerateLeadSummary, useGenerateDealSummary, useGenerateContactSummary, useGenerateBriefing, useFollowUpCheck, useAiHistory } from '@/hooks/useAi'
 import { useAiSettings } from '@/hooks/useAdmin'
 import { useLeads } from '@/hooks/useLeads'
 import { useDeals } from '@/hooks/useDeals'
@@ -21,6 +21,7 @@ export default function AiSummaryPage() {
   const dealSummary = useGenerateDealSummary()
   const contactSummary = useGenerateContactSummary()
   const briefing = useGenerateBriefing()
+  const followUpCheck = useFollowUpCheck()
 
   const [selectedLead, setSelectedLead] = useState('')
   const [selectedDeal, setSelectedDeal] = useState('')
@@ -87,13 +88,26 @@ export default function AiSummaryPage() {
     }
   }
 
-  const isAnyLoading = leadSummary.isPending || dealSummary.isPending || contactSummary.isPending || briefing.isPending
+  const handleFollowUpCheck = async () => {
+    const res = await followUpCheck.mutateAsync()
+    const d = res?.data
+    if (d?.summary) {
+      setActiveResult({ title: `Follow-Up Check (${d.items?.length || 0} Items)`, text: d.summary, model: d.model, tokens: d.tokensUsed, duration: d.durationMs })
+    } else if (d?.error) {
+      setActiveResult({ title: 'Fehler', text: d.error })
+    }
+  }
+
+  const isAnyLoading = leadSummary.isPending || dealSummary.isPending || contactSummary.isPending || briefing.isPending || followUpCheck.isPending
 
   const entityTypeLabels: Record<string, string> = {
     LEAD: 'Lead',
     DEAL: 'Angebot',
     CONTACT: 'Kontakt',
     BRIEFING: 'Briefing',
+    FOLLOW_UP: 'Follow-Up',
+    EMAIL_DRAFT: 'E-Mail',
+    EMAIL_REPLY: 'Antwort',
   }
 
   return (
@@ -131,7 +145,7 @@ export default function AiSummaryPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
         {/* Lead Summary */}
         <div className="glass-card p-4" style={{ borderRadius: 'var(--radius-lg)' }}>
           <div className="flex items-center gap-2 mb-3">
@@ -249,6 +263,26 @@ export default function AiSummaryPage() {
           >
             <RefreshCw size={11} className={briefing.isPending ? 'animate-spin' : ''} />
             {briefing.isPending ? 'Generiert...' : 'Briefing generieren'}
+          </button>
+        </div>
+
+        {/* Follow-Up Check */}
+        <div className="glass-card p-4" style={{ borderRadius: 'var(--radius-lg)' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle size={14} className="text-red-400" />
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-text-sec">Follow-Up Check</span>
+          </div>
+          <p className="text-[11px] text-text-dim mb-2">
+            Analysiert ueberfaellige Follow-Ups und gibt konkrete Handlungsempfehlungen.
+          </p>
+          <button
+            onClick={handleFollowUpCheck}
+            disabled={followUpCheck.isPending || !isConfigured}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all disabled:opacity-30"
+            style={{ background: 'rgba(248,113,113,0.12)', color: '#F87171', border: '1px solid rgba(248,113,113,0.2)' }}
+          >
+            <RefreshCw size={11} className={followUpCheck.isPending ? 'animate-spin' : ''} />
+            {followUpCheck.isPending ? 'Prueft...' : 'Follow-Ups pruefen'}
           </button>
         </div>
       </div>

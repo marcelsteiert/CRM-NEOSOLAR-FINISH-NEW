@@ -84,6 +84,57 @@ export function useGenerateBriefing() {
   })
 }
 
+// ── Email Draft ──
+
+export interface AiEmailDraftParams {
+  contactName: string
+  contactCompany?: string
+  entityType: string
+  entityTitle: string
+  entityStatus: string
+  entityValue?: number
+  entityId?: string
+  purpose?: string
+}
+
+export function useGenerateEmailDraft() {
+  return useMutation({
+    mutationFn: (params: AiEmailDraftParams) =>
+      api.post<{ data: { text: string | null; error?: string; model?: string; tokensUsed?: number; durationMs?: number } }>('/ai/email-draft', params),
+  })
+}
+
+// ── Email Reply ──
+
+export interface AiEmailReplyParams {
+  originalSubject: string
+  originalBody: string
+  originalSender: string
+  contactName: string
+  entityType?: string
+  entityTitle?: string
+}
+
+export function useGenerateEmailReply() {
+  return useMutation({
+    mutationFn: (params: AiEmailReplyParams) =>
+      api.post<{ data: { text: string | null; error?: string; model?: string; tokensUsed?: number; durationMs?: number } }>('/ai/email-reply', params),
+  })
+}
+
+// ── Follow-Up Check ──
+
+export function useFollowUpCheck() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.post<{ data: { summary: string | null; items?: any[]; error?: string } }>('/ai/follow-up-check', {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['aiHistory'] })
+    },
+  })
+}
+
 // ── Test Connection ──
 
 export function useTestAiConnection() {

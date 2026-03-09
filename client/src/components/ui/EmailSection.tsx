@@ -6,12 +6,13 @@ import {
   Mail, Send, Inbox, ChevronDown, ChevronUp, Paperclip,
   Clock, ArrowUpRight, ArrowDownLeft, Reply, Forward,
   Loader2, Plus, X, PenLine, FileText, User2,
-  Eye, MousePointerClick,
+  Eye, MousePointerClick, Sparkles,
 } from 'lucide-react'
 import {
   useOutlookEmails, useOutlookStatus, useSendEmail,
   useOutlookTemplates, type OutlookEmail, type OutlookTemplate,
 } from '@/hooks/useOutlook'
+import { useGenerateEmailDraft, useGenerateEmailReply } from '@/hooks/useAi'
 
 interface EmailSectionProps {
   contactId: string
@@ -122,6 +123,7 @@ export default function EmailSection({ contactId, contactEmail, contactName, ent
         <ReplyComposer
           email={replyTo}
           contactId={contactId}
+          contactName={contactName}
           onClose={() => setReplyTo(null)}
         />
       )}
@@ -161,6 +163,7 @@ function ComposeEmail({
   const [successMsg, setSuccessMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   const sendEmail = useSendEmail()
+  const generateDraft = useGenerateEmailDraft()
   const { data: templatesRes } = useOutlookTemplates()
   const templates = templatesRes?.data ?? []
 
@@ -353,7 +356,37 @@ function ComposeEmail({
 
         {/* Nachricht */}
         <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Nachricht</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Nachricht</label>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!contactName || !entityType) return
+                try {
+                  const res = await generateDraft.mutateAsync({
+                    contactName: contactName || '',
+                    entityType: entityType || 'LEAD',
+                    entityTitle: subject || 'Anfrage',
+                    entityStatus: '',
+                    entityId,
+                  })
+                  if (res?.data?.text) setBody(res.data.text)
+                  if (res?.data?.error) setErrorMsg(res.data.error)
+                } catch (err: any) {
+                  setErrorMsg(err?.message || 'KI-Fehler')
+                }
+              }}
+              disabled={generateDraft.isPending}
+              className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-md transition-all"
+              style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}
+            >
+              {generateDraft.isPending ? (
+                <><Loader2 size={9} className="animate-spin" /> Generiert...</>
+              ) : (
+                <><Sparkles size={9} /> KI-Entwurf</>
+              )}
+            </button>
+          </div>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -582,10 +615,12 @@ function EmailItem({
 
 // ── Reply Composer (Inline) ──
 
-function ReplyComposer({ email, contactId, onClose }: { email: OutlookEmail; contactId: string; onClose: () => void }) {
+function ReplyComposer({ email, contactId, contactName, onClose }: { email: OutlookEmail; contactId: string; contactName?: string; onClose: () => void }) {
   const [body, setBody] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [replyError, setReplyError] = useState('')
   const sendEmail = useSendEmail()
+  const generateReply = useGenerateEmailReply()
 
   const handleSend = async () => {
     if (!body.trim()) return
@@ -627,6 +662,38 @@ function ReplyComposer({ email, contactId, onClose }: { email: OutlookEmail; con
         </button>
       </div>
       <div className="p-4">
+        <div className="flex items-center justify-end mb-1.5">
+          <button
+            type="button"
+            onClick={async () => {
+              setReplyError('')
+              try {
+                const res = await generateReply.mutateAsync({
+                  originalSubject: email.subject || '',
+                  originalBody: email.bodyText || email.bodyPreview || '',
+                  originalSender: email.senderName || email.senderEmail || '',
+                  contactName: contactName || email.senderName || email.senderEmail || '',
+                })
+                if (res?.data?.text) setBody(res.data.text)
+                if (res?.data?.error) setReplyError(res.data.error)
+              } catch (err: any) {
+                setReplyError(err?.message || 'KI-Fehler')
+              }
+            }}
+            disabled={generateReply.isPending}
+            className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-md transition-all"
+            style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}
+          >
+            {generateReply.isPending ? (
+              <><Loader2 size={9} className="animate-spin" /> Generiert...</>
+            ) : (
+              <><Sparkles size={9} /> KI-Antwort</>
+            )}
+          </button>
+        </div>
+        {replyError && (
+          <div className="text-[10px] text-red-400 mb-2">{replyError}</div>
+        )}
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}

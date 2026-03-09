@@ -314,8 +314,13 @@ export default function DashboardPage() {
                 </span>
                 <button
                   onClick={async () => {
-                    const res = await generateBriefing.mutateAsync()
-                    if (res?.data?.summary) setAiBriefing(res.data.summary)
+                    try {
+                      const res = await generateBriefing.mutateAsync()
+                      if (res?.data?.summary) setAiBriefing(res.data.summary)
+                      if (res?.data?.error) setAiBriefing(`Fehler: ${res.data.error}`)
+                    } catch (err: any) {
+                      setAiBriefing(`Fehler: ${err?.message || 'Unbekannter Fehler'}`)
+                    }
                   }}
                   disabled={generateBriefing.isPending}
                   className="ml-auto flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold rounded-md transition-all"

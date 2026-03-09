@@ -7,6 +7,9 @@ import {
   buildDealSummaryPrompt,
   buildContactSummaryPrompt,
   buildBriefingPrompt,
+  buildEmailDraftPrompt,
+  buildEmailReplyPrompt,
+  buildFollowUpCheckPrompt,
   getAiSettings,
 } from '../lib/aiService.js'
 import { getOwnerFilter } from '../lib/userFilter.js'
@@ -235,6 +238,158 @@ router.post('/briefing', async (req: Request, res: Response, next: NextFunction)
     if (err.message?.includes('API-Key') || err.message?.includes('deaktiviert')) {
       return res.json({ data: { summary: null, error: err.message } })
     }
+    return res.json({ data: { summary: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/ai/email-draft – KI-E-Mail-Entwurf
+// ---------------------------------------------------------------------------
+router.post('/email-draft', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAiSettings()
+    if (!settings.features.emailDraft) {
+      return res.json({ data: { text: null, error: 'E-Mail-Entwurf ist deaktiviert. Aktiviere es unter Admin > KI-Einstellungen.' } })
+    }
+
+    const { contactName, contactCompany, entityType, entityTitle, entityStatus, entityValue, entityId, purpose } = req.body
+    if (!contactName || !entityType || !entityTitle) {
+      return res.status(400).json({ error: 'contactName, entityType und entityTitle sind erforderlich' })
+    }
+
+    // Aktivitaeten laden
+    const activities: any[] = []
+    if (entityId) {
+      const col = entityType === 'LEAD' ? 'lead_id' : entityType === 'ANGEBOT' ? 'deal_id' : null
+      if (col) {
+        const { data } = await supabase.from('activities').select('*').eq(col, entityId).order('created_at', { ascending: false }).limit(5)
+        if (data) activities.push(...data)
+      }
+    }
+
+    const senderName = (req as any).user?.name || 'NEOSOLAR Vertrieb'
+    const prompt = buildEmailDraftPrompt({
+      contactName,
+      contactCompany,
+      entityType,
+      entityTitle,
+      entityStatus,
+      entityValue,
+      activities,
+      purpose,
+      senderName,
+    })
+    const completion = await generateCompletion(prompt, { maxTokens: 1024 })
+
+    await saveGeneration('EMAIL_DRAFT', entityId || null, (req as any).user?.userId, completion.text, completion.model, completion.tokensUsed, completion.durationMs, `E-Mail: ${contactName}`)
+
+    res.json({
+      data: {
+        text: completion.text,
+        model: completion.model,
+        tokensUsed: completion.tokensUsed,
+        durationMs: completion.durationMs,
+      },
+    })
+  } catch (err: any) {
+    console.error('[AI] Email-Draft Fehler:', err?.message || err)
+    return res.json({ data: { text: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/ai/email-reply – KI-Antwort auf E-Mail
+// ---------------------------------------------------------------------------
+router.post('/email-reply', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getAiSettings()
+    if (!settings.features.emailDraft) {
+      return res.json({ data: { text: null, error: 'E-Mail-Entwurf ist deaktiviert. Aktiviere es unter Admin > KI-Einstellungen.' } })
+    }
+
+    const { originalSubject, originalBody, originalSender, contactName, entityType, entityTitle } = req.body
+    if (!originalBody || !contactName) {
+      return res.status(400).json({ error: 'originalBody und contactName sind erforderlich' })
+    }
+
+    const senderName = (req as any).user?.name || 'NEOSOLAR Vertrieb'
+    const prompt = buildEmailReplyPrompt({
+      originalSubject: originalSubject || '(Kein Betreff)',
+      originalBody,
+      originalSender: originalSender || contactName,
+      contactName,
+      entityType,
+      entityTitle,
+      senderName,
+    })
+    const completion = await generateCompletion(prompt, { maxTokens: 1024 })
+
+    await saveGeneration('EMAIL_REPLY', null, (req as any).user?.userId, completion.text, completion.model, completion.tokensUsed, completion.durationMs, `Antwort an: ${contactName}`)
+
+    res.json({
+      data: {
+        text: completion.text,
+        model: completion.model,
+        tokensUsed: completion.tokensUsed,
+        durationMs: completion.durationMs,
+      },
+    })
+  } catch (err: any) {
+    console.error('[AI] Email-Reply Fehler:', err?.message || err)
+    return res.json({ data: { text: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/ai/follow-up-check – Ueberfaellige Follow-Ups analysieren
+// ---------------------------------------------------------------------------
+router.post('/follow-up-check', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ownerFilter = getOwnerFilter(req)
+    const userFilter = ownerFilter || null
+    const now = new Date().toISOString()
+
+    // Ueberfaellige Deals mit Follow-Up
+    let query = supabase
+      .from('deals')
+      .select('*, contacts!deals_contact_id_fkey(first_name, last_name)')
+      .is('deleted_at', null)
+      .lte('follow_up_date', now)
+      .not('stage', 'in', '("GEWONNEN","VERLOREN")')
+      .order('follow_up_date', { ascending: true })
+      .limit(10)
+    if (userFilter) query = query.eq('assigned_to', userFilter)
+
+    const { data: deals } = await query
+
+    if (!deals || deals.length === 0) {
+      return res.json({ data: { summary: 'Keine ueberfaelligen Follow-Ups. Alles im gruenen Bereich!', items: [] } })
+    }
+
+    const overdueItems = deals.map((d: any) => ({
+      type: 'Angebot',
+      title: d.title,
+      contactName: d.contacts ? `${d.contacts.first_name} ${d.contacts.last_name}` : 'Unbekannt',
+      dueDate: d.follow_up_date,
+      value: d.value,
+    }))
+
+    const prompt = buildFollowUpCheckPrompt(overdueItems)
+    const completion = await generateCompletion(prompt, { maxTokens: 1024 })
+
+    await saveGeneration('FOLLOW_UP', null, (req as any).user?.userId, completion.text, completion.model, completion.tokensUsed, completion.durationMs, `Follow-Up Check (${overdueItems.length} Items)`)
+
+    res.json({
+      data: {
+        summary: completion.text,
+        items: overdueItems,
+        model: completion.model,
+        tokensUsed: completion.tokensUsed,
+        durationMs: completion.durationMs,
+      },
+    })
+  } catch (err: any) {
+    console.error('[AI] Follow-Up-Check Fehler:', err?.message || err)
     return res.json({ data: { summary: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
   }
 })
