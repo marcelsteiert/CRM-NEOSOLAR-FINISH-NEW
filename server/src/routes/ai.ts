@@ -69,10 +69,11 @@ router.post('/lead-summary/:id', async (req: Request, res: Response, next: NextF
       },
     })
   } catch (err: any) {
+    console.error('[AI] Lead-Summary Fehler:', err?.message || err)
     if (err.message?.includes('API-Key') || err.message?.includes('deaktiviert')) {
       return res.json({ data: { summary: null, error: err.message } })
     }
-    next(err)
+    return res.json({ data: { summary: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
   }
 })
 
@@ -117,10 +118,11 @@ router.post('/deal-summary/:id', async (req: Request, res: Response, next: NextF
       },
     })
   } catch (err: any) {
+    console.error('[AI] Deal-Summary Fehler:', err?.message || err)
     if (err.message?.includes('API-Key') || err.message?.includes('deaktiviert')) {
       return res.json({ data: { summary: null, error: err.message } })
     }
-    next(err)
+    return res.json({ data: { summary: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
   }
 })
 
@@ -154,10 +156,11 @@ router.post('/contact-summary/:contactId', async (req: Request, res: Response, n
       },
     })
   } catch (err: any) {
+    console.error('[AI] Contact-Summary Fehler:', err?.message || err)
     if (err.message?.includes('API-Key') || err.message?.includes('deaktiviert')) {
       return res.json({ data: { summary: null, error: err.message } })
     }
-    next(err)
+    return res.json({ data: { summary: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
   }
 })
 
@@ -228,10 +231,11 @@ router.post('/briefing', async (req: Request, res: Response, next: NextFunction)
       },
     })
   } catch (err: any) {
+    console.error('[AI] Briefing Fehler:', err?.message || err)
     if (err.message?.includes('API-Key') || err.message?.includes('deaktiviert')) {
       return res.json({ data: { summary: null, error: err.message } })
     }
-    next(err)
+    return res.json({ data: { summary: null, error: `KI-Fehler: ${err?.message || 'Unbekannter Fehler'}` } })
   }
 })
 

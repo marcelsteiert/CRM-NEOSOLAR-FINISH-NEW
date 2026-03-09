@@ -581,6 +581,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 summary={deal.aiSummary}
                 isGenerating={generateDealSummary.isPending}
                 onGenerate={() => generateDealSummary.mutate(deal.id)}
+                error={generateDealSummary.error?.message || (generateDealSummary.data as any)?.data?.error}
                 compact
               />
             </>

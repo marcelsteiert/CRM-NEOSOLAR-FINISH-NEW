@@ -41,14 +41,23 @@ const DEFAULT_SETTINGS: AiSettings = {
 // ── Settings (Supabase-persisted) ──
 
 export async function getAiSettings(): Promise<AiSettings> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('settings')
     .select('value')
     .eq('key', 'ai_settings')
     .single()
 
+  if (error) {
+    console.warn('[AI] Settings-Abfrage Fehler:', error.message)
+  }
+
   if (data?.value) {
-    return { ...DEFAULT_SETTINGS, ...data.value }
+    const merged = { ...DEFAULT_SETTINGS, ...data.value }
+    // Features separat mergen (nested)
+    if (data.value.features) {
+      merged.features = { ...DEFAULT_SETTINGS.features, ...data.value.features }
+    }
+    return merged
   }
   return { ...DEFAULT_SETTINGS }
 }
@@ -72,6 +81,7 @@ export async function saveAiSettings(settings: Partial<AiSettings>): Promise<AiS
 
 export async function generateCompletion(prompt: string, options?: { maxTokens?: number }): Promise<CompletionResult> {
   const settings = await getAiSettings()
+  console.log('[AI] Settings geladen:', { enabled: settings.enabled, model: settings.model, hasKey: !!settings.apiKey, keyLength: settings.apiKey?.length })
 
   if (!settings.enabled) {
     throw new Error('KI-Funktionen sind deaktiviert')
@@ -83,12 +93,14 @@ export async function generateCompletion(prompt: string, options?: { maxTokens?:
   const client = new Anthropic({ apiKey: settings.apiKey })
   const start = Date.now()
 
+  console.log('[AI] Sende Anfrage an Anthropic...', { model: settings.model, maxTokens: options?.maxTokens || settings.maxTokens })
   const response = await client.messages.create({
     model: settings.model,
     max_tokens: options?.maxTokens || settings.maxTokens,
     system: settings.systemPrompt,
     messages: [{ role: 'user', content: prompt }],
   })
+  console.log('[AI] Antwort erhalten:', { tokensIn: response.usage?.input_tokens, tokensOut: response.usage?.output_tokens })
 
   const durationMs = Date.now() - start
   const text = response.content
