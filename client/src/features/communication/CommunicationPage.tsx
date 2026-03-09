@@ -779,7 +779,7 @@ function TemplatesView() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="z.B. Erstanfrage Antwort"
-                  className="glass-input w-full text-[12px]"
+                  className="glass-input w-full px-4 py-2.5 text-[12px]"
                 />
               </div>
               <div>
@@ -787,7 +787,7 @@ function TemplatesView() {
                 <select
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  className="glass-input w-full text-[12px] appearance-none cursor-pointer"
+                  className="glass-input w-full px-4 py-2.5 text-[12px] appearance-none cursor-pointer"
                 >
                   {categories.map(c => (
                     <option key={c} value={c} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{c}</option>
@@ -804,24 +804,24 @@ function TemplatesView() {
                 value={formSubject}
                 onChange={(e) => setFormSubject(e.target.value)}
                 placeholder="z.B. Ihre Anfrage bei NEOSOLAR AG – {{firstName}}"
-                className="glass-input w-full text-[12px]"
+                className="glass-input w-full px-4 py-2.5 text-[12px]"
               />
             </div>
 
             {/* Nachricht */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Nachricht</label>
-                <span className="text-[9px] text-white/20">Platzhalter: {'{{firstName}} {{lastName}} {{datum}} {{absender}}'}</span>
-              </div>
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Nachricht</label>
               <textarea
                 value={formBody}
                 onChange={(e) => setFormBody(e.target.value)}
-                placeholder="Guten Tag {{firstName}} {{lastName}}&#10;&#10;Ihre Nachricht hier...&#10;&#10;Freundliche Grüsse&#10;{{absender}}&#10;NEOSOLAR AG"
-                className="glass-input w-full text-[12px] resize-none"
-                rows={10}
-                style={{ lineHeight: '1.6' }}
+                placeholder={"Guten Tag {{firstName}} {{lastName}}\n\nIhre Nachricht hier...\n\nFreundliche Grüsse\n{{absender}}\nNEOSOLAR AG"}
+                className="glass-input w-full px-4 py-3 text-[12px] resize-none"
+                rows={12}
+                style={{ lineHeight: '1.7' }}
               />
+              <p className="text-[9px] text-white/20 mt-1.5">
+                Verfuegbare Platzhalter: {'{{firstName}}'} {'{{lastName}}'} {'{{datum}}'} {'{{absender}}'}
+              </p>
             </div>
 
             {/* Team-Toggle */}
@@ -880,7 +880,7 @@ function TemplatesView() {
           {templates.map((t) => (
             <div
               key={t.id}
-              className="glass-card p-4 hover:border-white/[0.1] transition-all group relative"
+              className="glass-card p-4 relative"
               style={{ borderRadius: 'var(--radius-lg)' }}
             >
               <div className="flex items-center justify-between mb-2">
@@ -896,27 +896,27 @@ function TemplatesView() {
                   )}
                 </div>
               </div>
-              <p className="text-[11px] text-white/50 mb-1">{t.subject}</p>
-              <p className="text-[10px] text-white/25">{t.useCount}x verwendet</p>
-
-              {/* Aktionen (hover) */}
-              <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  onClick={() => openEdit(t)}
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-white/30 hover:text-amber-500 hover:bg-amber-500/10 transition-all"
-                  title="Bearbeiten"
-                >
-                  <PenLine size={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirm(t.id)}
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all"
-                  title="Loeschen"
-                >
-                  <Trash2 size={12} />
-                </button>
+              <p className="text-[11px] text-white/50 mb-2">{t.subject}</p>
+              <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <p className="text-[10px] text-white/25">{t.useCount}x verwendet</p>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(t)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-amber-500/70 hover:text-amber-500 hover:bg-amber-500/10 transition-all"
+                    style={{ border: '1px solid rgba(245,158,11,0.15)' }}
+                  >
+                    <PenLine size={11} /> Bearbeiten
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteConfirm(t.id)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-red-400/60 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                    style={{ border: '1px solid rgba(248,113,113,0.12)' }}
+                  >
+                    <Trash2 size={11} /> Loeschen
+                  </button>
+                </div>
               </div>
 
               {/* Delete Confirm */}
