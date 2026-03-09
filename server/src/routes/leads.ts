@@ -146,6 +146,118 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 })
 
 // ---------------------------------------------------------------------------
+// POST /api/v1/leads/check-duplicate – Duplikat-Pruefung
+// ---------------------------------------------------------------------------
+
+router.post('/check-duplicate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, phone, firstName, lastName } = req.body as Record<string, string>
+    const duplicates: Array<{ id: string; contactId: string; firstName: string; lastName: string; email: string; phone: string; status: string; createdAt: string }> = []
+
+    // 1. Suche nach E-Mail (staerkstes Kriterium)
+    if (email) {
+      const { data: contacts } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, email, phone')
+        .eq('email', email)
+        .is('deleted_at', null)
+
+      if (contacts && contacts.length > 0) {
+        for (const contact of contacts) {
+          const { data: leads } = await supabase
+            .from('leads')
+            .select('id, contact_id, status, created_at')
+            .eq('contact_id', contact.id)
+            .is('deleted_at', null)
+
+          for (const lead of leads ?? []) {
+            duplicates.push({
+              id: lead.id,
+              contactId: contact.id,
+              firstName: contact.first_name ?? '',
+              lastName: contact.last_name ?? '',
+              email: contact.email ?? '',
+              phone: contact.phone ?? '',
+              status: lead.status,
+              createdAt: lead.created_at,
+            })
+          }
+        }
+      }
+    }
+
+    // 2. Suche nach Telefonnummer (falls kein E-Mail-Match)
+    if (duplicates.length === 0 && phone) {
+      const cleanPhone = phone.replace(/\s+/g, '')
+      const { data: contacts } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, email, phone')
+        .is('deleted_at', null)
+
+      const phoneMatches = (contacts ?? []).filter((c: any) =>
+        c.phone && c.phone.replace(/\s+/g, '') === cleanPhone
+      )
+
+      for (const contact of phoneMatches) {
+        const { data: leads } = await supabase
+          .from('leads')
+          .select('id, contact_id, status, created_at')
+          .eq('contact_id', contact.id)
+          .is('deleted_at', null)
+
+        for (const lead of leads ?? []) {
+          duplicates.push({
+            id: lead.id,
+            contactId: contact.id,
+            firstName: contact.first_name ?? '',
+            lastName: contact.last_name ?? '',
+            email: contact.email ?? '',
+            phone: contact.phone ?? '',
+            status: lead.status,
+            createdAt: lead.created_at,
+          })
+        }
+      }
+    }
+
+    // 3. Suche nach Name (schwaecher, nur wenn exakter Vor+Nachname)
+    if (duplicates.length === 0 && firstName && lastName) {
+      const { data: contacts } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name, email, phone')
+        .ilike('first_name', firstName)
+        .ilike('last_name', lastName)
+        .is('deleted_at', null)
+
+      for (const contact of contacts ?? []) {
+        const { data: leads } = await supabase
+          .from('leads')
+          .select('id, contact_id, status, created_at')
+          .eq('contact_id', contact.id)
+          .is('deleted_at', null)
+
+        for (const lead of leads ?? []) {
+          duplicates.push({
+            id: lead.id,
+            contactId: contact.id,
+            firstName: contact.first_name ?? '',
+            lastName: contact.last_name ?? '',
+            email: contact.email ?? '',
+            phone: contact.phone ?? '',
+            status: lead.status,
+            createdAt: lead.created_at,
+          })
+        }
+      }
+    }
+
+    res.json({ data: { isDuplicate: duplicates.length > 0, duplicates } })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // POST /api/v1/leads – Erstellen
 // ---------------------------------------------------------------------------
 
@@ -155,6 +267,57 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     if (!result.success) {
       const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
       throw new AppError(`Validierungsfehler: ${messages}`, 422)
+    }
+
+    // Duplikat-Pruefung (kann mit skipDuplicateCheck=true umgangen werden)
+    if (!req.body.skipDuplicateCheck) {
+      const email = result.data.email || ''
+      const phone = result.data.phone || ''
+
+      if (email) {
+        const { data: existingContact } = await supabase
+          .from('contacts')
+          .select('id')
+          .eq('email', email)
+          .is('deleted_at', null)
+          .maybeSingle()
+
+        if (existingContact) {
+          const { data: existingLeads } = await supabase
+            .from('leads')
+            .select('id, status')
+            .eq('contact_id', existingContact.id)
+            .is('deleted_at', null)
+
+          const activeLead = (existingLeads ?? []).find((l: any) => l.status === 'ACTIVE')
+          if (activeLead) {
+            throw new AppError(`Duplikat: Ein aktiver Lead mit dieser E-Mail existiert bereits (ID: ${activeLead.id})`, 409)
+          }
+        }
+      } else if (phone) {
+        const cleanPhone = phone.replace(/\s+/g, '')
+        const { data: contacts } = await supabase
+          .from('contacts')
+          .select('id, phone')
+          .is('deleted_at', null)
+
+        const phoneMatch = (contacts ?? []).find((c: any) =>
+          c.phone && c.phone.replace(/\s+/g, '') === cleanPhone
+        )
+
+        if (phoneMatch) {
+          const { data: existingLeads } = await supabase
+            .from('leads')
+            .select('id, status')
+            .eq('contact_id', phoneMatch.id)
+            .is('deleted_at', null)
+
+          const activeLead = (existingLeads ?? []).find((l: any) => l.status === 'ACTIVE')
+          if (activeLead) {
+            throw new AppError(`Duplikat: Ein aktiver Lead mit dieser Telefonnummer existiert bereits (ID: ${activeLead.id})`, 409)
+          }
+        }
+      }
     }
 
     const contactId = await resolveContactId(result.data)

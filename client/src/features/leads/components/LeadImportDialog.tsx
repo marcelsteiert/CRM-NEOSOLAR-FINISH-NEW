@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, ArrowRight, ArrowLeft, ChevronDown } from 'lucide-react'
 import { useCreateLead, type LeadSource } from '@/hooks/useLeads'
+import { api } from '@/lib/api'
 import * as XLSX from 'xlsx'
 
 // ── Typen ──
@@ -21,7 +22,7 @@ interface ParsedLead {
   notes?: string
 }
 
-type CrmField = keyof ParsedLead | 'skip'
+type CrmField = keyof ParsedLead | 'fullName' | 'skip'
 
 // ── Konstanten ──
 
@@ -29,8 +30,9 @@ const CRM_FIELDS: { value: CrmField; label: string }[] = [
   { value: 'skip', label: '-- Ignorieren --' },
   { value: 'firstName', label: 'Vorname' },
   { value: 'lastName', label: 'Nachname' },
+  { value: 'fullName', label: 'Vollständiger Name' },
   { value: 'company', label: 'Firma' },
-  { value: 'address', label: 'Adresse' },
+  { value: 'address', label: 'Adresse (wird zusammengeführt)' },
   { value: 'phone', label: 'Telefon' },
   { value: 'email', label: 'E-Mail' },
   { value: 'source', label: 'Quelle' },
@@ -48,27 +50,29 @@ const SOURCE_MAP: Record<string, LeadSource> = {
 
 // ── Auto-Erkennung ──
 
-const COLUMN_MAP: Record<string, keyof ParsedLead> = {
+const COLUMN_MAP: Record<string, CrmField> = {
   // Vorname
   vorname: 'firstName', firstname: 'firstName', 'first name': 'firstName', vname: 'firstName',
   // Nachname
-  nachname: 'lastName', lastname: 'lastName', 'last name': 'lastName', name: 'lastName',
+  nachname: 'lastName', lastname: 'lastName', 'last name': 'lastName',
   familienname: 'lastName', zuname: 'lastName',
+  // Vollstaendiger Name (z.B. "Name" Spalte → wird in Vor+Nachname aufgeteilt)
+  name: 'fullName', 'full name': 'fullName', fullname: 'fullName',
+  kontaktname: 'fullName', 'kontakt name': 'fullName', kundenname: 'fullName',
   // Firma
   unternehmen: 'company', company: 'company', firma: 'company', firmenname: 'company',
   organisation: 'company', betrieb: 'company', arbeitgeber: 'company',
-  // Adresse
+  // Adresse (mehrere Spalten werden zusammengefuehrt)
   adresse: 'address', address: 'address', strasse: 'address', anschrift: 'address',
   wohnort: 'address', ort: 'address', plz: 'address', postleitzahl: 'address',
   'strasse nr': 'address', strassenr: 'address', wohnadresse: 'address',
-  standort: 'address', 'plz ort': 'address',
+  standort: 'address', 'plz ort': 'address', stadt: 'address', gemeinde: 'address',
   // Telefon
   telefon: 'phone', phone: 'phone', telefonnummer: 'phone', mobilnummer: 'phone',
   handy: 'phone', mobile: 'phone', mobil: 'phone', natel: 'phone',
-  festnetz: 'phone', fax: 'phone', rufnummer: 'phone',
+  festnetz: 'phone', rufnummer: 'phone',
   // E-Mail
   email: 'email', 'e mail': 'email', emailadresse: 'email', mailadresse: 'email',
-  kontakt: 'email',
   // Quelle
   quelle: 'source', source: 'source', quellenherkunft: 'source', herkunft: 'source',
   kanal: 'source', akquise: 'source',
@@ -229,8 +233,14 @@ function buildLeads(rows: string[][], mappings: CrmField[]): ParsedLead[] {
       switch (field) {
         case 'firstName': lead.firstName = val; break
         case 'lastName': lead.lastName = val; break
+        case 'fullName': {
+          const parts = val.trim().split(/\s+/)
+          lead.firstName = parts[0] || ''
+          lead.lastName = parts.slice(1).join(' ') || ''
+          break
+        }
         case 'company': lead.company = val; break
-        case 'address': lead.address = val; break
+        case 'address': lead.address = lead.address ? `${lead.address}, ${val}` : val; break
         case 'phone': lead.phone = val; break
         case 'email': lead.email = val; break
         case 'source': lead.source = parseSource(val); break
@@ -308,6 +318,9 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
   const [parsed, setParsed] = useState<ParsedLead[]>([])
   const [progress, setProgress] = useState(0)
   const [errors, setErrors] = useState<string[]>([])
+  const [duplicates, setDuplicates] = useState<Array<{ index: number; lead: ParsedLead; existingEmail: string }>>([])
+  const [skipDuplicates, setSkipDuplicates] = useState(true)
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false)
 
   const createLead = useCreateLead()
   const backdropRef = useRef<HTMLDivElement>(null)
@@ -348,8 +361,8 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
     })
   }
 
-  // Vorschau generieren
-  const goToPreview = () => {
+  // Vorschau generieren + Duplikat-Check
+  const goToPreview = async () => {
     const leads = buildLeads(rows, mappings)
     if (leads.length === 0) {
       setErrors(['Keine gueltigen Leads mit dieser Zuordnung. Pruefe ob mindestens ein Kontaktfeld (Name, E-Mail, Telefon oder Adresse) zugeordnet ist.'])
@@ -357,7 +370,43 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
     }
     setErrors([])
     setParsed(leads)
+    setDuplicates([])
+    setCheckingDuplicates(true)
     setStep('preview')
+
+    // Duplikate pruefen (im Hintergrund)
+    const found: typeof duplicates = []
+    // Interne Duplikate (gleiche E-Mail innerhalb der Import-Datei)
+    const seenEmails = new Map<string, number>()
+    for (let i = 0; i < leads.length; i++) {
+      const email = leads[i].email?.toLowerCase()
+      if (email && seenEmails.has(email)) {
+        found.push({ index: i, lead: leads[i], existingEmail: email })
+      } else if (email) {
+        seenEmails.set(email, i)
+      }
+    }
+    // Gegen DB pruefen (Batch – max. 50 auf einmal)
+    const uniqueEmails = [...new Set(leads.filter(l => l.email).map(l => l.email.toLowerCase()))]
+    try {
+      for (let batch = 0; batch < uniqueEmails.length; batch += 50) {
+        const chunk = uniqueEmails.slice(batch, batch + 50)
+        for (const email of chunk) {
+          try {
+            const res = await api.post<{ data: { isDuplicate: boolean } }>('/leads/check-duplicate', { email })
+            if (res.data.isDuplicate) {
+              leads.forEach((lead, idx) => {
+                if (lead.email?.toLowerCase() === email && !found.some(d => d.index === idx)) {
+                  found.push({ index: idx, lead, existingEmail: email })
+                }
+              })
+            }
+          } catch { /* ignore individual check errors */ }
+        }
+      }
+    } catch { /* ignore batch errors */ }
+    setDuplicates(found)
+    setCheckingDuplicates(false)
   }
 
   // Import starten
@@ -366,13 +415,24 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
     setErrors([])
     setProgress(0)
     const errs: string[] = []
+    const duplicateIndices = new Set(skipDuplicates ? duplicates.map(d => d.index) : [])
+    let skippedCount = 0
+
     for (let i = 0; i < parsed.length; i++) {
+      if (duplicateIndices.has(i)) {
+        skippedCount++
+        setProgress(i + 1)
+        continue
+      }
       try {
-        await createLead.mutateAsync(parsed[i] as Record<string, unknown>)
+        await createLead.mutateAsync({ ...parsed[i], skipDuplicateCheck: true } as Record<string, unknown>)
       } catch (err) {
         errs.push(`Zeile ${i + 2}: ${err instanceof Error ? err.message : 'Fehler'}`)
       }
       setProgress(i + 1)
+    }
+    if (skippedCount > 0) {
+      errs.unshift(`${skippedCount} Duplikat${skippedCount > 1 ? 'e' : ''} übersprungen`)
     }
     setErrors(errs)
     setStep('done')
@@ -537,7 +597,48 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
             <>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[13px] font-semibold">{parsed.length} Leads bereit zum Import</span>
+                {checkingDuplicates && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-text-dim">
+                    <Loader2 size={12} className="animate-spin" /> Duplikate werden geprüft...
+                  </span>
+                )}
               </div>
+
+              {/* Duplikat-Warnung */}
+              {duplicates.length > 0 && (
+                <div
+                  className="px-4 py-3 rounded-[10px] mb-2"
+                  style={{ background: 'color-mix(in srgb, #F59E0B 8%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 20%, transparent)' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={14} className="text-amber" strokeWidth={2} />
+                      <span className="text-[12px] font-semibold text-amber">
+                        {duplicates.length} Duplikat{duplicates.length > 1 ? 'e' : ''} gefunden
+                      </span>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-[11px] text-text-sec">
+                        {skipDuplicates ? 'Duplikate überspringen' : 'Trotzdem importieren'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSkipDuplicates(!skipDuplicates)}
+                        className="relative w-9 h-5 rounded-full transition-colors"
+                        style={{ background: skipDuplicates ? '#F59E0B' : 'rgba(255,255,255,0.1)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                          style={{ left: skipDuplicates ? '18px' : '2px' }}
+                        />
+                      </button>
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-text-dim mt-1.5">
+                    Leads mit gleicher E-Mail-Adresse die bereits im System existieren oder doppelt in der Datei vorkommen.
+                  </p>
+                </div>
+              )}
 
               <div className="max-h-[280px] overflow-y-auto rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
                 <table className="w-full text-[11px]">
@@ -548,22 +649,35 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
                       <th className="text-left px-3 py-2">E-Mail</th>
                       <th className="text-left px-3 py-2">Telefon</th>
                       <th className="text-left px-3 py-2">Adresse</th>
-                      <th className="text-left px-3 py-2">Quelle</th>
+                      <th className="text-left px-3 py-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parsed.slice(0, 20).map((lead, i) => (
-                      <tr key={i} className="border-b border-border/50">
-                        <td className="px-3 py-1.5 text-text-dim">{i + 1}</td>
-                        <td className="px-3 py-1.5 text-text-sec">
-                          {[lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.company || '\u2014'}
-                        </td>
-                        <td className="px-3 py-1.5 text-text-sec">{lead.email || '\u2014'}</td>
-                        <td className="px-3 py-1.5 text-text-sec tabular-nums">{lead.phone || '\u2014'}</td>
-                        <td className="px-3 py-1.5 text-text-sec truncate max-w-[150px]">{lead.address || '\u2014'}</td>
-                        <td className="px-3 py-1.5 text-text-sec">{lead.source}</td>
-                      </tr>
-                    ))}
+                    {parsed.slice(0, 20).map((lead, i) => {
+                      const isDuplicate = duplicates.some(d => d.index === i)
+                      return (
+                        <tr
+                          key={i}
+                          className="border-b border-border/50"
+                          style={isDuplicate && skipDuplicates ? { opacity: 0.4, textDecoration: 'line-through' } : undefined}
+                        >
+                          <td className="px-3 py-1.5 text-text-dim">{i + 1}</td>
+                          <td className="px-3 py-1.5 text-text-sec">
+                            {[lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.company || '\u2014'}
+                          </td>
+                          <td className="px-3 py-1.5 text-text-sec">{lead.email || '\u2014'}</td>
+                          <td className="px-3 py-1.5 text-text-sec tabular-nums">{lead.phone || '\u2014'}</td>
+                          <td className="px-3 py-1.5 text-text-sec truncate max-w-[150px]">{lead.address || '\u2014'}</td>
+                          <td className="px-3 py-1.5">
+                            {isDuplicate ? (
+                              <span className="text-[10px] font-semibold text-amber">Duplikat</span>
+                            ) : (
+                              <span className="text-[10px] text-text-sec">{lead.source}</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                     {parsed.length > 20 && (
                       <tr>
                         <td colSpan={6} className="px-3 py-1.5 text-text-dim text-center">
@@ -656,8 +770,9 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
 
           {step === 'preview' && (
             <button type="button" onClick={handleImport}
-              className="btn-primary px-5 py-2.5 text-[13px] flex items-center gap-2">
-              {parsed.length} Leads importieren
+              disabled={checkingDuplicates}
+              className="btn-primary px-5 py-2.5 text-[13px] flex items-center gap-2 disabled:opacity-40">
+              {parsed.length - (skipDuplicates ? duplicates.length : 0)} Leads importieren
             </button>
           )}
 

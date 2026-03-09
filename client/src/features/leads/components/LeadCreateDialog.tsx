@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, ChevronDown, Loader2 } from 'lucide-react'
+import { X, ChevronDown, Loader2, AlertTriangle } from 'lucide-react'
 import { useCreateLead, useUsers, type LeadSource, sourceLabels } from '@/hooks/useLeads'
 
 interface LeadCreateDialogProps {
@@ -22,6 +22,8 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
   const [assignedTo, setAssignedTo] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isDuplicate, setIsDuplicate] = useState(false)
+  const [forceCreate, setForceCreate] = useState(false)
 
   const createLead = useCreateLead()
   const { data: usersData } = useUsers()
@@ -49,6 +51,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setIsDuplicate(false)
 
     try {
       await createLead.mutateAsync({
@@ -62,10 +65,17 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
         value: value ? Number(value) : 0,
         assignedTo: assignedTo || undefined,
         notes: notes || undefined,
-      })
+        ...(forceCreate ? { skipDuplicateCheck: true } : {}),
+      } as Record<string, unknown>)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
+      const msg = err instanceof Error ? err.message : 'Fehler beim Erstellen'
+      if (msg.includes('Duplikat') || msg.includes('409')) {
+        setIsDuplicate(true)
+        setError('Ein aktiver Lead mit dieser E-Mail oder Telefonnummer existiert bereits.')
+      } else {
+        setError(msg)
+      }
     }
   }
 
@@ -115,13 +125,31 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {error && (
             <div
-              className="px-4 py-3 text-[12px] font-medium text-red rounded-[10px]"
+              className="px-4 py-3 rounded-[10px]"
               style={{
-                background: 'color-mix(in srgb, #F87171 8%, transparent)',
-                border: '1px solid color-mix(in srgb, #F87171 20%, transparent)',
+                background: isDuplicate
+                  ? 'color-mix(in srgb, #F59E0B 8%, transparent)'
+                  : 'color-mix(in srgb, #F87171 8%, transparent)',
+                border: `1px solid ${isDuplicate
+                  ? 'color-mix(in srgb, #F59E0B 20%, transparent)'
+                  : 'color-mix(in srgb, #F87171 20%, transparent)'}`,
               }}
             >
-              {error}
+              <div className="flex items-start gap-2">
+                <AlertTriangle size={14} className={isDuplicate ? 'text-amber mt-0.5' : 'text-red mt-0.5'} strokeWidth={2} />
+                <div className="flex-1">
+                  <p className={`text-[12px] font-medium ${isDuplicate ? 'text-amber' : 'text-red'}`}>{error}</p>
+                  {isDuplicate && (
+                    <button
+                      type="button"
+                      onClick={() => { setForceCreate(true); setError(null); setIsDuplicate(false) }}
+                      className="mt-2 text-[11px] font-semibold text-amber underline underline-offset-2 hover:text-amber/80 transition-colors"
+                    >
+                      Trotzdem erstellen
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
