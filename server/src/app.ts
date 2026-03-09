@@ -29,6 +29,7 @@ import adminDbExportRouter from './routes/admin/dbExport.js'
 import searchRouter from './routes/search.js'
 import aiRouter from './routes/ai.js'
 import passwordsRouter from './routes/passwords.js'
+import notificationsRouter from './routes/notifications.js'
 import outlookRouter from './routes/outlook.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { mapKeys } from './lib/caseMapper.js'
@@ -87,6 +88,7 @@ export function createApp() {
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
   app.use('/api/v1/search', authMiddleware, searchRouter)
   app.use('/api/v1/passwords', authMiddleware, passwordsRouter)
+  app.use('/api/v1/notifications', authMiddleware, notificationsRouter)
   // Outlook: callback + tracking pixel sind oeffentlich, Rest braucht Auth
   app.use('/api/v1/outlook', (req, res, next) => {
     // Oeffentliche Pfade ohne Auth

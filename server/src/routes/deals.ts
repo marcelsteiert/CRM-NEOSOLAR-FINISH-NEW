@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { createNotification, createNotificationForUsers, getAdminUserIds } from '../lib/notificationService.js'
 
 const router = Router()
 
@@ -440,6 +441,48 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError('Angebot nicht gefunden', 404)
+
+    // Notifications bei Status-Aenderung
+    if (u.stage && oldDeal && oldDeal.stage !== u.stage && data) {
+      const dealTitle = data.title || 'Angebot'
+      const assignee = data.assigned_to
+
+      if (u.stage === 'GEWONNEN') {
+        // Notification an Admins + Zugewiesener
+        const adminIds = await getAdminUserIds()
+        const allIds = [...new Set([...(assignee ? [assignee] : []), ...adminIds])]
+        createNotificationForUsers(allIds, {
+          type: 'DEAL_WON',
+          title: 'Angebot gewonnen!',
+          message: `"${dealTitle}" wurde gewonnen`,
+          referenceType: 'ANGEBOT',
+          referenceId: data.id,
+          referenceTitle: dealTitle,
+        })
+      } else if (u.stage === 'VERLOREN') {
+        if (assignee) {
+          createNotification({
+            userId: assignee,
+            type: 'DEAL_LOST',
+            title: 'Angebot verloren',
+            message: `"${dealTitle}" wurde als verloren markiert`,
+            referenceType: 'ANGEBOT',
+            referenceId: data.id,
+            referenceTitle: dealTitle,
+          })
+        }
+      } else if (assignee) {
+        createNotification({
+          userId: assignee,
+          type: 'DEAL_STATUS_CHANGE',
+          title: 'Angebotsstatus geändert',
+          message: `"${dealTitle}": ${oldDeal.stage} → ${u.stage}`,
+          referenceType: 'ANGEBOT',
+          referenceId: data.id,
+          referenceTitle: dealTitle,
+        })
+      }
+    }
 
     // Stage-Change Activity
     if (u.stage && oldDeal && oldDeal.stage !== u.stage) {

@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, Menu, Cloud, CloudOff, User, Briefcase, FileText, Calendar, X } from 'lucide-react'
+import { Search, Menu, Cloud, CloudOff, User, Briefcase, FileText, Calendar, X, Bell, ArrowRight, CheckCheck } from 'lucide-react'
 import { useSidebarPinned } from './Sidebar'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useIntegrations } from '@/hooks/useAdmin'
+import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, notificationTypeColors } from '@/hooks/useNotifications'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -313,6 +314,144 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ── Notification Bell ──
+
+function NotificationBell() {
+  const [open, setOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+  const { data: unreadRes } = useUnreadCount()
+  const { data: notifRes } = useNotifications({ limit: 5 })
+  const markRead = useMarkAsRead()
+  const markAllRead = useMarkAllAsRead()
+
+  const unreadCount = unreadRes?.data?.count ?? 0
+  const notifications = notifRes?.data ?? []
+
+  // Click-outside schliessen
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const handleClick = (n: { id: string; read: boolean; referenceType: string | null }) => {
+    if (!n.read) markRead.mutate(n.id)
+    setOpen(false)
+    if (n.referenceType === 'LEAD') navigate('/leads')
+    else if (n.referenceType === 'TERMIN') navigate('/appointments')
+    else if (n.referenceType === 'ANGEBOT') navigate('/deals')
+    else if (n.referenceType === 'PROJEKT') navigate('/projects')
+    else if (n.referenceType === 'TASK') navigate('/tasks')
+  }
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="relative w-8 h-8 rounded-lg flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-colors"
+        aria-label="Meldungen"
+      >
+        <Bell size={18} strokeWidth={1.8} />
+        {unreadCount > 0 && (
+          <div
+            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+            style={{ background: '#F87171', boxShadow: '0 0 8px rgba(248,113,113,0.5)' }}
+          >
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </div>
+        )}
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          className="absolute right-0 top-[calc(100%+6px)] w-[360px] max-h-[420px] rounded-2xl overflow-hidden z-50"
+          style={{
+            background: 'rgba(12, 14, 20, 0.98)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <span className="text-[13px] font-bold">Meldungen</span>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => markAllRead.mutate()}
+                  className="text-[10px] font-semibold text-amber hover:text-amber/80 flex items-center gap-1"
+                >
+                  <CheckCheck size={12} />
+                  Alle gelesen
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* List */}
+          <div className="overflow-y-auto max-h-[320px]">
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center text-[12px] text-text-dim">
+                Keine Meldungen
+              </div>
+            ) : (
+              notifications.map((n) => {
+                const color = notificationTypeColors[n.type] ?? '#94A3B8'
+                const timeDiff = Date.now() - new Date(n.createdAt).getTime()
+                const mins = Math.floor(timeDiff / 60_000)
+                const timeLabel = mins < 1 ? 'Jetzt' : mins < 60 ? `${mins}m` : mins < 1440 ? `${Math.floor(mins / 60)}h` : `${Math.floor(mins / 1440)}d`
+
+                return (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => handleClick(n)}
+                    className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors hover:bg-surface-hover border-b border-border/30 ${!n.read ? '' : 'opacity-60'}`}
+                  >
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}
+                    >
+                      <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[12px] leading-tight ${!n.read ? 'font-semibold' : 'text-text-sec'}`}>
+                        {n.title}
+                      </p>
+                      {n.message && (
+                        <p className="text-[11px] text-text-dim mt-0.5 truncate">{n.message}</p>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-text-dim shrink-0 mt-0.5">{timeLabel}</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <button
+            type="button"
+            onClick={() => { setOpen(false); navigate('/notifications') }}
+            className="w-full px-4 py-2.5 border-t border-border text-center text-[12px] font-semibold text-amber hover:bg-surface-hover transition-colors flex items-center justify-center gap-1.5"
+          >
+            Alle anzeigen
+            <ArrowRight size={12} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main TopBar ──
 
 export default function TopBar() {
@@ -405,6 +544,8 @@ export default function TopBar() {
               <Search size={18} strokeWidth={1.8} />
             </button>
           )}
+
+          <NotificationBell />
 
           <SupabaseStatus />
 

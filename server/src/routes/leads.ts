@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { createNotification } from '../lib/notificationService.js'
 
 const router = Router()
 
@@ -348,6 +349,23 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       )
     }
 
+    // Notification: Lead erstellt
+    if (lead) {
+      const assignee = lead.assigned_to ?? req.user?.userId
+      if (assignee) {
+        const leadName = [result.data.firstName, result.data.lastName].filter(Boolean).join(' ') || 'Neuer Lead'
+        createNotification({
+          userId: assignee,
+          type: 'LEAD_CREATED',
+          title: 'Neuer Lead erstellt',
+          message: leadName,
+          referenceType: 'LEAD',
+          referenceId: lead.id,
+          referenceTitle: leadName,
+        })
+      }
+    }
+
     res.status(201).json({ data: { ...lead, tags: result.data.tags ?? [] } })
   } catch (err) {
     next(err)
@@ -408,6 +426,20 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError('Lead nicht gefunden', 404)
+
+    // Notification: Lead zugewiesen (nur wenn assignedTo geaendert und nicht self)
+    if (result.data.assignedTo && result.data.assignedTo !== req.user?.userId && data) {
+      const leadName = [data.contact?.first_name, data.contact?.last_name].filter(Boolean).join(' ') || 'Lead'
+      createNotification({
+        userId: result.data.assignedTo,
+        type: 'LEAD_ASSIGNED',
+        title: 'Lead zugewiesen',
+        message: `Dir wurde der Lead "${leadName}" zugewiesen`,
+        referenceType: 'LEAD',
+        referenceId: data.id,
+        referenceTitle: leadName,
+      })
+    }
 
     // Tags aktualisieren
     if (result.data.tags !== undefined) {

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { createNotification } from '../lib/notificationService.js'
 
 const router = Router()
 
@@ -148,6 +149,20 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError(error.message, 500)
+
+    // Notification: Aufgabe zugewiesen (nur wenn nicht an sich selbst)
+    if (data && result.data.assignedTo !== req.user?.userId) {
+      createNotification({
+        userId: result.data.assignedTo,
+        type: 'TASK_ASSIGNED',
+        title: 'Neue Aufgabe zugewiesen',
+        message: `"${result.data.title}"`,
+        referenceType: 'TASK',
+        referenceId: data.id,
+        referenceTitle: result.data.title,
+      })
+    }
+
     res.status(201).json({ data })
   } catch (err) {
     next(err)

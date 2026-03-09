@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { createNotification } from '../lib/notificationService.js'
 
 const router = Router()
 
@@ -362,6 +363,24 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError('Projekt nicht gefunden', 404)
+
+    // Notification: Phase geaendert
+    if (u.phase && data) {
+      const pm = data.project_manager_id
+      if (pm) {
+        const phaseLabels: Record<string, string> = { admin: 'Administration', montage: 'Montage', elektro: 'Elektro', abschluss: 'Abschluss' }
+        createNotification({
+          userId: pm,
+          type: 'PROJEKT_UPDATE',
+          title: 'Projekt-Phase geändert',
+          message: `"${data.name}" → ${phaseLabels[u.phase] ?? u.phase}`,
+          referenceType: 'PROJEKT',
+          referenceId: data.id,
+          referenceTitle: data.name,
+        })
+      }
+    }
+
     res.json({ data: enrichProject(data) })
   } catch (err) {
     next(err)

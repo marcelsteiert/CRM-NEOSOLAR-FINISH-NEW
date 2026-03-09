@@ -1,4 +1,7 @@
 import { Router } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import { supabase } from '../../lib/supabase.js'
+import { invalidateNotifSettingsCache } from '../../lib/notificationService.js'
 
 const router = Router()
 
@@ -10,7 +13,7 @@ interface NotificationSetting {
   reminderMinutes: number | null
 }
 
-let notifSettings: NotificationSetting[] = [
+const defaultSettings: NotificationSetting[] = [
   { event: 'LEAD_CREATED', label: 'Neuer Lead erstellt', enabled: true, channels: ['IN_APP'], reminderMinutes: null },
   { event: 'LEAD_ASSIGNED', label: 'Lead zugewiesen', enabled: true, channels: ['IN_APP', 'EMAIL'], reminderMinutes: null },
   { event: 'APPOINTMENT_REMINDER', label: 'Termin-Erinnerung', enabled: true, channels: ['IN_APP', 'EMAIL'], reminderMinutes: 60 },
@@ -21,18 +24,42 @@ let notifSettings: NotificationSetting[] = [
   { event: 'FOLLOW_UP_DUE', label: 'Follow-Up fällig', enabled: true, channels: ['IN_APP', 'EMAIL'], reminderMinutes: 30 },
   { event: 'TASK_ASSIGNED', label: 'Aufgabe zugewiesen', enabled: true, channels: ['IN_APP', 'EMAIL'], reminderMinutes: null },
   { event: 'TASK_OVERDUE', label: 'Aufgabe überfällig', enabled: true, channels: ['IN_APP', 'EMAIL'], reminderMinutes: null },
+  { event: 'PROJEKT_UPDATE', label: 'Projekt-Update', enabled: true, channels: ['IN_APP'], reminderMinutes: null },
+  { event: 'DOCUMENT_UPLOADED', label: 'Dokument hochgeladen', enabled: true, channels: ['IN_APP'], reminderMinutes: null },
 ]
 
-router.get('/', (_req, res) => {
-  res.json({ data: notifSettings })
+router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'notification_settings')
+      .single()
+
+    const settings = (data?.value as NotificationSetting[] | null) ?? defaultSettings
+    res.json({ data: settings })
+  } catch (err) {
+    next(err)
+  }
 })
 
-router.put('/', (req, res) => {
-  const { settings } = req.body
-  if (Array.isArray(settings)) {
-    notifSettings = settings
+router.put('/', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { settings } = req.body
+    if (!Array.isArray(settings)) {
+      return res.status(400).json({ error: 'settings muss ein Array sein' })
+    }
+
+    await supabase
+      .from('settings')
+      .upsert({ key: 'notification_settings', value: settings }, { onConflict: 'key' })
+
+    invalidateNotifSettingsCache()
+
+    res.json({ data: settings })
+  } catch (err) {
+    next(err)
   }
-  res.json({ data: notifSettings })
 })
 
 export default router
