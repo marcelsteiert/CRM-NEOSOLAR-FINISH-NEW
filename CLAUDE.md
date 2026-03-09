@@ -14,7 +14,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - State: Zustand (global), React Query (server state)
 - API: `/api/v1/...`, api.ts Helpers (api.get, api.post, api.put, api.delete)
 - Auth: JWT (bcryptjs + jsonwebtoken), useAuth Hook mit Auto-Refresh
-- Tests: Vitest v4.0.18 + Supertest (470 Tests in 2 E2E-Dateien)
+- Tests: Vitest v4.0.18 + Supertest (541 Tests in 3 E2E-Dateien)
 - caseMapper Middleware: Konvertiert alle DB snake_case Felder zu camelCase in API-Responses (server/src/lib/caseMapper.ts)
 
 ## Design-System
@@ -56,10 +56,12 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - NIEMALS snake_case in Frontend-TypeScript-Interfaces verwenden (contact_id, file_name, etc.)
 - Sidebar-Filter: allowedModules hat Prioritaet ueber Feature Flags (Sidebar.tsx:130-151)
 
-## Tests (470 Tests, alle gruen)
+## Tests (541 Tests, alle gruen)
 - e2e-complete-v2.test.ts: 406 Backend-Tests (CRUD, Rollen, Berechtigungen, Edge Cases)
 - e2e-frontend-backend.test.ts: 64 Frontend-Backend-Kompatibilitaetstests (camelCase, User Flows, Regression)
+- e2e-v4-tasks-notifications.test.ts: 71 Tests (Tasks CRUD/Filter/Stats/Validierung, Notifications CRUD/Batch/Events/Isolation, Admin-Settings, camelCase-Regression, 20+ Smoke-Tests)
 - snake_case Regression: 28 verbotene Feldnamen werden ueber 7 Endpoints geprueft
+- WICHTIG: Tests muessen echte User-IDs verwenden (FK-Constraints auf users). Admin: 'u006', Vertrieb: 'd8aeb7e2-f59a-45ba-a609-7d168d613c34'
 
 ## Workflow
 - Aenderungen automatisch durchfuehren ohne Bestaetigung zu verlangen
@@ -73,7 +75,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [x] Projekte (Kanban, Dashboard, Partner, Detail-Modal, responsive)
 - [x] Deal→Projekt (Auto-Konvertierung bei Gewonnen)
 - [x] Provision (Monatsstatistiken, exakte CHF-Anzeige, responsive)
-- [x] Tasks-System Backend (moduluebergreifend, zuweisbar, CRUD + Stats)
+- [x] Tasks-System (Backend + Frontend: Kanban-Board, Listenansicht, KPI-Stats, Filter, CRUD, TaskSection in allen Detail-Modals)
 - [x] Sidebar (Expandable + Mobile Drawer + allowedModules Filter)
 - [x] Admin-Menue (15 Sektionen mit linker Tab-Navigation, responsive)
 - [x] Features-Seite (14 togglebare Module, responsive)
@@ -85,8 +87,6 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [ ] Rechnungen
 - [ ] Kommunikation
 - [ ] KI-Summary
-- [ ] Aufgaben (Frontend-Seite)
-- [ ] Meldungen
 - [ ] Export
 - [ ] Dokumente (eigene Seite)
 
@@ -159,11 +159,29 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 - Admin kann geschlossene Deals (GEWONNEN/VERLOREN) bearbeiten und Phasen zurueckschieben
 - Zugewiesen-an Spalte + Verkaufer-Filter (Admin)
 
-## Tasks-System
+## Tasks-System (Frontend + Backend)
 - Module: LEAD, TERMIN, ANGEBOT, PROJEKT, ALLGEMEIN
 - Status: OFFEN, IN_BEARBEITUNG, ERLEDIGT
+- Prioritaet: LOW, MEDIUM, HIGH, URGENT
 - Zuweisbar: assignedTo + assignedBy (an sich selbst oder andere)
 - referenceId/referenceTitle: Verknuepfung zu Lead/Termin/Angebot/Projekt
+- Frontend: TasksPage (Kanban 3-Spalten + Listenansicht, KPI-Stats, Filter, TaskFormModal)
+- TaskSection: Wiederverwendbare Komponente fuer Detail-Modals (Lead, Termin, Angebot, Projekt)
+- Dateien: client/src/features/tasks/TasksPage.tsx, client/src/components/ui/TaskSection.tsx
+- Hooks: client/src/hooks/useTasks.ts (useTasks, useTaskStats, useCreateTask, useUpdateTask, useDeleteTask)
+- Backend: server/src/routes/tasks.ts (GET /, GET /stats, GET /:id, POST /, PUT /:id, DELETE /:id)
+- FK-Constraints: tasks.assigned_to → users.id, tasks.assigned_by → users.id, tasks.contact_id → contacts.id
+
+## Meldungen-System (Notifications)
+- DB-Tabelle: notifications (user_id, type, title, message, reference_type/id/title, read, deleted_at)
+- 13 Notification-Typen: LEAD_CREATED, LEAD_ASSIGNED, APPOINTMENT_REMINDER/CONFIRMED, DEAL_STATUS_CHANGE/WON/LOST, FOLLOW_UP_DUE, TASK_ASSIGNED/OVERDUE, PROJEKT_UPDATE, DOCUMENT_UPLOADED, SYSTEM
+- Automatische Erzeugung: Fire-and-forget bei Lead/Task/Deal/Projekt-Events (kein await)
+- NotificationService: server/src/lib/notificationService.ts (createNotification, createNotificationForUsers, getAdminUserIds, Settings-Cache mit 1min TTL)
+- Backend: server/src/routes/notifications.ts (GET /, GET /unread-count, PUT /:id/read, PUT /mark-all-read, DELETE /clear-read, DELETE /:id)
+- Frontend: NotificationsPage (Filter nach Status/Typ, Gruppierung Heute/Gestern/Aelter, Klick-Navigation)
+- TopBar-Glocke: NotificationBell Dropdown mit letzten 5 Meldungen, Unread-Badge, Mark-All-Read
+- Admin-Settings: server/src/routes/admin/notifSettings.ts (persistent in settings-Tabelle, key: notification_settings)
+- Hooks: client/src/hooks/useNotifications.ts (useNotifications, useUnreadCount mit 30s Polling, useMarkAsRead, useMarkAllAsRead, useClearReadNotifications, useDeleteNotification)
 
 ## Auto-Zuweisung
 - Leads, Termine, Angebote: Bei Erstellung wird der eingeloggte User automatisch zugewiesen
@@ -176,11 +194,12 @@ Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
 
 ## User (Produktiv)
 - u006: Marcel Steiert (ADMIN) – marcel.steiert@neosolar.ch
-- u002: Lena Steiner (VERTRIEB) – lena.steiner@neosolar.ch
+- 10f8248c-940e-4d0b-a670-f5494d78328a: Roberto Reho (ADMIN) – roberto.reho@neosolar.ch
+- d8aeb7e2-f59a-45ba-a609-7d168d613c34: Gast (VERTRIEB) – gast@neosolar.ch
+- 7cdc21a4-b68f-4501-bd02-26c43a0ced6a: Sergej (SUBUNTERNEHMEN) – sergej@sehrgay.ch
 
 ## Geplante Features (Backlog)
 - Lead: km-Entfernung und Fahrzeit zum Kunden anzeigen
 - Lead: Outlook-Schnittstelle fuer Termine direkt eintragen und bestaetigen
 - Buchhaltung/Admin: 5% Provision auf Monatsabschluesse, druckbar
-- Aufgaben: Aus jedem Tab zuweisbar, Dashboard-Integration
 - Gewonnen → Projekt: Checkliste + Upload-Funktionen + Angaben pruefen
