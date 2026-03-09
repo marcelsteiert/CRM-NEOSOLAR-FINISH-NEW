@@ -12,6 +12,7 @@ import {
   useOutlookStatus, useOutlookEmails, useOutlookEmail, useOutlookEmailThread,
   useOutlookSync, useSendEmail, useMarkAsRead, useLinkEmail,
   useOutlookCalendar, useOutlookStats, useOutlookTemplates,
+  useCreateTemplate, useUpdateTemplate, useDeleteTemplate,
   useOutlookConnect, useOutlookDisconnect,
   type OutlookEmail, type OutlookCalendarEvent, type OutlookTemplate,
 } from '@/hooks/useOutlook'
@@ -625,6 +626,113 @@ function CalendarView() {
 function TemplatesView() {
   const { data: res, isLoading } = useOutlookTemplates()
   const templates = res?.data ?? []
+  const createTemplate = useCreateTemplate()
+  const updateTemplate = useUpdateTemplate()
+  const deleteTemplate = useDeleteTemplate()
+
+  const [editingTemplate, setEditingTemplate] = useState<OutlookTemplate | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  // Form state
+  const [formName, setFormName] = useState('')
+  const [formSubject, setFormSubject] = useState('')
+  const [formBody, setFormBody] = useState('')
+  const [formCategory, setFormCategory] = useState('Allgemein')
+  const [formShared, setFormShared] = useState(true)
+  const [formError, setFormError] = useState('')
+
+  const openNew = () => {
+    setEditingTemplate(null)
+    setFormName('')
+    setFormSubject('')
+    setFormBody('')
+    setFormCategory('Allgemein')
+    setFormShared(true)
+    setFormError('')
+    setShowForm(true)
+  }
+
+  const openEdit = (t: OutlookTemplate) => {
+    setEditingTemplate(t)
+    setFormName(t.name)
+    setFormSubject(t.subject)
+    // HTML zu Plaintext fuer Bearbeitung
+    setFormBody(
+      (t.bodyHtml || '')
+        .replace(/<\/p>\s*<p>/gi, '\n\n')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/?p>/gi, '')
+        .replace(/<strong>(.*?)<\/strong>/gi, '$1')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+    )
+    setFormCategory(t.category || 'Allgemein')
+    setFormShared(t.isShared)
+    setFormError('')
+    setShowForm(true)
+  }
+
+  const handleSave = async () => {
+    if (!formName.trim() || !formSubject.trim()) {
+      setFormError('Name und Betreff sind erforderlich')
+      return
+    }
+    setFormError('')
+
+    // Plaintext zu HTML konvertieren
+    const bodyHtml = formBody
+      .split('\n\n')
+      .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+      .join('')
+
+    // Platzhalter automatisch erkennen
+    const vars: string[] = []
+    const matches = (formSubject + ' ' + formBody).matchAll(/\{\{(\w+)\}\}/g)
+    for (const m of matches) {
+      if (!vars.includes(m[1])) vars.push(m[1])
+    }
+
+    try {
+      if (editingTemplate) {
+        await updateTemplate.mutateAsync({
+          id: editingTemplate.id,
+          name: formName.trim(),
+          subject: formSubject.trim(),
+          bodyHtml,
+          category: formCategory,
+          variables: vars,
+          isShared: formShared,
+        })
+      } else {
+        await createTemplate.mutateAsync({
+          name: formName.trim(),
+          subject: formSubject.trim(),
+          bodyHtml,
+          category: formCategory,
+          variables: vars,
+          isShared: formShared,
+        })
+      }
+      setShowForm(false)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Fehler beim Speichern')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTemplate.mutateAsync(id)
+      setDeleteConfirm(null)
+    } catch {
+      // Error von React Query
+    }
+  }
+
+  const isSaving = createTemplate.isPending || updateTemplate.isPending
+  const categories = ['Allgemein', 'Vertrieb', 'Termine', 'Projekte', 'After Sales']
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-white/20" /></div>
 
@@ -632,12 +740,134 @@ function TemplatesView() {
     <div className="p-5 space-y-4 overflow-y-auto h-full">
       <div className="flex items-center justify-between">
         <h3 className="text-[15px] font-extrabold">E-Mail-Vorlagen</h3>
-        <button className="btn-primary px-3.5 py-1.5 text-[11px] font-bold flex items-center gap-1.5">
+        <button onClick={openNew} className="btn-primary px-3.5 py-1.5 text-[11px] font-bold flex items-center gap-1.5">
           <Plus size={13} /> Neue Vorlage
         </button>
       </div>
 
-      {templates.length === 0 ? (
+      {/* ── Formular (Erstellen / Bearbeiten) ── */}
+      {showForm && (
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: 'rgba(11, 15, 21, 0.95)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          }}
+        >
+          <div className="flex items-center justify-between px-5 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(167,139,250,0.12)' }}>
+                <LayoutTemplate size={13} className="text-purple-400" />
+              </div>
+              <span className="text-[13px] font-bold text-white/90">
+                {editingTemplate ? 'Vorlage bearbeiten' : 'Neue Vorlage'}
+              </span>
+            </div>
+            <button type="button" onClick={() => setShowForm(false)} className="text-white/30 hover:text-white/60 transition-colors p-1">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="p-5 space-y-3.5">
+            {/* Name + Kategorie */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Name *</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="z.B. Erstanfrage Antwort"
+                  className="glass-input w-full text-[12px]"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Kategorie</label>
+                <select
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value)}
+                  className="glass-input w-full text-[12px] appearance-none cursor-pointer"
+                >
+                  {categories.map(c => (
+                    <option key={c} value={c} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Betreff */}
+            <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-1 block">Betreff *</label>
+              <input
+                type="text"
+                value={formSubject}
+                onChange={(e) => setFormSubject(e.target.value)}
+                placeholder="z.B. Ihre Anfrage bei NEOSOLAR AG – {{firstName}}"
+                className="glass-input w-full text-[12px]"
+              />
+            </div>
+
+            {/* Nachricht */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-white/40">Nachricht</label>
+                <span className="text-[9px] text-white/20">Platzhalter: {'{{firstName}} {{lastName}} {{datum}} {{absender}}'}</span>
+              </div>
+              <textarea
+                value={formBody}
+                onChange={(e) => setFormBody(e.target.value)}
+                placeholder="Guten Tag {{firstName}} {{lastName}}&#10;&#10;Ihre Nachricht hier...&#10;&#10;Freundliche Grüsse&#10;{{absender}}&#10;NEOSOLAR AG"
+                className="glass-input w-full text-[12px] resize-none"
+                rows={10}
+                style={{ lineHeight: '1.6' }}
+              />
+            </div>
+
+            {/* Team-Toggle */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setFormShared(!formShared)}
+                className="relative w-9 h-5 rounded-full transition-colors duration-200"
+                style={{ background: formShared ? 'rgba(96,165,250,0.5)' : 'rgba(255,255,255,0.1)' }}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200"
+                  style={{ left: formShared ? '18px' : '2px' }}
+                />
+              </button>
+              <span className="text-[11px] text-white/60">Fuer alle Team-Mitglieder sichtbar</span>
+            </div>
+
+            {/* Fehler */}
+            {formError && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium text-red-400" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)' }}>
+                {formError}
+              </div>
+            )}
+
+            {/* Aktionen */}
+            <div className="flex items-center justify-end gap-2 pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary text-[11px] px-4 py-1.5">
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!formName.trim() || !formSubject.trim() || isSaving}
+                className="btn-primary text-[11px] px-4 py-1.5 flex items-center gap-1.5 disabled:opacity-40"
+              >
+                {isSaving ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                {editingTemplate ? 'Speichern' : 'Erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Vorlagen-Liste ── */}
+      {templates.length === 0 && !showForm ? (
         <div className="text-center py-16">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'color-mix(in srgb, #A78BFA 8%, transparent)' }}>
             <LayoutTemplate size={24} className="text-purple-400" strokeWidth={1.5} />
@@ -648,15 +878,66 @@ function TemplatesView() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {templates.map((t) => (
-            <div key={t.id} className="glass-card p-4 hover:border-white/[0.1] transition-all cursor-pointer" style={{ borderRadius: 'var(--radius-lg)' }}>
+            <div
+              key={t.id}
+              className="glass-card p-4 hover:border-white/[0.1] transition-all group relative"
+              style={{ borderRadius: 'var(--radius-lg)' }}
+            >
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[13px] font-bold text-white/90">{t.name}</p>
-                {t.isShared && (
-                  <span className="text-[8px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, #60A5FA 12%, transparent)', color: '#60A5FA' }}>Team</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {t.category && (
+                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, #60A5FA 12%, transparent)', color: '#60A5FA' }}>
+                      {t.category}
+                    </span>
+                  )}
+                  {t.isShared && (
+                    <span className="text-[8px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)', color: '#34D399' }}>Team</span>
+                  )}
+                </div>
               </div>
-              <p className="text-[11px] text-white/50">{t.subject}</p>
-              <p className="text-[10px] text-white/25 mt-1.5">{t.useCount}x verwendet</p>
+              <p className="text-[11px] text-white/50 mb-1">{t.subject}</p>
+              <p className="text-[10px] text-white/25">{t.useCount}x verwendet</p>
+
+              {/* Aktionen (hover) */}
+              <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={() => openEdit(t)}
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-white/30 hover:text-amber-500 hover:bg-amber-500/10 transition-all"
+                  title="Bearbeiten"
+                >
+                  <PenLine size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirm(t.id)}
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all"
+                  title="Loeschen"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+
+              {/* Delete Confirm */}
+              {deleteConfirm === t.id && (
+                <div className="absolute inset-0 rounded-[var(--radius-lg)] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.9)', backdropFilter: 'blur(4px)' }}>
+                  <div className="text-center">
+                    <p className="text-[11px] text-white/70 mb-3">Vorlage loeschen?</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => setDeleteConfirm(null)} className="btn-secondary text-[10px] px-3 py-1">Abbrechen</button>
+                      <button
+                        onClick={() => handleDelete(t.id)}
+                        disabled={deleteTemplate.isPending}
+                        className="px-3 py-1 rounded-lg text-[10px] font-semibold text-red-400 transition-colors"
+                        style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}
+                      >
+                        {deleteTemplate.isPending ? <Loader2 size={10} className="animate-spin" /> : 'Loeschen'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
