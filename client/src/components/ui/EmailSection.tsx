@@ -191,8 +191,20 @@ function ComposeEmail({
     }
 
     setSubject(subj)
-    // HTML Tags entfernen fuer Textarea
-    setBody(bodyText.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''))
+    // HTML zu Plaintext: Absaetze und Zeilenumbrueche korrekt konvertieren
+    const plainText = bodyText
+      .replace(/<\/p>\s*<p>/gi, '\n\n')  // Absatzwechsel
+      .replace(/<br\s*\/?>/gi, '\n')      // Zeilenumbrueche
+      .replace(/<\/?p>/gi, '')             // Verbleibende p-Tags
+      .replace(/<strong>(.*?)<\/strong>/gi, '$1') // Bold entfernen
+      .replace(/<[^>]+>/g, '')             // Restliche HTML-Tags
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\n{3,}/g, '\n\n')         // Max 2 Leerzeilen
+      .trim()
+    setBody(plainText)
   }
 
   const handleSend = async () => {
