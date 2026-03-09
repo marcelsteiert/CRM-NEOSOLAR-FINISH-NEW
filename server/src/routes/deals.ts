@@ -478,6 +478,25 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 })
 
 // ---------------------------------------------------------------------------
+// DELETE /api/v1/deals/all – Alle Angebote loeschen (nur Admin)
+// ---------------------------------------------------------------------------
+
+router.delete('/all', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (req.user?.role !== 'ADMIN') throw new AppError('Nur Admins koennen alle Angebote loeschen', 403)
+    const now = new Date().toISOString()
+    const { count, error } = await supabase
+      .from('deals')
+      .update({ deleted_at: now }, { count: 'exact' })
+      .is('deleted_at', null)
+    if (error) throw new AppError(error.message, 500)
+    res.json({ message: `${count ?? 0} Angebote erfolgreich geloescht`, count: count ?? 0 })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // DELETE /api/v1/deals/:id
 // ---------------------------------------------------------------------------
 

@@ -1,5 +1,6 @@
-import { Download, Database, HardDrive, Clock, FileJson, FileSpreadsheet } from 'lucide-react'
-import { useDbStats } from '@/hooks/useAdmin'
+import { useState } from 'react'
+import { Download, Database, HardDrive, Clock, FileJson, FileSpreadsheet, Trash2, AlertTriangle } from 'lucide-react'
+import { useDbStats, useBulkDelete, type BulkDeleteEntity } from '@/hooks/useAdmin'
 
 const ENTITIES = [
   { key: 'leads', label: 'Leads', color: '#34D399' },
@@ -10,9 +11,34 @@ const ENTITIES = [
   { key: 'users', label: 'Benutzer', color: '#22D3EE' },
 ]
 
+const DELETABLE: { key: BulkDeleteEntity; label: string; color: string }[] = [
+  { key: 'leads', label: 'Leads', color: '#34D399' },
+  { key: 'appointments', label: 'Termine', color: '#60A5FA' },
+  { key: 'deals', label: 'Angebote', color: '#F59E0B' },
+  { key: 'projects', label: 'Projekte', color: '#E879F9' },
+]
+
 export default function DatabaseExportSection() {
   const { data: statsResponse } = useDbStats()
   const stats = statsResponse?.data
+  const bulkDelete = useBulkDelete()
+  const [confirmEntity, setConfirmEntity] = useState<BulkDeleteEntity | null>(null)
+  const [lastResult, setLastResult] = useState<string | null>(null)
+
+  const handleDelete = (entity: BulkDeleteEntity) => {
+    bulkDelete.mutate(entity, {
+      onSuccess: (res) => {
+        setConfirmEntity(null)
+        setLastResult(`${res.data.count} ${DELETABLE.find(d => d.key === entity)?.label ?? entity} gelöscht`)
+        setTimeout(() => setLastResult(null), 4000)
+      },
+      onError: () => {
+        setConfirmEntity(null)
+        setLastResult('Fehler beim Löschen')
+        setTimeout(() => setLastResult(null), 4000)
+      },
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -35,7 +61,7 @@ export default function DatabaseExportSection() {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">Datensätze</p>
               <p className="text-[16px] font-extrabold text-emerald-400 tabular-nums">
-                {stats.leads + stats.appointments + stats.deals + stats.tasks + stats.documents + stats.users}
+                {stats.leads + stats.appointments + stats.deals + (stats.projects ?? 0) + stats.tasks + stats.documents + stats.users}
               </p>
             </div>
           </div>
@@ -53,9 +79,96 @@ export default function DatabaseExportSection() {
         </div>
       )}
 
+      {/* Daten loeschen – Admin Gefahrenzone */}
+      <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)', border: '1px solid rgba(248, 113, 113, 0.15)' }}>
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle size={15} className="text-red-400" strokeWidth={2} />
+          <h3 className="text-[13px] font-bold text-red-400">Daten löschen</h3>
+        </div>
+        <p className="text-[11px] text-text-dim mb-4">Alle Einträge der jeweiligen Kategorie werden unwiderruflich gelöscht (Soft-Delete).</p>
+
+        {lastResult && (
+          <div
+            className="mb-3 px-4 py-2.5 rounded-[10px] text-[12px] font-semibold text-center"
+            style={{
+              background: lastResult.includes('Fehler')
+                ? 'color-mix(in srgb, #F87171 12%, transparent)'
+                : 'color-mix(in srgb, #34D399 12%, transparent)',
+              color: lastResult.includes('Fehler') ? '#F87171' : '#34D399',
+            }}
+          >
+            {lastResult}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {DELETABLE.map((entity) => {
+            const count = stats ? (stats as Record<string, number>)[entity.key] ?? 0 : 0
+            const isConfirming = confirmEntity === entity.key
+            const isDeleting = bulkDelete.isPending && confirmEntity === entity.key
+
+            return (
+              <div
+                key={entity.key}
+                className="flex items-center gap-3 p-3 rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
+              >
+                <div className="w-2 h-2 rounded-full" style={{ background: entity.color }} />
+                <span className="text-[12px] font-medium text-text flex-1">{entity.label}</span>
+                <span className="text-[11px] text-text-dim tabular-nums mr-2">{count}</span>
+
+                {!isConfirming ? (
+                  <button
+                    type="button"
+                    disabled={count === 0}
+                    onClick={() => setConfirmEntity(entity.key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                    style={{
+                      background: 'color-mix(in srgb, #F87171 10%, transparent)',
+                      color: '#F87171',
+                      border: '1px solid rgba(248, 113, 113, 0.15)',
+                    }}
+                  >
+                    <Trash2 size={11} strokeWidth={2} /> Alle löschen
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => handleDelete(entity.key)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors"
+                      style={{ background: '#F87171', color: '#fff' }}
+                    >
+                      {isDeleting ? (
+                        <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 size={11} strokeWidth={2} />
+                      )}
+                      {isDeleting ? 'Lösche...' : 'Bestätigen'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmEntity(null)}
+                      className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-text-sec hover:bg-surface-hover transition-colors"
+                      style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Export Cards */}
       <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
-        <h3 className="text-[13px] font-bold mb-4">Daten exportieren</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <Download size={15} className="text-text-sec" strokeWidth={1.8} />
+          <h3 className="text-[13px] font-bold">Daten exportieren</h3>
+        </div>
         <div className="space-y-2">
           {ENTITIES.map((entity) => {
             const count = stats ? (stats as Record<string, number>)[entity.key] ?? 0 : 0
@@ -104,7 +217,7 @@ export default function DatabaseExportSection() {
           <div>
             <label className="block text-[10px] font-semibold text-text-dim mb-1">Verfügbare Endpunkte</label>
             <div className="flex flex-wrap gap-1.5">
-              {['/leads', '/appointments', '/deals', '/tasks', '/users', '/documents', '/settings', '/pipelines'].map((ep) => (
+              {['/leads', '/appointments', '/deals', '/projects', '/tasks', '/users', '/documents', '/settings', '/pipelines'].map((ep) => (
                 <code key={ep} className="text-[10px] text-text-dim font-mono bg-bg px-2 py-1 rounded">{ep}</code>
               ))}
             </div>

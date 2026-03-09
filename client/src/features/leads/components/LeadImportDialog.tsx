@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, ArrowRight, ArrowLeft, ChevronDown } from 'lucide-react'
 import { useCreateLead, type LeadSource } from '@/hooks/useLeads'
+import * as XLSX from 'xlsx'
+
+// ── Typen ──
 
 interface LeadImportDialogProps {
   onClose: () => void
@@ -18,144 +21,350 @@ interface ParsedLead {
   notes?: string
 }
 
+type CrmField = keyof ParsedLead | 'skip'
+
+// ── Konstanten ──
+
+const CRM_FIELDS: { value: CrmField; label: string }[] = [
+  { value: 'skip', label: '-- Ignorieren --' },
+  { value: 'firstName', label: 'Vorname' },
+  { value: 'lastName', label: 'Nachname' },
+  { value: 'company', label: 'Firma' },
+  { value: 'address', label: 'Adresse' },
+  { value: 'phone', label: 'Telefon' },
+  { value: 'email', label: 'E-Mail' },
+  { value: 'source', label: 'Quelle' },
+  { value: 'value', label: 'Wert (CHF)' },
+  { value: 'notes', label: 'Notizen' },
+]
+
 const SOURCE_MAP: Record<string, LeadSource> = {
-  homepage: 'HOMEPAGE',
-  landingpage: 'LANDINGPAGE',
-  messe: 'MESSE',
-  empfehlung: 'EMPFEHLUNG',
-  kaltakquise: 'KALTAKQUISE',
-  sonstige: 'SONSTIGE',
+  homepage: 'HOMEPAGE', landingpage: 'LANDINGPAGE', messe: 'MESSE',
+  empfehlung: 'EMPFEHLUNG', kaltakquise: 'KALTAKQUISE', sonstige: 'SONSTIGE',
+  'kalt akquise': 'KALTAKQUISE', 'kalt-akquise': 'KALTAKQUISE',
+  website: 'HOMEPAGE', web: 'HOMEPAGE', referral: 'EMPFEHLUNG',
+  fair: 'MESSE', andere: 'SONSTIGE', other: 'SONSTIGE',
+}
+
+// ── Auto-Erkennung ──
+
+const COLUMN_MAP: Record<string, keyof ParsedLead> = {
+  // Vorname
+  vorname: 'firstName', firstname: 'firstName', 'first name': 'firstName', vname: 'firstName',
+  // Nachname
+  nachname: 'lastName', lastname: 'lastName', 'last name': 'lastName', name: 'lastName',
+  familienname: 'lastName', zuname: 'lastName',
+  // Firma
+  unternehmen: 'company', company: 'company', firma: 'company', firmenname: 'company',
+  organisation: 'company', betrieb: 'company', arbeitgeber: 'company',
+  // Adresse
+  adresse: 'address', address: 'address', strasse: 'address', anschrift: 'address',
+  wohnort: 'address', ort: 'address', plz: 'address', postleitzahl: 'address',
+  'strasse nr': 'address', strassenr: 'address', wohnadresse: 'address',
+  standort: 'address', 'plz ort': 'address',
+  // Telefon
+  telefon: 'phone', phone: 'phone', telefonnummer: 'phone', mobilnummer: 'phone',
+  handy: 'phone', mobile: 'phone', mobil: 'phone', natel: 'phone',
+  festnetz: 'phone', fax: 'phone', rufnummer: 'phone',
+  // E-Mail
+  email: 'email', 'e mail': 'email', emailadresse: 'email', mailadresse: 'email',
+  kontakt: 'email',
+  // Quelle
+  quelle: 'source', source: 'source', quellenherkunft: 'source', herkunft: 'source',
+  kanal: 'source', akquise: 'source',
+  // Wert
+  wert: 'value', value: 'value', betrag: 'value', umsatz: 'value', volumen: 'value',
+  // Notizen
+  notizen: 'notes', notes: 'notes', bemerkung: 'notes', bemerkungen: 'notes',
+  kommentar: 'notes', beschreibung: 'notes', info: 'notes', hinweis: 'notes',
+  label: 'notes', tag: 'notes', tags: 'notes',
+}
+
+// Fuzzy-Patterns: Laengere Begriffe die im Header enthalten sein muessen (mind. 4 Zeichen)
+const FUZZY_PATTERNS: { pattern: string; field: keyof ParsedLead }[] = [
+  { pattern: 'vorname', field: 'firstName' },
+  { pattern: 'first', field: 'firstName' },
+  { pattern: 'nachname', field: 'lastName' },
+  { pattern: 'familien', field: 'lastName' },
+  { pattern: 'firma', field: 'company' },
+  { pattern: 'unternehm', field: 'company' },
+  { pattern: 'adress', field: 'address' },
+  { pattern: 'anschrift', field: 'address' },
+  { pattern: 'strasse', field: 'address' },
+  { pattern: 'telefon', field: 'phone' },
+  { pattern: 'phone', field: 'phone' },
+  { pattern: 'mobil', field: 'phone' },
+  { pattern: 'handy', field: 'phone' },
+  { pattern: 'natel', field: 'phone' },
+  { pattern: 'email', field: 'email' },
+  { pattern: 'mail', field: 'email' },
+  { pattern: 'quelle', field: 'source' },
+  { pattern: 'herkunft', field: 'source' },
+  { pattern: 'notiz', field: 'notes' },
+  { pattern: 'bemerk', field: 'notes' },
+  { pattern: 'komment', field: 'notes' },
+]
+
+function normalizeHeader(s: string): string {
+  return s.toLowerCase()
+    .replace(/[äÄ]/g, 'ae').replace(/[öÖ]/g, 'oe').replace(/[üÜ]/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function autoDetectField(header: string): CrmField {
+  const norm = normalizeHeader(header)
+  // Auch Variante ohne Umlaute-Expansion (a statt ae)
+  const normSimple = header.toLowerCase()
+    .replace(/[äÄ]/g, 'a').replace(/[öÖ]/g, 'o').replace(/[üÜ]/g, 'u').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+
+  // 1. Direkte Suche (exakter Match)
+  if (COLUMN_MAP[norm]) return COLUMN_MAP[norm]
+  if (COLUMN_MAP[normSimple]) return COLUMN_MAP[normSimple]
+
+  // 2. Einzelne Woerter pruefen (z.B. "Kontakt Telefon" → "telefon" matched)
+  const words = normSimple.split(' ')
+  for (const word of words) {
+    if (COLUMN_MAP[word]) return COLUMN_MAP[word]
+  }
+
+  // 3. Letztes Wort nach Prefix (z.B. "Lead - Adresse" → "adresse")
+  const parts = header.split(/\s*[-–:]\s*/)
+  if (parts.length >= 2) {
+    const lastPart = normalizeHeader(parts[parts.length - 1])
+    if (COLUMN_MAP[lastPart]) return COLUMN_MAP[lastPart]
+    const lastSimple = parts[parts.length - 1].toLowerCase()
+      .replace(/[äÄ]/g, 'a').replace(/[öÖ]/g, 'o').replace(/[üÜ]/g, 'u').replace(/ß/g, 'ss')
+      .replace(/[^a-z0-9 ]/g, ' ').trim()
+    if (COLUMN_MAP[lastSimple]) return COLUMN_MAP[lastSimple]
+  }
+
+  // 4. Fuzzy: Laengere Patterns (mind. 4 Zeichen) im Header suchen
+  for (const { pattern, field } of FUZZY_PATTERNS) {
+    if (normSimple.includes(pattern)) return field
+  }
+
+  return 'skip'
 }
 
 function parseSource(raw: string): LeadSource {
-  const lower = raw.trim().toLowerCase()
-  return SOURCE_MAP[lower] ?? 'SONSTIGE'
+  if (!raw) return 'SONSTIGE'
+  const upper = raw.trim().toUpperCase()
+  if (['HOMEPAGE', 'LANDINGPAGE', 'MESSE', 'EMPFEHLUNG', 'KALTAKQUISE', 'SONSTIGE'].includes(upper)) return upper as LeadSource
+  return SOURCE_MAP[raw.trim().toLowerCase()] ?? 'SONSTIGE'
 }
+
+// ── Datei-Parser ──
 
 function parseCsvLine(line: string): string[] {
   const cells: string[] = []
   let current = ''
   let inQuotes = false
-
   for (let i = 0; i < line.length; i++) {
     const ch = line[i]
     if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        current += '"'
-        i++
-      } else if (ch === '"') {
-        inQuotes = false
-      } else {
-        current += ch
-      }
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++ }
+      else if (ch === '"') inQuotes = false
+      else current += ch
     } else {
-      if (ch === '"') {
-        inQuotes = true
-      } else if (ch === ';' || ch === ',') {
-        cells.push(current.trim())
-        current = ''
-      } else {
-        current += ch
-      }
+      if (ch === '"') inQuotes = true
+      else if (ch === ';' || ch === ',') { cells.push(current.trim()); current = '' }
+      else current += ch
     }
   }
   cells.push(current.trim())
   return cells
 }
 
-function parseCsv(text: string): ParsedLead[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim())
-  if (lines.length < 2) return []
+function parseFile(file: File): Promise<{ headers: string[]; rows: string[][] }> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z]/g, ''))
-  const leads: ParsedLead[] = []
-
-  for (let i = 1; i < lines.length; i++) {
-    const cells = parseCsvLine(lines[i])
-    if (cells.length < 3) continue
-
-    const row: Record<string, string> = {}
-    headers.forEach((h, idx) => {
-      row[h] = cells[idx] ?? ''
-    })
-
-    leads.push({
-      firstName: row.vorname || row.firstname || undefined,
-      lastName: row.nachname || row.lastname || undefined,
-      company: row.unternehmen || row.company || row.firma || undefined,
-      address: row.adresse || row.address || '',
-      phone: row.telefon || row.phone || row.tel || '',
-      email: row.email || row.mail || '',
-      source: parseSource(row.quelle || row.source || 'sonstige'),
-      value: row.wert || row.value ? Number(row.wert || row.value) || 0 : undefined,
-      notes: row.notizen || row.notes || undefined,
-    })
-  }
-
-  return leads.filter((l) => l.address && l.phone && l.email)
+      if (isExcel) {
+        const buffer = await file.arrayBuffer()
+        const wb = XLSX.read(buffer, { type: 'array' })
+        const sheet = wb.Sheets[wb.SheetNames[0]]
+        if (!sheet) { resolve({ headers: [], rows: [] }); return }
+        const all = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 }) as unknown[][]
+        if (all.length < 2) { resolve({ headers: [], rows: [] }); return }
+        const headers = (all[0]).map((h) => String(h ?? ''))
+        const rows = all.slice(1).map((r) => (r as unknown[]).map((c) => String(c ?? '').trim()))
+        resolve({ headers, rows })
+      } else {
+        const text = await file.text()
+        const lines = text.split(/\r?\n/).filter((l) => l.trim())
+        if (lines.length < 2) { resolve({ headers: [], rows: [] }); return }
+        const headers = parseCsvLine(lines[0])
+        const rows = lines.slice(1).map((l) => parseCsvLine(l))
+        resolve({ headers, rows })
+      }
+    } catch (err) {
+      reject(err)
+    }
+  })
 }
 
+function looksLikeEmail(val: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)
+}
+
+function looksLikePhone(val: string): boolean {
+  const digits = val.replace(/\D/g, '')
+  return digits.length >= 7 && /^[+\d()\s./-]+$/.test(val)
+}
+
+function buildLeads(rows: string[][], mappings: CrmField[]): ParsedLead[] {
+  const leads: ParsedLead[] = []
+
+  for (const cells of rows) {
+    if (cells.filter(Boolean).length < 2) continue
+
+    const lead: ParsedLead = { address: '', phone: '', email: '', source: 'SONSTIGE' }
+    const notesParts: string[] = []
+
+    mappings.forEach((field, idx) => {
+      const val = cells[idx]?.trim() ?? ''
+      if (!val || field === 'skip') return
+      switch (field) {
+        case 'firstName': lead.firstName = val; break
+        case 'lastName': lead.lastName = val; break
+        case 'company': lead.company = val; break
+        case 'address': lead.address = val; break
+        case 'phone': lead.phone = val; break
+        case 'email': lead.email = val; break
+        case 'source': lead.source = parseSource(val); break
+        case 'value': lead.value = Number(val) || undefined; break
+        case 'notes': notesParts.push(val); break
+      }
+    })
+
+    if (notesParts.length > 0) lead.notes = notesParts.join(' | ')
+
+    // Auto-Korrektur: Vertauschte Felder erkennen und tauschen
+    // E-Mail in Telefon-Feld → tauschen
+    if (looksLikeEmail(lead.phone) && !lead.email) {
+      lead.email = lead.phone
+      lead.phone = ''
+    }
+    // Telefon in E-Mail-Feld → tauschen
+    if (looksLikePhone(lead.email) && !looksLikeEmail(lead.email) && !lead.phone) {
+      lead.phone = lead.email
+      lead.email = ''
+    }
+    // E-Mail in Adresse-Feld
+    if (looksLikeEmail(lead.address) && !lead.email) {
+      lead.email = lead.address
+      lead.address = ''
+    }
+    // Telefon in Adresse-Feld
+    if (looksLikePhone(lead.address) && lead.address.length < 20 && !lead.phone) {
+      lead.phone = lead.address
+      lead.address = ''
+    }
+
+    // Mindestens ein Kontaktfeld
+    if (lead.email || lead.phone || lead.address || lead.firstName || lead.lastName) {
+      leads.push(lead)
+    }
+  }
+
+  return leads
+}
+
+function downloadTemplate() {
+  const headers = [
+    'Vorname', 'Nachname', 'Firma', 'Adresse', 'Telefon', 'E-Mail',
+    'Quelle', 'Wert (CHF)', 'Notizen',
+  ]
+  const example = [
+    'Max', 'Muster', 'Muster AG', 'Musterstrasse 1, 8000 Zuerich',
+    '+41 79 123 45 67', 'max@muster.ch', 'HOMEPAGE', '25000', 'Interesse an 10kWp Anlage',
+  ]
+  const example2 = [
+    'Anna', 'Beispiel', 'Solar GmbH', 'Sonnenweg 5, 3000 Bern',
+    '+41 78 987 65 43', 'anna@beispiel.ch', 'EMPFEHLUNG', '35000', '',
+  ]
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.aoa_to_sheet([headers, example, example2])
+  ws['!cols'] = [
+    { wch: 12 }, { wch: 14 }, { wch: 18 }, { wch: 35 },
+    { wch: 20 }, { wch: 25 }, { wch: 14 }, { wch: 12 }, { wch: 30 },
+  ]
+  XLSX.utils.book_append_sheet(wb, ws, 'Leads')
+  XLSX.writeFile(wb, 'NeoSolar_Lead_Import_Vorlage.xlsx')
+}
+
+// ── Hauptkomponente ──
+
+type Step = 'upload' | 'mapping' | 'preview' | 'importing' | 'done'
+
 export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
+  const [step, setStep] = useState<Step>('upload')
   const [file, setFile] = useState<File | null>(null)
+  const [headers, setHeaders] = useState<string[]>([])
+  const [rows, setRows] = useState<string[][]>([])
+  const [mappings, setMappings] = useState<CrmField[]>([])
   const [parsed, setParsed] = useState<ParsedLead[]>([])
-  const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [errors, setErrors] = useState<string[]>([])
-  const [done, setDone] = useState(false)
 
   const createLead = useCreateLead()
   const backdropRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === backdropRef.current) onClose()
-  }
-
+  // Datei laden → Auto-Mapping → zum Mapping-Schritt
   const handleFileSelect = useCallback(async (f: File) => {
     setFile(f)
     setErrors([])
-    setDone(false)
-    setParsed([])
-
     try {
-      const text = await f.text()
-      const leads = parseCsv(text)
-
-      if (leads.length === 0) {
-        setErrors(['Keine gueltige Leads in der Datei gefunden. Pruefe das Format (Pflichtfelder: Adresse, Telefon, E-Mail).'])
+      const result = await parseFile(f)
+      if (result.headers.length === 0) {
+        setErrors(['Keine Spalten in der Datei gefunden.'])
         return
       }
-
-      setParsed(leads)
+      setHeaders(result.headers)
+      setRows(result.rows)
+      // Auto-Mapping
+      setMappings(result.headers.map((h) => autoDetectField(h)))
+      setStep('mapping')
     } catch {
       setErrors(['Fehler beim Lesen der Datei.'])
     }
   }, [])
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      const f = e.dataTransfer.files[0]
-      if (f && (f.name.endsWith('.csv') || f.type === 'text/csv')) {
-        handleFileSelect(f)
-      }
-    },
-    [handleFileSelect],
-  )
+  // Mapping-Änderung
+  const updateMapping = (idx: number, field: CrmField) => {
+    setMappings((prev) => {
+      const next = [...prev]
+      next[idx] = field
+      return next
+    })
+  }
 
+  // Vorschau generieren
+  const goToPreview = () => {
+    const leads = buildLeads(rows, mappings)
+    if (leads.length === 0) {
+      setErrors(['Keine gueltigen Leads mit dieser Zuordnung. Pruefe ob mindestens ein Kontaktfeld (Name, E-Mail, Telefon oder Adresse) zugeordnet ist.'])
+      return
+    }
+    setErrors([])
+    setParsed(leads)
+    setStep('preview')
+  }
+
+  // Import starten
   const handleImport = async () => {
-    setImporting(true)
+    setStep('importing')
     setErrors([])
     setProgress(0)
-
     const errs: string[] = []
     for (let i = 0; i < parsed.length; i++) {
       try {
@@ -165,28 +374,40 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
       }
       setProgress(i + 1)
     }
-
     setErrors(errs)
-    setImporting(false)
-    setDone(true)
+    setStep('done')
   }
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const f = e.dataTransfer.files[0]
+    if (f) handleFileSelect(f)
+  }, [handleFileSelect])
+
+  // Beispielwerte pro Spalte (erste 3 nicht-leere Werte)
+  const getSampleValues = (colIdx: number): string[] => {
+    const samples: string[] = []
+    for (const row of rows) {
+      const val = row[colIdx]?.trim()
+      if (val && samples.length < 3) samples.push(val)
+      if (samples.length >= 3) break
+    }
+    return samples
+  }
+
+  const mappedFieldCount = mappings.filter((m) => m !== 'skip').length
 
   return (
     <div
       ref={backdropRef}
-      onClick={handleBackdropClick}
+      onClick={(e) => { if (e.target === backdropRef.current) onClose() }}
       className="fixed inset-0 z-[90] flex items-center justify-center"
-      style={{
-        background: 'rgba(6, 8, 12, 0.7)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
+      style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
     >
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Leads importieren"
-        className="outline-none w-full max-w-[520px] mx-4"
+        className="outline-none w-full max-w-[680px] mx-4 max-h-[85vh] flex flex-col"
         style={{
           background: 'rgba(255,255,255,0.035)',
           backdropFilter: 'blur(24px) saturate(1.2)',
@@ -196,135 +417,202 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border shrink-0">
           <div>
             <h2 className="text-base font-bold tracking-[-0.02em]">Leads importieren</h2>
-            <p className="text-[12px] text-text-sec mt-0.5">CSV-Datei hochladen</p>
+            <p className="text-[12px] text-text-sec mt-0.5">
+              {step === 'upload' && 'Schritt 1/3 – Datei hochladen'}
+              {step === 'mapping' && 'Schritt 2/3 – Spalten zuordnen'}
+              {step === 'preview' && 'Schritt 3/3 – Vorschau & Import'}
+              {step === 'importing' && 'Importiere...'}
+              {step === 'done' && 'Import abgeschlossen'}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Dialog schliessen"
-            className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150"
-          >
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all duration-150">
             <X size={18} strokeWidth={1.8} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-6 py-5 space-y-4">
-          {/* Drop zone */}
-          {!done && (
-            <div
-              onDrop={handleDrop}
-              onDragOver={(e) => e.preventDefault()}
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-amber/30 transition-colors"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) handleFileSelect(f)
-                }}
-              />
-              {file ? (
-                <div className="flex items-center justify-center gap-3">
-                  <FileSpreadsheet size={20} className="text-amber" strokeWidth={1.8} />
-                  <div className="text-left">
-                    <p className="text-[13px] font-semibold">{file.name}</p>
-                    <p className="text-[11px] text-text-sec">{parsed.length} Leads erkannt</p>
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1">
+
+          {/* ── STEP 1: Upload ── */}
+          {step === 'upload' && (
+            <>
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-border rounded-xl p-10 text-center cursor-pointer hover:border-amber/30 transition-colors"
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f) }}
+                />
+                <Upload size={28} className="text-text-dim mx-auto mb-3" strokeWidth={1.5} />
+                <p className="text-[13px] text-text-sec">
+                  Excel (.xlsx) oder CSV-Datei hierher ziehen oder klicken
+                </p>
+                <p className="text-[10px] text-text-dim mt-1">
+                  Spalten werden im naechsten Schritt zugeordnet
+                </p>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); downloadTemplate() }}
+                  className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-amber hover:text-amber/80 transition-colors"
+                  style={{ background: 'color-mix(in srgb, #F59E0B 8%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 15%, transparent)' }}
+                >
+                  <Download size={12} strokeWidth={2} />
+                  Vorlage herunterladen (.xlsx)
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── STEP 2: Mapping ── */}
+          {step === 'mapping' && (
+            <>
+              <div className="flex items-center gap-3 mb-1">
+                <FileSpreadsheet size={16} className="text-amber" strokeWidth={1.8} />
+                <span className="text-[13px] font-semibold">{file?.name}</span>
+                <span className="text-[11px] text-text-dim">{rows.length} Zeilen, {headers.length} Spalten</span>
+              </div>
+
+              <p className="text-[11px] text-text-sec mb-3">
+                Ordne jede Spalte einem CRM-Feld zu. Automatisch erkannte Felder sind vorausgefuellt.
+              </p>
+
+              <div className="space-y-1.5 max-h-[340px] overflow-y-auto">
+                {headers.map((header, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                    style={{
+                      background: mappings[idx] !== 'skip' ? 'rgba(245,158,11,0.04)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${mappings[idx] !== 'skip' ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)'}`,
+                    }}
+                  >
+                    {/* Spalten-Name + Beispielwerte */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-medium text-text truncate">{header}</p>
+                      <p className="text-[10px] text-text-dim truncate">
+                        {getSampleValues(idx).join(' | ') || '(leer)'}
+                      </p>
+                    </div>
+
+                    {/* Pfeil */}
+                    <ArrowRight size={14} className="text-text-dim shrink-0" />
+
+                    {/* Dropdown */}
+                    <div className="relative shrink-0 w-[160px]">
+                      <select
+                        value={mappings[idx]}
+                        onChange={(e) => updateMapping(idx, e.target.value as CrmField)}
+                        className="glass-input appearance-none w-full px-3 py-1.5 pr-7 text-[12px] cursor-pointer"
+                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                      >
+                        {CRM_FIELDS.map((f) => (
+                          <option key={f.value} value={f.value} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                            {f.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" />
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <Upload size={24} className="text-text-dim mx-auto mb-2" strokeWidth={1.5} />
-                  <p className="text-[13px] text-text-sec">
-                    CSV-Datei hierher ziehen oder klicken
-                  </p>
-                  <p className="text-[10px] text-text-dim mt-1">
-                    Spalten: Vorname, Nachname, Unternehmen, Adresse*, Telefon*, E-Mail*, Quelle, Wert, Notizen
-                  </p>
-                </>
-              )}
-            </div>
+                ))}
+              </div>
+
+              <p className="text-[10px] text-text-dim">
+                {mappedFieldCount} von {headers.length} Spalten zugeordnet
+              </p>
+            </>
           )}
 
-          {/* Preview */}
-          {parsed.length > 0 && !importing && !done && (
-            <div className="max-h-[200px] overflow-y-auto rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
-              <table className="w-full text-[11px]">
-                <thead>
-                  <tr className="border-b border-border text-text-dim">
-                    <th className="text-left px-3 py-2">Name</th>
-                    <th className="text-left px-3 py-2">E-Mail</th>
-                    <th className="text-left px-3 py-2">Quelle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsed.slice(0, 10).map((lead, i) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="px-3 py-1.5 text-text-sec">
-                        {[lead.firstName, lead.lastName].filter(Boolean).join(' ') || '\u2014'}
-                      </td>
-                      <td className="px-3 py-1.5 text-text-sec">{lead.email}</td>
-                      <td className="px-3 py-1.5 text-text-sec">{lead.source}</td>
+          {/* ── STEP 3: Preview ── */}
+          {step === 'preview' && (
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[13px] font-semibold">{parsed.length} Leads bereit zum Import</span>
+              </div>
+
+              <div className="max-h-[280px] overflow-y-auto rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="border-b border-border text-text-dim sticky top-0" style={{ background: 'rgba(11,15,21,0.95)' }}>
+                      <th className="text-left px-3 py-2">#</th>
+                      <th className="text-left px-3 py-2">Name</th>
+                      <th className="text-left px-3 py-2">E-Mail</th>
+                      <th className="text-left px-3 py-2">Telefon</th>
+                      <th className="text-left px-3 py-2">Adresse</th>
+                      <th className="text-left px-3 py-2">Quelle</th>
                     </tr>
-                  ))}
-                  {parsed.length > 10 && (
-                    <tr>
-                      <td colSpan={3} className="px-3 py-1.5 text-text-dim text-center">
-                        ... und {parsed.length - 10} weitere
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {parsed.slice(0, 20).map((lead, i) => (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="px-3 py-1.5 text-text-dim">{i + 1}</td>
+                        <td className="px-3 py-1.5 text-text-sec">
+                          {[lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.company || '\u2014'}
+                        </td>
+                        <td className="px-3 py-1.5 text-text-sec">{lead.email || '\u2014'}</td>
+                        <td className="px-3 py-1.5 text-text-sec tabular-nums">{lead.phone || '\u2014'}</td>
+                        <td className="px-3 py-1.5 text-text-sec truncate max-w-[150px]">{lead.address || '\u2014'}</td>
+                        <td className="px-3 py-1.5 text-text-sec">{lead.source}</td>
+                      </tr>
+                    ))}
+                    {parsed.length > 20 && (
+                      <tr>
+                        <td colSpan={6} className="px-3 py-1.5 text-text-dim text-center">
+                          ... und {parsed.length - 20} weitere
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
-          {/* Progress */}
-          {importing && (
-            <div className="space-y-2">
+          {/* ── STEP: Importing ── */}
+          {step === 'importing' && (
+            <div className="space-y-3 py-6">
               <div className="flex items-center gap-2">
-                <Loader2 size={14} className="animate-spin text-amber" />
-                <span className="text-[12px] text-text-sec">
+                <Loader2 size={16} className="animate-spin text-amber" />
+                <span className="text-[13px] text-text-sec">
                   {progress} / {parsed.length} importiert...
                 </span>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
                 <div
                   className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${(progress / parsed.length) * 100}%`,
-                    background: 'linear-gradient(90deg, #F59E0B, #F97316)',
-                  }}
+                  style={{ width: `${(progress / parsed.length) * 100}%`, background: 'linear-gradient(90deg, #F59E0B, #F97316)' }}
                 />
               </div>
             </div>
           )}
 
-          {/* Done */}
-          {done && (
-            <div className="text-center py-4">
-              <CheckCircle2 size={32} className="text-emerald-400 mx-auto mb-2" />
-              <p className="text-[14px] font-semibold">
+          {/* ── STEP: Done ── */}
+          {step === 'done' && (
+            <div className="text-center py-8">
+              <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-3" />
+              <p className="text-[15px] font-semibold">
                 {parsed.length - errors.length} von {parsed.length} Leads importiert
               </p>
+              {errors.length > 0 && (
+                <p className="text-[11px] text-red-400 mt-1">{errors.length} Fehler</p>
+              )}
             </div>
           )}
 
           {/* Errors */}
           {errors.length > 0 && (
             <div
-              className="px-4 py-3 rounded-[10px] space-y-1"
-              style={{
-                background: 'color-mix(in srgb, #F87171 8%, transparent)',
-                border: '1px solid color-mix(in srgb, #F87171 20%, transparent)',
-              }}
+              className="px-4 py-3 rounded-[10px] space-y-1 max-h-[100px] overflow-y-auto"
+              style={{ background: 'color-mix(in srgb, #F87171 8%, transparent)', border: '1px solid color-mix(in srgb, #F87171 20%, transparent)' }}
             >
               {errors.map((err, i) => (
                 <div key={i} className="flex items-start gap-2">
@@ -334,28 +622,50 @@ export default function LeadImportDialog({ onClose }: LeadImportDialogProps) {
               ))}
             </div>
           )}
+        </div>
 
-          {/* Buttons */}
-          <div className="flex items-center gap-2.5 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary flex-1 px-4 py-2.5 text-[13px] font-semibold text-center"
-            >
-              {done ? 'Schliessen' : 'Abbrechen'}
+        {/* Footer Buttons */}
+        <div className="px-6 py-4 border-t border-border shrink-0 flex items-center gap-2.5">
+          {step === 'mapping' && (
+            <button type="button" onClick={() => { setStep('upload'); setFile(null); setHeaders([]); setRows([]) }}
+              className="btn-secondary px-4 py-2.5 text-[13px] font-semibold flex items-center gap-1.5">
+              <ArrowLeft size={14} /> Zurueck
             </button>
-            {!done && (
-              <button
-                type="button"
-                onClick={handleImport}
-                disabled={parsed.length === 0 || importing}
-                className="btn-primary flex-1 px-4 py-2.5 text-[13px] text-center flex items-center justify-center gap-2"
-              >
-                {importing && <Loader2 size={14} className="animate-spin" />}
-                {parsed.length} Leads importieren
-              </button>
-            )}
-          </div>
+          )}
+          {step === 'preview' && (
+            <button type="button" onClick={() => setStep('mapping')}
+              className="btn-secondary px-4 py-2.5 text-[13px] font-semibold flex items-center gap-1.5">
+              <ArrowLeft size={14} /> Mapping aendern
+            </button>
+          )}
+
+          <div className="flex-1" />
+
+          {step === 'upload' && (
+            <button type="button" onClick={onClose} className="btn-secondary px-4 py-2.5 text-[13px] font-semibold">
+              Abbrechen
+            </button>
+          )}
+
+          {step === 'mapping' && (
+            <button type="button" onClick={goToPreview} disabled={mappedFieldCount === 0}
+              className="btn-primary px-5 py-2.5 text-[13px] flex items-center gap-1.5 disabled:opacity-40">
+              Vorschau <ArrowRight size={14} />
+            </button>
+          )}
+
+          {step === 'preview' && (
+            <button type="button" onClick={handleImport}
+              className="btn-primary px-5 py-2.5 text-[13px] flex items-center gap-2">
+              {parsed.length} Leads importieren
+            </button>
+          )}
+
+          {step === 'done' && (
+            <button type="button" onClick={onClose} className="btn-primary px-5 py-2.5 text-[13px]">
+              Schliessen
+            </button>
+          )}
         </div>
       </div>
     </div>

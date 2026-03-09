@@ -464,6 +464,25 @@ router.put('/:id/archive', async (req: Request, res: Response, next: NextFunctio
 })
 
 // ---------------------------------------------------------------------------
+// DELETE /api/v1/projects/all – Alle Projekte loeschen (nur Admin)
+// ---------------------------------------------------------------------------
+
+router.delete('/all', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (req.user?.role !== 'ADMIN') throw new AppError('Nur Admins koennen alle Projekte loeschen', 403)
+    const now = new Date().toISOString()
+    const { count, error } = await supabase
+      .from('projects')
+      .update({ deleted_at: now }, { count: 'exact' })
+      .is('deleted_at', null)
+    if (error) throw new AppError(error.message, 500)
+    res.json({ message: `${count ?? 0} Projekte erfolgreich geloescht`, count: count ?? 0 })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // DELETE /api/v1/projects/:id
 // ---------------------------------------------------------------------------
 

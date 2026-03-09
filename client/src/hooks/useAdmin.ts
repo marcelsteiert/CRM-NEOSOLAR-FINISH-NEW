@@ -299,6 +299,7 @@ export interface DbStats {
   leads: number
   appointments: number
   deals: number
+  projects: number
   tasks: number
   documents: number
   users: number
@@ -310,6 +311,25 @@ export function useDbStats() {
   return useQuery({
     queryKey: ['dbStats'],
     queryFn: () => api.get<{ data: DbStats }>('/admin/db-export/stats'),
+  })
+}
+
+// ── Bulk Delete (Admin only) ──
+
+export type BulkDeleteEntity = 'leads' | 'appointments' | 'deals' | 'projects'
+
+export function useBulkDelete() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (entity: BulkDeleteEntity) =>
+      api.delete<{ message: string; count: number }>(`/${entity}/all`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['dbStats'] })
+      qc.invalidateQueries({ queryKey: ['leads'] })
+      qc.invalidateQueries({ queryKey: ['appointments'] })
+      qc.invalidateQueries({ queryKey: ['deals'] })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+    },
   })
 }
 
