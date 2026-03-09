@@ -1213,7 +1213,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="text-[13px] font-semibold truncate">{activity.title}</p>
+                            <p className="text-[13px] font-semibold truncate">{activity.text || activity.title}</p>
                             <span className="text-[11px] text-text-dim shrink-0 tabular-nums">
                               {relativeTime(activity.createdAt)}
                             </span>

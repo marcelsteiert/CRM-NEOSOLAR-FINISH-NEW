@@ -371,8 +371,9 @@ export interface Activity {
   id: string
   leadId: string
   type: ActivityType
-  title: string
-  description: string | null
+  text: string
+  title?: string
+  description?: string | null
   createdBy: string
   createdAt: string
 }
@@ -388,8 +389,8 @@ export function useActivities(leadId: string | null) {
 export function useCreateActivity() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { leadId: string; type: ActivityType; title: string; description?: string; createdBy?: string }) =>
-      api.post<{ data: Activity }>('/activities', data),
+    mutationFn: (data: { leadId: string; type: ActivityType; title: string; description?: string; text?: string; createdBy?: string }) =>
+      api.post<{ data: Activity }>('/activities', { ...data, text: data.text || data.title }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['activities'] })
     },

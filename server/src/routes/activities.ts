@@ -39,10 +39,13 @@ const createActivitySchema = z.object({
   leadId: z.string().optional(),
   dealId: z.string().optional(),
   projectId: z.string().optional(),
-  type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM', 'DOCUMENT_UPLOAD']),
-  text: z.string().min(1),
+  type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM', 'DOCUMENT_UPLOAD',
+    'TASK', 'DOCUMENT', 'REMINDER', 'DEAL_CREATED']),
+  text: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
   createdBy: z.string().optional(),
-})
+}).refine(d => d.text || d.title, { message: 'text oder title ist erforderlich' })
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -57,7 +60,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         deal_id: result.data.dealId ?? null,
         project_id: result.data.projectId ?? null,
         type: result.data.type,
-        text: result.data.text,
+        text: result.data.text || (result.data.description
+          ? `${result.data.title}\n${result.data.description}`
+          : result.data.title) || '',
         created_by: result.data.createdBy || req.user?.userId || null,
       })
       .select()
