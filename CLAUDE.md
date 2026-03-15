@@ -14,7 +14,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - State: Zustand (global), React Query (server state)
 - API: `/api/v1/...`, api.ts Helpers (api.get, api.post, api.put, api.delete)
 - Auth: JWT (bcryptjs + jsonwebtoken), useAuth Hook mit Auto-Refresh
-- Tests: Vitest v4.0.18 + Supertest (541 Tests in 3 E2E-Dateien)
+- Tests: Vitest v4.0.18 + Supertest (541 Backend-Tests + 204 Online-E2E-Tests)
 - caseMapper Middleware: Konvertiert alle DB snake_case Felder zu camelCase in API-Responses (server/src/lib/caseMapper.ts)
 
 ## Design-System
@@ -56,11 +56,12 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - NIEMALS snake_case in Frontend-TypeScript-Interfaces verwenden (contact_id, file_name, etc.)
 - Sidebar-Filter: allowedModules hat Prioritaet ueber Feature Flags (Sidebar.tsx:130-151)
 
-## Tests (541 Tests, alle gruen)
+## Tests (541 Backend + 204 Online E2E, alle gruen)
 - e2e-complete-v2.test.ts: 406 Backend-Tests (CRUD, Rollen, Berechtigungen, Edge Cases)
 - e2e-frontend-backend.test.ts: 64 Frontend-Backend-Kompatibilitaetstests (camelCase, User Flows, Regression)
 - e2e-v4-tasks-notifications.test.ts: 71 Tests (Tasks CRUD/Filter/Stats/Validierung, Notifications CRUD/Batch/Events/Isolation, Admin-Settings, camelCase-Regression, 20+ Smoke-Tests)
 - snake_case Regression: 28 verbotene Feldnamen werden ueber 7 Endpoints geprueft
+- online-e2e.sh: 204 Tests gegen Production (26 Sektionen: Auth, CRUD, Cross-Module, Rollen-403, Edge Cases, Deal VERLOREN Flow)
 - WICHTIG: Tests muessen echte User-IDs verwenden (FK-Constraints auf users). Admin: 'u006', Vertrieb: 'd8aeb7e2-f59a-45ba-a609-7d168d613c34'
 
 ## Workflow
@@ -83,12 +84,14 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [x] Dashboard (KPI, KI-Briefing, Tasks, Monatsstatistik, Provision)
 - [x] Modul-Berechtigungen (Sidebar + Routes + Admin-Matrix pro User)
 - [x] Dokumentenablage (Pipeline-uebergreifend, Supabase Storage, Base64 Upload)
-- [ ] Kalkulation
+- [x] Kalkulation (PV-Anlagen-Rechner, Stammdaten, Marge-Slider, CHF/kWp, CSV Export)
+- [x] Dokumente Hub (zentrale Dokumentenverwaltung, Filter nach Phase, Suche)
+- [x] Export-Center (CSV/JSON fuer 8 Entitaeten, DB-Stats, Format-Toggle)
+- [x] Kunden-Timeline (chronologische Aktivitaeten in allen Detail-Modals)
+- [x] Aktivitaets-Feed (Live-Feed im Dashboard)
+- [x] Batch-Operationen (Mehrfachauswahl Leads, Status-Massenänderung, Massen-Loeschen)
 - [ ] Rechnungen
-- [ ] Kommunikation
 - [ ] KI-Summary
-- [ ] Export
-- [ ] Dokumente (eigene Seite)
 
 ## Admin-Menue (14 Sektionen)
 Route: `/admin`, Komponente: AdminPage.tsx mit useState<AdminSection>
