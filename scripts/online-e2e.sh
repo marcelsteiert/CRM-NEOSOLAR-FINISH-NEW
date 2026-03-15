@@ -594,33 +594,160 @@ DASH_OK=$(echo "$DASH" | node -e "let b='';process.stdin.on('data',d=>b+=d);proc
 check "DashboardStats: {deals,appointments,tasks}" "$DASH_OK" "OK"
 
 # ════════════════════════════════════════════════════════════════════════════
-# 22. CROSS-MODULE (3 Tests)
+# 22. CROSS-MODULE VERKNUEPFUNGEN KOMPLETT (30+ Tests)
 # ════════════════════════════════════════════════════════════════════════════
 
 echo ""
-echo "── 22. CROSS-MODULE ──"
+echo "── 22. CROSS-MODULE KOMPLETT ──"
 
-# Lead → Deal mit leadId
-CROSS_LEAD=$(auth_post "/leads" "{\"firstName\":\"Cross-$RID\",\"lastName\":\"Module\",\"email\":\"cross-$RID@online.ch\",\"phone\":\"+41 71 000\",\"address\":\"Test\",\"source\":\"EMPFEHLUNG\"}")
-CROSS_LID=$(json_field "$CROSS_LEAD" "o.data.id")
-CROSS_CID=$(json_field "$CROSS_LEAD" "o.data.contactId")
+# ── 22a. Kontakt als Basis erstellen ──
+CM_CONTACT=$(auth_post "/contacts" "{\"firstName\":\"Pipeline-$RID\",\"lastName\":\"Flow-$RID\",\"email\":\"pipeline-$RID@online.ch\",\"phone\":\"+41 79 999 00 00\",\"address\":\"Solarweg 1, 8000 Zuerich\",\"company\":\"Pipeline AG\"}")
+CM_CID=$(json_field "$CM_CONTACT" "o.data.id")
+check "CM: Kontakt erstellt" "$([ -n "$CM_CID" ] && echo 'OK' || echo 'FAIL')" "OK"
 
-CROSS_DEAL=$(auth_post "/deals" "{\"title\":\"CrossDeal-$RID\",\"contactName\":\"Cross\",\"contactEmail\":\"crossd-$RID@online.ch\",\"contactPhone\":\"+41 71 000\",\"address\":\"Test\",\"value\":20000,\"leadId\":\"$CROSS_LID\",\"assignedTo\":\"$ADMIN_ID\"}")
-CROSS_DID=$(json_field "$CROSS_DEAL" "o.data.id")
-CROSS_DEAL_LID=$(json_field "$CROSS_DEAL" "o.data.leadId")
-check "Deal mit leadId verknuepft" "$CROSS_DEAL_LID" "$CROSS_LID"
+# ── 22b. Lead mit contactId verknuepfen ──
+CM_LEAD=$(auth_post "/leads" "{\"firstName\":\"Pipeline-$RID\",\"lastName\":\"Flow-$RID\",\"email\":\"pipeline-$RID@online.ch\",\"phone\":\"+41 79 999 00 00\",\"address\":\"Solarweg 1, 8000 Zuerich\",\"source\":\"EMPFEHLUNG\",\"contactId\":\"$CM_CID\"}")
+CM_LID=$(json_field "$CM_LEAD" "o.data.id")
+CM_LEAD_CID=$(json_field "$CM_LEAD" "o.data.contactId")
+check "CM: Lead erstellt mit contactId" "$([ -n "$CM_LID" ] && echo 'OK' || echo 'FAIL')" "OK"
+check "CM: Lead → Kontakt verknuepft" "$CM_LEAD_CID" "$CM_CID"
 
-# Task mit Lead-Referenz
-CROSS_TASK=$(auth_post "/tasks" "{\"title\":\"CrossTask-$RID\",\"module\":\"LEAD\",\"referenceId\":\"$CROSS_LID\",\"referenceTitle\":\"Cross Lead\",\"assignedTo\":\"$ADMIN_ID\"}")
-CROSS_TREF=$(json_field "$CROSS_TASK" "o.data.referenceId")
-check "Task mit Lead-Referenz" "$CROSS_TREF" "$CROSS_LID"
+# ── 22c. Termin mit contactId verknuepfen ──
+CM_APPT=$(auth_post "/appointments" "{\"contactName\":\"Pipeline-$RID Flow-$RID\",\"contactEmail\":\"pipeline-$RID@online.ch\",\"contactPhone\":\"+41 79 999 00 00\",\"address\":\"Solarweg 1, 8000 Zuerich\",\"appointmentDate\":\"2026-09-01\",\"appointmentTime\":\"14:00\",\"assignedTo\":\"$ADMIN_ID\",\"contactId\":\"$CM_CID\",\"leadId\":\"$CM_LID\"}")
+CM_AID=$(json_field "$CM_APPT" "o.data.id")
+CM_APPT_CID=$(json_field "$CM_APPT" "o.data.contactId")
+check "CM: Termin erstellt" "$([ -n "$CM_AID" ] && echo 'OK' || echo 'FAIL')" "OK"
+check "CM: Termin → Kontakt verknuepft" "$CM_APPT_CID" "$CM_CID"
 
-# Kontakt hat Verknuepfungen
-if [ -n "$CROSS_CID" ]; then
-  CROSS_DETAIL=$(auth_get "/contacts/$CROSS_CID")
-  CROSS_HAS=$(json_field "$CROSS_DETAIL" "o.data.leads&&o.data.leads.length>0?'OK':'FAIL'")
-  check "Kontakt hat verknuepfte Leads" "$CROSS_HAS" "OK"
-fi
+# Termin → Lead verknuepft
+CM_APPT_LID=$(json_field "$CM_APPT" "o.data.leadId")
+check "CM: Termin → Lead verknuepft" "$CM_APPT_LID" "$CM_LID"
+
+# ── 22d. Deal mit contactId + leadId verknuepfen ──
+CM_DEAL=$(auth_post "/deals" "{\"title\":\"PV-Anlage Pipeline-$RID\",\"contactName\":\"Pipeline-$RID\",\"contactEmail\":\"pipeline-deal-$RID@online.ch\",\"contactPhone\":\"+41 79 999 00 00\",\"address\":\"Solarweg 1\",\"value\":45000,\"assignedTo\":\"$ADMIN_ID\",\"winProbability\":75,\"leadId\":\"$CM_LID\",\"contactId\":\"$CM_CID\"}")
+CM_DID=$(json_field "$CM_DEAL" "o.data.id")
+CM_DEAL_CID=$(json_field "$CM_DEAL" "o.data.contactId")
+CM_DEAL_LID=$(json_field "$CM_DEAL" "o.data.leadId")
+check "CM: Deal erstellt" "$([ -n "$CM_DID" ] && echo 'OK' || echo 'FAIL')" "OK"
+check "CM: Deal → Kontakt verknuepft" "$CM_DEAL_CID" "$CM_CID"
+check "CM: Deal → Lead verknuepft" "$CM_DEAL_LID" "$CM_LID"
+
+# ── 22e. Deal Status-Flow: ERSTELLT → GESENDET → VERHANDLUNG → GEWONNEN ──
+auth_put "/deals/$CM_DID" '{"stage":"GESENDET"}' > /dev/null
+auth_put "/deals/$CM_DID" '{"stage":"VERHANDLUNG"}' > /dev/null
+CM_WON=$(auth_put "/deals/$CM_DID" '{"stage":"GEWONNEN"}')
+CM_WON_STAGE=$(json_field "$CM_WON" "o.data.stage")
+CM_WON_WP=$(json_field "$CM_WON" "o.data.winProbability")
+check "CM: Deal GEWONNEN" "$CM_WON_STAGE" "GEWONNEN"
+check "CM: winProbability=100 nach Gewonnen" "$CM_WON_WP" "100"
+
+# ── 22f. Projekt aus Deal erstellen (manuelle Konvertierung) ──
+CM_PROJ=$(auth_post "/projects" "{\"name\":\"PV Installation Pipeline-$RID\",\"description\":\"Aus Deal konvertiert\",\"address\":\"Solarweg 1, 8000 Zuerich\",\"email\":\"pipeline-$RID@online.ch\",\"kWp\":15,\"value\":45000,\"contactId\":\"$CM_CID\",\"dealId\":\"$CM_DID\",\"leadId\":\"$CM_LID\"}")
+CM_PID=$(json_field "$CM_PROJ" "o.data.id")
+CM_PROJ_CID=$(json_field "$CM_PROJ" "o.data.contactId")
+CM_PROJ_DID=$(json_field "$CM_PROJ" "o.data.dealId")
+check "CM: Projekt erstellt (aus Deal)" "$([ -n "$CM_PID" ] && echo 'OK' || echo 'FAIL')" "OK"
+check "CM: Projekt → Kontakt verknuepft" "$CM_PROJ_CID" "$CM_CID"
+check "CM: Projekt → Deal verknuepft" "$CM_PROJ_DID" "$CM_DID"
+
+# ── 22g. Tasks in ALLEN Modulen erstellen ──
+# Task LEAD
+CM_TASK_L=$(auth_post "/tasks" "{\"title\":\"Lead Task $RID\",\"module\":\"LEAD\",\"referenceId\":\"$CM_LID\",\"referenceTitle\":\"Pipeline Lead\",\"assignedTo\":\"$ADMIN_ID\"}")
+CM_TL_REF=$(json_field "$CM_TASK_L" "o.data.referenceId")
+CM_TL_MOD=$(json_field "$CM_TASK_L" "o.data.module")
+check "CM: Task LEAD → referenceId" "$CM_TL_REF" "$CM_LID"
+check "CM: Task LEAD → module" "$CM_TL_MOD" "LEAD"
+
+# Task TERMIN
+CM_TASK_T=$(auth_post "/tasks" "{\"title\":\"Termin Task $RID\",\"module\":\"TERMIN\",\"referenceId\":\"$CM_AID\",\"referenceTitle\":\"Pipeline Termin\",\"assignedTo\":\"$ADMIN_ID\"}")
+CM_TT_REF=$(json_field "$CM_TASK_T" "o.data.referenceId")
+CM_TT_MOD=$(json_field "$CM_TASK_T" "o.data.module")
+check "CM: Task TERMIN → referenceId" "$CM_TT_REF" "$CM_AID"
+check "CM: Task TERMIN → module" "$CM_TT_MOD" "TERMIN"
+
+# Task ANGEBOT
+CM_TASK_A=$(auth_post "/tasks" "{\"title\":\"Angebot Task $RID\",\"module\":\"ANGEBOT\",\"referenceId\":\"$CM_DID\",\"referenceTitle\":\"Pipeline Deal\",\"assignedTo\":\"$ADMIN_ID\"}")
+CM_TA_REF=$(json_field "$CM_TASK_A" "o.data.referenceId")
+CM_TA_MOD=$(json_field "$CM_TASK_A" "o.data.module")
+check "CM: Task ANGEBOT → referenceId" "$CM_TA_REF" "$CM_DID"
+check "CM: Task ANGEBOT → module" "$CM_TA_MOD" "ANGEBOT"
+
+# Task PROJEKT
+CM_TASK_P=$(auth_post "/tasks" "{\"title\":\"Projekt Task $RID\",\"module\":\"PROJEKT\",\"referenceId\":\"$CM_PID\",\"referenceTitle\":\"Pipeline Projekt\",\"assignedTo\":\"$ADMIN_ID\"}")
+CM_TP_REF=$(json_field "$CM_TASK_P" "o.data.referenceId")
+CM_TP_MOD=$(json_field "$CM_TASK_P" "o.data.module")
+check "CM: Task PROJEKT → referenceId" "$CM_TP_REF" "$CM_PID"
+check "CM: Task PROJEKT → module" "$CM_TP_MOD" "PROJEKT"
+
+# Task ALLGEMEIN (ohne Referenz)
+CM_TASK_G=$(auth_post "/tasks" "{\"title\":\"Allgemein Task $RID\",\"module\":\"ALLGEMEIN\",\"assignedTo\":\"$ADMIN_ID\"}")
+CM_TG_MOD=$(json_field "$CM_TASK_G" "o.data.module")
+check "CM: Task ALLGEMEIN (ohne Referenz)" "$CM_TG_MOD" "ALLGEMEIN"
+
+# ── 22h. Dokument-Upload an Kontakt (pipeline-uebergreifend) ──
+CM_DOC=$(auth_post "/documents" "{\"contactId\":\"$CM_CID\",\"entityType\":\"ANGEBOT\",\"entityId\":\"$CM_DID\",\"fileName\":\"Offerte_Pipeline_$RID.pdf\",\"fileSize\":1024,\"mimeType\":\"application/pdf\",\"fileBase64\":\"JVBERi0xLjQK\"}")
+CM_DOC_ID=$(json_field "$CM_DOC" "o.data.id")
+check "CM: Dokument Upload → Kontakt" "$([ -n "$CM_DOC_ID" ] && echo 'OK' || echo 'FAIL')" "OK"
+
+# Dokumente fuer Kontakt abrufen (alle Phasen)
+CM_DOCS=$(auth_get "/documents?contactId=$CM_CID")
+CM_DOCS_OK=$(echo "$CM_DOCS" | node -e "let b='';process.stdin.on('data',d=>b+=d);process.stdin.on('end',()=>{try{const r=JSON.parse(b);console.log(Array.isArray(r.data)&&r.data.length>0?'OK':'FAIL')}catch{console.log('FAIL')}})")
+check "CM: Dokumente fuer Kontakt abrufbar" "$CM_DOCS_OK" "OK"
+
+# ── 22i. Aktivitaeten pruefen (Auto-generiert durch Deal/Projekt) ──
+CM_ACTS=$(auth_get "/activities?contactId=$CM_CID")
+CM_ACTS_OK=$(echo "$CM_ACTS" | node -e "let b='';process.stdin.on('data',d=>b+=d);process.stdin.on('end',()=>{try{const r=JSON.parse(b);console.log(Array.isArray(r.data)?'OK':'FAIL')}catch{console.log('FAIL')}})")
+check "CM: Aktivitaeten fuer Kontakt abrufbar" "$CM_ACTS_OK" "OK"
+
+# Deal-Aktivitaeten pruefen
+CM_DACTS=$(auth_get "/deals/$CM_DID")
+CM_DACTS_OK=$(json_field "$(auth_get "/activities?dealId=$CM_DID")" "Array.isArray(o.data)?'OK':'FAIL'")
+check "CM: Aktivitaeten fuer Deal abrufbar" "$CM_DACTS_OK" "OK"
+
+# ── 22j. Notifications pruefen (Auto-generiert bei Events) ──
+CM_NOTIFS=$(auth_get "/notifications")
+CM_NOTIF_HAS=$(echo "$CM_NOTIFS" | node -e "let b='';process.stdin.on('data',d=>b+=d);process.stdin.on('end',()=>{try{const r=JSON.parse(b);const n=r.data||[];console.log(n.length>0?'OK':'FAIL')}catch{console.log('FAIL')}})")
+check "CM: Notifications vorhanden" "$CM_NOTIF_HAS" "OK"
+
+# DEAL_WON Notification pruefen
+CM_WON_NOTIF=$(echo "$CM_NOTIFS" | node -e "let b='';process.stdin.on('data',d=>b+=d);process.stdin.on('end',()=>{try{const r=JSON.parse(b);const n=(r.data||[]).find(x=>x.type==='DEAL_WON');console.log(n?'OK':'FAIL')}catch{console.log('FAIL')}})")
+check "CM: DEAL_WON Notification erzeugt" "$CM_WON_NOTIF" "OK"
+
+# ── 22k. Kontakt-Detail zeigt ALLE Verknuepfungen ──
+CM_DETAIL=$(auth_get "/contacts/$CM_CID")
+CM_HAS_LEADS=$(json_field "$CM_DETAIL" "o.data.leads&&o.data.leads.length>0?'OK':'FAIL'")
+check "CM: Kontakt → Leads verknuepft" "$CM_HAS_LEADS" "OK"
+
+CM_HAS_DEALS=$(json_field "$CM_DETAIL" "o.data.deals&&o.data.deals.length>0?'OK':'FAIL'")
+check "CM: Kontakt → Deals verknuepft" "$CM_HAS_DEALS" "OK"
+
+CM_HAS_PROJS=$(json_field "$CM_DETAIL" "o.data.projects&&o.data.projects.length>0?'OK':'FAIL'")
+check "CM: Kontakt → Projekte verknuepft" "$CM_HAS_PROJS" "OK"
+
+CM_HAS_APPTS=$(json_field "$CM_DETAIL" "o.data.appointments&&o.data.appointments.length>0?'OK':'FAIL'")
+check "CM: Kontakt → Termine verknuepft" "$CM_HAS_APPTS" "OK"
+
+# ── 22l. Task-Filter nach Modul pruefen ──
+CM_TASKS_LEAD=$(auth_get "/tasks?module=LEAD")
+CM_TFL=$(echo "$CM_TASKS_LEAD" | node -e "let b='';process.stdin.on('data',d=>b+=d);process.stdin.on('end',()=>{try{const r=JSON.parse(b);const ok=(r.data||[]).every(t=>t.module==='LEAD');console.log(ok?'OK':'FAIL')}catch{console.log('FAIL')}})")
+check "CM: Tasks Filter module=LEAD korrekt" "$CM_TFL" "OK"
+
+CM_TASKS_PROJ=$(auth_get "/tasks?module=PROJEKT")
+CM_TFP=$(echo "$CM_TASKS_PROJ" | node -e "let b='';process.stdin.on('data',d=>b+=d);process.stdin.on('end',()=>{try{const r=JSON.parse(b);const ok=(r.data||[]).every(t=>t.module==='PROJEKT');console.log(ok?'OK':'FAIL')}catch{console.log('FAIL')}})")
+check "CM: Tasks Filter module=PROJEKT korrekt" "$CM_TFP" "OK"
+
+# ── 22m. Cleanup: Erstellte Testdaten loeschen ──
+auth_delete_status "/tasks/$(json_field "$CM_TASK_L" "o.data.id")" > /dev/null
+auth_delete_status "/tasks/$(json_field "$CM_TASK_T" "o.data.id")" > /dev/null
+auth_delete_status "/tasks/$(json_field "$CM_TASK_A" "o.data.id")" > /dev/null
+auth_delete_status "/tasks/$(json_field "$CM_TASK_P" "o.data.id")" > /dev/null
+auth_delete_status "/tasks/$(json_field "$CM_TASK_G" "o.data.id")" > /dev/null
+auth_delete_status "/documents/$CM_DOC_ID" > /dev/null
+auth_delete_status "/projects/$CM_PID" > /dev/null
+auth_delete_status "/deals/$CM_DID" > /dev/null
+auth_delete_status "/appointments/$CM_AID" > /dev/null
+auth_delete_status "/leads/$CM_LID" > /dev/null
+check "CM: Cleanup abgeschlossen" "OK" "OK"
 
 # ════════════════════════════════════════════════════════════════════════════
 # 23. HEALTH (1 Test)
