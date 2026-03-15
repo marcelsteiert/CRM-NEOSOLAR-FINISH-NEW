@@ -13,6 +13,8 @@ interface LeadTableProps {
   onSort: (field: string) => void
   tags: Tag[]
   onEditLead?: (lead: Lead) => void
+  selectedIds?: Set<string>
+  onToggleSelect?: (id: string) => void
 }
 
 /* ── Status color mapping ── */
@@ -527,6 +529,8 @@ export default function LeadTable({
   onSort,
   tags,
   onEditLead,
+  selectedIds,
+  onToggleSelect,
 }: LeadTableProps) {
   const deleteLead = useDeleteLead()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -621,6 +625,20 @@ export default function LeadTable({
                 onClick={() => onSelectLead(lead)}
                 className="border-b border-border cursor-pointer hover:bg-surface-hover transition-colors duration-150"
               >
+                {/* Batch-Checkbox */}
+                {onToggleSelect && (
+                  <td className="pl-4 pr-1 py-4 w-8">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onToggleSelect(lead.id) }}
+                      className="text-white/25 hover:text-white/50"
+                    >
+                      {selectedIds?.has(lead.id)
+                        ? <span className="text-amber-500">☑</span>
+                        : <span>☐</span>
+                      }
+                    </button>
+                  </td>
+                )}
                 {visibleColumns.map((col) => (
                   <td key={col.key} className="px-6 py-4">
                     {renderCell(col.key, lead, tagMap, prefs.sourceLabels, tags)}

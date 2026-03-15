@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   Users,
   Plus,
@@ -10,11 +10,16 @@ import {
   Download,
   Tag as TagIcon,
   Trash2,
+  CheckSquare,
+  Square,
+  X,
 } from 'lucide-react'
 import {
   useLeads,
   useTags,
   useDeleteAllLeads,
+  useDeleteLead,
+  useUpdateLead,
   type Lead,
   type LeadSource,
   type LeadStatus,
@@ -166,6 +171,9 @@ export default function LeadsPage() {
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchAction, setBatchAction] = useState<'delete' | 'status' | null>(null)
+  const [batchStatus, setBatchStatus] = useState<LeadStatus>('ACTIVE')
 
   /* ── Preferences (custom source labels) ── */
   const { prefs } = useTablePreferences()
@@ -188,7 +196,47 @@ export default function LeadsPage() {
   })
 
   const deleteAllLeads = useDeleteAllLeads()
+  const deleteLead = useDeleteLead()
+  const updateLead = useUpdateLead()
   const allLeads: Lead[] = leadsResponse?.data ?? []
+
+  // Batch-Helpers
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    setSelectedIds(prev => {
+      if (prev.size === allLeads.length) return new Set()
+      return new Set(allLeads.map(l => l.id))
+    })
+  }, [allLeads])
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+    setBatchAction(null)
+  }, [])
+
+  const executeBatchDelete = useCallback(async () => {
+    for (const id of selectedIds) {
+      await deleteLead.mutateAsync(id)
+    }
+    clearSelection()
+    refetch()
+  }, [selectedIds, deleteLead, clearSelection, refetch])
+
+  const executeBatchStatus = useCallback(async () => {
+    for (const id of selectedIds) {
+      await updateLead.mutateAsync({ id, status: batchStatus })
+    }
+    clearSelection()
+    refetch()
+  }, [selectedIds, updateLead, batchStatus, clearSelection, refetch])
 
   const { data: tagsData } = useTags()
 
@@ -496,14 +544,91 @@ export default function LeadsPage() {
             onRetry={() => refetch()}
           />
         ) : (
-          <LeadTable
-            leads={filteredLeads}
-            onSelectLead={handleSelectLead}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSort={handleSort}
-            tags={tags}
-          />
+          <>
+            {/* Batch-Toolbar */}
+            {selectedIds.size > 0 && (
+              <div className="glass-card p-3 mb-3 flex items-center gap-3 border border-amber-500/20">
+                <span className="text-xs text-amber-400 font-medium">
+                  {selectedIds.size} ausgewählt
+                </span>
+                <div className="h-4 w-px bg-white/10" />
+                {batchAction === 'delete' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-400">Wirklich löschen?</span>
+                    <button onClick={executeBatchDelete} className="text-[11px] px-2 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30">
+                      Ja, löschen
+                    </button>
+                    <button onClick={() => setBatchAction(null)} className="text-[11px] px-2 py-1 rounded bg-white/[0.04] text-white/40 hover:text-white/60">
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : batchAction === 'status' ? (
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="glass-input text-[11px] py-1"
+                      value={batchStatus}
+                      onChange={e => setBatchStatus(e.target.value as LeadStatus)}
+                    >
+                      {Object.entries(statusLabels).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                    <button onClick={executeBatchStatus} className="text-[11px] px-2 py-1 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30">
+                      Anwenden
+                    </button>
+                    <button onClick={() => setBatchAction(null)} className="text-[11px] px-2 py-1 rounded bg-white/[0.04] text-white/40 hover:text-white/60">
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setBatchAction('status')}
+                      className="text-[11px] px-2.5 py-1 rounded bg-white/[0.04] text-white/50 hover:text-white/80 hover:bg-white/[0.06]"
+                    >
+                      Status ändern
+                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setBatchAction('delete')}
+                        className="text-[11px] px-2.5 py-1 rounded bg-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/20"
+                      >
+                        <Trash2 size={12} className="inline mr-1" />Löschen
+                      </button>
+                    )}
+                  </>
+                )}
+                <div className="flex-1" />
+                <button onClick={clearSelection} className="text-white/20 hover:text-white/50">
+                  <X size={14} strokeWidth={1.8} />
+                </button>
+              </div>
+            )}
+
+            {/* Select-All Checkbox */}
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <button onClick={toggleSelectAll} className="text-white/25 hover:text-white/50">
+                {selectedIds.size === allLeads.length && allLeads.length > 0
+                  ? <CheckSquare size={16} strokeWidth={1.8} className="text-amber-500" />
+                  : <Square size={16} strokeWidth={1.8} />
+                }
+              </button>
+              <span className="text-[10px] text-white/20">
+                {selectedIds.size > 0 ? `${selectedIds.size}/${allLeads.length}` : 'Alle auswählen'}
+              </span>
+            </div>
+
+            <LeadTable
+              leads={filteredLeads}
+              onSelectLead={handleSelectLead}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              tags={tags}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+            />
+          </>
         )}
       </div>
 

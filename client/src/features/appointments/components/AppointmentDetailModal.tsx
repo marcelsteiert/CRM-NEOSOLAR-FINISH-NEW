@@ -15,13 +15,14 @@ import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import TaskSection from '@/components/ui/TaskSection'
+import ContactTimeline from '@/components/ui/ContactTimeline'
 
 interface Props {
   appointmentId: string
   onClose: () => void
 }
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'checklist' | 'tasks'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'checklist' | 'tasks' | 'timeline'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -204,6 +205,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     { key: 'documents', label: 'Dokumente' },
     { key: 'emails', label: 'E-Mail' },
     { key: 'tasks', label: 'Aufgaben' },
+    { key: 'timeline', label: 'Timeline' },
   ]
 
   return (
@@ -520,6 +522,11 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
           {/* ────── TAB: Aufgaben ────── */}
           {activeTab === 'tasks' && (
             <TaskSection module="TERMIN" referenceId={appt.id} referenceTitle={appt.contactName || 'Termin'} />
+          )}
+
+          {/* ────── TAB: Timeline ────── */}
+          {activeTab === 'timeline' && appt && (
+            <ContactTimeline contactId={appt.contactId} />
           )}
         </div>
 

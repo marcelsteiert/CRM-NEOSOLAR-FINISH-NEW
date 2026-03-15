@@ -18,6 +18,7 @@ import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
 import TaskSection from '@/components/ui/TaskSection'
+import ContactTimeline from '@/components/ui/ContactTimeline'
 import { useGenerateDealSummary } from '@/hooks/useAi'
 
 interface Props {
@@ -25,7 +26,7 @@ interface Props {
   onClose: () => void
 }
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks' | 'timeline'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -247,6 +248,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     { key: 'documents', label: 'Dokumente' },
     { key: 'emails', label: 'E-Mail' },
     { key: 'tasks', label: 'Aufgaben' },
+    { key: 'timeline', label: 'Timeline' },
   ]
 
   return (
@@ -704,6 +706,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           {/* ────── TAB: Aufgaben ────── */}
           {activeTab === 'tasks' && (
             <TaskSection module="ANGEBOT" referenceId={deal.id} referenceTitle={deal.title || 'Angebot'} />
+          )}
+
+          {/* ────── TAB: Timeline ────── */}
+          {activeTab === 'timeline' && deal && (
+            <ContactTimeline contactId={deal.contactId} />
           )}
         </div>
 

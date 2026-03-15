@@ -50,6 +50,7 @@ import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
 import TaskSection from '@/components/ui/TaskSection'
+import ContactTimeline from '@/components/ui/ContactTimeline'
 import { useGenerateLeadSummary } from '@/hooks/useAi'
 
 /* ── Props ── */
@@ -123,7 +124,7 @@ const activityTypeConfig: Record<ActivityType, { icon: typeof Phone; color: stri
 
 /* ── Tab Type ── */
 
-type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'reminders' | 'tasks'
+type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'reminders' | 'tasks' | 'timeline'
 
 /* ── Mock Documents ── */
 
@@ -442,6 +443,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     { key: 'emails', label: 'E-Mail' },
     { key: 'reminders', label: 'Erinnerungen' },
     { key: 'tasks', label: 'Aufgaben' },
+    { key: 'timeline', label: 'Timeline' },
   ]
 
   /* ── Source options ── */
@@ -1453,6 +1455,11 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
               referenceId={lead.id}
               referenceTitle={[lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Lead'}
             />
+          )}
+
+          {/* ────────── TAB 8: Timeline ────────── */}
+          {activeTab === 'timeline' && lead && (
+            <ContactTimeline contactId={lead.contactId} />
           )}
         </div>
 

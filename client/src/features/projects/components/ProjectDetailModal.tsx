@@ -18,6 +18,7 @@ import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
 import TaskSection from '@/components/ui/TaskSection'
+import ContactTimeline from '@/components/ui/ContactTimeline'
 import { useGenerateContactSummary } from '@/hooks/useAi'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
@@ -37,7 +38,7 @@ const activityIcons: Record<ProjectActivityType, React.ComponentType<{ size?: nu
   SYSTEM: Zap,
 }
 
-type ProjectTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks'
+type ProjectTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks' | 'timeline'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -270,6 +271,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     { key: 'documents', label: 'Dokumente' },
     { key: 'emails', label: 'E-Mail' },
     { key: 'tasks', label: 'Aufgaben' },
+    { key: 'timeline', label: 'Timeline' },
   ]
 
   return (
@@ -865,6 +867,11 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
             <div className="px-4 sm:px-6 py-5">
               <TaskSection module="PROJEKT" referenceId={project.id} referenceTitle={project.name || 'Projekt'} />
             </div>
+          )}
+
+          {/* ────── TAB: Timeline ────── */}
+          {activeTab === 'timeline' && project && (
+            <ContactTimeline contactId={project.contactId} />
           )}
         </div>
       </div>

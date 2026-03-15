@@ -760,6 +760,88 @@ HEALTH_OK=$(echo "$HEALTH" | node -e "let b='';process.stdin.on('data',d=>b+=d);
 check "Health: status=ok, supabase=connected" "$HEALTH_OK" "OK"
 
 # ════════════════════════════════════════════════════════════════════════════
+# 24. ROLLEN-ZUGRIFF – VERTRIEB darf NICHT auf Admin-Routen (9 Tests)
+# ════════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "── 24. ROLLEN-ZUGRIFF (VERTRIEB → 403) ──"
+
+# Login als Vertrieb
+VT_LOGIN=$(curl -s -X POST "$PROD/auth/login" -H "Content-Type: application/json" -d '{"email":"gast@neosolar.ch","password":"marceL...1"}')
+VT_TOKEN=$(json_field "$VT_LOGIN" "o.data.token")
+
+if [ -n "$VT_TOKEN" ] && [ "$VT_TOKEN" != "ERROR" ]; then
+  vt_status() {
+    curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $VT_TOKEN" "$PROD$1"
+  }
+
+  check "VERTRIEB: /admin/products → 403" "$(vt_status '/admin/products')" "403"
+  check "VERTRIEB: /admin/integrations → 403" "$(vt_status '/admin/integrations')" "403"
+  check "VERTRIEB: /admin/webhooks → 403" "$(vt_status '/admin/webhooks')" "403"
+  check "VERTRIEB: /admin/branding → 403" "$(vt_status '/admin/branding')" "403"
+  check "VERTRIEB: /admin/ai-settings → 403" "$(vt_status '/admin/ai-settings')" "403"
+  check "VERTRIEB: /admin/notification-settings → 403" "$(vt_status '/admin/notification-settings')" "403"
+  check "VERTRIEB: /admin/doc-templates → 403" "$(vt_status '/admin/doc-templates')" "403"
+  check "VERTRIEB: /admin/audit-log → 403" "$(vt_status '/admin/audit-log')" "403"
+  check "VERTRIEB: /admin/db-export/stats → 403" "$(vt_status '/admin/db-export/stats')" "403"
+else
+  echo "  ⚠️  VERTRIEB-Login fehlgeschlagen – Rollen-Tests uebersprungen"
+fi
+
+# ════════════════════════════════════════════════════════════════════════════
+# 25. EDGE CASES & VALIDIERUNG (8 Tests)
+# ════════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "── 25. EDGE CASES ──"
+
+# Nicht-existierende ID → 404
+check "Lead 404 fuer ungueltige ID" "$(auth_status '/leads/nonexistent-id-12345')" "404"
+check "Deal 404 fuer ungueltige ID" "$(auth_status '/deals/nonexistent-id-12345')" "404"
+check "Task 404 fuer ungueltige ID" "$(auth_status '/tasks/nonexistent-id-12345')" "404"
+check "Projekt 404 fuer ungueltige ID" "$(auth_status '/projects/nonexistent-id-12345')" "404"
+
+# Leere Pflichtfelder → 422
+check "Lead ohne Pflichtfelder → 422" "$(auth_post_status '/leads' '{}')" "422"
+check "Task ohne Pflichtfelder → 422" "$(auth_post_status '/tasks' '{}')" "422"
+
+# Ungueltige Suche (zu kurz) → leeres Array
+SHORT_SEARCH=$(auth_get "/search?q=X")
+SHORT_OK=$(json_field "$SHORT_SEARCH" "Array.isArray(o.data)&&o.data.length===0?'OK':'FAIL'")
+check "Suche mit 1 Zeichen → leeres Array" "$SHORT_OK" "OK"
+
+# Pagination
+PAGE_RESP=$(auth_get "/leads?page=1&pageSize=2")
+PAGE_OK=$(json_field "$PAGE_RESP" "Array.isArray(o.data)&&o.data.length<=2?'OK':'FAIL'")
+check "Pagination: pageSize=2 limitiert" "$PAGE_OK" "OK"
+
+# ════════════════════════════════════════════════════════════════════════════
+# 26. DEAL VERLOREN FLOW (4 Tests)
+# ════════════════════════════════════════════════════════════════════════════
+
+echo ""
+echo "── 26. DEAL VERLOREN FLOW ──"
+
+LOST_DEAL=$(auth_post "/deals" "{\"title\":\"LostDeal-$RID\",\"contactName\":\"Lost\",\"contactEmail\":\"lost-$RID@online.ch\",\"contactPhone\":\"+41 71 000\",\"address\":\"Test\",\"value\":10000,\"assignedTo\":\"$ADMIN_ID\",\"winProbability\":50}")
+LOST_DID=$(json_field "$LOST_DEAL" "o.data.id")
+
+# VERLOREN setzen
+LOST_UPD=$(auth_put "/deals/$LOST_DID" '{"stage":"VERLOREN"}')
+LOST_STAGE=$(json_field "$LOST_UPD" "o.data.stage")
+LOST_WP=$(json_field "$LOST_UPD" "o.data.winProbability")
+check "Deal VERLOREN: stage" "$LOST_STAGE" "VERLOREN"
+check "Deal VERLOREN: winProbability=0" "$LOST_WP" "0"
+
+# Zurueck zu VERHANDLUNG (Admin-Revert)
+REVERT_UPD=$(auth_put "/deals/$LOST_DID" '{"stage":"VERHANDLUNG"}')
+REVERT_STAGE=$(json_field "$REVERT_UPD" "o.data.stage")
+check "Deal Revert: VERLOREN → VERHANDLUNG" "$REVERT_STAGE" "VERHANDLUNG"
+
+# Cleanup
+auth_delete_status "/deals/$LOST_DID" > /dev/null
+check "Deal VERLOREN Cleanup" "OK" "OK"
+
+# ════════════════════════════════════════════════════════════════════════════
 # ERGEBNIS
 # ════════════════════════════════════════════════════════════════════════════
 

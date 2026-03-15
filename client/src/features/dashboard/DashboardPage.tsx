@@ -18,6 +18,8 @@ import {
   Check,
   ExternalLink,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
 import { useDashboardStats, useMonthlyStats } from '@/hooks/useDashboard'
 import { useTasks, type Task, taskPriorityColors } from '@/hooks/useTasks'
 import { useSharedPasswords } from '@/hooks/usePasswords'
@@ -163,6 +165,68 @@ function TaskRow({ task, onNavigate }: { task: Task; onNavigate: () => void }) {
 }
 
 // ── Shared Passwords Widget ──
+
+// ── Activity Feed Widget ──
+
+function ActivityFeedWidget() {
+  const { data } = useQuery({
+    queryKey: ['activities', 'recent'],
+    queryFn: () => api.get<{ data: { id: string; type: string; title?: string; text?: string; description?: string; createdAt: string; entityType?: string }[] }>('/activities'),
+  })
+
+  const activities = (data?.data ?? []).slice(0, 8)
+
+  const typeIcons: Record<string, { icon: string; color: string }> = {
+    NOTE: { icon: '💬', color: '#F59E0B' },
+    CALL: { icon: '📞', color: '#22D3EE' },
+    EMAIL: { icon: '✉️', color: '#60A5FA' },
+    MEETING: { icon: '🤝', color: '#A78BFA' },
+    STATUS_CHANGE: { icon: '🔄', color: '#F87171' },
+    SYSTEM: { icon: '⚙️', color: '#9CA3AF' },
+    DOCUMENT_UPLOAD: { icon: '📎', color: '#34D399' },
+  }
+
+  if (activities.length === 0) return null
+
+  return (
+    <div className="glass-card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <ClipboardList size={16} className="text-cyan-400" />
+          <h3 className="text-sm font-bold tracking-[-0.01em]">Letzte Aktivitäten</h3>
+        </div>
+        <span className="text-[10px] text-white/25">Live-Feed</span>
+      </div>
+      <div className="space-y-2">
+        {activities.map(a => {
+          const config = typeIcons[a.type] ?? { icon: '📋', color: '#9CA3AF' }
+          const text = a.title || a.text || a.description || a.type
+          const time = new Date(a.createdAt)
+          const diff = Math.floor((Date.now() - time.getTime()) / 60000)
+          const timeStr = diff < 1 ? 'gerade' : diff < 60 ? `${diff}m` : diff < 1440 ? `${Math.floor(diff/60)}h` : `${Math.floor(diff/1440)}d`
+
+          return (
+            <div key={a.id} className="flex items-center gap-3 py-1.5">
+              <span className="text-sm shrink-0">{config.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-white/60 truncate">{text}</p>
+              </div>
+              {a.entityType && (
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: `color-mix(in srgb, ${config.color} 10%, transparent)`, color: config.color }}
+                >
+                  {a.entityType}
+                </span>
+              )}
+              <span className="text-[10px] text-white/20 shrink-0 w-8 text-right">{timeStr}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 function SharedPasswordsWidget() {
   const { data: response } = useSharedPasswords()
@@ -599,6 +663,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* ── Letzte Aktivitäten (Feed) ── */}
+      <ActivityFeedWidget />
 
       {/* ── Geteilte Passwörter ── */}
       <SharedPasswordsWidget />
