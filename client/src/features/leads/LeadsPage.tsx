@@ -64,7 +64,7 @@ function LoadingSkeleton() {
                     <div
                       className="h-3.5 rounded-md animate-pulse"
                       style={{
-                        width: `${100 + Math.random() * 40}px`,
+                        width: `${100 + (i % 5) * 10}px`,
                         background: 'rgba(255,255,255,0.06)',
                         animationDelay: `${i * 80}ms`,
                       }}

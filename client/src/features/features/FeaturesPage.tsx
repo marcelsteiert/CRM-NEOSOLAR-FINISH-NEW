@@ -3,7 +3,7 @@ import {
   Puzzle, Mail, Calculator, Sparkles, ClipboardList, FileBox,
   Download, Bell, Coins, FolderKanban, CalendarCheck, FileText,
   Users, Shield, LayoutDashboard, ToggleLeft, ToggleRight,
-  Zap, Star, Lock, Check,
+  Lock, Check,
 } from 'lucide-react'
 import { useFeatureFlags, type FeatureFlag } from '@/hooks/useFeatureFlags'
 import { useAuth } from '@/hooks/useAuth'

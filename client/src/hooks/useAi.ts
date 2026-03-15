@@ -128,7 +128,7 @@ export function useFollowUpCheck() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () =>
-      api.post<{ data: { summary: string | null; items?: any[]; error?: string } }>('/ai/follow-up-check', {}),
+      api.post<{ data: { summary: string | null; items?: unknown[]; error?: string } }>('/ai/follow-up-check', {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['aiHistory'] })
     },

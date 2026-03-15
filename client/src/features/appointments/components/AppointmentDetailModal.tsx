@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import {
-  X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar, Clock,
+  X, Pencil, Check, Phone, Mail, MapPin, Building2, Clock,
   Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle, Globe,
-  Plus, Send, PhoneCall, MessageSquare, Users as UsersIcon, Zap,
 } from 'lucide-react'
 import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
   statusLabels, statusColors, priorityLabels, priorityColors,
   appointmentTypeLabels, appointmentTypeColors,
-  type AppointmentStatus, type AppointmentPriority, type AppointmentType, type ChecklistItem,
+  type AppointmentStatus, type AppointmentPriority,
 } from '@/hooks/useAppointments'
 import { useCreateDeal } from '@/hooks/useDeals'
 import { useUsers } from '@/hooks/useLeads'

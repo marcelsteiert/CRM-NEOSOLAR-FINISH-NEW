@@ -1,16 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Users,
   TrendingUp,
-  Target,
   DollarSign,
   Calendar,
-  CheckCircle2,
   ClipboardList,
-  AlertCircle,
   Trophy,
-  XCircle,
   ArrowUpRight,
   Sparkles,
   BarChart3,
@@ -25,7 +20,7 @@ import {
 } from 'lucide-react'
 import { useDashboardStats, useMonthlyStats } from '@/hooks/useDashboard'
 import { useTasks, type Task, taskPriorityColors } from '@/hooks/useTasks'
-import { useSharedPasswords, type PasswordEntry } from '@/hooks/usePasswords'
+import { useSharedPasswords } from '@/hooks/usePasswords'
 import { useAuth } from '@/hooks/useAuth'
 import { useGenerateBriefing } from '@/hooks/useAi'
 
@@ -318,8 +313,8 @@ export default function DashboardPage() {
                       const res = await generateBriefing.mutateAsync()
                       if (res?.data?.summary) setAiBriefing(res.data.summary)
                       if (res?.data?.error) setAiBriefing(`Fehler: ${res.data.error}`)
-                    } catch (err: any) {
-                      setAiBriefing(`Fehler: ${err?.message || 'Unbekannter Fehler'}`)
+                    } catch (err: unknown) {
+                      setAiBriefing(`Fehler: ${(err as Error)?.message || 'Unbekannter Fehler'}`)
                     }
                   }}
                   disabled={generateBriefing.isPending}

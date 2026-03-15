@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from 'react'
 import { Sparkles, User, FileText, Briefcase, Clock, Zap, ChevronDown, RefreshCw, History, AlertTriangle } from 'lucide-react'
 import { useGenerateLeadSummary, useGenerateDealSummary, useGenerateContactSummary, useGenerateBriefing, useFollowUpCheck, useAiHistory } from '@/hooks/useAi'

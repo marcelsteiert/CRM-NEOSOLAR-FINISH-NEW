@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   X, AlertTriangle, MapPin, Phone, Mail, Building2, Sun, Zap, CheckCircle2,
   FolderKanban, Check, Loader2, Pencil, Save, XCircle, Trash2, Archive, ArchiveRestore,
-  ExternalLink, FileText, TrendingUp, MessageSquare, PhoneCall,
+  ExternalLink, TrendingUp, MessageSquare, PhoneCall,
   Users as UsersIcon, Send, GitBranch, Calendar, FileCheck, Clock,
 } from 'lucide-react'
 import {
@@ -742,10 +742,10 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
               {project.contactId && (
                 <div className="mt-5">
                   <AiSummaryCard
-                    summary={(generateContactSummary.data as any)?.data?.summary}
+                    summary={(generateContactSummary.data as Record<string, Record<string, string>> | undefined)?.data?.summary}
                     isGenerating={generateContactSummary.isPending}
                     onGenerate={() => generateContactSummary.mutate(project.contactId)}
-                    error={generateContactSummary.error?.message || (generateContactSummary.data as any)?.data?.error}
+                    error={generateContactSummary.error?.message || (generateContactSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
                   />
                 </div>
               )}

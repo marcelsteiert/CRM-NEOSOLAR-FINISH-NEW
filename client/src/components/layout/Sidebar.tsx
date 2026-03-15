@@ -37,6 +37,7 @@ interface SidebarContextValue {
 
 const SidebarContext = createContext<SidebarContextValue>({ pinned: false, setPinned: () => {}, mobileOpen: false, setMobileOpen: () => {} })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSidebarPinned() {
   return useContext(SidebarContext)
 }

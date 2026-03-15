@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar,
-  Trash2, ChevronDown, Trophy, XCircle, FileText, Clock,
+  Trash2, ChevronDown, Trophy, XCircle, Clock,
   MessageSquare, PhoneCall, Users as UsersIcon,
   Zap, Send, Percent, CalendarClock,
 } from 'lucide-react'
@@ -583,7 +583,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 summary={deal.aiSummary}
                 isGenerating={generateDealSummary.isPending}
                 onGenerate={() => generateDealSummary.mutate(deal.id)}
-                error={generateDealSummary.error?.message || (generateDealSummary.data as any)?.data?.error}
+                error={generateDealSummary.error?.message || (generateDealSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
                 compact
               />
             </>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
 import { useTags } from '@/hooks/useLeads'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
 const TAG_COLORS = [

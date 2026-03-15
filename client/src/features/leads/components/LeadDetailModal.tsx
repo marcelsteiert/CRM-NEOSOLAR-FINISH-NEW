@@ -1066,7 +1066,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 summary={lead.aiSummary}
                 isGenerating={generateLeadSummary.isPending}
                 onGenerate={() => generateLeadSummary.mutate(lead.id)}
-                error={generateLeadSummary.error?.message || (generateLeadSummary.data as any)?.data?.error}
+                error={generateLeadSummary.error?.message || (generateLeadSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
                 compact
               />
             </>

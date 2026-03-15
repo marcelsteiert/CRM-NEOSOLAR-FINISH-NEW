@@ -181,33 +181,27 @@ function parseCsvLine(line: string): string[] {
   return cells
 }
 
-function parseFile(file: File): Promise<{ headers: string[]; rows: string[][] }> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+async function parseFile(file: File): Promise<{ headers: string[]; rows: string[][] }> {
+  const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
 
-      if (isExcel) {
-        const buffer = await file.arrayBuffer()
-        const wb = XLSX.read(buffer, { type: 'array' })
-        const sheet = wb.Sheets[wb.SheetNames[0]]
-        if (!sheet) { resolve({ headers: [], rows: [] }); return }
-        const all = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 }) as unknown[][]
-        if (all.length < 2) { resolve({ headers: [], rows: [] }); return }
-        const headers = (all[0]).map((h) => String(h ?? ''))
-        const rows = all.slice(1).map((r) => (r as unknown[]).map((c) => String(c ?? '').trim()))
-        resolve({ headers, rows })
-      } else {
-        const text = await file.text()
-        const lines = text.split(/\r?\n/).filter((l) => l.trim())
-        if (lines.length < 2) { resolve({ headers: [], rows: [] }); return }
-        const headers = parseCsvLine(lines[0])
-        const rows = lines.slice(1).map((l) => parseCsvLine(l))
-        resolve({ headers, rows })
-      }
-    } catch (err) {
-      reject(err)
-    }
-  })
+  if (isExcel) {
+    const buffer = await file.arrayBuffer()
+    const wb = XLSX.read(buffer, { type: 'array' })
+    const sheet = wb.Sheets[wb.SheetNames[0]]
+    if (!sheet) return { headers: [], rows: [] }
+    const all = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 }) as unknown[][]
+    if (all.length < 2) return { headers: [], rows: [] }
+    const headers = (all[0]).map((h) => String(h ?? ''))
+    const rows = all.slice(1).map((r) => (r as unknown[]).map((c) => String(c ?? '').trim()))
+    return { headers, rows }
+  } else {
+    const text = await file.text()
+    const lines = text.split(/\r?\n/).filter((l) => l.trim())
+    if (lines.length < 2) return { headers: [], rows: [] }
+    const headers = parseCsvLine(lines[0])
+    const rows = lines.slice(1).map((l) => parseCsvLine(l))
+    return { headers, rows }
+  }
 }
 
 function looksLikeEmail(val: string): boolean {

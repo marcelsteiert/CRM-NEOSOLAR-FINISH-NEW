@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, RotateCcw, Plus, Trash2, GripVertical, FolderKanban, Sun, Zap, CheckCircle2 } from 'lucide-react'
-import { usePhaseDefinitions, type PhaseDefinition, type ProjectPhase } from '@/hooks/useProjects'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { usePhaseDefinitions } from '@/hooks/useProjects'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
 const phaseIcons: Record<string, typeof FolderKanban> = {

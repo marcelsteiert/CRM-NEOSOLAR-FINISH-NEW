@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Pencil, Check, X } from 'lucide-react'
+import { Plus, Trash2, Check, X } from 'lucide-react'
 import {
   useProducts,
   useCreateProduct,

@@ -11,7 +11,7 @@ router.get('/stats', async (_req: Request, res: Response, next: NextFunction) =>
     const counts: Record<string, number> = {}
 
     for (const table of tables) {
-      const { count } = await supabase.from(table).select('*', { count: 'exact', head: true })
+      const { count } = await supabase.from(table).select('*', { count: 'exact', head: true }).is('deleted_at', null)
       counts[table] = count ?? 0
     }
 
@@ -37,7 +37,14 @@ router.get('/export/:entity', async (req: Request, res: Response, next: NextFunc
       throw new AppError('Unbekannte Entitaet', 400)
     }
 
-    const { data, error } = await supabase.from(entity).select('*')
+    // Nur aktive Datensaetze exportieren (soft-delete ausschliessen)
+    let query = supabase.from(entity).select('*')
+    if (entity === 'users') {
+      query = query.eq('is_active', true)
+    } else {
+      query = query.is('deleted_at', null)
+    }
+    const { data, error } = await query
     if (error) throw new AppError(error.message, 500)
 
     if (format === 'csv') {

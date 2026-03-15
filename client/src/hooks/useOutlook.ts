@@ -109,7 +109,7 @@ export interface OutlookStats {
   unreadEmails: number
   matchedEmails: number
   calendarEvents: number
-  recentSyncs: any[]
+  recentSyncs: { id: string; status: string; syncType: string; completedAt: string; emailsSynced: number }[]
 }
 
 export interface EmailTrackingEntry {
@@ -154,7 +154,7 @@ export function useOutlookDisconnect() {
 export function useOutlookSync() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => api.post<{ data: any }>('/outlook/sync', {}),
+    mutationFn: () => api.post<{ data: unknown }>('/outlook/sync', {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outlook'] })
     },
@@ -281,7 +281,7 @@ export function useOutlookCalendar(filters: CalendarFilters = {}) {
 export function useCreateCalendarEvent() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: any) => api.post<{ data: any }>('/outlook/calendar', data),
+    mutationFn: (data: Record<string, unknown>) => api.post<{ data: unknown }>('/outlook/calendar', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['outlook', 'calendar'] })
     },

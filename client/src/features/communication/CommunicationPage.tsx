@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react'
 import {
   Mail, Send, Inbox, SendHorizontal, Search, RefreshCw,
-  Plus, Paperclip, Eye, EyeOff, Clock, CheckCircle2,
+  Plus, Paperclip, Eye, EyeOff, CheckCircle2,
   ChevronLeft, ChevronRight, MailOpen, Calendar, BarChart3,
-  Link2, User, Building2, FileText, X, Loader2, Wifi,
-  Reply, Forward, ExternalLink, Star, Archive,
-  Video, MapPin, Users as UsersIcon, ArrowUpRight, ArrowDownLeft,
+  Link2, User, Building2, FileText, X, Loader2,
+  Reply, Forward,
+  Video, MapPin, Users as UsersIcon, ArrowUpRight,
   LayoutTemplate, PenLine, Trash2,
 } from 'lucide-react'
 import {
-  useOutlookStatus, useOutlookEmails, useOutlookEmail, useOutlookEmailThread,
+  useOutlookStatus, useOutlookEmails, useOutlookEmail,
   useOutlookSync, useSendEmail, useMarkAsRead, useLinkEmail,
   useOutlookCalendar, useOutlookStats, useOutlookTemplates,
   useCreateTemplate, useUpdateTemplate, useDeleteTemplate,
-  useOutlookConnect, useOutlookDisconnect,
+  useOutlookConnect,
   type OutlookEmail, type OutlookCalendarEvent, type OutlookTemplate,
 } from '@/hooks/useOutlook'
 
@@ -982,7 +982,7 @@ function TrackingView() {
         <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
           <h3 className="text-[13px] font-extrabold mb-4">Letzte Synchronisierungen</h3>
           <div className="space-y-0">
-            {stats.recentSyncs.map((sync: any) => (
+            {stats.recentSyncs.map((sync: { id: string; status: string; syncType: string; completedAt: string; emailsSynced: number }) => (
               <div key={sync.id} className="flex items-center justify-between text-[12px] py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <div className="flex items-center gap-2.5">
                   <div className={`w-2 h-2 rounded-full ${sync.status === 'success' ? 'bg-emerald-400' : sync.status === 'running' ? 'bg-blue-400 animate-pulse' : 'bg-amber-400'}`} />

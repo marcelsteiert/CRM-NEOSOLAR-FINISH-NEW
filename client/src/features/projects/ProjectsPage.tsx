@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   FolderKanban, LayoutDashboard, Users2, Search, AlertTriangle, ChevronRight,
   TrendingUp, Sun, Zap, CheckCircle2, Clock, Star, ArrowUpRight, Loader2, Building2,
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import {
   useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
-  phaseLabels, phaseColors, priorityColors, formatCHF, computePhaseProgress,
+  phaseLabels, phaseColors, formatCHF, computePhaseProgress,
   type Project, type ProjectPhase, type Partner, type ProjectStats,
 } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'

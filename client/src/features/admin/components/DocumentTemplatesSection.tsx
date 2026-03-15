@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   FolderOpen, FolderPlus, ChevronRight, ChevronDown, Plus, Pencil, Trash2,
-  Check, X, Shield, Save,
+  Check, Shield, Save,
 } from 'lucide-react'
 import {
   useDocTemplates, useAddDocFolder, useUpdateDocFolder, useDeleteDocFolder,

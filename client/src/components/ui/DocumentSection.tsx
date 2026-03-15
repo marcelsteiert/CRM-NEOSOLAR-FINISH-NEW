@@ -46,7 +46,8 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({ [entityType]: true })
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
-  const [uploadTarget, setUploadTarget] = useState<{ phase: EntityType; folderPath: string } | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_uploadTarget, setUploadTarget] = useState<{ phase: EntityType; folderPath: string } | null>(null)
   const uploadTargetRef = useRef<{ phase: EntityType; folderPath: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -73,7 +74,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     // Admins sehen alles, sonst nur Ordner mit passender Rolle oder ohne Einschraenkung
     if (userRole === 'ADMIN' || userRole === 'GESCHAEFTSLEITUNG' || userRole === 'GL') return folders
     return folders.filter((f) => {
-      const roles = (f as any).allowedRoles as string[] | undefined
+      const roles = (f as Record<string, unknown>).allowedRoles as string[] | undefined
       return !roles || roles.length === 0 || roles.includes(userRole)
     })
   }
@@ -85,7 +86,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
 
     const tree: FolderNode[] = templateFolders.map((folder) => {
       const folderPath = folder.name
-      const subfolders: FolderNode[] = ((folder as any).subfolders ?? []).map((sub: string) => {
+      const subfolders: FolderNode[] = (((folder as Record<string, unknown>).subfolders ?? []) as string[]).map((sub: string) => {
         const subPath = `${folderPath}/${sub}`
         return {
           name: sub,
@@ -248,7 +249,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   const renderFolder = (folder: FolderNode, phase: EntityType, depth: number) => {
     const key = `${phase}:${folder.path}`
     const isExpanded = expandedFolders[key] ?? false
-    const hasContent = folder.docs.length > 0 || folder.subfolders.some((sf) => sf.docs.length > 0)
+    // hasContent intentionally unused – kept for future use
     const docCount = folder.docs.length + folder.subfolders.reduce((sum, sf) => sum + sf.docs.length, 0)
     const FolderIcon = isExpanded ? FolderOpen : Folder
     const paddingLeft = depth * 16

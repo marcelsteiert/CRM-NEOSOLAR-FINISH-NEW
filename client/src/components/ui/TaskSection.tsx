@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Plus, Clock, CheckCircle2, Circle, Calendar, Trash2, ChevronDown,
-  ArrowRight, Loader2, X, AlertTriangle,
+  Loader2,
 } from 'lucide-react'
 import {
   useTasks, useCreateTask, useUpdateTask, useDeleteTask,
@@ -33,7 +33,6 @@ export default function TaskSection({ module, referenceId, referenceTitle }: Tas
   const { user } = useAuth()
   const { data: tasksRes, isLoading } = useTasks({ module, search: undefined })
   const { data: usersRes } = useUsers()
-  const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
 

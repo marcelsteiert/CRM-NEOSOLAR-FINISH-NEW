@@ -1,16 +1,16 @@
 // EmailSection – Wiederverwendbare E-Mail-Timeline fuer Detail-Modals
 // Zeigt alle E-Mails zwischen Mitarbeitern und dem Kontakt (ueber contactId)
 // Integriert Outlook-Vorlagen, Absender-Info und Team-weite Verlaeufe
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
-  Mail, Send, Inbox, ChevronDown, ChevronUp, Paperclip,
-  Clock, ArrowUpRight, ArrowDownLeft, Reply, Forward,
+  Send, Inbox, ChevronDown, ChevronUp, Paperclip,
+  Clock, ArrowUpRight, ArrowDownLeft, Reply,
   Loader2, Plus, X, PenLine, FileText, User2,
   Eye, MousePointerClick, Sparkles,
 } from 'lucide-react'
 import {
   useOutlookEmails, useOutlookStatus, useSendEmail,
-  useOutlookTemplates, type OutlookEmail, type OutlookTemplate,
+  useOutlookTemplates, type OutlookEmail,
 } from '@/hooks/useOutlook'
 import { useGenerateEmailDraft, useGenerateEmailReply } from '@/hooks/useAi'
 
@@ -372,8 +372,8 @@ function ComposeEmail({
                   })
                   if (res?.data?.text) setBody(res.data.text)
                   if (res?.data?.error) setErrorMsg(res.data.error)
-                } catch (err: any) {
-                  setErrorMsg(err?.message || 'KI-Fehler')
+                } catch (err: unknown) {
+                  setErrorMsg((err as Error)?.message || 'KI-Fehler')
                 }
               }}
               disabled={generateDraft.isPending}
@@ -676,8 +676,8 @@ function ReplyComposer({ email, contactId, contactName, onClose }: { email: Outl
                 })
                 if (res?.data?.text) setBody(res.data.text)
                 if (res?.data?.error) setReplyError(res.data.error)
-              } catch (err: any) {
-                setReplyError(err?.message || 'KI-Fehler')
+              } catch (err: unknown) {
+                setReplyError((err as Error)?.message || 'KI-Fehler')
               }
             }}
             disabled={generateReply.isPending}

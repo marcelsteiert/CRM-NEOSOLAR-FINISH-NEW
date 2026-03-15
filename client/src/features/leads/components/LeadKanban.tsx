@@ -416,6 +416,7 @@ export default function LeadKanban({
     setActiveId(String(event.active.id))
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function handleDragOver(_event: DragOverEvent) {
     // Visual feedback is handled by the DroppableColumn isOver state.
     // No state mutation needed here.

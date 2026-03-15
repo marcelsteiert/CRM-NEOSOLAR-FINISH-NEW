@@ -8,7 +8,12 @@ import { AppError } from '../middleware/errorHandler.js'
 
 const router = Router()
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-secure-random-string'
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) throw new Error('FATAL: JWT_SECRET Umgebungsvariable muss gesetzt sein')
+  return secret
+}
+const JWT_SECRET: string = getJwtSecret()
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn']
 
 // Inline Auth-Check (um zirkulaere Imports zu vermeiden)

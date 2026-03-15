@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, useDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
-import { Shield, Pencil, Trash2, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck } from 'lucide-react'
+import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, type User, type UserRole } from '@/hooks/useLeads'
+import { Shield, Pencil, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck } from 'lucide-react'
 
 const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']
 const roleLabels: Record<UserRole, string> = {
@@ -68,8 +68,6 @@ export default function UsersRolesSection() {
   const updateRoleDefaults = useUpdateRoleDefaults()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
-  const deleteUser = useDeleteUser()
-
   const users = usersResponse?.data ?? []
   const roleDefaults = roleDefaultsResponse?.data ?? {} as Record<UserRole, string[]>
 
@@ -174,10 +172,6 @@ export default function UsersRolesSection() {
     }, {
       onSuccess: () => setEditingUser(null),
     })
-  }
-
-  const handleToggleActive = (user: User) => {
-    updateUser.mutate({ id: user.id, isActive: !user.isActive })
   }
 
   const handleDeactivate = (userId: string) => {

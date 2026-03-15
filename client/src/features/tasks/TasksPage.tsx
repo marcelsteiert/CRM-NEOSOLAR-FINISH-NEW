@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react'
 import {
   ClipboardList, Plus, Search, ChevronDown, AlertTriangle, RefreshCw,
-  LayoutList, Columns3, Calendar, Clock, Flag, User, ArrowRight,
+  LayoutList, Columns3, Calendar, Clock, ArrowRight,
   CheckCircle2, Circle, Loader2, Trash2, X, GripVertical,
 } from 'lucide-react'
 import {
@@ -21,13 +21,6 @@ type StatusFilter = TaskStatus | 'ALL'
 const statusOrder: TaskStatus[] = ['OFFEN', 'IN_BEARBEITUNG', 'ERLEDIGT']
 
 const priorityOrder: TaskPriority[] = ['URGENT', 'HIGH', 'MEDIUM', 'LOW']
-
-const priorityIcons: Record<TaskPriority, string> = {
-  URGENT: '🔴',
-  HIGH: '🟠',
-  MEDIUM: '🔵',
-  LOW: '⚪',
-}
 
 /* ── Helper ── */
 
@@ -368,7 +361,8 @@ function KanbanView({
   users,
   onSelect,
   onDrop,
-  onUpdateStatus,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onUpdateStatus: _onUpdateStatus,
 }: {
   tasksByStatus: Record<TaskStatus, Task[]>
   users: UserType[]

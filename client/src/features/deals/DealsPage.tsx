@@ -25,8 +25,6 @@ import {
   type DealStage,
   type DealPriority,
   type FollowUp,
-  stageLabels,
-  stageColors,
   priorityLabels,
   formatCHF,
 } from '@/hooks/useDeals'

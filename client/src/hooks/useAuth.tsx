@@ -150,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth muss innerhalb von AuthProvider verwendet werden')
@@ -159,6 +160,7 @@ export function useAuth(): AuthContextType {
 /**
  * Gibt den aktuellen Token zurueck (fuer API-Calls)
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }

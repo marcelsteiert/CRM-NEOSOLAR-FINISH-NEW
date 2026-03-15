@@ -33,7 +33,7 @@ import notificationsRouter from './routes/notifications.js'
 import outlookRouter from './routes/outlook.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { mapKeys } from './lib/caseMapper.js'
-import { authMiddleware } from './middleware/auth.js'
+import { authMiddleware, requireRole } from './middleware/auth.js'
 
 export function createApp() {
   const app = express()
@@ -101,16 +101,17 @@ export function createApp() {
   // AI routes (geschuetzt)
   app.use('/api/v1/ai', authMiddleware, aiRouter)
 
-  // Admin routes (geschuetzt)
-  app.use('/api/v1/admin/products', authMiddleware, adminProductsRouter)
-  app.use('/api/v1/admin/integrations', authMiddleware, adminIntegrationsRouter)
-  app.use('/api/v1/admin/webhooks', authMiddleware, adminWebhooksRouter)
-  app.use('/api/v1/admin/audit-log', authMiddleware, adminAuditLogRouter)
-  app.use('/api/v1/admin/branding', authMiddleware, adminBrandingRouter)
-  app.use('/api/v1/admin/ai-settings', authMiddleware, adminAiSettingsRouter)
-  app.use('/api/v1/admin/notification-settings', authMiddleware, adminNotifSettingsRouter)
-  app.use('/api/v1/admin/doc-templates', authMiddleware, adminDocTemplatesRouter)
-  app.use('/api/v1/admin/db-export', authMiddleware, adminDbExportRouter)
+  // Admin routes (geschuetzt + Rollencheck: nur ADMIN/GL)
+  const adminGuard = [authMiddleware, requireRole('ADMIN', 'GL')]
+  app.use('/api/v1/admin/products', ...adminGuard, adminProductsRouter)
+  app.use('/api/v1/admin/integrations', ...adminGuard, adminIntegrationsRouter)
+  app.use('/api/v1/admin/webhooks', ...adminGuard, adminWebhooksRouter)
+  app.use('/api/v1/admin/audit-log', ...adminGuard, adminAuditLogRouter)
+  app.use('/api/v1/admin/branding', ...adminGuard, adminBrandingRouter)
+  app.use('/api/v1/admin/ai-settings', ...adminGuard, adminAiSettingsRouter)
+  app.use('/api/v1/admin/notification-settings', ...adminGuard, adminNotifSettingsRouter)
+  app.use('/api/v1/admin/doc-templates', ...adminGuard, adminDocTemplatesRouter)
+  app.use('/api/v1/admin/db-export', ...adminGuard, adminDbExportRouter)
 
   app.use(errorHandler)
 

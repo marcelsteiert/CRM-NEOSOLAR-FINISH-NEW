@@ -2,7 +2,12 @@ import type { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { AppError } from './errorHandler.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-this-to-a-secure-random-string'
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) throw new Error('FATAL: JWT_SECRET Umgebungsvariable muss gesetzt sein')
+  return secret
+}
+const JWT_SECRET: string = getJwtSecret()
 
 export interface AuthUser {
   userId: string

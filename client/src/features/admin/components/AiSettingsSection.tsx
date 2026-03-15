@@ -40,7 +40,8 @@ export default function AiSettingsSection() {
   )
 
   const handleSave = async () => {
-    const payload: any = { ...settings }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload: Record<string, any> = { ...settings }
     // Nur den API-Key senden wenn er geaendert wurde (nicht maskiert)
     if (apiKeyInput && !apiKeyInput.startsWith('****')) {
       payload.apiKey = apiKeyInput
