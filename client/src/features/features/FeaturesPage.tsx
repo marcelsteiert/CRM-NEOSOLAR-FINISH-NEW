@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   Puzzle, Mail, Calculator, Sparkles, ClipboardList, FileBox,
-  Download, Bell, Coins, FolderKanban, CalendarCheck, FileText,
+  Download, Bell, Coins, FolderKanban, CalendarCheck, CalendarDays, FileText,
   Users, Shield, LayoutDashboard, ToggleLeft, ToggleRight,
   Lock, Check,
 } from 'lucide-react'
@@ -30,6 +30,7 @@ const features: FeatureInfo[] = [
 
   // Sales (toggleable)
   { id: 'provision', name: 'Provision', description: 'Monatsbasierte Provisionsberechnung mit 5% auf Angebotswert', icon: Coins, color: '#F59E0B', category: 'sales', status: 'live' },
+  { id: 'calendar', name: 'Kalender', description: 'Montage-, Elektro- und Wartungstermine planen – mit Berechtigungssteuerung', icon: CalendarDays, color: '#10B981', category: 'sales', status: 'live' },
   { id: 'calculations', name: 'Kalkulation', description: 'PV-Anlagen kalkulieren: Module, Speicher, Wechselrichter, Arbeitszeit', icon: Calculator, color: '#A78BFA', category: 'sales', status: 'coming' },
 
   // Operations (toggleable)

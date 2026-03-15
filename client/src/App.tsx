@@ -15,6 +15,7 @@ import NotificationsPage from '@/features/notifications/NotificationsPage'
 import AdminPage from '@/features/admin/AdminPage'
 import ExportPage from '@/features/export/ExportPage'
 import DocumentsPage from '@/features/documents/DocumentsPage'
+import CalendarPage from '@/features/calendar/CalendarPage'
 import FeaturesPage from '@/features/features/FeaturesPage'
 import PasswordsPage from '@/features/passwords/PasswordsPage'
 import { useAuth } from '@/hooks/useAuth'
@@ -107,6 +108,7 @@ export default function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
           <Route path="export" element={<ModuleRoute moduleId="export"><ExportPage /></ModuleRoute>} />
+          <Route path="calendar" element={<ModuleRoute moduleId="calendar"><CalendarPage /></ModuleRoute>} />
           <Route path="documents" element={<ModuleRoute moduleId="documents"><DocumentsPage /></ModuleRoute>} />
           <Route path="passwords" element={<ModuleRoute moduleId="passwords"><PasswordsPage /></ModuleRoute>} />
           <Route path="features" element={<FeaturesPage />} />

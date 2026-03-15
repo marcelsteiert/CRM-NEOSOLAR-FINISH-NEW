@@ -26,6 +26,7 @@ const ALL_MODULES = [
   { id: 'appointments', label: 'Termine' },
   { id: 'deals', label: 'Angebote' },
   { id: 'provision', label: 'Provision' },
+  { id: 'calendar', label: 'Kalender' },
   { id: 'calculations', label: 'Kalkulation' },
   { id: 'projects', label: 'Projekte' },
   { id: 'tasks', label: 'Aufgaben' },
