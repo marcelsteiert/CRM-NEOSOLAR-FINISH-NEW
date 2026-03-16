@@ -738,19 +738,17 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* KI-Zusammenfassung (kontaktbasiert) */}
-              {project.contactId && (
-                <div className="mt-5">
+                {/* KI-Zusammenfassung (kontaktbasiert) */}
+                {project.contactId && (
                   <AiSummaryCard
                     summary={(generateContactSummary.data as Record<string, Record<string, string>> | undefined)?.data?.summary}
                     isGenerating={generateContactSummary.isPending}
                     onGenerate={() => generateContactSummary.mutate(project.contactId)}
                     error={generateContactSummary.error?.message || (generateContactSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           )}
 
