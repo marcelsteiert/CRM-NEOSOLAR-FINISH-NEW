@@ -259,7 +259,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         aria-modal="true"
         aria-label="Angebot Details"
         tabIndex={-1}
-        className="outline-none w-[720px] max-h-[90vh] mx-4 flex flex-col"
+        className="outline-none w-full max-w-[720px] max-h-[90vh] mx-4 flex flex-col"
         style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}
       >
         {/* ── Header ── */}

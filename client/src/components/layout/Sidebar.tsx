@@ -160,7 +160,7 @@ export default function Sidebar() {
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-[49] bg-black/60 md:hidden"
+          className="fixed inset-0 z-[51] bg-black/60 md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}

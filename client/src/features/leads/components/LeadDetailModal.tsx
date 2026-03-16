@@ -16,7 +16,6 @@ import {
   Trash2,
   PhoneCall,
   Send,
-  Sparkles,
   Globe,
   GitBranch,
   User,
@@ -471,7 +470,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         }}
       >
         <div
-          className="w-[720px] max-h-[90vh] p-12 text-center"
+          className="w-full max-w-[720px] max-h-[90vh] p-12 text-center"
           style={{
             background: 'rgba(255,255,255,0.035)',
             backdropFilter: 'blur(24px) saturate(1.2)',
@@ -1033,37 +1032,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
               </div>
 
               {/* KI-Zusammenfassung */}
-              <div
-                className="p-4 relative overflow-hidden"
-                style={{
-                  background:
-                    'linear-gradient(135deg, color-mix(in srgb, #F59E0B 6%, transparent), color-mix(in srgb, #A78BFA 4%, transparent))',
-                  border: '1px solid color-mix(in srgb, #F59E0B 10%, transparent)',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                <div
-                  className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
-                  style={{
-                    background:
-                      'radial-gradient(circle, color-mix(in srgb, #F59E0B 8%, transparent), transparent 70%)',
-                  }}
-                />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <Sparkles size={14} className="text-amber" strokeWidth={1.8} />
-                    <h4 className="text-[11px] font-bold text-amber uppercase tracking-[0.06em]">
-                      KI-Zusammenfassung
-                    </h4>
-                  </div>
-                  <p className="text-[12px] text-text-sec leading-relaxed">
-                    {lead.notes ||
-                      'Keine Notizen vorhanden. Die KI-Zusammenfassung wird automatisch generiert, sobald genuegend Interaktionsdaten vorliegen.'}
-                  </p>
-                </div>
-              </div>
-
-              {/* KI-Zusammenfassung */}
               <AiSummaryCard
                 summary={lead.aiSummary}
                 isGenerating={generateLeadSummary.isPending}
@@ -1521,18 +1489,17 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         {/* ── Delete Confirmation ── */}
         {showDeleteConfirm && (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center"
+            className="fixed inset-0 z-[95] flex items-center justify-center"
             style={{
               background: 'rgba(6, 8, 12, 0.6)',
               backdropFilter: 'blur(4px)',
-              borderRadius: 'var(--radius-lg)',
             }}
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowDeleteConfirm(false)
             }}
           >
             <div
-              className="w-[360px] mx-4 p-6 text-center"
+              className="w-full max-w-[360px] mx-4 p-6 text-center"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
@@ -1579,18 +1546,17 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         {/* ── Deal Confirmation ── */}
         {showDealConfirm && (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center"
+            className="fixed inset-0 z-[95] flex items-center justify-center"
             style={{
               background: 'rgba(6, 8, 12, 0.6)',
               backdropFilter: 'blur(4px)',
-              borderRadius: 'var(--radius-lg)',
             }}
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowDealConfirm(false)
             }}
           >
             <div
-              className="w-[440px] mx-4 p-6"
+              className="w-full max-w-[440px] mx-4 p-6"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
@@ -1742,11 +1708,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         {/* ── Lost Confirmation with required reason ── */}
         {showLostConfirm && (
           <div
-            className="absolute inset-0 z-10 flex items-center justify-center"
+            className="fixed inset-0 z-[95] flex items-center justify-center"
             style={{
               background: 'rgba(6, 8, 12, 0.6)',
               backdropFilter: 'blur(4px)',
-              borderRadius: 'var(--radius-lg)',
             }}
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -1756,7 +1721,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             }}
           >
             <div
-              className="w-[400px] mx-4 p-6"
+              className="w-full max-w-[400px] mx-4 p-6"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
