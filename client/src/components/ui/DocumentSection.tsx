@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import {
   FileText, Image, File, Upload, Trash2, Download, ChevronDown, ChevronRight,
-  Folder, FolderOpen, Plus,
+  Folder, FolderOpen, Plus, Eye,
 } from 'lucide-react'
 import {
   useContactDocuments,
@@ -15,6 +15,7 @@ import {
 } from '@/hooks/useDocuments'
 import { useAuth } from '@/hooks/useAuth'
 import { useDocTemplates } from '@/hooks/useAdmin'
+import FileViewer, { type ViewerFile } from './FileViewer'
 
 interface DocumentSectionProps {
   contactId: string
@@ -44,6 +45,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   const deleteDoc = useDeleteDocument()
   const [notes, setNotes] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [viewerFile, setViewerFile] = useState<ViewerFile | null>(null)
   const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({ [entityType]: true })
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -185,7 +187,19 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     return (
       <div
         key={doc.id}
-        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors group"
+        className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors group cursor-pointer"
+        onClick={() => {
+          if (doc.downloadUrl) {
+            setViewerFile({
+              id: doc.id,
+              fileName: doc.fileName,
+              fileSize: doc.fileSize,
+              mimeType: doc.mimeType,
+              downloadUrl: doc.downloadUrl,
+              createdAt: doc.createdAt,
+            })
+          }
+        }}
       >
         <div
           className="w-6 h-6 rounded-[6px] flex items-center justify-center shrink-0"
@@ -205,10 +219,21 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           </div>
         </div>
         {doc.downloadUrl && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setViewerFile({ id: doc.id, fileName: doc.fileName, fileSize: doc.fileSize, mimeType: doc.mimeType, downloadUrl: doc.downloadUrl, createdAt: doc.createdAt }) }}
+            className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-text-dim hover:text-amber transition-all shrink-0"
+            title="Vorschau"
+          >
+            <Eye size={11} strokeWidth={1.8} />
+          </button>
+        )}
+        {doc.downloadUrl && (
           <a
             href={doc.downloadUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-text-dim hover:text-amber transition-all shrink-0"
             title="Herunterladen"
           >
@@ -216,7 +241,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           </a>
         )}
         {confirmDeleteId === doc.id ? (
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
               onClick={() => { deleteDoc.mutate(doc.id); setConfirmDeleteId(null) }}
@@ -236,7 +261,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
         ) : (
           <button
             type="button"
-            onClick={() => setConfirmDeleteId(doc.id)}
+            onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(doc.id) }}
             className="opacity-0 group-hover:opacity-100 w-5 h-5 rounded flex items-center justify-center text-text-dim hover:text-red transition-all shrink-0"
           >
             <Trash2 size={11} strokeWidth={1.8} />
@@ -413,6 +438,25 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           )
         })}
       </div>
+
+      {/* ── Datei-Viewer ── */}
+      {viewerFile && (
+        <FileViewer
+          file={viewerFile}
+          files={allDocs
+            .filter((d) => d.downloadUrl)
+            .map((d) => ({
+              id: d.id,
+              fileName: d.fileName,
+              fileSize: d.fileSize,
+              mimeType: d.mimeType,
+              downloadUrl: d.downloadUrl,
+              createdAt: d.createdAt,
+            }))}
+          onClose={() => setViewerFile(null)}
+          onNavigate={(f) => setViewerFile(f)}
+        />
+      )}
     </div>
   )
 }

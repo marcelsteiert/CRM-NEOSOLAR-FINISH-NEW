@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
-import { FileBox, Search, File, Image, FileText, Trash2, Download, FolderOpen, Filter } from 'lucide-react'
+import { FileBox, Search, File, Image, FileText, Trash2, Download, FolderOpen, Filter, Eye } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { formatFileSize, type EntityType, entityTypeLabels, type Document } from '@/hooks/useDocuments'
+import FileViewer, { type ViewerFile } from '@/components/ui/FileViewer'
 
 const ENTITY_TYPES: EntityType[] = ['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT']
 
@@ -22,6 +23,7 @@ function FileIcon({ mimeType }: { mimeType: string }) {
 export default function DocumentsPage() {
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<EntityType | ''>('')
+  const [viewerFile, setViewerFile] = useState<ViewerFile | null>(null)
   const qc = useQueryClient()
 
   // Alle Dokumente laden (ohne contactId-Filter = systemweit)
@@ -140,7 +142,13 @@ export default function DocumentsPage() {
 
             <div className="divide-y divide-white/[0.03]">
               {typeDocs.map(doc => (
-                <div key={doc.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group">
+                <div
+                  key={doc.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group cursor-pointer"
+                  onClick={() => {
+                    if (doc.downloadUrl) setViewerFile({ id: doc.id, fileName: doc.fileName, fileSize: doc.fileSize, mimeType: doc.mimeType, downloadUrl: doc.downloadUrl, createdAt: doc.createdAt })
+                  }}
+                >
                   <FileIcon mimeType={doc.mimeType} />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-white/80 truncate">{doc.fileName}</p>
@@ -156,18 +164,31 @@ export default function DocumentsPage() {
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     {doc.downloadUrl && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setViewerFile({ id: doc.id, fileName: doc.fileName, fileSize: doc.fileSize, mimeType: doc.mimeType, downloadUrl: doc.downloadUrl, createdAt: doc.createdAt }) }}
+                        className="p-1.5 rounded hover:bg-white/[0.05] text-white/30 hover:text-white/60"
+                        title="Vorschau"
+                      >
+                        <Eye size={14} strokeWidth={1.8} />
+                      </button>
+                    )}
+                    {doc.downloadUrl && (
                       <a
                         href={doc.downloadUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="p-1.5 rounded hover:bg-white/[0.05] text-white/30 hover:text-white/60"
+                        title="Herunterladen"
                       >
                         <Download size={14} strokeWidth={1.8} />
                       </a>
                     )}
                     <button
-                      onClick={() => { if (confirm('Dokument löschen?')) deleteMut.mutate(doc.id) }}
+                      onClick={(e) => { e.stopPropagation(); if (confirm('Dokument löschen?')) deleteMut.mutate(doc.id) }}
                       className="p-1.5 rounded hover:bg-red-500/10 text-white/30 hover:text-red-400"
+                      title="Löschen"
                     >
                       <Trash2 size={14} strokeWidth={1.8} />
                     </button>
@@ -178,6 +199,25 @@ export default function DocumentsPage() {
           </div>
         )
       })}
+
+      {/* ── Datei-Viewer ── */}
+      {viewerFile && (
+        <FileViewer
+          file={viewerFile}
+          files={docs
+            .filter((d) => d.downloadUrl)
+            .map((d) => ({
+              id: d.id,
+              fileName: d.fileName,
+              fileSize: d.fileSize,
+              mimeType: d.mimeType,
+              downloadUrl: d.downloadUrl,
+              createdAt: d.createdAt,
+            }))}
+          onClose={() => setViewerFile(null)}
+          onNavigate={(f) => setViewerFile(f)}
+        />
+      )}
     </div>
   )
 }

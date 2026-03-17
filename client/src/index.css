@@ -82,6 +82,13 @@ body {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* ── Select/Option Dark Theme ── */
+
+select option {
+  background: #0B0F15;
+  color: #F0F2F5;
+}
+
 /* ── Glass Components ── */
 
 .glass-card {
