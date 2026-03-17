@@ -15,6 +15,8 @@ import {
   HardDrive,
   ClipboardList,
   KeyRound,
+  CalendarCheck,
+  FileText,
 } from 'lucide-react'
 
 export type AdminSection =
@@ -25,6 +27,8 @@ export type AdminSection =
   | 'tags'
   | 'automations'
   | 'projectPhases'
+  | 'appointmentKanban'
+  | 'dealKanban'
   | 'integrations'
   | 'webhooks'
   | 'templates'
@@ -63,6 +67,8 @@ const navGroups: AdminNavGroup[] = [
       { id: 'tags', icon: Tag, label: 'Tag-Verwaltung', color: '#34D399' },
       { id: 'automations', icon: Zap, label: 'Automations-Regeln', color: '#F59E0B' },
       { id: 'projectPhases', icon: ClipboardList, label: 'Projekt-Phasen', color: '#34D399' },
+      { id: 'appointmentKanban', icon: CalendarCheck, label: 'Termin-Kanban', color: '#34D399' },
+      { id: 'dealKanban', icon: FileText, label: 'Angebote-Kanban', color: '#A78BFA' },
     ],
   },
   {

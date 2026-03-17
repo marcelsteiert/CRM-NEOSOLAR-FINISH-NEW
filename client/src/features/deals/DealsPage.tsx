@@ -15,9 +15,12 @@ import {
   Phone,
   Clock,
   Users,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 import {
   useDeals,
+  useUpdateDeal,
   useDealStats,
   useFollowUps,
   useDismissFollowUp,
@@ -26,10 +29,14 @@ import {
   type DealPriority,
   type FollowUp,
   priorityLabels,
+  priorityColors,
+  stageLabels,
+  stageColors,
   formatCHF,
 } from '@/hooks/useDeals'
 import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
+import { useDealKanbanColumns, type DealKanbanColumn } from '@/hooks/useAdmin'
 import DealTable from './components/DealTable'
 import DealDetailModal from './components/DealDetailModal'
 import DealCreateDialog from './components/DealCreateDialog'
@@ -230,6 +237,192 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
   )
 }
 
+/* ── Kanban Card ── */
+
+interface UserInfo { id: string; firstName: string; lastName: string; role: string }
+
+function DealKanbanCard({ deal, users, onSelect }: { deal: Deal; users: UserInfo[]; onSelect: (d: Deal) => void }) {
+  const assignee = users.find((u) => u.id === deal.assignedTo)
+
+  return (
+    <div
+      onClick={() => onSelect(deal)}
+      className="p-3.5 rounded-xl cursor-pointer hover:bg-surface-hover/50 transition-all duration-150 group"
+      style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.04)' }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-text truncate">{deal.title}</p>
+          <p className="text-[10px] text-text-dim truncate">{deal.contactName}</p>
+        </div>
+        <span
+          className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-semibold"
+          style={{
+            background: `color-mix(in srgb, ${priorityColors[deal.priority]} 12%, transparent)`,
+            color: priorityColors[deal.priority],
+          }}
+        >
+          {priorityLabels[deal.priority]}
+        </span>
+      </div>
+
+      {/* Value + Date */}
+      <div className="flex items-center gap-3 text-[11px] text-text-sec mb-2.5">
+        <span className="font-bold tabular-nums text-amber">{formatCHF(deal.value)}</span>
+        {deal.expectedCloseDate && (
+          <span className="flex items-center gap-1 tabular-nums">
+            <Clock size={10} strokeWidth={1.8} />
+            {new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })}
+          </span>
+        )}
+      </div>
+
+      {/* Probability + Assignee */}
+      <div className="flex items-center justify-between gap-2">
+        {deal.winProbability != null ? (
+          <div className="flex items-center gap-2">
+            <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${deal.winProbability}%`,
+                  background: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171',
+                }}
+              />
+            </div>
+            <span className="text-[9px] font-semibold tabular-nums" style={{
+              color: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171',
+            }}>
+              {deal.winProbability}%
+            </span>
+          </div>
+        ) : (
+          <div />
+        )}
+        {assignee && (
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold text-bg shrink-0"
+            style={{ background: '#A78BFA' }}
+            title={`${assignee.firstName} ${assignee.lastName}`}
+          >
+            {assignee.firstName?.[0]}{assignee.lastName?.[0]}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── Kanban View with Drag & Drop ── */
+
+const defaultDealColumns: DealKanbanColumn[] = [
+  { stage: 'ERSTELLT', label: 'Angebot erstellen', color: '#60A5FA', order: 0 },
+  { stage: 'GESENDET', label: 'Angebot gesendet', color: '#A78BFA', order: 1 },
+  { stage: 'FOLLOW_UP', label: 'Warten auf Unterlagen', color: '#F59E0B', order: 2 },
+  { stage: 'VERHANDLUNG', label: 'Verhandlung', color: '#FB923C', order: 3 },
+]
+
+function DealKanbanView({ deals, users, onSelect, columns }: { deals: Deal[]; users: UserInfo[]; onSelect: (d: Deal) => void; columns: DealKanbanColumn[] }) {
+  const updateDeal = useUpdateDeal()
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, dealId: string) => {
+    e.dataTransfer.setData('dealId', dealId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, stage: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverCol(stage)
+  }
+
+  const handleDragLeave = () => setDragOverCol(null)
+
+  const handleDrop = (e: React.DragEvent, targetStage: string) => {
+    e.preventDefault()
+    setDragOverCol(null)
+    const dealId = e.dataTransfer.getData('dealId')
+    const deal = deals.find((d) => d.id === dealId)
+    if (deal && deal.stage !== targetStage) {
+      updateDeal.mutate({ id: dealId, stage: targetStage as DealStage })
+    }
+  }
+
+  const sorted = [...columns].sort((a, b) => a.order - b.order)
+
+  if (deals.length === 0) {
+    return (
+      <div className="glass-card p-12 text-center">
+        <p className="text-[14px] font-semibold text-text mb-1">Keine Angebote gefunden</p>
+        <p className="text-[12px] text-text-sec">Erstelle ein neues Angebot oder passe die Filter an.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${sorted.length <= 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4`}>
+      {sorted.map((col) => {
+        const items = deals.filter((d) => d.stage === col.stage)
+        const totalValue = items.reduce((sum, d) => sum + d.value, 0)
+        const isOver = dragOverCol === col.stage
+        return (
+          <div
+            key={col.stage}
+            className="flex flex-col rounded-xl min-h-[200px] transition-all duration-150"
+            style={{
+              background: isOver ? `color-mix(in srgb, ${col.color} 4%, transparent)` : 'rgba(255,255,255,0.015)',
+              border: isOver ? `1px solid color-mix(in srgb, ${col.color} 30%, transparent)` : '1px solid rgba(255,255,255,0.04)',
+            }}
+            onDragOver={(e) => handleDragOver(e, col.stage)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, col.stage)}
+          >
+            {/* Column header */}
+            <div className="flex items-center gap-2.5 px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
+              <span className="text-[12px] font-bold" style={{ color: col.color }}>{col.label}</span>
+              <span
+                className="ml-auto text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full"
+                style={{ background: `color-mix(in srgb, ${col.color} 12%, transparent)`, color: col.color }}
+              >
+                {items.length}
+              </span>
+            </div>
+
+            {/* Total value */}
+            {totalValue > 0 && (
+              <div className="px-4 py-1.5 text-[10px] font-semibold tabular-nums text-amber" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                {formatCHF(totalValue)}
+              </div>
+            )}
+
+            {/* Cards */}
+            <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-380px)]">
+              {items.length === 0 ? (
+                <p className="text-[10px] text-text-dim text-center py-6">
+                  {isOver ? 'Hier ablegen' : 'Keine Angebote'}
+                </p>
+              ) : (
+                items.map((d) => (
+                  <div key={d.id} draggable onDragStart={(e) => handleDragStart(e, d.id)}>
+                    <DealKanbanCard deal={d} users={users} onSelect={onSelect} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ── View Mode Type ── */
+
+type ViewMode = 'kanban' | 'list'
+
 /* ── Main Component ── */
 
 export default function DealsPage() {
@@ -242,6 +435,10 @@ export default function DealsPage() {
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [viewAll, setViewAll] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban')
+
+  const { data: kanbanColumnsRes } = useDealKanbanColumns()
+  const kanbanCols = kanbanColumnsRes?.data ?? defaultDealColumns
 
   const canViewAll = isAdmin
   const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
@@ -320,6 +517,35 @@ export default function DealsPage() {
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            {/* View Toggle */}
+            <div
+              className="flex rounded-[10px] p-0.5 shrink-0"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban')}
+                className={[
+                  'p-2 rounded-[8px] transition-all',
+                  viewMode === 'kanban' ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text',
+                ].join(' ')}
+                title="Kanban-Ansicht"
+              >
+                <LayoutGrid size={15} strokeWidth={1.8} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={[
+                  'p-2 rounded-[8px] transition-all',
+                  viewMode === 'list' ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text',
+                ].join(' ')}
+                title="Listenansicht"
+              >
+                <List size={15} strokeWidth={1.8} />
+              </button>
+            </div>
+
             {canViewAll && (
               <button type="button" onClick={() => setViewAll(!viewAll)} className={['flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors', viewAll ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text hover:bg-surface-hover'].join(' ')} style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Users size={14} strokeWidth={1.8} />
@@ -398,6 +624,13 @@ export default function DealsPage() {
         {/* Content */}
         {isLoading ? <LoadingSkeleton /> : isError ? (
           <ErrorState message={error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.'} onRetry={() => refetch()} />
+        ) : viewMode === 'kanban' ? (
+          <DealKanbanView
+            deals={filteredDeals}
+            users={users}
+            onSelect={(d) => setSelectedDealId(d.id)}
+            columns={kanbanCols}
+          />
         ) : (
           <DealTable deals={filteredDeals} users={users} onSelectDeal={(d) => setSelectedDealId(d.id)} sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
         )}

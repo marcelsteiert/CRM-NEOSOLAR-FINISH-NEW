@@ -17,6 +17,8 @@ import CompanyBrandingSection from './components/CompanyBrandingSection'
 import DatabaseExportSection from './components/DatabaseExportSection'
 import ProjectPhasesSection from './components/ProjectPhasesSection'
 import SharedPasswordsSection from './components/SharedPasswordsSection'
+import AppointmentKanbanSection from './components/AppointmentKanbanSection'
+import DealKanbanSection from './components/DealKanbanSection'
 
 const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   users: { title: 'Benutzer & Rollen', desc: 'Benutzer verwalten, Rollen und Modul-Berechtigungen zuweisen' },
@@ -26,6 +28,8 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   tags: { title: 'Tag-Verwaltung', desc: 'Tags erstellen, bearbeiten und Farben zuweisen' },
   automations: { title: 'Automations-Regeln', desc: 'Follow-Up Regeln, Checklisten und Wiedervorlage-Logik' },
   projectPhases: { title: 'Projekt-Phasen', desc: 'Checklisten-Schritte pro Projektphase konfigurieren' },
+  appointmentKanban: { title: 'Termin-Kanban', desc: 'Kanban-Spalten benennen, einfärben und sortieren' },
+  dealKanban: { title: 'Angebote-Kanban', desc: 'Angebote-Kanban-Spalten benennen, einfärben und sortieren' },
   integrations: { title: 'Integrationen', desc: 'Outlook, 3CX, Zoom und Bexio verbinden' },
   webhooks: { title: 'Webhook-Verwaltung', desc: 'Leadquellen und Webhooks konfigurieren' },
   templates: { title: 'Dokumenten-Vorlagen', desc: 'Ordnerstruktur-Templates pro Entität definieren' },
@@ -45,6 +49,8 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   tags: TagManagementSection,
   automations: AutomationRulesSection,
   projectPhases: ProjectPhasesSection,
+  appointmentKanban: AppointmentKanbanSection,
+  dealKanban: DealKanbanSection,
   integrations: IntegrationsSection,
   webhooks: WebhookSection,
   templates: DocumentTemplatesSection,

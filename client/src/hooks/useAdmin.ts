@@ -351,3 +351,53 @@ export const categoryColors: Record<ProductCategory, string> = {
   INSTALLATION: '#A78BFA',
   PARTNER_PRICE: '#FB923C',
 }
+
+// ── Deal Kanban Columns ──
+
+export interface DealKanbanColumn {
+  stage: string
+  label: string
+  color: string
+  order: number
+}
+
+export function useDealKanbanColumns() {
+  return useQuery({
+    queryKey: ['dealKanbanColumns'],
+    queryFn: () => api.get<{ data: DealKanbanColumn[] }>('/admin/deal-kanban'),
+  })
+}
+
+export function useUpdateDealKanbanColumns() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (columns: DealKanbanColumn[]) =>
+      api.put<{ data: DealKanbanColumn[] }>('/admin/deal-kanban', { columns }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dealKanbanColumns'] }),
+  })
+}
+
+// ── Appointment Kanban Columns ──
+
+export interface KanbanColumn {
+  status: string
+  label: string
+  color: string
+  order: number
+}
+
+export function useKanbanColumns() {
+  return useQuery({
+    queryKey: ['kanbanColumns'],
+    queryFn: () => api.get<{ data: KanbanColumn[] }>('/admin/appointment-kanban'),
+  })
+}
+
+export function useUpdateKanbanColumns() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (columns: KanbanColumn[]) =>
+      api.put<{ data: KanbanColumn[] }>('/admin/appointment-kanban', { columns }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['kanbanColumns'] }),
+  })
+}

@@ -26,6 +26,8 @@ import adminAiSettingsRouter from './routes/admin/aiSettings.js'
 import adminNotifSettingsRouter from './routes/admin/notifSettings.js'
 import adminDocTemplatesRouter from './routes/admin/docTemplates.js'
 import adminDbExportRouter from './routes/admin/dbExport.js'
+import adminAppointmentKanbanRouter from './routes/admin/appointmentKanban.js'
+import adminDealKanbanRouter from './routes/admin/dealKanban.js'
 import searchRouter from './routes/search.js'
 import aiRouter from './routes/ai.js'
 import passwordsRouter from './routes/passwords.js'
@@ -114,6 +116,8 @@ export function createApp() {
   app.use('/api/v1/admin/notification-settings', ...adminGuard, adminNotifSettingsRouter)
   app.use('/api/v1/admin/doc-templates', ...adminGuard, adminDocTemplatesRouter)
   app.use('/api/v1/admin/db-export', ...adminGuard, adminDbExportRouter)
+  app.use('/api/v1/admin/appointment-kanban', ...adminGuard, adminAppointmentKanbanRouter)
+  app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
 
   app.use(errorHandler)
 
