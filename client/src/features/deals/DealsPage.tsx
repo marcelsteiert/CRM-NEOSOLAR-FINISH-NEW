@@ -47,7 +47,7 @@ function LoadingSkeleton() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {['Angebot', 'Unternehmen', 'Wert', 'Phase', 'Priorität', 'Abschluss', 'Erstellt'].map((h) => (
+              {['Angebot', 'Unternehmen', 'Wert', 'Phase', 'Priorität', 'Wahrsch.', 'Zugewiesen', 'Abschluss', 'Erstellt'].map((h) => (
                 <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">{h}</th>
               ))}
             </tr>
@@ -55,7 +55,7 @@ function LoadingSkeleton() {
           <tbody>
             {Array.from({ length: 6 }).map((_, i) => (
               <tr key={i} className="border-b border-border">
-                {[180, 120, 80, 90, 70, 85, 75].map((w, j) => (
+                {[180, 120, 80, 90, 70, 60, 100, 85, 75].map((w, j) => (
                   <td key={j} className="px-6 py-4">
                     <div className="rounded-md animate-pulse" style={{ width: `${w + Math.random() * 30}px`, height: '14px', background: 'rgba(255,255,255,0.06)', animationDelay: `${i * 80 + j * 40}ms` }} />
                   </td>

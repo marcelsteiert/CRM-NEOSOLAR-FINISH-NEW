@@ -74,8 +74,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       query = query.or(`title.ilike.%${search}%`)
     }
 
+    const allowedSortFields = ['title', 'value', 'stage', 'priority', 'assigned_to', 'expected_close_date', 'created_at', 'updated_at', 'win_probability']
     const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'created_at'
-    query = query.order(sf, { ascending: sortOrder !== 'desc' })
+    const safeSortField = allowedSortFields.includes(sf) ? sf : 'created_at'
+    query = query.order(safeSortField, { ascending: sortOrder !== 'desc' })
 
     const page = Math.max(1, Number(pp) || 1)
     const pageSize = Math.min(100, Math.max(1, Number(psp) || 20))

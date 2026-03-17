@@ -48,11 +48,12 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
 
   const columns: { key: string; label: string; sortField?: string }[] = [
     { key: 'title', label: 'Angebot', sortField: 'title' },
-    { key: 'company', label: 'Unternehmen', sortField: 'company' },
+    { key: 'company', label: 'Unternehmen' },
     { key: 'value', label: 'Wert', sortField: 'value' },
     { key: 'stage', label: 'Phase' },
     { key: 'priority', label: 'Priorität' },
-    { key: 'assignedTo', label: 'Zugewiesen an', sortField: 'assignedTo' },
+    { key: 'winProbability', label: 'Wahrsch.', sortField: 'winProbability' },
+    { key: 'assignedTo', label: 'Zugewiesen an' },
     { key: 'expectedCloseDate', label: 'Erwarteter Abschluss', sortField: 'expectedCloseDate' },
     { key: 'createdAt', label: 'Erstellt', sortField: 'createdAt' },
   ]
@@ -137,6 +138,30 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                   >
                     {priorityLabels[deal.priority]}
                   </span>
+                </td>
+
+                {/* Win Probability */}
+                <td className="px-6 py-3.5">
+                  {deal.winProbability != null ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${deal.winProbability}%`,
+                            background: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171',
+                          }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-semibold tabular-nums" style={{
+                        color: deal.winProbability >= 70 ? '#34D399' : deal.winProbability >= 40 ? '#F59E0B' : '#F87171',
+                      }}>
+                        {deal.winProbability}%
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-text-dim">{'\u2014'}</span>
+                  )}
                 </td>
 
                 {/* Zugewiesen an */}
