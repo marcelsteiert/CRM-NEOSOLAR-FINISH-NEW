@@ -14,6 +14,7 @@ import {
 } from '@/hooks/useProjects'
 import { usePartners } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
+import { useUsers } from '@/hooks/useLeads'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
@@ -69,6 +70,8 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
   const deleteProject = useDeleteProject()
   const archiveProject = useArchiveProject()
   const generateContactSummary = useGenerateContactSummary()
+  const { data: usersResponse } = useUsers()
+  const users = usersResponse?.data ?? []
 
   const project = projectData?.data
   const phases = phasesData?.data ?? []
@@ -460,7 +463,18 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-text-dim w-12 shrink-0">PL</span>
-                          <input type="text" value={editProjectManager} onChange={(e) => setEditProjectManager(e.target.value)} placeholder="Projektleiter" className="glass-input flex-1 px-2 py-1 text-[12px]" />
+                          <select
+                            value={editProjectManager}
+                            onChange={(e) => setEditProjectManager(e.target.value)}
+                            className="glass-input flex-1 px-2 py-1 text-[12px]"
+                          >
+                            <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>– Kein PL –</option>
+                            {users.map((u) => (
+                              <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                                {u.firstName} {u.lastName}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </>
                     ) : (
@@ -479,7 +493,10 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                         </div>
                         <div className="flex items-center justify-between text-[12px]">
                           <span className="text-text-dim">Projektleiter</span>
-                          <span className="font-semibold">{project.projectManager || '–'}</span>
+                          <span className="font-semibold">{(() => {
+                            const pm = users.find((u) => u.id === project.projectManager)
+                            return pm ? `${pm.firstName} ${pm.lastName}` : (project.projectManager || '–')
+                          })()}</span>
                         </div>
                       </>
                     )}
@@ -725,12 +742,9 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                             </div>
                             <div className="pb-2.5">
                               <span className={`text-[11px] font-semibold ${active ? 'text-text' : 'text-text-dim'}`}>{step.label}</span>
-                              {active && step.id !== project.id && (
-                                <span className="flex items-center gap-1 text-[9px] mt-0.5" style={{ color: step.color }}>
-                                  <ExternalLink size={8} /> {step.id}
-                                </span>
+                              {active && (
+                                <span className="text-[9px] text-text-dim block mt-0.5">{step.desc}</span>
                               )}
-                              {isLast && <span className="text-[9px] text-text-dim block mt-0.5">{step.desc}</span>}
                             </div>
                           </div>
                         )
