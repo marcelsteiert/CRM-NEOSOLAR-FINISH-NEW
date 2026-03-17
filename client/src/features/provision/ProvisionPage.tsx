@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Coins, ChevronLeft, ChevronRight, TrendingUp, Users, FileText, Printer } from 'lucide-react'
+import { Coins, ChevronLeft, ChevronRight, TrendingUp, Users, FileText, Printer, Info } from 'lucide-react'
 import { useProvision, useMonthlyStats } from '@/hooks/useDashboard'
 
 /* ── Helpers ── */
@@ -205,6 +205,26 @@ export default function ProvisionPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── Hinweis ── */}
+      <div
+        className="flex items-start gap-3 p-4 rounded-xl"
+        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
+      >
+        <Info size={16} className="text-text-dim shrink-0 mt-0.5" strokeWidth={1.8} />
+        <div className="text-[11px] text-text-sec leading-relaxed space-y-1">
+          <p className="font-semibold text-text-dim">Hinweis zur Provisionsberechnung</p>
+          <p>
+            Die hier angezeigten Provisionen sind <span className="text-text font-medium">vorläufige Richtwerte</span> und dienen ausschliesslich der Orientierung.
+            Die verbindliche Abrechnung erfolgt nach dem jeweiligen Monatsabschluss auf Basis der tatsaechlich abgeschlossenen und abgerechneten Baustellen im Abrechnungstool.
+          </p>
+          <p>
+            Massgebend fuer die Provisionsberechnung ist der <span className="text-text font-medium">Nettobetrag der PV-Anlage (ohne Zubehoer und Zusatzleistungen)</span>.
+            Abweichungen zwischen den hier dargestellten Werten und der finalen Abrechnung sind moeglich und kein Fehler.
+          </p>
+          <p>Die endgueltige Provision wird durch die Buchhaltung nach Monatsabschluss bestaetigt.</p>
+        </div>
       </div>
 
       {/* ── 6 Monats-Trend ── */}
