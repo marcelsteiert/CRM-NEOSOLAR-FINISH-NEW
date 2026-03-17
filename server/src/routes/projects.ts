@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification } from '../lib/notificationService.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -306,6 +307,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       })
     }
 
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'PROJECT', entityId: project?.id, description: `Projekt "${d.name}" erstellt` })
     res.status(201).json({ data: { ...enrichProject(project), activities: [] } })
   } catch (err) {
     next(err)
@@ -381,6 +383,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'PROJECT', entityId: req.params.id, description: `Projekt "${data.name}" aktualisiert${u.phase ? ` → Phase: ${u.phase}` : ''}` })
     res.json({ data: enrichProject(data) })
   } catch (err) {
     next(err)
@@ -495,6 +498,7 @@ router.delete('/all', async (req: Request, res: Response, next: NextFunction) =>
       .update({ deleted_at: now }, { count: 'exact' })
       .is('deleted_at', null)
     if (error) throw new AppError(error.message, 500)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'PROJECT', description: `${count ?? 0} Projekte gelöscht (Massenoperation)` })
     res.json({ message: `${count ?? 0} Projekte erfolgreich geloescht`, count: count ?? 0 })
   } catch (err) {
     next(err)
@@ -514,6 +518,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .is('deleted_at', null)
 
     if (error) throw new AppError('Projekt nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'PROJECT', entityId: req.params.id, description: `Projekt gelöscht` })
     res.json({ message: 'Projekt geloescht' })
   } catch (err) {
     next(err)

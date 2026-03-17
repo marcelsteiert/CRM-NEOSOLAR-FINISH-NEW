@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification } from '../lib/notificationService.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -163,6 +164,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       })
     }
 
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'TASK', entityId: data?.id, description: `Aufgabe "${result.data.title}" erstellt` })
     res.status(201).json({ data })
   } catch (err) {
     next(err)
@@ -204,6 +206,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError('Aufgabe nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'TASK', entityId: req.params.id, description: `Aufgabe aktualisiert` })
     res.json({ data })
   } catch (err) {
     next(err)
@@ -223,6 +226,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .is('deleted_at', null)
 
     if (error) throw new AppError('Aufgabe nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'TASK', entityId: req.params.id, description: `Aufgabe gelöscht` })
     res.json({ message: 'Aufgabe erfolgreich geloescht' })
   } catch (err) {
     next(err)

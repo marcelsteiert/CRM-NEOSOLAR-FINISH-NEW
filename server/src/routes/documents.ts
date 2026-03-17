@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -129,6 +130,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       .from('documents')
       .createSignedUrl(storagePath, 3600)
 
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DOCUMENT', entityId: doc?.id, description: `Dokument "${d.fileName}" hochgeladen` })
     res.status(201).json({ data: { ...doc, downloadUrl: urlData?.signedUrl ?? null } })
   } catch (err) {
     next(err)
@@ -181,6 +183,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
     // Aus DB loeschen (hard delete – Dokumente haben kein soft delete)
     await supabase.from('documents').delete().eq('id', req.params.id)
 
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'DOCUMENT', entityId: req.params.id, description: `Dokument "${doc.file_name}" gelöscht` })
     res.json({ message: 'Dokument geloescht' })
   } catch (err) {
     next(err)

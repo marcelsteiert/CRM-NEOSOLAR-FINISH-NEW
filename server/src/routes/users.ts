@@ -4,6 +4,7 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -220,6 +221,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError(error.message, 500)
     }
 
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'USER', entityId: data?.id, description: `Benutzer "${firstName} ${lastName}" (${role}) erstellt` })
     res.status(201).json({
       data: {
         id: data.id,
@@ -289,6 +291,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       throw new AppError('Benutzer nicht gefunden', 404)
     }
 
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'USER', entityId: req.params.id, description: `Benutzer "${data.first_name} ${data.last_name}" aktualisiert` })
     res.json({
       data: {
         id: data.id,
@@ -319,6 +322,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .single()
 
     if (error) throw new AppError('Benutzer nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'USER', entityId: req.params.id, description: `Benutzer "${data.first_name} ${data.last_name}" deaktiviert` })
 
     res.json({
       message: 'Benutzer deaktiviert',

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -213,6 +214,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError(error.message, 500)
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'APPOINTMENT', entityId: data?.id, description: `Termin erstellt (${result.data.appointmentType ?? 'VOR_ORT'})` })
     res.status(201).json({ data: {
       ...data,
       contactName: data.contact ? `${data.contact.first_name} ${data.contact.last_name}` : '',
@@ -268,6 +270,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       .single()
 
     if (error) throw new AppError('Termin nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'APPOINTMENT', entityId: req.params.id, description: `Termin aktualisiert` })
     res.json({ data: {
       ...data,
       contactName: data.contact ? `${data.contact.first_name} ${data.contact.last_name}` : '',
@@ -295,6 +298,7 @@ router.delete('/all', async (req: Request, res: Response, next: NextFunction) =>
       .update({ deleted_at: now }, { count: 'exact' })
       .is('deleted_at', null)
     if (error) throw new AppError(error.message, 500)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'APPOINTMENT', description: `${count ?? 0} Termine gelöscht (Massenoperation)` })
     res.json({ message: `${count ?? 0} Termine erfolgreich geloescht`, count: count ?? 0 })
   } catch (err) {
     next(err)
@@ -314,6 +318,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .is('deleted_at', null)
 
     if (error) throw new AppError('Termin nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'APPOINTMENT', entityId: req.params.id, description: `Termin gelöscht` })
     res.json({ message: 'Termin erfolgreich geloescht' })
   } catch (err) {
     next(err)

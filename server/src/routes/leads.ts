@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification } from '../lib/notificationService.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -366,6 +367,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
+    // Audit-Log
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'LEAD', entityId: lead?.id, description: `Lead "${result.data.firstName} ${result.data.lastName}" erstellt` })
+
     res.status(201).json({ data: { ...lead, tags: result.data.tags ?? [] } })
   } catch (err) {
     next(err)
@@ -451,6 +455,9 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
+    // Audit-Log
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'LEAD', entityId: req.params.id, description: `Lead aktualisiert` })
+
     res.json({
       data: {
         ...data,
@@ -481,6 +488,7 @@ router.delete('/all', async (req: Request, res: Response, next: NextFunction) =>
 
     if (error) throw new AppError(error.message, 500)
 
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'LEAD', description: `${count ?? 0} Leads gelöscht (Massenoperation)` })
     res.json({ message: `${count ?? 0} Leads erfolgreich geloescht`, count: count ?? 0 })
   } catch (err) {
     next(err)
@@ -500,6 +508,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .is('deleted_at', null)
 
     if (error) throw new AppError('Lead nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'LEAD', entityId: req.params.id, description: `Lead gelöscht` })
     res.json({ message: 'Lead erfolgreich geloescht' })
   } catch (err) {
     next(err)

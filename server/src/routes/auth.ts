@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { logAudit } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -71,6 +72,8 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN },
     )
+
+    logAudit({ userId: user.id, action: 'LOGIN', entity: 'AUTH', description: `${user.first_name} ${user.last_name} (${user.role}) angemeldet` })
 
     res.json({
       data: {

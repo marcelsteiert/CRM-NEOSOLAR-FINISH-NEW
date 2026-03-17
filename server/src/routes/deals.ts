@@ -6,6 +6,7 @@ import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
 import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification, createNotificationForUsers, getAdminUserIds } from '../lib/notificationService.js'
+import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
 
@@ -344,6 +345,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       await supabase.from('deal_tags').insert(result.data.tags.map((tagId) => ({ deal_id: deal.id, tag_id: tagId })))
     }
 
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DEAL', entityId: deal?.id, description: `Angebot "${result.data.title}" erstellt` })
+
     res.status(201).json({ data: {
       ...deal,
       contactName: deal.contact ? `${deal.contact.first_name} ${deal.contact.last_name}` : '',
@@ -505,6 +508,9 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
+    const stageInfo = u.stage && oldDeal?.stage !== u.stage ? ` Phase: ${oldDeal?.stage} → ${u.stage}` : ''
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'DEAL', entityId: req.params.id, description: `Angebot "${data.title}" aktualisiert${stageInfo}` })
+
     res.json({
       data: {
         ...data,
@@ -535,6 +541,7 @@ router.delete('/all', async (req: Request, res: Response, next: NextFunction) =>
       .update({ deleted_at: now }, { count: 'exact' })
       .is('deleted_at', null)
     if (error) throw new AppError(error.message, 500)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'DEAL', description: `${count ?? 0} Angebote gelöscht (Massenoperation)` })
     res.json({ message: `${count ?? 0} Angebote erfolgreich geloescht`, count: count ?? 0 })
   } catch (err) {
     next(err)
@@ -554,6 +561,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .is('deleted_at', null)
 
     if (error) throw new AppError('Angebot nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'DEAL', entityId: req.params.id, description: `Angebot gelöscht` })
     res.json({ message: 'Angebot erfolgreich geloescht' })
   } catch (err) {
     next(err)
