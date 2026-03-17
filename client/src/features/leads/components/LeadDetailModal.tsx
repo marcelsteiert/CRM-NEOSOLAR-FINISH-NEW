@@ -1590,12 +1590,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   onChange={(e) => setApptAssignedTo(e.target.value)}
                   className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
                 >
-                  <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Verkäufer auswählen...</option>
-                  {users
-                    .filter((u) => u.role === 'VERTRIEB' || u.role === 'GL')
-                    .map((u) => (
+                  <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Benutzer auswählen...</option>
+                  {users.map((u) => (
                       <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
-                        {u.firstName} {u.lastName} – {u.role === 'VERTRIEB' ? 'Vertrieb' : 'Geschäftsleitung'}
+                        {u.firstName} {u.lastName} – {u.role}
                       </option>
                     ))}
                 </select>
