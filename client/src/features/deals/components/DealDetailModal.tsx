@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar,
-  Trash2, ChevronDown, Trophy, XCircle, Clock,
+  Trash2, ChevronDown, Trophy, XCircle, Clock, AlertTriangle,
   MessageSquare, PhoneCall, Users as UsersIcon,
   Zap, Send, Percent, CalendarClock,
 } from 'lucide-react'
@@ -727,11 +727,26 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           {showWonConfirm && (
             <div className="space-y-2.5 mb-3">
               <p className="text-[12px] text-emerald-400 font-semibold">Angebot als gewonnen markieren und zu Projekt konvertieren?</p>
-              <p className="text-[11px] text-text-sec">Alle Aktivitäten und Daten werden zum Projekt übernommen.</p>
-              <div className="flex items-center gap-2.5">
-                <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary flex-1 px-3 py-1.5 text-[11px] text-center">Abbrechen</button>
-                <button type="button" onClick={handleMarkWon} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white text-center" style={{ background: '#34D399' }}>Gewonnen &rarr; Projekt</button>
-              </div>
+              {deal && deal.value <= 0 ? (
+                <>
+                  <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'color-mix(in srgb, #F87171 8%, transparent)', border: '1px solid color-mix(in srgb, #F87171 15%, transparent)' }}>
+                    <AlertTriangle size={14} className="text-red shrink-0" strokeWidth={2} />
+                    <p className="text-[11px] text-red font-semibold">Bitte zuerst einen Angebotswert (CHF) erfassen, bevor du das Angebot als gewonnen markierst.</p>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <button type="button" onClick={() => { setShowWonConfirm(false); setIsEditing(true) }} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-amber text-center" style={{ border: '1px solid rgba(245,158,11,0.2)', background: 'color-mix(in srgb, #F59E0B 8%, transparent)' }}>Wert bearbeiten</button>
+                    <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary flex-1 px-3 py-1.5 text-[11px] text-center">Abbrechen</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] text-text-sec">Alle Aktivitäten und Daten werden zum Projekt übernommen.</p>
+                  <div className="flex items-center gap-2.5">
+                    <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary flex-1 px-3 py-1.5 text-[11px] text-center">Abbrechen</button>
+                    <button type="button" onClick={handleMarkWon} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white text-center" style={{ background: '#34D399' }}>Gewonnen &rarr; Projekt</button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
