@@ -162,7 +162,21 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
 
   const handleMarkWon = async () => {
     if (!deal) return
-    updateDeal.mutate({ id: deal.id, stage: 'GEWONNEN' as DealStage })
+    // Wenn im Edit-Modus, zuerst Änderungen speichern (inkl. Wert)
+    if (isEditing) {
+      updateDeal.mutate({
+        id: deal.id, title: editTitle.trim(), contactName: editContactName.trim(),
+        contactEmail: editContactEmail.trim(), contactPhone: editContactPhone.trim(),
+        company: editCompany.trim() || undefined, address: editAddress.trim(),
+        value: Number(editValue) || 0, stage: 'GEWONNEN' as DealStage, priority: editPriority,
+        expectedCloseDate: editExpectedClose || undefined, notes: editNotes.trim() || undefined,
+        winProbability: editWinProb ? Number(editWinProb) : undefined,
+        followUpDate: editFollowUpDate || undefined,
+      })
+      setIsEditing(false)
+    } else {
+      updateDeal.mutate({ id: deal.id, stage: 'GEWONNEN' as DealStage })
+    }
 
     const now = new Date().toISOString()
     const historyActivities: Array<{ type: string; text: string; createdBy: string; createdAt: string }> = []
@@ -186,11 +200,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         name: deal.company || deal.contactName,
         description: deal.title,
         kWp: 0,
-        value: deal.value,
-        address: deal.address,
-        phone: deal.contactPhone,
-        email: deal.contactEmail,
-        company: deal.company ?? undefined,
+        value: isEditing ? (Number(editValue) || deal.value) : deal.value,
+        address: isEditing ? editAddress.trim() || deal.address : deal.address,
+        phone: isEditing ? editContactPhone.trim() || deal.contactPhone : deal.contactPhone,
+        email: isEditing ? editContactEmail.trim() || deal.contactEmail : deal.contactEmail,
+        company: (isEditing ? editCompany.trim() : deal.company) || undefined,
         leadId: deal.leadId ?? undefined,
         appointmentId: deal.appointmentId ?? undefined,
         dealId: deal.id,
@@ -744,7 +758,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           {showWonConfirm && (
             <div className="space-y-2.5 mb-3">
               <p className="text-[12px] text-emerald-400 font-semibold">Angebot als gewonnen markieren und zu Projekt konvertieren?</p>
-              {deal && deal.value <= 0 ? (
+              {deal && (isEditing ? Number(editValue) || 0 : deal.value) <= 0 ? (
                 <>
                   <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'color-mix(in srgb, #F87171 8%, transparent)', border: '1px solid color-mix(in srgb, #F87171 15%, transparent)' }}>
                     <AlertTriangle size={14} className="text-red shrink-0" strokeWidth={2} />
