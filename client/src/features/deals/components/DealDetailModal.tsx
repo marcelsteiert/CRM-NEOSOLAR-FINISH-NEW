@@ -83,6 +83,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const [showLostConfirm, setShowLostConfirm] = useState(false)
   const [showFollowUpPicker, setShowFollowUpPicker] = useState(false)
   const [lostReason, setLostReason] = useState('')
+  const [wonSeller, setWonSeller] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
   // Activity input
@@ -195,6 +196,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         dealId: deal.id,
         notes: deal.notes ?? undefined,
         priority: deal.priority === 'URGENT' ? 'URGENT' : deal.priority === 'HIGH' ? 'HIGH' : 'MEDIUM',
+        projectManagerId: wonSeller || undefined,
         activities: historyActivities,
       })
     } catch { /* non-blocking */ }
@@ -574,10 +576,23 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 </div>
               )}
 
-              {/* Erstellt */}
-              <div className="flex items-center gap-2 text-[11px] text-text-dim px-1">
-                <Clock size={12} strokeWidth={1.8} />
-                Erstellt {relativeTime(deal.createdAt)}
+              {/* Erstellt + Zuletzt bearbeitet */}
+              <div className="flex flex-col gap-1 text-[11px] text-text-dim px-1">
+                <div className="flex items-center gap-2">
+                  <Clock size={12} strokeWidth={1.8} />
+                  Erstellt {relativeTime(deal.createdAt)}
+                </div>
+                {deal.updatedAt && deal.updatedAt !== deal.createdAt && (() => {
+                  const lastAct = [...deal.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+                  const lastEditor = lastAct ? users.find((u) => u.id === lastAct.createdBy) : null
+                  const editorName = lastEditor ? `${lastEditor.firstName} ${lastEditor.lastName}` : null
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Pencil size={11} strokeWidth={1.8} />
+                      Zuletzt bearbeitet {relativeTime(deal.updatedAt)}{editorName ? ` von ${editorName}` : ''}
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* KI-Analyse */}
@@ -644,6 +659,8 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 <div className="space-y-0.5">
                   {sortedActivities.map((act) => {
                     const ActIcon = activityIcons[act.type] ?? Zap
+                    const actUser = users.find((u) => u.id === act.createdBy)
+                    const actUserName = actUser ? `${actUser.firstName} ${actUser.lastName}` : act.createdBy
                     return (
                       <div key={act.id} className="flex items-start gap-3 p-3 rounded-[12px] hover:bg-surface-hover transition-colors duration-150">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: `color-mix(in srgb, ${activityTypeColors[act.type]} 12%, transparent)` }}>
@@ -654,7 +671,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                             <p className="text-[12px] text-text-sec">{act.text}</p>
                             <span className="text-[10px] text-text-dim shrink-0 tabular-nums">{relativeTime(act.createdAt)}</span>
                           </div>
-                          <p className="text-[10px] text-text-dim mt-0.5">{act.createdBy}</p>
+                          <p className="text-[10px] text-text-dim mt-0.5">{actUserName}</p>
                         </div>
                       </div>
                     )
@@ -741,9 +758,22 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
               ) : (
                 <>
                   <p className="text-[11px] text-text-sec">Alle Aktivitäten und Daten werden zum Projekt übernommen.</p>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim">Verkäufer / Projektleiter bestätigen</label>
+                    <select
+                      value={wonSeller}
+                      onChange={(e) => setWonSeller(e.target.value)}
+                      className="glass-input w-full px-3 py-2 text-[12px]"
+                    >
+                      <option value="">— Bitte auswählen —</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="flex items-center gap-2.5">
                     <button type="button" onClick={() => setShowWonConfirm(false)} className="btn-secondary flex-1 px-3 py-1.5 text-[11px] text-center">Abbrechen</button>
-                    <button type="button" onClick={handleMarkWon} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white text-center" style={{ background: '#34D399' }}>Gewonnen &rarr; Projekt</button>
+                    <button type="button" onClick={handleMarkWon} disabled={!wonSeller} className="flex-1 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-white text-center transition-opacity" style={{ background: wonSeller ? '#34D399' : 'rgba(52,211,153,0.3)', color: wonSeller ? '#fff' : 'rgba(255,255,255,0.4)' }}>Gewonnen &rarr; Projekt</button>
                   </div>
                 </>
               )}
@@ -767,7 +797,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
             <div className="flex items-center gap-2">
               {(!isClosed || isAdmin) && (
                 <>
-                  <button type="button" onClick={() => setShowWonConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(52,211,153,0.15)' }}>
+                  <button type="button" onClick={() => { setWonSeller(deal?.assignedTo ?? ''); setShowWonConfirm(true) }} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(52,211,153,0.15)' }}>
                     <Trophy size={14} strokeWidth={1.8} />Gewonnen
                   </button>
                   <button type="button" onClick={() => setShowLostConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>

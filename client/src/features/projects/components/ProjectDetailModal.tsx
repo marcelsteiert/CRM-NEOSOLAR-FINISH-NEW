@@ -823,7 +823,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                             <span>·</span>
                             <span>{relativeTime(act.createdAt)}</span>
                             <span>·</span>
-                            <span>{act.createdBy}</span>
+                            <span>{(() => { const u = users.find((x) => x.id === act.createdBy); return u ? `${u.firstName} ${u.lastName}` : act.createdBy })()}</span>
                           </div>
                         </div>
                       </div>

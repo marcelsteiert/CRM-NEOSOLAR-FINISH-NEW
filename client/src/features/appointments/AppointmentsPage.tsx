@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/useAuth'
 import AppointmentTable from './components/AppointmentTable'
 import AppointmentDetailModal from './components/AppointmentDetailModal'
 import AppointmentCreateDialog from './components/AppointmentCreateDialog'
+import { useKanbanColumns, type KanbanColumn } from '@/hooks/useAdmin'
 
 /* ── Filter Types ── */
 
@@ -202,15 +203,43 @@ function KanbanCard({ appointment: a, users, onSelect }: { appointment: Appointm
   )
 }
 
-/* ── Kanban Column ── */
+/* ── Kanban View with Drag & Drop ── */
 
-const kanbanColumns: { status: AppointmentStatus; label: string; color: string }[] = [
-  { status: 'GEPLANT', label: 'Geplant', color: '#60A5FA' },
-  { status: 'BESTAETIGT', label: 'Bestätigt', color: '#34D399' },
-  { status: 'VORBEREITUNG', label: 'In Vorbereitung', color: '#F59E0B' },
+const defaultColumns: KanbanColumn[] = [
+  { status: 'GEPLANT', label: 'Geplant', color: '#60A5FA', order: 0 },
+  { status: 'BESTAETIGT', label: 'Bestätigt', color: '#34D399', order: 1 },
+  { status: 'VORBEREITUNG', label: 'In Vorbereitung', color: '#F59E0B', order: 2 },
 ]
 
-function KanbanView({ appointments, users, onSelect }: { appointments: Appointment[]; users: UserInfo[]; onSelect: (a: Appointment) => void }) {
+function KanbanView({ appointments, users, onSelect, columns }: { appointments: Appointment[]; users: UserInfo[]; onSelect: (a: Appointment) => void; columns: KanbanColumn[] }) {
+  const updateAppt = useUpdateAppointment()
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, appointmentId: string) => {
+    e.dataTransfer.setData('appointmentId', appointmentId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, status: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverCol(status)
+  }
+
+  const handleDragLeave = () => setDragOverCol(null)
+
+  const handleDrop = (e: React.DragEvent, targetStatus: string) => {
+    e.preventDefault()
+    setDragOverCol(null)
+    const appointmentId = e.dataTransfer.getData('appointmentId')
+    const appointment = appointments.find((a) => a.id === appointmentId)
+    if (appointment && appointment.status !== targetStatus) {
+      updateAppt.mutate({ id: appointmentId, status: targetStatus as AppointmentStatus })
+    }
+  }
+
+  const sorted = [...columns].sort((a, b) => a.order - b.order)
+
   if (appointments.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
@@ -222,13 +251,20 @@ function KanbanView({ appointments, users, onSelect }: { appointments: Appointme
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {kanbanColumns.map((col) => {
+      {sorted.map((col) => {
         const items = appointments.filter((a) => a.status === col.status)
+        const isOver = dragOverCol === col.status
         return (
           <div
             key={col.status}
-            className="flex flex-col rounded-xl min-h-[200px]"
-            style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)' }}
+            className="flex flex-col rounded-xl min-h-[200px] transition-all duration-150"
+            style={{
+              background: isOver ? `color-mix(in srgb, ${col.color} 4%, transparent)` : 'rgba(255,255,255,0.015)',
+              border: isOver ? `1px solid color-mix(in srgb, ${col.color} 30%, transparent)` : '1px solid rgba(255,255,255,0.04)',
+            }}
+            onDragOver={(e) => handleDragOver(e, col.status)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, col.status)}
           >
             {/* Column header */}
             <div className="flex items-center gap-2.5 px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
@@ -245,10 +281,18 @@ function KanbanView({ appointments, users, onSelect }: { appointments: Appointme
             {/* Cards */}
             <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-380px)]">
               {items.length === 0 ? (
-                <p className="text-[10px] text-text-dim text-center py-6">Keine Termine</p>
+                <p className="text-[10px] text-text-dim text-center py-6">
+                  {isOver ? 'Hier ablegen' : 'Keine Termine'}
+                </p>
               ) : (
                 items.map((a) => (
-                  <KanbanCard key={a.id} appointment={a} users={users} onSelect={onSelect} />
+                  <div
+                    key={a.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, a.id)}
+                  >
+                    <KanbanCard appointment={a} users={users} onSelect={onSelect} />
+                  </div>
                 ))
               )}
             </div>
@@ -272,6 +316,9 @@ export default function AppointmentsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [viewAll, setViewAll] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
+
+  const { data: kanbanColumnsRes } = useKanbanColumns()
+  const kanbanCols = kanbanColumnsRes?.data ?? defaultColumns
 
   const canViewAll = isAdmin
   const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
@@ -517,6 +564,7 @@ export default function AppointmentsPage() {
             appointments={filteredItems}
             users={users}
             onSelect={handleSelect}
+            columns={kanbanCols}
           />
         ) : (
           <AppointmentTable

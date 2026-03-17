@@ -1161,7 +1161,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                             </p>
                           )}
                           <p className="text-[11px] text-text-dim mt-1">
-                            {activity.createdBy}
+                            {(() => { const u = users.find((x) => x.id === activity.createdBy); return u ? `${u.firstName} ${u.lastName}` : activity.createdBy })()}
                           </p>
                         </div>
                       </div>

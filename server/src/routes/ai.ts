@@ -372,6 +372,7 @@ router.post('/follow-up-check', async (req: Request, res: Response, next: NextFu
       contactName: d.contacts ? `${d.contacts.first_name} ${d.contacts.last_name}` : 'Unbekannt',
       dueDate: d.follow_up_date,
       value: d.value,
+      notes: d.notes || null,
     }))
 
     const prompt = buildFollowUpCheckPrompt(overdueItems)

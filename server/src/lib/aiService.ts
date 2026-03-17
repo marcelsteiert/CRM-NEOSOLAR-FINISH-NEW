@@ -150,6 +150,8 @@ export function buildDealSummaryPrompt(deal: any, contact: any, activities: any[
 
   const dealInfo = `Angebot: "${deal.title}", Phase: ${deal.stage}, Wert: CHF ${deal.value ?? 0}, Win-Probability: ${deal.win_probability ?? 50}%, Erstellt: ${deal.created_at}, Follow-Up: ${deal.follow_up_date || 'keins'}`
 
+  const dealNotes = deal.notes ? `Notizen: ${deal.notes}` : 'Keine Notizen'
+
   const activityList = activities.length > 0
     ? activities.slice(0, 10).map((a: any) => `- ${a.type}: ${a.text || a.description || 'k.A.'} (${a.created_at})`).join('\n')
     : 'Keine Aktivitaeten'
@@ -158,22 +160,23 @@ export function buildDealSummaryPrompt(deal: any, contact: any, activities: any[
 
 ${contactInfo}
 ${dealInfo}
+${dealNotes}
 
 Aktivitaeten:
 ${activityList}
 
-Bitte analysiere: Aktuelle Situation, Staerken/Risiken, empfohlene naechste Schritte, und eine Einschaetzung der Abschlusswahrscheinlichkeit. Maximal 5-6 Saetze.`
+Bitte analysiere: Aktuelle Situation, Staerken/Risiken, empfohlene naechste Schritte, und eine Einschaetzung der Abschlusswahrscheinlichkeit. Beruecksichtige auch die Notizen und Aktivitaeten fuer deine Analyse. Maximal 5-6 Saetze.`
 }
 
 export function buildContactSummaryPrompt(contact: any, leads: any[], deals: any[], appointments: any[], projects: any[]): string {
   const contactInfo = `${contact.first_name} ${contact.last_name}, ${contact.email || ''}, ${contact.phone || ''}, Firma: ${contact.company || 'Privat'}, Adresse: ${contact.address || 'k.A.'}`
 
   const leadList = leads.length > 0
-    ? leads.map((l: any) => `- "${l.title}" (${l.status}, CHF ${l.value ?? 0})`).join('\n')
+    ? leads.map((l: any) => `- "${l.title}" (${l.status}, CHF ${l.value ?? 0})${l.notes ? ` – Notizen: ${l.notes.substring(0, 200)}` : ''}`).join('\n')
     : 'Keine Leads'
 
   const dealList = deals.length > 0
-    ? deals.map((d: any) => `- "${d.title}" (${d.stage}, CHF ${d.value ?? 0})`).join('\n')
+    ? deals.map((d: any) => `- "${d.title}" (${d.stage}, CHF ${d.value ?? 0})${d.notes ? ` – Notizen: ${d.notes.substring(0, 200)}` : ''}`).join('\n')
     : 'Keine Angebote'
 
   const apptList = appointments.length > 0
@@ -211,7 +214,7 @@ export function buildBriefingPrompt(stats: any, tasks: any[], followUps: any[], 
     : 'Keine offenen Aufgaben'
 
   const followUpList = followUps.length > 0
-    ? followUps.slice(0, 5).map((f: any) => `- "${f.title}" (CHF ${f.value ?? 0}, Follow-Up: ${f.follow_up_date})`).join('\n')
+    ? followUps.slice(0, 5).map((f: any) => `- "${f.title}" (CHF ${f.value ?? 0}, Follow-Up: ${f.follow_up_date})${f.notes ? ` – Notizen: ${f.notes.substring(0, 150)}` : ''}`).join('\n')
     : 'Keine Follow-Ups faellig'
 
   const apptList = appointments.length > 0
@@ -313,7 +316,7 @@ Regeln:
 
 export function buildFollowUpCheckPrompt(overdueItems: any[]): string {
   const items = overdueItems.slice(0, 10).map((item: any) =>
-    `- ${item.type}: "${item.title}" – Kontakt: ${item.contactName}, Faellig seit: ${item.dueDate}, Wert: CHF ${item.value ?? 0}`
+    `- ${item.type}: "${item.title}" – Kontakt: ${item.contactName}, Faellig seit: ${item.dueDate}, Wert: CHF ${item.value ?? 0}${item.notes ? ` – Notizen: ${item.notes.substring(0, 150)}` : ''}`
   ).join('\n')
 
   return `Du bist der KI-Assistent fuer NEOSOLAR AG. Hier sind ueberfaellige Follow-Ups die dringend bearbeitet werden muessen:
