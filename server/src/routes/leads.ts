@@ -85,7 +85,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     query = query.order(sf, { ascending })
 
     const page = Math.max(1, Number(pp) || 1)
-    const pageSize = Math.min(100, Math.max(1, Number(psp) || 20))
+    const pageSize = Math.min(500, Math.max(1, Number(psp) || 20))
     const from = (page - 1) * pageSize
     query = query.range(from, from + pageSize - 1)
 

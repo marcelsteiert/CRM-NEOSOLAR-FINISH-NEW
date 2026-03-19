@@ -192,7 +192,7 @@ export default function LeadsPage() {
     search: searchQuery.trim() || undefined,
     sortBy,
     sortOrder,
-    pageSize: 100,
+    pageSize: 500,
   })
 
   const deleteAllLeads = useDeleteAllLeads()
