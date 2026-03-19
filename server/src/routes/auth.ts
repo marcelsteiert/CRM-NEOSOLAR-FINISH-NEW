@@ -24,7 +24,7 @@ function requireAuth(req: Request, _res: Response, next: NextFunction): void {
     return next(new AppError('Nicht autorisiert – Token fehlt', 401))
   }
   try {
-    const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string; email: string; role: string }
+    const decoded = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string; email: string; role: string; allowedModules?: string[] }
     ;(req as any).user = decoded
     next()
   } catch {
@@ -68,7 +68,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      { userId: user.id, email: user.email, role: user.role, allowedModules: user.allowed_modules ?? [] },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_IN },
     )

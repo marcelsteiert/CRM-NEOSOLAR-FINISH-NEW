@@ -38,6 +38,7 @@ const ALL_MODULES = [
 ]
 
 const ALL_PERMISSIONS = [
+  { id: 'canViewAll', label: 'Alle Daten sehen' },
   { id: 'canDelete', label: 'Löschen' },
   { id: 'canExport', label: 'Export' },
   { id: 'canImport', label: 'Import' },
@@ -310,7 +311,7 @@ export default function UsersRolesSection() {
                       <button
                         type="button"
                         onClick={() => handleDeactivate(user.id)}
-                        className="px-2 py-1 rounded-lg text-[10px] font-bold text-red hover:bg-red-soft transition-colors"
+                        className="px-2 py-1 rounded-lg text-[10px] font-bold text-amber hover:bg-amber-soft transition-colors"
                       >
                         Deaktivieren
                       </button>
@@ -326,10 +327,43 @@ export default function UsersRolesSection() {
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(user.id)}
-                      className="p-1.5 rounded-lg hover:bg-surface-hover text-text-dim hover:text-red transition-colors"
+                      className="p-1.5 rounded-lg hover:bg-surface-hover text-text-dim hover:text-amber transition-colors"
                       title="Deaktivieren"
                     >
                       <UserX size={13} strokeWidth={2} />
+                    </button>
+                  )}
+                  {confirmHardDelete === user.id ? (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-red font-medium">Endgültig?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          hardDeleteUser.mutate(user.id, {
+                            onSuccess: () => { setConfirmHardDelete(null); setConfirmDelete(null) },
+                          })
+                        }}
+                        disabled={hardDeleteUser.isPending}
+                        className="px-2 py-1 rounded-lg text-[10px] font-bold text-red hover:bg-red-soft transition-colors disabled:opacity-40"
+                      >
+                        {hardDeleteUser.isPending ? 'Löscht...' : 'Ja, löschen'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmHardDelete(null)}
+                        className="p-1 rounded-lg text-text-dim hover:text-text transition-colors"
+                      >
+                        <X size={11} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmHardDelete(user.id)}
+                      className="p-1.5 rounded-lg hover:bg-surface-hover text-text-dim hover:text-red transition-colors"
+                      title="Endgültig löschen"
+                    >
+                      <Trash2 size={13} strokeWidth={2} />
                     </button>
                   )}
                 </div>

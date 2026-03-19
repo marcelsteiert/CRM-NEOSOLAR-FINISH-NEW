@@ -13,6 +13,7 @@ export interface AuthUser {
   userId: string
   email: string
   role: string
+  allowedModules?: string[]
 }
 
 // Erweiterung des Request-Types
