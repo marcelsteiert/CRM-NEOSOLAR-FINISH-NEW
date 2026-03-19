@@ -1,7 +1,7 @@
 import type { Request } from 'express'
 
-// Admin-artige Rollen sehen alle Daten
-const ADMIN_ROLES = ['ADMIN', 'GL', 'GESCHAEFTSLEITUNG']
+// Rollen die alle Daten sehen (kein Owner-Filter)
+const ADMIN_ROLES = ['ADMIN', 'GL', 'GESCHAEFTSLEITUNG', 'VERTRIEB', 'PROJEKTLEITUNG']
 
 /**
  * Gibt die User-ID zurueck, nach der gefiltert werden soll.
