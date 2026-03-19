@@ -38,7 +38,11 @@ const ALL_MODULES = [
 ]
 
 const ALL_PERMISSIONS = [
-  { id: 'canViewAll', label: 'Alle Daten sehen' },
+  { id: 'canViewAllLeads', label: 'Alle Leads sehen' },
+  { id: 'canViewAllAppointments', label: 'Alle Termine sehen' },
+  { id: 'canViewAllDeals', label: 'Alle Angebote sehen' },
+  { id: 'canViewAllProjects', label: 'Alle Projekte sehen' },
+  { id: 'canViewAllTasks', label: 'Alle Aufgaben sehen' },
   { id: 'canDelete', label: 'Löschen' },
   { id: 'canExport', label: 'Export' },
   { id: 'canImport', label: 'Import' },

@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
-import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { getProjectOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification } from '../lib/notificationService.js'
 import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
@@ -129,7 +129,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     // Per-User Filter: Nicht-Admins sehen Projekte wo sie PL oder Deal-Owner sind
     // Subunternehmen sehen ALLE Projekte (kein Owner-Filter)
-    const ownerFilter = userRole === 'SUBUNTERNEHMEN' ? null : getOwnerFilter(req)
+    const ownerFilter = userRole === 'SUBUNTERNEHMEN' ? null : getProjectOwnerFilter(req)
     if (ownerFilter) {
       // Zuerst: Deal-IDs finden, die diesem User gehoeren
       const { data: userDeals } = await supabase

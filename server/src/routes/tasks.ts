@@ -3,7 +3,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
-import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { getTaskOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification } from '../lib/notificationService.js'
 import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
@@ -51,7 +51,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Tasks
-    const ownerFilter = getOwnerFilter(req)
+    const ownerFilter = getTaskOwnerFilter(req)
     if (ownerFilter && !assignedTo) query = query.eq('assigned_to', ownerFilter)
 
     if (status && typeof status === 'string') query = query.eq('status', status)

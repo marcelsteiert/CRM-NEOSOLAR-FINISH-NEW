@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
-import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { getDealOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { createNotification, createNotificationForUsers, getAdminUserIds } from '../lib/notificationService.js'
 import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
@@ -68,7 +68,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Deals
-    const ownerFilter = getOwnerFilter(req)
+    const ownerFilter = getDealOwnerFilter(req)
     if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
 
     if (search && typeof search === 'string') {

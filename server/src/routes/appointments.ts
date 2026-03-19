@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { resolveContactId } from '../lib/contactResolver.js'
-import { getOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
+import { getAppointmentOwnerFilter, toSnakeCase } from '../lib/userFilter.js'
 import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
@@ -75,7 +75,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Termine
-    const ownerFilter = getOwnerFilter(req)
+    const ownerFilter = getAppointmentOwnerFilter(req)
     if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
 
     if (search && typeof search === 'string') {

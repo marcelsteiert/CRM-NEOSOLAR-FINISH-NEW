@@ -13,10 +13,10 @@ const router = Router()
 type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' | 'SUBUNTERNEHMEN'
 
 const defaultModulesByRole: Record<UserRole, string[]> = {
-  ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'export', 'canViewAll'],
-  GL: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'export', 'canViewAll'],
-  VERTRIEB: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents', 'passwords', 'canViewAll'],
-  PROJEKTLEITUNG: ['dashboard', 'projects', 'calculations', 'calendar', 'tasks', 'appointments', 'communication', 'documents', 'passwords', 'canViewAll'],
+  ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
+  GL: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
+  VERTRIEB: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents', 'passwords', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllTasks'],
+  PROJEKTLEITUNG: ['dashboard', 'projects', 'calculations', 'calendar', 'tasks', 'appointments', 'communication', 'documents', 'passwords', 'canViewAllProjects', 'canViewAllTasks', 'canViewAllAppointments'],
   BUCHHALTUNG: ['dashboard', 'provision', 'deals', 'documents', 'passwords', 'export'],
   SUBUNTERNEHMEN: ['dashboard', 'projects', 'calendar', 'tasks', 'documents', 'passwords'],
 }
