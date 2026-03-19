@@ -575,6 +575,9 @@ export default function LeadTable({
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
+              {onToggleSelect && (
+                <th className="pl-4 pr-1 py-3.5 w-8" />
+              )}
               {visibleColumns.map((col) => (
                 <SortableHeader
                   key={col.key}
