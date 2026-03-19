@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, type User, type UserRole } from '@/hooks/useLeads'
-import { Shield, Pencil, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck } from 'lucide-react'
+import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, useHardDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
+import { Shield, Pencil, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck, Trash2 } from 'lucide-react'
 
 const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']
 const roleLabels: Record<UserRole, string> = {
@@ -69,6 +69,7 @@ export default function UsersRolesSection() {
   const updateRoleDefaults = useUpdateRoleDefaults()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
+  const hardDeleteUser = useHardDeleteUser()
   const users = usersResponse?.data ?? []
   const roleDefaults = roleDefaultsResponse?.data ?? {} as Record<UserRole, string[]>
 
@@ -78,6 +79,7 @@ export default function UsersRolesSection() {
   const [editForm, setEditForm] = useState<FormData>({ ...emptyForm })
   const [expandedUser, setExpandedUser] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [confirmHardDelete, setConfirmHardDelete] = useState<string | null>(null)
   const [showInactive, setShowInactive] = useState(false)
 
   const activeUsers = users.filter((u) => u.isActive)
@@ -534,6 +536,40 @@ export default function UsersRolesSection() {
                       <UserCheck size={12} strokeWidth={2} />
                       Reaktivieren
                     </button>
+                    {confirmHardDelete === user.id ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] text-red font-medium">Endgültig?</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            hardDeleteUser.mutate(user.id, {
+                              onSuccess: () => setConfirmHardDelete(null),
+                            })
+                          }}
+                          disabled={hardDeleteUser.isPending}
+                          className="px-2 py-1 rounded-lg text-[10px] font-bold text-red hover:bg-red-soft transition-colors disabled:opacity-40"
+                        >
+                          {hardDeleteUser.isPending ? 'Löscht...' : 'Ja, löschen'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmHardDelete(null)}
+                          className="p-1 rounded-lg text-text-dim hover:text-text transition-colors"
+                        >
+                          <X size={11} strokeWidth={2} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmHardDelete(user.id)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold text-red hover:bg-surface-hover transition-colors"
+                        title="Endgültig löschen"
+                      >
+                        <Trash2 size={12} strokeWidth={2} />
+                        Löschen
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

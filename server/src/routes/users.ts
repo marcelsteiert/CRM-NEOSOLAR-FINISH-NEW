@@ -340,4 +340,60 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
   }
 })
 
+// DELETE user (hard – endgueltig loeschen inkl. aller Referenzen)
+router.delete('/:id/hard', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Pruefen ob der anfragende User Admin ist
+    const reqRole = (req as any).user?.role
+    if (reqRole !== 'ADMIN' && reqRole !== 'GL') {
+      throw new AppError('Nur Admins koennen Benutzer endgueltig loeschen', 403)
+    }
+
+    // User laden fuer Audit-Log
+    const { data: user, error: fetchErr } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, email, role')
+      .eq('id', req.params.id)
+      .single()
+
+    if (fetchErr || !user) throw new AppError('Benutzer nicht gefunden', 404)
+
+    // Selbstloeschung verhindern
+    if (user.id === (req as any).user?.userId) {
+      throw new AppError('Sie koennen sich nicht selbst loeschen', 400)
+    }
+
+    // Referenzen nullen (FK-Constraints)
+    await Promise.all([
+      supabase.from('tasks').update({ assigned_to: null }).eq('assigned_to', req.params.id),
+      supabase.from('tasks').update({ assigned_by: null }).eq('assigned_by', req.params.id),
+      supabase.from('activities').update({ created_by: null }).eq('created_by', req.params.id),
+      supabase.from('notifications').delete().eq('user_id', req.params.id),
+      supabase.from('audit_logs').update({ user_id: 'system' }).eq('user_id', req.params.id),
+    ])
+
+    // User endgueltig loeschen
+    const { error: delErr } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', req.params.id)
+
+    if (delErr) throw new AppError(`Loeschen fehlgeschlagen: ${delErr.message}`, 500)
+
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'USER', entityId: req.params.id, description: `Benutzer "${user.first_name} ${user.last_name}" (${user.email}) endgueltig geloescht` })
+
+    res.json({
+      message: 'Benutzer endgueltig geloescht',
+      data: {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
 export default router

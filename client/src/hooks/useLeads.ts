@@ -344,6 +344,14 @@ export function useDeleteUser() {
   })
 }
 
+export function useHardDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ message: string }>(`/users/${id}/hard`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+  })
+}
+
 // ── Pipeline Delete ──
 
 export function useDeletePipeline() {
