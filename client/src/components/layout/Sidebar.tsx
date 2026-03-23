@@ -127,6 +127,16 @@ export default function Sidebar() {
     setMobileOpen(false)
   }, [location.pathname, setMobileOpen])
 
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
   const isAdminUser = user?.role === 'ADMIN' || user?.role === 'GL' || user?.role === 'GESCHAEFTSLEITUNG'
   const userModules = user?.allowedModules ?? []
   // Stabiler Key fuer memo-Invalidierung bei Modul-Aenderungen
@@ -160,7 +170,7 @@ export default function Sidebar() {
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-[51] bg-black/60 md:hidden"
+          className="fixed inset-0 z-[49] bg-black/60 md:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
