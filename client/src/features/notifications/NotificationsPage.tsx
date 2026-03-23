@@ -211,7 +211,7 @@ export default function NotificationsPage() {
               value={filter === 'ALL' ? 'ALL' : filter}
               onChange={(e) => setFilter(e.target.value === 'ALL' ? 'ALL' : e.target.value)}
               className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-              style={{ minWidth: '160px' }}
+              style={{ minWidth: 'auto' }}
             >
               {typeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
@@ -265,48 +265,49 @@ export default function NotificationsPage() {
                       key={n.id}
                       type="button"
                       onClick={() => handleClick(n)}
-                      className={`w-full glass-card p-4 text-left flex items-start gap-3 transition-all hover:border-[rgba(255,255,255,0.12)] group ${
+                      className={`w-full glass-card p-3 sm:p-4 text-left flex items-start gap-2.5 sm:gap-3 transition-all hover:border-[rgba(255,255,255,0.12)] group ${
                         !n.read ? '' : 'opacity-60'
                       }`}
                       style={!n.read ? { borderLeft: `3px solid ${color}` } : undefined}
                     >
                       {/* Icon */}
                       <div
-                        className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-[10px] flex items-center justify-center shrink-0"
                         style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}
                       >
-                        <Icon size={16} style={{ color }} strokeWidth={1.8} />
+                        <Icon size={14} className="sm:!w-4 sm:!h-4" style={{ color }} strokeWidth={1.8} />
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 flex-wrap">
                           <span
-                            className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase"
+                            className="px-1.5 py-0.5 rounded text-[8px] sm:text-[9px] font-bold uppercase"
                             style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
                           >
                             {notificationTypeLabels[n.type] ?? n.type}
                           </span>
+                          <span className="text-[10px] text-text-dim whitespace-nowrap sm:hidden">{relativeTime(n.createdAt)}</span>
                           {!n.read && (
                             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#F87171', boxShadow: '0 0 6px rgba(248,113,113,0.5)' }} />
                           )}
                         </div>
-                        <p className={`text-[13px] leading-tight ${!n.read ? 'font-semibold' : 'font-medium text-text-sec'}`}>
+                        <p className={`text-[12px] sm:text-[13px] leading-tight ${!n.read ? 'font-semibold' : 'font-medium text-text-sec'}`}>
                           {n.title}
                         </p>
                         {n.message && (
-                          <p className="text-[12px] text-text-dim mt-0.5 truncate">{n.message}</p>
+                          <p className="text-[11px] sm:text-[12px] text-text-dim mt-0.5 line-clamp-2 sm:truncate">{n.message}</p>
                         )}
                         {n.referenceTitle && (
-                          <p className="text-[11px] text-text-dim mt-1 flex items-center gap-1">
+                          <p className="text-[10px] sm:text-[11px] text-text-dim mt-1 flex items-center gap-1">
                             <ArrowRight size={10} />
-                            {n.referenceTitle}
+                            <span className="truncate">{n.referenceTitle}</span>
                           </p>
                         )}
                       </div>
 
                       {/* Time + Delete */}
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <div className="hidden sm:flex flex-col items-end gap-1.5 shrink-0">
                         <span className="text-[10px] text-text-dim whitespace-nowrap">{relativeTime(n.createdAt)}</span>
                         <button
                           type="button"

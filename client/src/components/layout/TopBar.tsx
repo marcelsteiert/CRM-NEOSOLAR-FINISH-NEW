@@ -372,7 +372,7 @@ function NotificationBell() {
       {/* Dropdown */}
       {open && (
         <div
-          className="absolute right-0 top-[calc(100%+6px)] w-[360px] max-h-[420px] rounded-2xl overflow-hidden z-50"
+          className="fixed right-3 left-3 top-[58px] sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+6px)] sm:w-[360px] max-h-[420px] rounded-2xl overflow-hidden z-50"
           style={{
             background: 'rgba(12, 14, 20, 0.98)',
             border: '1px solid rgba(255,255,255,0.08)',
