@@ -242,11 +242,19 @@ export default function LeadsPage() {
 
   const tags = tagsData?.data ?? []
 
-  /* ── Client-side tag filtering ── */
+  /* ── Client-side tag filtering + tag sorting ── */
   const filteredLeads = useMemo(() => {
-    if (tagFilter === 'ALL') return allLeads
-    return allLeads.filter((lead) => lead.tags.includes(tagFilter))
-  }, [allLeads, tagFilter])
+    let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
+    // Tags-Sortierung clientseitig (Tags sind Arrays, nicht DB-Spalte)
+    if (sortBy === 'tags') {
+      result = [...result].sort((a, b) => {
+        const aTag = (a.tags?.[0] ?? '').toLowerCase()
+        const bTag = (b.tags?.[0] ?? '').toLowerCase()
+        return sortOrder === 'asc' ? aTag.localeCompare(bTag) : bTag.localeCompare(aTag)
+      })
+    }
+    return result
+  }, [allLeads, tagFilter, sortBy, sortOrder])
 
   /* ── Handlers ── */
 

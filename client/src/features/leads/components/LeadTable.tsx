@@ -116,7 +116,7 @@ const columnDefs: ColumnDef[] = [
   { key: 'email' },
   { key: 'source' },
   { key: 'status' },
-  { key: 'tags' },
+  { key: 'tags', sortField: 'tags' },
   { key: 'createdAt', sortField: 'createdAt' },
 ]
 
