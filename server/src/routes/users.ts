@@ -338,19 +338,21 @@ router.delete('/:id/hard', async (req: Request, res: Response, next: NextFunctio
     // Alle FK-Referenzen nullen bzw. loeschen
     const uid = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
     await Promise.all([
+      // NOT NULL Spalten → DELETE (kann nicht null setzen)
+      supabase.from('activities').delete().eq('created_by', uid),
+      supabase.from('documents').delete().eq('uploaded_by', uid),
+      supabase.from('reminders').delete().eq('created_by', uid),
+      supabase.from('notifications').delete().eq('user_id', uid),
+      // Nullable Spalten → UPDATE null
       supabase.from('tasks').update({ assigned_to: null }).eq('assigned_to', uid),
       supabase.from('tasks').update({ assigned_by: null }).eq('assigned_by', uid),
-      supabase.from('activities').update({ created_by: null }).eq('created_by', uid),
-      supabase.from('notifications').delete().eq('user_id', uid),
       supabase.from('audit_logs').update({ user_id: null }).eq('user_id', uid),
       supabase.from('appointments').update({ assigned_to: null }).eq('assigned_to', uid),
       supabase.from('calendar_events').update({ created_by: null }).eq('created_by', uid),
       supabase.from('calendar_events').update({ assigned_to: null }).eq('assigned_to', uid),
       supabase.from('deals').update({ assigned_to: null }).eq('assigned_to', uid),
-      supabase.from('documents').update({ uploaded_by: null }).eq('uploaded_by', uid),
       supabase.from('leads').update({ assigned_to: null }).eq('assigned_to', uid),
       supabase.from('projects').update({ project_manager_id: null }).eq('project_manager_id', uid),
-      supabase.from('reminders').update({ created_by: null }).eq('created_by', uid),
     ])
 
     // User endgueltig loeschen

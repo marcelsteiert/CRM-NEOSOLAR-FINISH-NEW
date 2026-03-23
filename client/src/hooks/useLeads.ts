@@ -349,6 +349,7 @@ export function useHardDeleteUser() {
   return useMutation({
     mutationFn: (id: string) => api.delete<{ message: string }>(`/users/${id}/hard`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
+    onError: (err: Error) => alert(`Löschen fehlgeschlagen: ${err.message}`),
   })
 }
 
