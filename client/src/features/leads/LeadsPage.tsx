@@ -248,7 +248,7 @@ export default function LeadsPage() {
   const filteredLeads = useMemo(() => {
     let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
     // Clientseitige Sortierung fuer Kontakt-Felder und Tags (nicht via DB sortierbar)
-    const clientSortFields = ['tags', 'phone', 'email', 'source', 'lastName', 'company']
+    const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company']
     if (clientSortFields.includes(sortBy)) {
       result = [...result].sort((a, b) => {
         let aVal = ''
@@ -257,6 +257,7 @@ export default function LeadsPage() {
         else if (sortBy === 'phone') { aVal = a.phone ?? ''; bVal = b.phone ?? '' }
         else if (sortBy === 'email') { aVal = a.email ?? ''; bVal = b.email ?? '' }
         else if (sortBy === 'source') { aVal = a.source ?? ''; bVal = b.source ?? '' }
+        else if (sortBy === 'status') { aVal = a.status ?? ''; bVal = b.status ?? '' }
         else if (sortBy === 'lastName') { aVal = a.lastName ?? ''; bVal = b.lastName ?? '' }
         else if (sortBy === 'company') { aVal = a.company ?? ''; bVal = b.company ?? '' }
         return sortOrder === 'asc'

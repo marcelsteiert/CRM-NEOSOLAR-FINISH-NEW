@@ -89,7 +89,7 @@ const columnDefs: ColumnDef[] = [
   { key: 'phone', sortField: 'phone' },
   { key: 'email', sortField: 'email' },
   { key: 'source', sortField: 'source' },
-  { key: 'status' },
+  { key: 'status', sortField: 'status' },
   { key: 'tags', sortField: 'tags' },
   { key: 'createdAt', sortField: 'createdAt' },
 ]
