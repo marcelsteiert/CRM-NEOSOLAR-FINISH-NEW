@@ -164,11 +164,33 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 })
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/projects/phases
+// GET /api/v1/projects/phases – aus settings-Tabelle oder Fallback
 // ---------------------------------------------------------------------------
 
-router.get('/phases', (_req: Request, res: Response) => {
-  res.json({ data: phaseDefinitions })
+router.get('/phases', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data } = await supabase.from('settings').select('value').eq('key', 'project_phases').single()
+    res.json({ data: (data?.value as typeof phaseDefinitions) ?? phaseDefinitions })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
+// PUT /api/v1/projects/phases – Phasen speichern
+// ---------------------------------------------------------------------------
+
+router.put('/phases', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phases } = req.body
+    if (!Array.isArray(phases)) {
+      return res.status(400).json({ error: 'phases muss ein Array sein' })
+    }
+    await supabase.from('settings').upsert({ key: 'project_phases', value: phases }, { onConflict: 'key' })
+    res.json({ data: phases })
+  } catch (err) {
+    next(err)
+  }
 })
 
 // ---------------------------------------------------------------------------
