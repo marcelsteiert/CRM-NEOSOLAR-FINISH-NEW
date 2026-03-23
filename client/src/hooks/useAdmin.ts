@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 
@@ -414,6 +415,7 @@ export function useLeadSources() {
   return useQuery({
     queryKey: ['leadSources'],
     queryFn: () => api.get<{ data: LeadSourceDef[] }>('/admin/lead-sources'),
+    staleTime: 5 * 60_000, // 5 Min Cache – aendert sich selten
   })
 }
 
@@ -426,15 +428,17 @@ export function useUpdateLeadSources() {
   })
 }
 
-/** Dynamische Label- und Farb-Maps aus den Admin-Quellen */
+/** Dynamische Label- und Farb-Maps aus den Admin-Quellen (memoisiert) */
 export function useLeadSourceMaps() {
   const { data } = useLeadSources()
   const sources = data?.data ?? []
-  const labels: Record<string, string> = {}
-  const colors: Record<string, { bg: string; text: string }> = {}
-  for (const s of sources) {
-    labels[s.id] = s.name
-    colors[s.id] = { bg: `color-mix(in srgb, ${s.color} 10%, transparent)`, text: s.color }
-  }
-  return { labels, colors, sources }
+  return useMemo(() => {
+    const labels: Record<string, string> = {}
+    const colors: Record<string, { bg: string; text: string }> = {}
+    for (const s of sources) {
+      labels[s.id] = s.name
+      colors[s.id] = { bg: `color-mix(in srgb, ${s.color} 10%, transparent)`, text: s.color }
+    }
+    return { labels, colors, sources }
+  }, [sources])
 }

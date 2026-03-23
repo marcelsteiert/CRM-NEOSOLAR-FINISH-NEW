@@ -95,9 +95,11 @@ interface SortableItemProps {
   lead: Lead
   tags: Tag[]
   onSelect: (lead: Lead) => void
+  srcLabels: Record<string, string>
+  srcColors: Record<string, string>
 }
 
-function SortableItem({ lead, tags, onSelect }: SortableItemProps) {
+function SortableItem({ lead, tags, onSelect, srcLabels: dynLabels, srcColors: dynColors }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -106,9 +108,6 @@ function SortableItem({ lead, tags, onSelect }: SortableItemProps) {
     transition,
     isDragging,
   } = useSortable({ id: lead.id })
-  const { labels: dynLabels, sources } = useLeadSourceMaps()
-  const dynColors: Record<string, string> = {}
-  for (const s of sources) dynColors[s.id] = s.color
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -195,12 +194,11 @@ function SortableItem({ lead, tags, onSelect }: SortableItemProps) {
 interface LeadCardOverlayProps {
   lead: Lead
   tags: Tag[]
+  srcLabels: Record<string, string>
+  srcColors: Record<string, string>
 }
 
-function LeadCardOverlay({ lead, tags }: LeadCardOverlayProps) {
-  const { labels: dynLabels, sources } = useLeadSourceMaps()
-  const dynColors: Record<string, string> = {}
-  for (const s of sources) dynColors[s.id] = s.color
+function LeadCardOverlay({ lead, tags, srcLabels: dynLabels, srcColors: dynColors }: LeadCardOverlayProps) {
   const srcColor = dynColors[lead.source] ?? defaultSourceColors[lead.source] ?? DEFAULT_COLOR
   const value = lead.value ?? 0
 
@@ -349,6 +347,8 @@ function DroppableColumn({
               lead={lead}
               tags={tags}
               onSelect={onSelectLead}
+              srcLabels={srcLabels}
+              srcColors={srcColors}
             />
           ))}
         </SortableContext>
@@ -382,6 +382,14 @@ export default function LeadKanban({
   onMoveLead,
 }: LeadKanbanProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+
+  // Quellen einmal laden, an alle Cards weitergeben
+  const { labels: srcLabels, sources: srcDefs } = useLeadSourceMaps()
+  const srcColors = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const s of srcDefs) m[s.id] = s.color
+    return m
+  }, [srcDefs])
 
   // Use provided buckets or fall back to defaults
   const activeBuckets = useMemo(() => {
@@ -498,7 +506,7 @@ export default function LeadKanban({
       {/* Drag overlay – rendered outside column flow */}
       <DragOverlay dropAnimation={null}>
         {activeLead ? (
-          <LeadCardOverlay lead={activeLead} tags={tags} />
+          <LeadCardOverlay lead={activeLead} tags={tags} srcLabels={srcLabels} srcColors={srcColors} />
         ) : null}
       </DragOverlay>
     </DndContext>
