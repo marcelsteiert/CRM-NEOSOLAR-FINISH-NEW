@@ -311,36 +311,8 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
   }
 })
 
-// DELETE user (soft – deactivate)
-router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ is_active: false })
-      .eq('id', req.params.id)
-      .select()
-      .single()
-
-    if (error) throw new AppError('Benutzer nicht gefunden', 404)
-    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'USER', entityId: req.params.id, description: `Benutzer "${data.first_name} ${data.last_name}" deaktiviert` })
-
-    res.json({
-      message: 'Benutzer deaktiviert',
-      data: {
-        id: data.id,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        role: data.role,
-        isActive: data.is_active,
-      },
-    })
-  } catch (err) {
-    next(err)
-  }
-})
-
 // DELETE user (hard – endgueltig loeschen inkl. aller Referenzen)
+// WICHTIG: Muss VOR /:id stehen (Express Route-Order)
 router.delete('/:id/hard', async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Pruefen ob der anfragende User Admin ist
@@ -363,13 +335,22 @@ router.delete('/:id/hard', async (req: Request, res: Response, next: NextFunctio
       throw new AppError('Sie koennen sich nicht selbst loeschen', 400)
     }
 
-    // Referenzen nullen (FK-Constraints)
+    // Alle FK-Referenzen nullen bzw. loeschen
+    const uid = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
     await Promise.all([
-      supabase.from('tasks').update({ assigned_to: null }).eq('assigned_to', req.params.id),
-      supabase.from('tasks').update({ assigned_by: null }).eq('assigned_by', req.params.id),
-      supabase.from('activities').update({ created_by: null }).eq('created_by', req.params.id),
-      supabase.from('notifications').delete().eq('user_id', req.params.id),
-      supabase.from('audit_logs').update({ user_id: 'system' }).eq('user_id', req.params.id),
+      supabase.from('tasks').update({ assigned_to: null }).eq('assigned_to', uid),
+      supabase.from('tasks').update({ assigned_by: null }).eq('assigned_by', uid),
+      supabase.from('activities').update({ created_by: null }).eq('created_by', uid),
+      supabase.from('notifications').delete().eq('user_id', uid),
+      supabase.from('audit_logs').update({ user_id: 'system' }).eq('user_id', uid),
+      supabase.from('appointments').update({ assigned_to: null }).eq('assigned_to', uid),
+      supabase.from('calendar_events').update({ created_by: null }).eq('created_by', uid),
+      supabase.from('calendar_events').update({ assigned_to: null }).eq('assigned_to', uid),
+      supabase.from('deals').update({ assigned_to: null }).eq('assigned_to', uid),
+      supabase.from('documents').update({ uploaded_by: null }).eq('uploaded_by', uid),
+      supabase.from('leads').update({ assigned_to: null }).eq('assigned_to', uid),
+      supabase.from('projects').update({ project_manager_id: null }).eq('project_manager_id', uid),
+      supabase.from('reminders').update({ created_by: null }).eq('created_by', uid),
     ])
 
     // User endgueltig loeschen
@@ -389,6 +370,35 @@ router.delete('/:id/hard', async (req: Request, res: Response, next: NextFunctio
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// DELETE user (soft – deactivate)
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ is_active: false })
+      .eq('id', req.params.id)
+      .select()
+      .single()
+
+    if (error) throw new AppError('Benutzer nicht gefunden', 404)
+    logAudit({ userId: getAuditUserId(req), action: 'DELETE', entity: 'USER', entityId: req.params.id, description: `Benutzer "${data.first_name} ${data.last_name}" deaktiviert` })
+
+    res.json({
+      message: 'Benutzer deaktiviert',
+      data: {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        role: data.role,
+        isActive: data.is_active,
       },
     })
   } catch (err) {
