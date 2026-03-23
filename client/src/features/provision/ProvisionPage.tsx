@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react'
-import { Coins, ChevronLeft, ChevronRight, TrendingUp, Users, FileText, Printer, Info, Eye } from 'lucide-react'
+import { useState, useMemo, useRef } from 'react'
+import { Coins, ChevronLeft, ChevronRight, TrendingUp, Users, FileText, Printer, Info, Eye, Pencil, Check, X, Trash2 } from 'lucide-react'
 import { useProvision, useMonthlyStats } from '@/hooks/useDashboard'
 import { useAuth } from '@/hooks/useAuth'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/lib/api'
 
 /* ── Helpers ── */
 
@@ -35,6 +37,42 @@ export default function ProvisionPage() {
 
   const { user } = useAuth()
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'GL'
+  const qc = useQueryClient()
+
+  // Inline-Editing State
+  const [editingDealId, setEditingDealId] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const editInputRef = useRef<HTMLInputElement>(null)
+
+  const updateDeal = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: number }) =>
+      api.put(`/deals/${id}`, { value }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['provision'] })
+      qc.invalidateQueries({ queryKey: ['monthlyStats'] })
+      setEditingDealId(null)
+    },
+  })
+
+  const deleteDeal = useMutation({
+    mutationFn: (id: string) => api.delete(`/deals/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['provision'] })
+      qc.invalidateQueries({ queryKey: ['monthlyStats'] })
+    },
+  })
+
+  const startEdit = (dealId: string, currentValue: number) => {
+    setEditingDealId(dealId)
+    setEditValue(String(currentValue))
+    setTimeout(() => editInputRef.current?.select(), 50)
+  }
+
+  const saveEdit = (dealId: string) => {
+    const num = parseFloat(editValue.replace(/[^\d.,]/g, '').replace(',', '.'))
+    if (isNaN(num) || num < 0) { setEditingDealId(null); return }
+    updateDeal.mutate({ id: dealId, value: Math.round(num) })
+  }
 
   const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`
   const monthLabel = `${MONTH_NAMES[selectedMonth]} ${selectedYear}`
@@ -246,12 +284,55 @@ export default function ProvisionPage() {
 
                 {/* Deal List */}
                 <div className="ml-0 sm:ml-12 space-y-1.5">
-                  {p.deals.map((deal, i) => (
-                    <div key={i} className="flex items-center justify-between text-[11px] gap-2">
+                  {p.deals.map((deal) => (
+                    <div key={deal.id} className="flex items-center justify-between text-[11px] gap-2 group/deal">
                       <span className="text-text-sec truncate">{deal.title}</span>
                       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <span className="text-text-dim tabular-nums">{new Date(deal.closedAt).toLocaleDateString('de-CH')}</span>
-                        <span className="font-semibold tabular-nums">{formatCHF(deal.value)}</span>
+                        {editingDealId === deal.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') saveEdit(deal.id)
+                                if (e.key === 'Escape') setEditingDealId(null)
+                              }}
+                              className="w-24 px-2 py-0.5 text-[11px] rounded bg-bg border border-amber/30 text-text tabular-nums text-right focus:outline-none focus:border-amber"
+                              autoFocus
+                            />
+                            <button type="button" onClick={() => saveEdit(deal.id)} className="text-emerald-400 hover:text-emerald-300 p-0.5" disabled={updateDeal.isPending}>
+                              <Check size={11} strokeWidth={2.5} />
+                            </button>
+                            <button type="button" onClick={() => setEditingDealId(null)} className="text-text-dim hover:text-text p-0.5">
+                              <X size={11} strokeWidth={2} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            className={`font-semibold tabular-nums ${isAdmin ? 'cursor-pointer hover:text-amber transition-colors' : ''}`}
+                            onClick={isAdmin ? () => startEdit(deal.id, deal.value) : undefined}
+                          >
+                            {formatCHF(deal.value)}
+                          </span>
+                        )}
+                        {isAdmin && editingDealId !== deal.id && (
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover/deal:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => startEdit(deal.id, deal.value)} className="text-text-dim hover:text-amber p-0.5" title="Wert bearbeiten">
+                              <Pencil size={10} strokeWidth={2} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { if (confirm(`Deal "${deal.title}" wirklich löschen?`)) deleteDeal.mutate(deal.id) }}
+                              className="text-text-dim hover:text-red p-0.5"
+                              title="Deal löschen"
+                            >
+                              <Trash2 size={10} strokeWidth={2} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

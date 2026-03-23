@@ -214,6 +214,7 @@ router.get('/provision', async (req: Request, res: Response, next: NextFunction)
       const userId = (deal as any).assigned_to || 'unassigned'
       if (!byUser[userId]) byUser[userId] = { deals: [], totalValue: 0, provision: 0 }
       byUser[userId].deals.push({
+        id: (deal as any).id,
         title: (deal as any).title,
         value: (deal as any).value ?? 0,
         closedAt: (deal as any).closed_at,

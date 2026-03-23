@@ -47,7 +47,7 @@ export interface ProvisionEntry {
   userId: string
   userName: string
   userRole: string
-  deals: { title: string; value: number; closedAt: string }[]
+  deals: { id: string; title: string; value: number; closedAt: string }[]
   totalValue: number
   provisionRate: number
   provision: number
