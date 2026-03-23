@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { ChevronUp, ChevronDown, Pencil, Trash2, Settings2, RotateCcw, Eye, EyeOff, Plus, X } from 'lucide-react'
 import { type Lead, type Tag, statusLabels, useDeleteLead, useUpdateLead } from '@/hooks/useLeads'
 import { useTablePreferences, defaultColumnPrefs, defaultSourceLabels } from '@/hooks/useTablePreferences'
+import { useLeadSourceMaps } from '@/hooks/useAdmin'
 
 /* ── Props ── */
 
@@ -42,34 +43,7 @@ const statusColors: Record<Lead['status'], { bg: string; text: string }> = {
   },
 }
 
-/* ── Source color mapping ── */
-
-const sourceColors: Record<Lead['source'], { bg: string; text: string }> = {
-  HOMEPAGE: {
-    bg: 'color-mix(in srgb, #60A5FA 10%, transparent)',
-    text: '#60A5FA',
-  },
-  LANDINGPAGE: {
-    bg: 'color-mix(in srgb, #22D3EE 10%, transparent)',
-    text: '#22D3EE',
-  },
-  MESSE: {
-    bg: 'color-mix(in srgb, #A78BFA 10%, transparent)',
-    text: '#A78BFA',
-  },
-  EMPFEHLUNG: {
-    bg: 'color-mix(in srgb, #34D399 10%, transparent)',
-    text: '#34D399',
-  },
-  KALTAKQUISE: {
-    bg: 'color-mix(in srgb, #F59E0B 10%, transparent)',
-    text: '#F59E0B',
-  },
-  SONSTIGE: {
-    bg: 'color-mix(in srgb, #525E6F 10%, transparent)',
-    text: '#525E6F',
-  },
-}
+/* ── Source colors (fallback, dynamische aus useLeadSourceMaps) ── */
 
 /* ── Formatters ── */
 
@@ -112,9 +86,9 @@ const columnDefs: ColumnDef[] = [
   { key: 'name', sortField: 'lastName' },
   { key: 'company', sortField: 'company' },
   { key: 'value', sortField: 'value' },
-  { key: 'phone' },
-  { key: 'email' },
-  { key: 'source' },
+  { key: 'phone', sortField: 'phone' },
+  { key: 'email', sortField: 'email' },
+  { key: 'source', sortField: 'source' },
   { key: 'status' },
   { key: 'tags', sortField: 'tags' },
   { key: 'createdAt', sortField: 'createdAt' },
@@ -434,12 +408,22 @@ function InlineTagCell({
 
 /* ── Cell renderer ── */
 
+const defaultSourceColors: Record<string, { bg: string; text: string }> = {
+  HOMEPAGE: { bg: 'color-mix(in srgb, #60A5FA 10%, transparent)', text: '#60A5FA' },
+  LANDINGPAGE: { bg: 'color-mix(in srgb, #22D3EE 10%, transparent)', text: '#22D3EE' },
+  MESSE: { bg: 'color-mix(in srgb, #A78BFA 10%, transparent)', text: '#A78BFA' },
+  EMPFEHLUNG: { bg: 'color-mix(in srgb, #34D399 10%, transparent)', text: '#34D399' },
+  KALTAKQUISE: { bg: 'color-mix(in srgb, #F59E0B 10%, transparent)', text: '#F59E0B' },
+  SONSTIGE: { bg: 'color-mix(in srgb, #525E6F 10%, transparent)', text: '#525E6F' },
+}
+
 function renderCell(
   key: string,
   lead: Lead,
   tagMap: Map<string, Tag>,
   customSourceLabels: Record<string, string>,
   allTags: Tag[],
+  dynSourceColors?: Record<string, { bg: string; text: string }>,
 ) {
   switch (key) {
     case 'name':
@@ -485,7 +469,7 @@ function renderCell(
         </span>
       )
     case 'source': {
-      const srcC = sourceColors[lead.source]
+      const srcC = dynSourceColors?.[lead.source] ?? defaultSourceColors[lead.source] ?? { bg: 'color-mix(in srgb, #525E6F 10%, transparent)', text: '#525E6F' }
       return (
         <span
           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
@@ -535,6 +519,7 @@ export default function LeadTable({
   const deleteLead = useDeleteLead()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const { colors: dynSourceColors, labels: dynSourceLabels } = useLeadSourceMaps()
 
   const {
     prefs,
@@ -644,7 +629,7 @@ export default function LeadTable({
                 )}
                 {visibleColumns.map((col) => (
                   <td key={col.key} className="px-3 sm:px-6 py-3 sm:py-4">
-                    {renderCell(col.key, lead, tagMap, prefs.sourceLabels, tags)}
+                    {renderCell(col.key, lead, tagMap, { ...dynSourceLabels, ...prefs.sourceLabels }, tags, dynSourceColors)}
                   </td>
                 ))}
 

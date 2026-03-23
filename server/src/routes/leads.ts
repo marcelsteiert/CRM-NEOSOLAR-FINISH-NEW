@@ -22,7 +22,7 @@ const createLeadSchema = z.object({
   phone: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   company: z.string().nullable().optional(),
-  source: z.enum(['HOMEPAGE', 'LANDINGPAGE', 'MESSE', 'EMPFEHLUNG', 'KALTAKQUISE', 'SONSTIGE']),
+  source: z.string().min(1),
   pipelineId: z.string().nullable().optional(),
   bucketId: z.string().nullable().optional(),
   assignedTo: z.string().nullable().optional(),

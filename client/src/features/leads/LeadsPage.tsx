@@ -26,6 +26,7 @@ import {
   statusLabels,
 } from '@/hooks/useLeads'
 import { useTablePreferences } from '@/hooks/useTablePreferences'
+import { useLeadSourceMaps } from '@/hooks/useAdmin'
 import LeadTable from './components/LeadTable'
 import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
@@ -174,6 +175,7 @@ export default function LeadsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [batchAction, setBatchAction] = useState<'delete' | 'status' | null>(null)
   const [batchStatus, setBatchStatus] = useState<LeadStatus>('ACTIVE')
+  const { labels: dynSourceLabels, sources: dynSources } = useLeadSourceMaps()
 
   /* ── Preferences (custom source labels) ── */
   const { prefs } = useTablePreferences()
@@ -245,12 +247,21 @@ export default function LeadsPage() {
   /* ── Client-side tag filtering + tag sorting ── */
   const filteredLeads = useMemo(() => {
     let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
-    // Tags-Sortierung clientseitig (Tags sind Arrays, nicht DB-Spalte)
-    if (sortBy === 'tags') {
+    // Clientseitige Sortierung fuer Kontakt-Felder und Tags (nicht via DB sortierbar)
+    const clientSortFields = ['tags', 'phone', 'email', 'source', 'lastName', 'company']
+    if (clientSortFields.includes(sortBy)) {
       result = [...result].sort((a, b) => {
-        const aTag = (a.tags?.[0] ?? '').toLowerCase()
-        const bTag = (b.tags?.[0] ?? '').toLowerCase()
-        return sortOrder === 'asc' ? aTag.localeCompare(bTag) : bTag.localeCompare(aTag)
+        let aVal = ''
+        let bVal = ''
+        if (sortBy === 'tags') { aVal = a.tags?.[0] ?? ''; bVal = b.tags?.[0] ?? '' }
+        else if (sortBy === 'phone') { aVal = a.phone ?? ''; bVal = b.phone ?? '' }
+        else if (sortBy === 'email') { aVal = a.email ?? ''; bVal = b.email ?? '' }
+        else if (sortBy === 'source') { aVal = a.source ?? ''; bVal = b.source ?? '' }
+        else if (sortBy === 'lastName') { aVal = a.lastName ?? ''; bVal = b.lastName ?? '' }
+        else if (sortBy === 'company') { aVal = a.company ?? ''; bVal = b.company ?? '' }
+        return sortOrder === 'asc'
+          ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
+          : bVal.toLowerCase().localeCompare(aVal.toLowerCase())
       })
     }
     return result
@@ -276,7 +287,7 @@ export default function LeadsPage() {
   }
 
   const handleExport = () => {
-    exportLeadsCsv(filteredLeads, prefs.sourceLabels)
+    exportLeadsCsv(filteredLeads, { ...dynSourceLabels, ...prefs.sourceLabels })
   }
 
   /* ── Permissions ── */
@@ -294,12 +305,9 @@ export default function LeadsPage() {
 
   /* ── Source options for dropdown (use custom labels) ── */
 
-  const sourceOptions: { value: LeadSource | 'ALL'; label: string }[] = [
+  const sourceOptions: { value: string; label: string }[] = [
     { value: 'ALL', label: 'Alle Quellen' },
-    ...Object.keys(prefs.sourceLabels).map((key) => ({
-      value: key as LeadSource,
-      label: prefs.sourceLabels[key],
-    })),
+    ...dynSources.map((s) => ({ value: s.id, label: s.name })),
   ]
 
   /* ── Tag options for dropdown ── */

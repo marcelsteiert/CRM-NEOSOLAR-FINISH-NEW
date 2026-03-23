@@ -401,3 +401,40 @@ export function useUpdateKanbanColumns() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['kanbanColumns'] }),
   })
 }
+
+// ── Lead Sources ──
+
+export interface LeadSourceDef {
+  id: string
+  name: string
+  color: string
+}
+
+export function useLeadSources() {
+  return useQuery({
+    queryKey: ['leadSources'],
+    queryFn: () => api.get<{ data: LeadSourceDef[] }>('/admin/lead-sources'),
+  })
+}
+
+export function useUpdateLeadSources() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (sources: LeadSourceDef[]) =>
+      api.put<{ data: LeadSourceDef[] }>('/admin/lead-sources', { sources }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leadSources'] }),
+  })
+}
+
+/** Dynamische Label- und Farb-Maps aus den Admin-Quellen */
+export function useLeadSourceMaps() {
+  const { data } = useLeadSources()
+  const sources = data?.data ?? []
+  const labels: Record<string, string> = {}
+  const colors: Record<string, { bg: string; text: string }> = {}
+  for (const s of sources) {
+    labels[s.id] = s.name
+    colors[s.id] = { bg: `color-mix(in srgb, ${s.color} 10%, transparent)`, text: s.color }
+  }
+  return { labels, colors, sources }
+}

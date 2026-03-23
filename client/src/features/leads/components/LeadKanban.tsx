@@ -17,7 +17,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useDroppable } from '@dnd-kit/core'
-import { type Lead, type Bucket, type Tag, sourceLabels, type LeadSource } from '@/hooks/useLeads'
+import { type Lead, type Bucket, type Tag, type LeadSource } from '@/hooks/useLeads'
+import { useLeadSourceMaps } from '@/hooks/useAdmin'
 
 /* ── Props ── */
 
@@ -45,9 +46,9 @@ function getColumnColor(position: number): string {
   return columnColors[position] ?? DEFAULT_COLOR
 }
 
-/* ── Source badge colors ── */
+/* ── Source badge colors (fallback) ── */
 
-const sourceColors: Record<LeadSource, string> = {
+const defaultSourceColors: Record<string, string> = {
   HOMEPAGE: '#60A5FA',
   LANDINGPAGE: '#22D3EE',
   MESSE: '#A78BFA',
@@ -105,6 +106,9 @@ function SortableItem({ lead, tags, onSelect }: SortableItemProps) {
     transition,
     isDragging,
   } = useSortable({ id: lead.id })
+  const { labels: dynLabels, sources } = useLeadSourceMaps()
+  const dynColors: Record<string, string> = {}
+  for (const s of sources) dynColors[s.id] = s.color
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -119,7 +123,7 @@ function SortableItem({ lead, tags, onSelect }: SortableItemProps) {
     cursor: 'grab',
   }
 
-  const srcColor = sourceColors[lead.source] ?? DEFAULT_COLOR
+  const srcColor = dynColors[lead.source] ?? defaultSourceColors[lead.source] ?? DEFAULT_COLOR
   const value = lead.value ?? 0
 
   // Resolve tag objects from IDs
@@ -164,7 +168,7 @@ function SortableItem({ lead, tags, onSelect }: SortableItemProps) {
             color: srcColor,
           }}
         >
-          {sourceLabels[lead.source]}
+          {dynLabels[lead.source] ?? lead.source}
         </span>
         {resolvedTags.map((tag) => (
           <span
@@ -194,7 +198,10 @@ interface LeadCardOverlayProps {
 }
 
 function LeadCardOverlay({ lead, tags }: LeadCardOverlayProps) {
-  const srcColor = sourceColors[lead.source] ?? DEFAULT_COLOR
+  const { labels: dynLabels, sources } = useLeadSourceMaps()
+  const dynColors: Record<string, string> = {}
+  for (const s of sources) dynColors[s.id] = s.color
+  const srcColor = dynColors[lead.source] ?? defaultSourceColors[lead.source] ?? DEFAULT_COLOR
   const value = lead.value ?? 0
 
   const resolvedTags = lead.tags
@@ -235,7 +242,7 @@ function LeadCardOverlay({ lead, tags }: LeadCardOverlayProps) {
             color: srcColor,
           }}
         >
-          {sourceLabels[lead.source]}
+          {dynLabels[lead.source] ?? lead.source}
         </span>
         {resolvedTags.map((tag) => (
           <span

@@ -38,12 +38,12 @@ import {
   useDismissReminder,
   useAddLeadTags,
   useRemoveLeadTag,
-  sourceLabels,
   statusLabels,
   type LeadSource,
   type LeadStatus,
   type ActivityType,
 } from '@/hooks/useLeads'
+import { useLeadSourceMaps } from '@/hooks/useAdmin'
 import { useCreateAppointment } from '@/hooks/useAppointments'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
@@ -135,6 +135,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const lead = leadResponse?.data ?? null
 
   const generateLeadSummary = useGenerateLeadSummary()
+  const { labels: sourceLabels, sources: sourceDefs } = useLeadSourceMaps()
   const updateLead = useUpdateLead()
   const deleteLead = useDeleteLead()
   const { data: usersResponse } = useUsers()
@@ -445,10 +446,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     { key: 'timeline', label: 'Timeline' },
   ]
 
-  /* ── Source options ── */
-  const sourceOptions: { value: LeadSource; label: string }[] = (
-    Object.entries(sourceLabels) as [LeadSource, string][]
-  ).map(([value, label]) => ({ value, label }))
+  /* ── Source options (dynamisch aus Admin-Settings) ── */
+  const sourceOptions = sourceDefs.map((s) => ({ value: s.id, label: s.name }))
 
   /* ── Activity type options ── */
   const activityTypeOptions: { value: ActivityType; label: string }[] = (
@@ -756,7 +755,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                         />
                       </div>
                     ) : (
-                      <span className="text-[12px] text-text-sec">{sourceLabels[lead.source]}</span>
+                      <span className="text-[12px] text-text-sec">{sourceLabels[lead.source] ?? lead.source}</span>
                     )}
                   </div>
                 </div>

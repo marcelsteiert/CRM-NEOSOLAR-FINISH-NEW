@@ -1,14 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, ChevronDown, Loader2, AlertTriangle } from 'lucide-react'
-import { useCreateLead, useUsers, type LeadSource, sourceLabels } from '@/hooks/useLeads'
+import { useCreateLead, useUsers } from '@/hooks/useLeads'
+import { useLeadSources } from '@/hooks/useAdmin'
 
 interface LeadCreateDialogProps {
   onClose: () => void
 }
-
-const sourceOptions: { value: LeadSource; label: string }[] = (
-  Object.entries(sourceLabels) as [LeadSource, string][]
-).map(([value, label]) => ({ value, label }))
 
 export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
   const [firstName, setFirstName] = useState('')
@@ -17,13 +14,15 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [source, setSource] = useState<LeadSource>('HOMEPAGE')
+  const [source, setSource] = useState('HOMEPAGE')
   const [value, setValue] = useState('')
   const [assignedTo, setAssignedTo] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDuplicate, setIsDuplicate] = useState(false)
   const [forceCreate, setForceCreate] = useState(false)
+  const { data: sourcesRes } = useLeadSources()
+  const sourceOptions = (sourcesRes?.data ?? []).map((s) => ({ value: s.id, label: s.name }))
 
   const createLead = useCreateLead()
   const { data: usersData } = useUsers()
@@ -241,7 +240,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
               <div className="relative">
                 <select
                   value={source}
-                  onChange={(e) => setSource(e.target.value as LeadSource)}
+                  onChange={(e) => setSource(e.target.value)}
                   className="glass-input w-full px-4 py-2.5 text-[13px] appearance-none cursor-pointer pr-9"
                 >
                   {sourceOptions.map((opt) => (
