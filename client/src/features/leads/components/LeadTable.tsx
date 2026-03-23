@@ -286,7 +286,7 @@ function SortableHeader({
 
   return (
     <th
-      className={`text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5 ${
+      className={`text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5 ${
         isSortable ? 'cursor-pointer select-none hover:text-text-sec transition-colors' : ''
       }`}
       onClick={isSortable ? () => onSort(sortField!) : undefined}
@@ -588,7 +588,7 @@ export default function LeadTable({
                   onSort={onSort}
                 />
               ))}
-              <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">
+              <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5">
                 <div className="flex items-center justify-end gap-2 relative">
                   <span>Aktionen</span>
                   <button
@@ -643,13 +643,13 @@ export default function LeadTable({
                   </td>
                 )}
                 {visibleColumns.map((col) => (
-                  <td key={col.key} className="px-6 py-4">
+                  <td key={col.key} className="px-3 sm:px-6 py-3 sm:py-4">
                     {renderCell(col.key, lead, tagMap, prefs.sourceLabels, tags)}
                   </td>
                 ))}
 
                 {/* Aktionen */}
-                <td className="px-6 py-4">
+                <td className="px-3 sm:px-6 py-3 sm:py-4">
                   <div className="flex items-center justify-end gap-1.5">
                     {confirmDeleteId === lead.id ? (
                       <>

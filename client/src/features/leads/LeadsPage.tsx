@@ -450,7 +450,7 @@ export default function LeadsPage() {
                 value={tagFilter}
                 onChange={(e) => setTagFilter(e.target.value)}
                 className="glass-input appearance-none pl-8 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                style={{ minWidth: '140px' }}
+                style={{ minWidth: 'auto' }}
               >
                 {tagOptions.map((opt) => (
                   <option
@@ -475,7 +475,7 @@ export default function LeadsPage() {
                 value={appointmentTypeFilter}
                 onChange={(e) => setAppointmentTypeFilter(e.target.value as 'VOR_ORT' | 'ONLINE' | 'ALL')}
                 className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                style={{ minWidth: '130px' }}
+                style={{ minWidth: 'auto' }}
               >
                 <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Termine</option>
                 <option value="VOR_ORT" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Vor Ort</option>
@@ -494,7 +494,7 @@ export default function LeadsPage() {
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value as LeadSource | 'ALL')}
                 className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                style={{ minWidth: '140px' }}
+                style={{ minWidth: 'auto' }}
               >
                 {sourceOptions.map((opt) => (
                   <option

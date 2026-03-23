@@ -242,7 +242,7 @@ export default function TasksPage() {
                 value={moduleFilter}
                 onChange={(e) => setModuleFilter(e.target.value as TaskModule | 'ALL')}
                 className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                style={{ minWidth: '130px' }}
+                style={{ minWidth: 'auto' }}
               >
                 <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Module</option>
                 {(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'ALLGEMEIN'] as TaskModule[]).map((m) => (
@@ -258,7 +258,7 @@ export default function TasksPage() {
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | 'ALL')}
                 className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                style={{ minWidth: '120px' }}
+                style={{ minWidth: 'auto' }}
               >
                 <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Prioritäten</option>
                 {priorityOrder.map((p) => (
@@ -275,7 +275,7 @@ export default function TasksPage() {
                   value={assigneeFilter}
                   onChange={(e) => setAssigneeFilter(e.target.value)}
                   className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                  style={{ minWidth: '140px' }}
+                  style={{ minWidth: 'auto' }}
                 >
                   <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Benutzer</option>
                   {users.filter((u) => u.isActive).map((u) => (

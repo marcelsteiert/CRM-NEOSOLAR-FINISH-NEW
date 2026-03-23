@@ -275,11 +275,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         aria-modal="true"
         aria-label="Angebot Details"
         tabIndex={-1}
-        className="outline-none w-full max-w-[720px] max-h-[90vh] mx-4 flex flex-col"
+        className="outline-none w-full max-w-[720px] max-h-[85vh] sm:max-h-[90vh] mx-2 sm:mx-4 flex flex-col"
         style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}
       >
         {/* ── Header ── */}
-        <div className="flex items-center gap-3.5 px-6 py-5 border-b border-border shrink-0">
+        <div className="flex items-center gap-3.5 px-4 sm:px-6 py-4 sm:py-5 border-b border-border shrink-0">
           <div className="min-w-0 flex-1">
             {isEditing ? (
               <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="glass-input w-full px-3 py-1 text-[15px] font-bold" />
@@ -344,7 +344,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         </div>
 
         {/* ── Tab Content (scrollable) ── */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
 
           {/* ────── TAB: Übersicht ────── */}
           {activeTab === 'overview' && (

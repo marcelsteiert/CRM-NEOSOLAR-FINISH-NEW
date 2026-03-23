@@ -399,7 +399,7 @@ function DealKanbanView({ deals, users, onSelect, columns }: { deals: Deal[]; us
             )}
 
             {/* Cards */}
-            <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-380px)]">
+            <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-300px)] sm:max-h-[calc(100vh-380px)]">
               {items.length === 0 ? (
                 <p className="text-[10px] text-text-dim text-center py-6">
                   {isOver ? 'Hier ablegen' : 'Keine Angebote'}
@@ -547,14 +547,16 @@ export default function DealsPage() {
             </div>
 
             {canViewAll && (
-              <button type="button" onClick={() => setViewAll(!viewAll)} className={['flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors', viewAll ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text hover:bg-surface-hover'].join(' ')} style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+              <button type="button" onClick={() => setViewAll(!viewAll)} className={['flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors', viewAll ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text hover:bg-surface-hover'].join(' ')} style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Users size={14} strokeWidth={1.8} />
-                {viewAll ? 'Alle Angebote' : 'Meine Angebote'}
+                <span className="hidden sm:inline">{viewAll ? 'Alle Angebote' : 'Meine Angebote'}</span>
+                <span className="sm:hidden">{viewAll ? 'Alle' : 'Meine'}</span>
               </button>
             )}
-            <button type="button" className="btn-primary flex items-center gap-2 px-5 py-2.5 text-[13px]" onClick={() => setCreateDialogOpen(true)}>
+            <button type="button" className="btn-primary flex items-center gap-2 px-4 sm:px-5 py-2.5 text-[13px]" onClick={() => setCreateDialogOpen(true)}>
               <Plus size={16} strokeWidth={2.5} />
-              Neues Angebot
+              <span className="hidden sm:inline">Neues Angebot</span>
+              <span className="sm:hidden">Neu</span>
             </button>
           </div>
         </div>
@@ -595,7 +597,7 @@ export default function DealsPage() {
                     if (val === 'ALL') setViewAll(true)
                   }}
                   className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                  style={{ minWidth: '160px' }}
+                  style={{ minWidth: 'auto' }}
                 >
                   <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
                   {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL').map((u) => (
@@ -609,7 +611,7 @@ export default function DealsPage() {
             )}
 
             <div className="relative">
-              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as DealPriority | 'ALL')} className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer" style={{ minWidth: '140px' }}>
+              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as DealPriority | 'ALL')} className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer" style={{ minWidth: 'auto' }}>
                 {priorityOptions.map((opt) => <option key={opt.value} value={opt.value} style={{ background: '#0B0F15', color: '#F0F2F5' }}>{opt.label}</option>)}
               </select>
               <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />

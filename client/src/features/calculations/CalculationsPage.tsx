@@ -273,9 +273,9 @@ export default function CalculationsPage() {
 
             {/* Section Content */}
             {isExpanded && (
-              <div className="px-4 pb-4 space-y-2">
+              <div className="px-4 pb-4 space-y-2 overflow-x-auto">
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-2 text-[10px] text-white/30 uppercase px-1">
+                <div className="grid grid-cols-12 gap-2 text-[10px] text-white/30 uppercase px-1 min-w-[600px]">
                   <div className="col-span-4">Produkt</div>
                   <div className="col-span-2">Menge</div>
                   <div className="col-span-2">Einzelpreis</div>
@@ -286,7 +286,7 @@ export default function CalculationsPage() {
 
                 {/* Items */}
                 {section.items.map((item, itemIdx) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div key={item.id} className="grid grid-cols-12 gap-2 items-center min-w-[600px]">
                     {/* Product Select */}
                     <div className="col-span-4">
                       <select

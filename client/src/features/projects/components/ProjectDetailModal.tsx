@@ -283,11 +283,11 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label="Projektdetail"
-        className="outline-none w-full max-w-[960px] mx-4 max-h-[92vh] flex flex-col"
+        className="outline-none w-full max-w-[960px] mx-2 sm:mx-4 max-h-[85vh] sm:max-h-[92vh] flex flex-col"
         style={{ background: 'rgba(255,255,255,0.035)', backdropFilter: 'blur(24px) saturate(1.2)', WebkitBackdropFilter: 'blur(24px) saturate(1.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-lg)' }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b border-border shrink-0">
+        <div className="flex items-start justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-border shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               {isEditing ? (

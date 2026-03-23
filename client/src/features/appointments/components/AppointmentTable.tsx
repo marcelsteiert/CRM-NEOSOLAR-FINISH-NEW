@@ -63,7 +63,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                 <th
                   key={col.key}
                   className={[
-                    'text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5',
+                    'text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5',
                     col.sortField ? 'cursor-pointer select-none group hover:text-text transition-colors' : '',
                   ].join(' ')}
                   onClick={col.sortField ? () => onSort(col.sortField!) : undefined}
@@ -90,7 +90,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   className="border-b border-border cursor-pointer hover:bg-surface-hover transition-colors duration-100"
                 >
                   {/* Contact */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <div>
                       <p className="text-[13px] font-semibold text-text truncate max-w-[200px]">{a.contactName}</p>
                       <p className="text-[11px] text-text-sec">{a.address.split(',')[1]?.trim() ?? a.address}</p>
@@ -98,12 +98,12 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Company */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <span className="text-[12px] text-text-sec">{a.company ?? '\u2014'}</span>
                   </td>
 
                   {/* Appointment Type – click to toggle */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -124,7 +124,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Date/Time */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <div>
                       <p className="text-[12px] font-semibold text-text tabular-nums">
                         {a.appointmentDate
@@ -138,7 +138,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Fahrzeit */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     {a.travelMinutes != null ? (
                       <div className="flex items-center gap-1.5">
                         <Car size={12} className="text-text-dim" strokeWidth={1.8} />
@@ -154,7 +154,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Status */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <span
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
                       style={{
@@ -168,7 +168,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Zugewiesen an */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     {(() => {
                       const assignee = users.find((u) => u.id === a.assignedTo)
                       if (!assignee) return <span className="text-[11px] text-text-dim">{'\u2014'}</span>
@@ -190,7 +190,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Checklist Progress */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-1.5 rounded-full bg-surface-hover overflow-hidden">
                         <div
@@ -206,7 +206,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                   </td>
 
                   {/* Created */}
-                  <td className="px-6 py-3.5">
+                  <td className="px-3 sm:px-6 py-3.5">
                     <span className="text-[12px] text-text-sec tabular-nums">
                       {new Date(a.createdAt).toLocaleDateString('de-CH')}
                     </span>

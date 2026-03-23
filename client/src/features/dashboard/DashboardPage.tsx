@@ -496,11 +496,11 @@ export default function DashboardPage() {
           {monthly.length > 0 ? (
             <>
               <MiniBarChart data={monthly} dataKey="wonValue" color="#34D399" maxVal={maxWon} />
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
                 {monthly.slice(-3).map((m) => (
                   <div key={m.month} className="text-center">
                     <p className="text-[10px] font-bold uppercase text-text-dim">{m.label}</p>
-                    <p className="text-[14px] font-extrabold tabular-nums text-green">{formatCHF(m.wonValue)}</p>
+                    <p className="text-[12px] sm:text-[14px] font-extrabold tabular-nums text-green">{formatCHF(m.wonValue)}</p>
                     <p className="text-[10px] text-text-dim">{m.wonDeals} Deal(s)</p>
                   </div>
                 ))}
@@ -527,11 +527,11 @@ export default function DashboardPage() {
           {monthly.length > 0 ? (
             <>
               <MiniBarChart data={monthly} dataKey="totalAppointments" color="#60A5FA" maxVal={maxAppointments} />
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
                 {monthly.slice(-3).map((m) => (
                   <div key={m.month} className="text-center">
                     <p className="text-[10px] font-bold uppercase text-text-dim">{m.label}</p>
-                    <p className="text-[14px] font-extrabold tabular-nums text-blue">{m.totalAppointments}</p>
+                    <p className="text-[12px] sm:text-[14px] font-extrabold tabular-nums text-blue">{m.totalAppointments}</p>
                     <p className="text-[10px] text-text-dim">{m.completedAppointments} durchgeführt</p>
                   </div>
                 ))}

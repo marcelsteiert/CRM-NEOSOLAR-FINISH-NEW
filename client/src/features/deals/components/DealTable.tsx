@@ -68,7 +68,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 <th
                   key={col.key}
                   className={[
-                    'text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5',
+                    'text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5',
                     col.sortField ? 'cursor-pointer select-none group hover:text-text transition-colors' : '',
                   ].join(' ')}
                   onClick={col.sortField ? () => onSort(col.sortField!) : undefined}
@@ -89,7 +89,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 className="border-b border-border cursor-pointer hover:bg-surface-hover transition-colors duration-100"
               >
                 {/* Title */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <div>
                     <p className="text-[13px] font-semibold text-text truncate max-w-[250px]">
                       {deal.title}
@@ -99,19 +99,19 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 </td>
 
                 {/* Company */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <span className="text-[12px] text-text-sec">{deal.company ?? '\u2014'}</span>
                 </td>
 
                 {/* Value */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <span className="text-[13px] font-bold tabular-nums text-amber">
                     {formatCHF(deal.value)}
                   </span>
                 </td>
 
                 {/* Stage */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <span
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
                     style={{
@@ -128,7 +128,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 </td>
 
                 {/* Priority */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <span
                     className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold"
                     style={{
@@ -141,7 +141,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 </td>
 
                 {/* Win Probability */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   {deal.winProbability != null ? (
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
@@ -165,7 +165,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 </td>
 
                 {/* Zugewiesen an */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   {(() => {
                     const assignee = users.find((u) => u.id === deal.assignedTo)
                     if (!assignee) return <span className="text-[11px] text-text-dim">{'\u2014'}</span>
@@ -187,7 +187,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 </td>
 
                 {/* Expected Close */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <span className="text-[12px] text-text-sec tabular-nums">
                     {deal.expectedCloseDate
                       ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH')
@@ -196,7 +196,7 @@ export default function DealTable({ deals, users = [], onSelectDeal, sortBy, sor
                 </td>
 
                 {/* Created */}
-                <td className="px-6 py-3.5">
+                <td className="px-3 sm:px-6 py-3.5">
                   <span className="text-[12px] text-text-sec tabular-nums">
                     {new Date(deal.createdAt).toLocaleDateString('de-CH')}
                   </span>

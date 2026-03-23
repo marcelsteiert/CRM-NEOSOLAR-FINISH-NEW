@@ -447,22 +447,24 @@ export default function AppointmentsPage() {
                 type="button"
                 onClick={() => setViewAll(!viewAll)}
                 className={[
-                  'flex items-center gap-2 px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors',
+                  'flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors',
                   viewAll ? 'bg-emerald-400/10 text-emerald-400' : 'text-text-dim hover:text-text hover:bg-surface-hover',
                 ].join(' ')}
                 style={{ border: '1px solid rgba(255,255,255,0.06)' }}
               >
                 <Users size={14} strokeWidth={1.8} />
-                {viewAll ? 'Alle Termine' : 'Meine Termine'}
+                <span className="hidden sm:inline">{viewAll ? 'Alle Termine' : 'Meine Termine'}</span>
+                <span className="sm:hidden">{viewAll ? 'Alle' : 'Meine'}</span>
               </button>
             )}
             <button
               type="button"
-              className="btn-primary flex items-center gap-2 px-5 py-2.5 text-[13px]"
+              className="btn-primary flex items-center gap-2 px-4 sm:px-5 py-2.5 text-[13px]"
               onClick={() => setCreateOpen(true)}
             >
               <Plus size={16} strokeWidth={2.5} />
-              Neuer Termin
+              <span className="hidden sm:inline">Neuer Termin</span>
+              <span className="sm:hidden">Neu</span>
             </button>
           </div>
         </div>
@@ -509,7 +511,7 @@ export default function AppointmentsPage() {
                     if (val === 'ALL') setViewAll(true)
                   }}
                   className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                  style={{ minWidth: '160px' }}
+                  style={{ minWidth: 'auto' }}
                 >
                   <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
                   {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL').map((u) => (
@@ -527,7 +529,7 @@ export default function AppointmentsPage() {
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as AppointmentPriority | 'ALL')}
                 className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                style={{ minWidth: '160px' }}
+                style={{ minWidth: 'auto' }}
               >
                 {priorityOptions.map((opt) => (
                   <option key={opt.value} value={opt.value} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
