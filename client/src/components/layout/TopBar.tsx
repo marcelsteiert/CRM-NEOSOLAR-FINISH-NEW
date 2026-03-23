@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Search, Menu, Cloud, CloudOff, User, Briefcase, FileText, Calendar, X, Bell, ArrowRight, CheckCheck } from 'lucide-react'
 import { useSidebarPinned } from './Sidebar'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
@@ -320,6 +321,7 @@ function NotificationBell() {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const { data: unreadRes } = useUnreadCount()
   const { data: notifRes } = useNotifications({ limit: 5 })
   const markRead = useMarkAsRead()
@@ -354,7 +356,7 @@ function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => { if (isMobile) { navigate('/notifications') } else { setOpen(!open) } }}
         className="relative w-8 h-8 rounded-lg flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-colors"
         aria-label="Meldungen"
       >
