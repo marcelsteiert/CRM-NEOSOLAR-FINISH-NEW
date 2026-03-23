@@ -342,7 +342,7 @@ router.delete('/:id/hard', async (req: Request, res: Response, next: NextFunctio
       supabase.from('tasks').update({ assigned_by: null }).eq('assigned_by', uid),
       supabase.from('activities').update({ created_by: null }).eq('created_by', uid),
       supabase.from('notifications').delete().eq('user_id', uid),
-      supabase.from('audit_logs').update({ user_id: 'system' }).eq('user_id', uid),
+      supabase.from('audit_logs').update({ user_id: null }).eq('user_id', uid),
       supabase.from('appointments').update({ assigned_to: null }).eq('assigned_to', uid),
       supabase.from('calendar_events').update({ created_by: null }).eq('created_by', uid),
       supabase.from('calendar_events').update({ assigned_to: null }).eq('assigned_to', uid),

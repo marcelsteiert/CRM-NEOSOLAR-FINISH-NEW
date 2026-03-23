@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Coins, ChevronLeft, ChevronRight, TrendingUp, Users, FileText, Printer, Info } from 'lucide-react'
+import { Coins, ChevronLeft, ChevronRight, TrendingUp, Users, FileText, Printer, Info, Eye } from 'lucide-react'
 import { useProvision, useMonthlyStats } from '@/hooks/useDashboard'
+import { useAuth } from '@/hooks/useAuth'
 
 /* ── Helpers ── */
 
@@ -30,6 +31,10 @@ export default function ProvisionPage() {
   const now = new Date()
   const [selectedYear, setSelectedYear] = useState(now.getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()) // 0-based
+  const [viewUserId, setViewUserId] = useState<string>('ALL')
+
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'GL'
 
   const monthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`
   const monthLabel = `${MONTH_NAMES[selectedMonth]} ${selectedYear}`
@@ -37,8 +42,19 @@ export default function ProvisionPage() {
   const { data: provisionResponse, isLoading } = useProvision(monthKey)
   const { data: monthlyResponse } = useMonthlyStats()
 
-  const provision = provisionResponse?.data ?? null
+  const provisionRaw = provisionResponse?.data ?? null
   const monthlyData = monthlyResponse?.data ?? []
+
+  // Gefilterte Provision basierend auf User-Auswahl
+  const provision = useMemo(() => {
+    if (!provisionRaw) return null
+    if (viewUserId === 'ALL') return provisionRaw
+    const filtered = provisionRaw.provisions.filter((p) => p.userId === viewUserId)
+    const totalValue = filtered.reduce((s, p) => s + p.totalValue, 0)
+    const totalProvision = filtered.reduce((s, p) => s + p.provision, 0)
+    const totalDeals = filtered.reduce((s, p) => s + p.deals.length, 0)
+    return { ...provisionRaw, provisions: filtered, summary: { totalValue, totalProvision, totalDeals } }
+  }, [provisionRaw, viewUserId])
 
   /* ── Navigate months ── */
   const goPrev = () => {
@@ -110,16 +126,54 @@ export default function ProvisionPage() {
           >
             <ChevronRight size={16} strokeWidth={2} />
           </button>
+          {/* User-Switcher (nur Admin) */}
+          {isAdmin && provisionRaw && provisionRaw.provisions.length > 0 && (
+            <div className="relative ml-auto sm:ml-2">
+              <Eye size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+              <select
+                value={viewUserId}
+                onChange={(e) => setViewUserId(e.target.value)}
+                className="glass-input appearance-none pl-8 pr-8 py-2 text-[12px] font-medium cursor-pointer"
+              >
+                <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
+                {provisionRaw.provisions.map((p) => (
+                  <option key={p.userId} value={p.userId} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                    {p.userName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => window.print()}
-            className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2 text-[12px] ml-auto sm:ml-2 shrink-0"
+            className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2 text-[12px] sm:ml-2 shrink-0"
           >
             <Printer size={14} strokeWidth={2} />
             <span className="hidden sm:inline">Drucken</span>
           </button>
         </div>
       </div>
+
+      {/* User-Filter Hinweis */}
+      {viewUserId !== 'ALL' && provision && (
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px]"
+          style={{ background: 'color-mix(in srgb, #60A5FA 8%, transparent)', border: '1px solid color-mix(in srgb, #60A5FA 15%, transparent)' }}
+        >
+          <Eye size={14} className="text-blue-400 shrink-0" strokeWidth={1.8} />
+          <span className="text-blue-300">
+            Ansicht: <span className="font-semibold text-blue-200">{provision.provisions[0]?.userName ?? 'Unbekannt'}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setViewUserId('ALL')}
+            className="ml-auto text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Alle anzeigen
+          </button>
+        </div>
+      )}
 
       {/* ── Summary Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -170,7 +224,17 @@ export default function ProvisionPage() {
                       {p.userName.split(' ').map((n) => n[0]).join('')}
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold">{p.userName}</p>
+                      {isAdmin && viewUserId === 'ALL' ? (
+                        <button
+                          type="button"
+                          onClick={() => setViewUserId(p.userId)}
+                          className="text-[13px] font-semibold hover:text-amber transition-colors text-left"
+                        >
+                          {p.userName}
+                        </button>
+                      ) : (
+                        <p className="text-[13px] font-semibold">{p.userName}</p>
+                      )}
                       <p className="text-[11px] text-text-dim">{p.userRole}</p>
                     </div>
                   </div>
