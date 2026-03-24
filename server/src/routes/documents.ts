@@ -135,7 +135,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DOCUMENT', entityId: doc?.id, description: `Dokument "${d.fileName}" hochgeladen` })
     res.status(201).json({ data: { ...doc, downloadUrl: urlData?.signedUrl ?? null } })
-  } catch (err) {
+  } catch (err: any) {
+    console.error('[DOC-UPLOAD-ERROR]', err?.message, err?.statusCode, JSON.stringify(err).slice(0, 500))
     next(err)
   }
 })
