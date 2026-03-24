@@ -118,12 +118,15 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     if (dbError) throw new AppError(dbError.message, 500)
 
     // Activity erstellen
-    await supabase.from('activities').insert({
-      contact_id: d.contactId,
-      type: 'DOCUMENT_UPLOAD',
-      text: `Dokument hochgeladen: ${d.fileName}`,
-      created_by: d.uploadedBy,
-    })
+    const activityUserId = d.uploadedBy || req.user?.userId
+    if (activityUserId) {
+      await supabase.from('activities').insert({
+        contact_id: d.contactId,
+        type: 'DOCUMENT_UPLOAD',
+        text: `Dokument hochgeladen: ${d.fileName}`,
+        created_by: activityUserId,
+      })
+    }
 
     // Signierte URL mitgeben
     const { data: urlData } = await supabase.storage
