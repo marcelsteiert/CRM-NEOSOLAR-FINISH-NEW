@@ -49,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!res.ok) throw new Error('Token ungueltig')
         const body = await res.json()
         const userData = body.data
+        // Frisches Token speichern (mit aktualisierten Berechtigungen)
+        if (userData.token) {
+          setToken(userData.token)
+          localStorage.setItem(TOKEN_KEY, userData.token)
+        }
         setUser(userData)
         localStorage.setItem(USER_KEY, JSON.stringify(userData))
       })
@@ -74,6 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!res.ok) throw new Error('Token ungueltig')
         const body = await res.json()
         const userData = body.data
+        if (userData.token) {
+          setToken(userData.token)
+          localStorage.setItem(TOKEN_KEY, userData.token)
+        }
         setUser(userData)
         localStorage.setItem(USER_KEY, JSON.stringify(userData))
       })

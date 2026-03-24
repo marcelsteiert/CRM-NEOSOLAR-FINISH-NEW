@@ -111,8 +111,16 @@ router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFun
 
     if (error || !user) throw new AppError('Benutzer nicht gefunden', 404)
 
+    // Frisches Token mit aktuellen allowedModules generieren
+    const freshToken = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role, allowedModules: user.allowed_modules ?? [] },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN },
+    )
+
     res.json({
       data: {
+        token: freshToken,
         id: user.id,
         firstName: user.first_name,
         lastName: user.last_name,
