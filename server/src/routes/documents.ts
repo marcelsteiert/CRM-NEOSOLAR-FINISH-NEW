@@ -95,7 +95,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         upsert: false,
       })
 
-    if (storageError) throw new AppError(`Upload fehlgeschlagen: ${storageError.message}`, 500)
+    if (storageError) throw new AppError(`Storage-Upload fehlgeschlagen: ${storageError.message} (path: ${storagePath})`, 500)
 
     // Metadaten in DB speichern
     const { data: doc, error: dbError } = await supabase
@@ -109,13 +109,13 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         file_size: d.fileSize,
         mime_type: d.mimeType,
         storage_path: storagePath,
-        uploaded_by: d.uploadedBy || req.user?.userId || null,
+        uploaded_by: d.uploadedBy || req.user?.userId,
         notes: d.notes ?? null,
       })
       .select()
       .single()
 
-    if (dbError) throw new AppError(dbError.message, 500)
+    if (dbError) throw new AppError(`DB-Insert fehlgeschlagen: ${dbError.message} (code: ${dbError.code})`, 500)
 
     // Activity erstellen
     const activityUserId = d.uploadedBy || req.user?.userId
