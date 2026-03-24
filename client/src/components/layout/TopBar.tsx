@@ -254,37 +254,45 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
                         <div className="text-[10px] text-text-dim mt-0.5 truncate">{contact.address}</div>
                       )}
 
-                      {/* Linked entities */}
+                      {/* Linked entities – klickbar mit Status */}
                       {entityCount > 0 && (
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          {contact.leads.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          {contact.leads.map((l) => (
+                            <span key={l.id}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/leads?open=${l.id}`); onClose() }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold cursor-pointer hover:brightness-125 transition-all"
                               style={{ background: 'color-mix(in srgb, #94A3B8 12%, transparent)', color: '#94A3B8' }}>
                               <User size={8} strokeWidth={2} />
-                              {contact.leads.length} Lead{contact.leads.length > 1 ? 's' : ''}
+                              Lead
                             </span>
-                          )}
-                          {contact.appointments.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+                          ))}
+                          {contact.appointments.map((a) => (
+                            <span key={a.id}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/appointments?open=${a.id}`); onClose() }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold cursor-pointer hover:brightness-125 transition-all"
                               style={{ background: 'color-mix(in srgb, #60A5FA 12%, transparent)', color: '#60A5FA' }}>
                               <Calendar size={8} strokeWidth={2} />
-                              {contact.appointments.length} Termin{contact.appointments.length > 1 ? 'e' : ''}
+                              Termin
                             </span>
-                          )}
-                          {contact.deals.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+                          ))}
+                          {contact.deals.map((d) => (
+                            <span key={d.id}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/deals?open=${d.id}`); onClose() }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold cursor-pointer hover:brightness-125 transition-all"
                               style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)', color: '#F59E0B' }}>
                               <Briefcase size={8} strokeWidth={2} />
-                              {contact.deals.length} Angebot{contact.deals.length > 1 ? 'e' : ''}
+                              Angebot
                             </span>
-                          )}
-                          {contact.projects.length > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+                          ))}
+                          {contact.projects.map((p) => (
+                            <span key={p.id}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/projects?open=${p.id}`); onClose() }}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold cursor-pointer hover:brightness-125 transition-all"
                               style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)', color: '#34D399' }}>
                               <FileText size={8} strokeWidth={2} />
-                              {contact.projects.length} Projekt{contact.projects.length > 1 ? 'e' : ''}
+                              Projekt
                             </span>
-                          )}
+                          ))}
                         </div>
                       )}
                     </div>
