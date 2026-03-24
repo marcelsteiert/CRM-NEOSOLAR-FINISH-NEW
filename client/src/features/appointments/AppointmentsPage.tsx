@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CalendarCheck,
   Plus,
@@ -310,8 +311,17 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<AppointmentPriority | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (openId) {
+      setSelectedId(openId)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [sortBy, setSortBy] = useState<string>('appointmentDate')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [viewAll, setViewAll] = useState(false)

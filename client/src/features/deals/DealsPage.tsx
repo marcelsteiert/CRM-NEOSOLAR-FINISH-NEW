@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   FileText,
   Plus,
@@ -40,6 +40,7 @@ import { useDealKanbanColumns, type DealKanbanColumn } from '@/hooks/useAdmin'
 import DealTable from './components/DealTable'
 import DealDetailModal from './components/DealDetailModal'
 import DealCreateDialog from './components/DealCreateDialog'
+import { useSearchParams } from 'react-router-dom'
 
 /* ── Filter Types ── */
 
@@ -430,8 +431,18 @@ export default function DealsPage() {
   const [stageFilter, setStageFilter] = useState<StageFilter>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<DealPriority | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+
+  // URL-Parameter ?open=<dealId> auswerten
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (openId) {
+      setSelectedDealId(openId)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [viewAll, setViewAll] = useState(false)

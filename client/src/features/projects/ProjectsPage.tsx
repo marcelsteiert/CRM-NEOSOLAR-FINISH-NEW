@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   FolderKanban, LayoutDashboard, Users2, Search, AlertTriangle, ChevronRight,
   TrendingUp, Sun, Zap, CheckCircle2, Clock, Star, ArrowUpRight, Loader2, Building2,
@@ -26,7 +27,16 @@ export default function ProjectsPage() {
   const { isAdmin, isSubunternehmen } = useAuth()
   const [view, setView] = useState<ViewTab>('kanban')
   const [search, setSearch] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (openId) {
+      setSelectedProjectId(openId)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const isArchivView = view === 'archiv'
   const { data: projectsData, isLoading } = useProjects({ search: search || undefined, archived: isArchivView })

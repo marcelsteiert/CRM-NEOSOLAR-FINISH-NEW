@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   Users,
   Plus,
@@ -32,6 +32,7 @@ import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
 import LeadImportDialog from './components/LeadImportDialog'
 import { useAuth } from '@/hooks/useAuth'
+import { useSearchParams } from 'react-router-dom'
 
 /* ── Filter Tab Type ── */
 
@@ -165,7 +166,17 @@ export default function LeadsPage() {
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
   const [tagFilter, setTagFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
+
+  // URL-Parameter ?open=<leadId> auswerten
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (openId) {
+      setSelectedLeadId(openId)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'ALL'>('ALL')

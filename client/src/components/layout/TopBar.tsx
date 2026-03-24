@@ -127,15 +127,15 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
   }, [query])
 
   const goToResult = useCallback((contact: SearchContact) => {
-    // Navigate to the most relevant page for this contact
+    // Navigate to the most relevant entity and open its detail modal
     if (contact.projects.length > 0) {
-      navigate('/projects')
+      navigate(`/projects?open=${contact.projects[0].id}`)
     } else if (contact.deals.length > 0) {
-      navigate('/deals')
+      navigate(`/deals?open=${contact.deals[0].id}`)
     } else if (contact.leads.length > 0) {
-      navigate('/leads')
+      navigate(`/leads?open=${contact.leads[0].id}`)
     } else if (contact.appointments.length > 0) {
-      navigate('/appointments')
+      navigate(`/appointments?open=${contact.appointments[0].id}`)
     } else {
       navigate('/leads')
     }
