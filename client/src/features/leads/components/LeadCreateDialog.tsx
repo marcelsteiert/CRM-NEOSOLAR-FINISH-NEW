@@ -57,7 +57,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
         firstName: firstName || undefined,
         lastName: lastName || undefined,
         company: company || undefined,
-        address,
+        address: address || undefined,
         phone,
         email,
         source,
@@ -191,7 +191,7 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
           {/* Address */}
           <div>
             <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
-              Adresse <span className="text-amber">*</span>
+              Adresse
             </label>
             <input
               type="text"
@@ -199,7 +199,6 @@ export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
               onChange={(e) => setAddress(e.target.value)}
               placeholder="z.B. Bahnhofstrasse 42, 8001 Zuerich"
               className="glass-input w-full px-4 py-2.5 text-[13px]"
-              required
             />
           </div>
 

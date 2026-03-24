@@ -71,7 +71,7 @@ export interface Integration {
 export function useIntegrations() {
   return useQuery({
     queryKey: ['integrations'],
-    queryFn: () => api.get<{ data: Integration[] }>('/admin/integrations'),
+    queryFn: () => api.get<{ data: Integration[] }>('/integrations'),
   })
 }
 
@@ -414,7 +414,7 @@ export interface LeadSourceDef {
 export function useLeadSources() {
   return useQuery({
     queryKey: ['leadSources'],
-    queryFn: () => api.get<{ data: LeadSourceDef[] }>('/admin/lead-sources'),
+    queryFn: () => api.get<{ data: LeadSourceDef[] }>('/lead-sources'),
     staleTime: 5 * 60_000, // 5 Min Cache – aendert sich selten
   })
 }

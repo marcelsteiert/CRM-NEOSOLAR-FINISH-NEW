@@ -106,6 +106,10 @@ export function createApp() {
   // AI routes (geschuetzt)
   app.use('/api/v1/ai', authMiddleware, aiRouter)
 
+  // Oeffentliche Read-Only Routen (alle authentifizierten User)
+  app.use('/api/v1/lead-sources', authMiddleware, adminLeadSourcesRouter)
+  app.use('/api/v1/integrations', authMiddleware, adminIntegrationsRouter)
+
   // Admin routes (geschuetzt + Rollencheck: nur ADMIN/GL)
   const adminGuard = [authMiddleware, requireRole('ADMIN', 'GL')]
   app.use('/api/v1/admin/products', ...adminGuard, adminProductsRouter)
