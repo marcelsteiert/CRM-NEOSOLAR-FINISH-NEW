@@ -71,6 +71,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Debug: Request-Infos
+    const bodyKeys = Object.keys(req.body || {})
+    const bodySize = JSON.stringify(req.body || {}).length
+    console.log(`[DOC-UPLOAD] Keys: ${bodyKeys.join(',')}, BodySize: ${bodySize}, User: ${req.user?.userId}`)
+
     const result = uploadDocSchema.safeParse(req.body)
     if (!result.success) {
       const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
@@ -136,8 +141,10 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DOCUMENT', entityId: doc?.id, description: `Dokument "${d.fileName}" hochgeladen` })
     res.status(201).json({ data: { ...doc, downloadUrl: urlData?.signedUrl ?? null } })
   } catch (err: any) {
-    console.error('[DOC-UPLOAD-ERROR]', err?.message, err?.statusCode, JSON.stringify(err).slice(0, 500))
-    next(err)
+    const msg = err?.message || 'Unbekannter Fehler'
+    const code = err?.statusCode || 500
+    console.error('[DOC-UPLOAD-ERROR]', msg, code)
+    res.status(code).json({ success: false, error: { message: msg, statusCode: code, debug: { stack: (err?.stack || '').slice(0, 200) } } })
   }
 })
 
