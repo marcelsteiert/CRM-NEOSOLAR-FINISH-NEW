@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, useHardDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
 import { Shield, Pencil, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck, Trash2 } from 'lucide-react'
 
-const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']
+const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']
 const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Admin',
   VERTRIEB: 'Vertrieb',
@@ -10,6 +10,8 @@ const roleLabels: Record<UserRole, string> = {
   BUCHHALTUNG: 'Buchhaltung',
   GL: 'Geschäftsleitung',
   SUBUNTERNEHMEN: 'Subunternehmen',
+  CLOSER: 'Closer',
+  SETTER: 'Setter',
 }
 const roleColors: Record<UserRole, string> = {
   ADMIN: '#A78BFA',
@@ -18,6 +20,8 @@ const roleColors: Record<UserRole, string> = {
   BUCHHALTUNG: '#F59E0B',
   GL: '#F87171',
   SUBUNTERNEHMEN: '#F472B6',
+  CLOSER: '#22D3EE',
+  SETTER: '#FB923C',
 }
 
 const ALL_MODULES = [

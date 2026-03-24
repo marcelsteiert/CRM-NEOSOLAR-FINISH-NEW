@@ -16,7 +16,7 @@ export interface Contact {
 
 // ── Role & Auth Types ──
 
-export type Role = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GESCHAEFTSLEITUNG'
+export type Role = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GESCHAEFTSLEITUNG' | 'GL' | 'SUBUNTERNEHMEN' | 'CLOSER' | 'SETTER'
 
 export interface User {
   id: string

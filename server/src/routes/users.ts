@@ -10,7 +10,7 @@ const router = Router()
 
 // ── Standard-Berechtigungen pro Rolle ──
 
-type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' | 'SUBUNTERNEHMEN'
+type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' | 'SUBUNTERNEHMEN' | 'CLOSER' | 'SETTER'
 
 const defaultModulesByRole: Record<UserRole, string[]> = {
   ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'calculations', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
@@ -19,6 +19,8 @@ const defaultModulesByRole: Record<UserRole, string[]> = {
   PROJEKTLEITUNG: ['dashboard', 'projects', 'calculations', 'calendar', 'tasks', 'appointments', 'communication', 'documents', 'passwords', 'canViewAllProjects', 'canViewAllTasks', 'canViewAllAppointments'],
   BUCHHALTUNG: ['dashboard', 'provision', 'deals', 'documents', 'passwords', 'export'],
   SUBUNTERNEHMEN: ['dashboard', 'projects', 'calendar', 'tasks', 'documents', 'passwords'],
+  CLOSER: ['dashboard', 'leads', 'appointments', 'documents', 'passwords'],
+  SETTER: ['dashboard', 'leads', 'appointments', 'documents', 'passwords'],
 }
 
 // ── Validation ──
@@ -29,7 +31,7 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6).optional(),
   phone: z.string().default(''),
-  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
+  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']),
   allowedModules: z.array(z.string()).optional(),
 })
 
@@ -38,7 +40,7 @@ const updateUserSchema = z.object({
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']).optional(),
+  role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']).optional(),
   isActive: z.boolean().optional(),
   allowedModules: z.array(z.string()).optional(),
 })
@@ -104,7 +106,7 @@ router.put('/role-defaults', async (req: Request, res: Response, next: NextFunct
   try {
     const schema = z.object({
       defaults: z.record(
-        z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN']),
+        z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']),
         z.array(z.string()),
       ),
       applyToUsers: z.boolean().optional(),

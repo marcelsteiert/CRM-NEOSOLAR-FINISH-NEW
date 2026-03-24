@@ -22,6 +22,8 @@ const roleLabels: Record<string, string> = {
   BUCHHALTUNG: 'Buchhaltung',
   GL: 'Geschäftsleitung',
   SUBUNTERNEHMEN: 'Subunternehmen',
+  CLOSER: 'Closer',
+  SETTER: 'Setter',
 }
 
 const roleColors: Record<string, string> = {
@@ -31,6 +33,8 @@ const roleColors: Record<string, string> = {
   BUCHHALTUNG: '#F59E0B',
   GL: '#F87171',
   SUBUNTERNEHMEN: '#F472B6',
+  CLOSER: '#22D3EE',
+  SETTER: '#FB923C',
 }
 
 interface EditingFolder {

@@ -8,9 +8,9 @@ import {
 } from '@/hooks/usePasswords'
 
 const CATEGORIES = ['Allgemein', 'E-Mail', 'Software', 'Website', 'Server', 'Cloud', 'Bexio', 'Sonstiges']
-const ROLES = ['ADMIN', 'GL', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'SUBUNTERNEHMEN'] as const
+const ROLES = ['ADMIN', 'GL', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER'] as const
 const roleLabels: Record<string, string> = {
-  ADMIN: 'Admin', GL: 'GL', VERTRIEB: 'Vertrieb', PROJEKTLEITUNG: 'Projektleitung', BUCHHALTUNG: 'Buchhaltung', SUBUNTERNEHMEN: 'Subunternehmen',
+  ADMIN: 'Admin', GL: 'GL', VERTRIEB: 'Vertrieb', PROJEKTLEITUNG: 'Projektleitung', BUCHHALTUNG: 'Buchhaltung', SUBUNTERNEHMEN: 'Subunternehmen', CLOSER: 'Closer', SETTER: 'Setter',
 }
 
 interface FormData {
