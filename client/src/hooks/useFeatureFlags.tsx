@@ -69,12 +69,14 @@ export function FeatureFlagProvider({ children }: { children: React.ReactNode })
   const [flags, setFlags] = useState<Record<FeatureFlag, boolean>>(loadCachedFlags)
   const initialLoadDone = useRef(false)
 
-  // Flags vom Server laden
+  // Flags vom Server laden (nur wenn eingeloggt)
+  const hasToken = !!localStorage.getItem('token')
   const { data: serverFlags } = useQuery({
     queryKey: ['feature-flags'],
     queryFn: () => api.get<{ data: Record<FeatureFlag, boolean> }>('/settings/feature-flags'),
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+    enabled: hasToken,
   })
 
   // Server-Daten in lokalen State uebernehmen
