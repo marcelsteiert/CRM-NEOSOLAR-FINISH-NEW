@@ -64,8 +64,23 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const ownerFilter = getLeadOwnerFilter(req)
     if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
 
-    if (search && typeof search === 'string') {
-      query = query.or(`notes.ilike.%${search}%,source.ilike.%${search}%`)
+    if (search && typeof search === 'string' && search.trim()) {
+      // Kontakte durchsuchen (Name, Email, Telefon, Firma, Adresse)
+      const s = search.trim()
+      const { data: matchingContacts } = await supabase
+        .from('contacts')
+        .select('id')
+        .or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%,company.ilike.%${s}%,address.ilike.%${s}%`)
+
+      const contactIds = (matchingContacts ?? []).map((c: any) => c.id)
+
+      if (contactIds.length > 0) {
+        // Leads mit matchenden Kontakten ODER matching notes/source
+        query = query.or(`contact_id.in.(${contactIds.join(',')}),notes.ilike.%${s}%,source.ilike.%${s}%`)
+      } else {
+        // Kein Kontakt gefunden – nur in leads-Feldern suchen
+        query = query.or(`notes.ilike.%${s}%,source.ilike.%${s}%`)
+      }
     }
 
     // Whitelist gültiger Sort-Felder (nur Spalten die in leads/contacts existieren)

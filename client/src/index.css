@@ -138,6 +138,113 @@ html.light .ambient-bg::after {
   background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 70%);
 }
 
+/* ── Light Mode: Global Inline-Style Fixes ── */
+
+/* Select/Option Elements – hardcoded #0B0F15 backgrounds fix */
+html.light select option {
+  background: #FFFFFF !important;
+  color: #1A1D23 !important;
+}
+
+/* All elements with rgba(255,255,255,...) borders → fix to dark borders */
+html.light [style*="rgba(255,255,255"] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Fix hardcoded #06080C text (btn-primary etc.) */
+html.light [style*="color: rgb(6, 8, 12)"],
+html.light [style*="color:#06080C"] {
+  color: #FFFFFF !important;
+}
+
+/* Glass-style inline backgrounds → make them light */
+html.light [style*="background: rgba(255, 255, 255, 0.03"],
+html.light [style*="background: rgba(255,255,255,0.03"],
+html.light [style*="background: rgba(255, 255, 255, 0.04"],
+html.light [style*="background:rgba(255,255,255,0.04"],
+html.light [style*="background: rgba(255, 255, 255, 0.035"],
+html.light [style*="background:rgba(255,255,255,0.035"] {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Surface hover backgrounds */
+html.light [style*="background: rgba(255, 255, 255, 0.06"],
+html.light [style*="background:rgba(255,255,255,0.06"],
+html.light [style*="background: rgba(255, 255, 255, 0.07"],
+html.light [style*="background: rgba(255, 255, 255, 0.08"] {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Dark sub-backgrounds (#0B0F15) → light */
+html.light [style*="background: #0B0F15"],
+html.light [style*="background:#0B0F15"],
+html.light [style*="background: rgb(11, 15, 21)"] {
+  background: #FFFFFF !important;
+  color: #1A1D23 !important;
+}
+
+/* #06080C backgrounds → light */
+html.light [style*="background: #06080C"],
+html.light [style*="background:#06080C"],
+html.light [style*="background: rgb(6, 8, 12)"] {
+  background: var(--color-bg) !important;
+}
+
+/* Border with rgba(255,255,255) inline */
+html.light [style*="border: 1px solid rgba(255, 255, 255"],
+html.light [style*="border: 1px solid rgba(255,255,255"],
+html.light [style*="border-color: rgba(255, 255, 255"],
+html.light [style*="border-color:rgba(255,255,255"] {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Fix backdrop-filter containers in light mode */
+html.light [style*="backdropFilter"],
+html.light [style*="backdrop-filter"] {
+  backdrop-filter: blur(16px) saturate(1.05) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.05) !important;
+}
+
+/* Box shadows with rgba(255,255,255) → darker version */
+html.light [style*="boxShadow"][style*="rgba(255, 255, 255"] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Dim text (#525E6F, #F0F2F5) in inline styles */
+html.light [style*="color: #F0F2F5"],
+html.light [style*="color:#F0F2F5"] {
+  color: #1A1D23 !important;
+}
+
+/* Fix TopBar and Sidebar backgrounds */
+html.light [style*="saturate(1.2)"] {
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Kanban columns in light mode */
+html.light [style*="background: rgba(255, 255, 255, 0.02"],
+html.light [style*="background:rgba(255,255,255,0.02"] {
+  background: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Color-mix backgrounds (status badges etc.) stay as-is, they work in both modes */
+
+/* Table row hover */
+html.light tr:hover td {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Fix modals */
+html.light [style*="background: rgba(0, 0, 0, 0.6"] {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Gradient overlays for amber/orange stay visible */
+html.light [style*="linear-gradient(135deg, #F59E0B"] {
+  color: #FFFFFF !important;
+}
+
 /* ── Base ── */
 
 body {
