@@ -18,3 +18,4 @@ package.json.tmp
 .netlify-build/
 netlify-functions-dist/
 deploy.js
+scripts/import-sql/
