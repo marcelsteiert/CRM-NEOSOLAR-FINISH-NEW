@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, Menu, Cloud, CloudOff, User, Briefcase, FileText, Calendar, X, Bell, ArrowRight, CheckCheck } from 'lucide-react'
+import { Search, Menu, Cloud, CloudOff, User, Briefcase, FileText, Calendar, X, Bell, ArrowRight, CheckCheck, Sun, Moon } from 'lucide-react'
 import { useSidebarPinned } from './Sidebar'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { useQuery } from '@tanstack/react-query'
@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { useIntegrations } from '@/hooks/useAdmin'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, notificationTypeColors } from '@/hooks/useNotifications'
+import { useTheme } from '@/hooks/useTheme'
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -68,6 +69,22 @@ function getPageTitle(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname]
   const basePath = '/' + pathname.split('/')[1]
   return pageTitles[basePath] || 'NeoSolar'
+}
+
+// ── Theme Toggle ──
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme()
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="relative w-8 h-8 rounded-lg flex items-center justify-center text-text-dim hover:text-amber transition-colors"
+      title={theme === 'dark' ? 'Helles Design' : 'Dunkles Design'}
+    >
+      {theme === 'dark' ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
+    </button>
+  )
 }
 
 function SupabaseStatus() {
@@ -555,6 +572,8 @@ export default function TopBar() {
               <Search size={18} strokeWidth={1.8} />
             </button>
           )}
+
+          <ThemeToggle />
 
           <NotificationBell />
 
