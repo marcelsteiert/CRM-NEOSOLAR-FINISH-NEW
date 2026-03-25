@@ -84,6 +84,8 @@ export interface LeadFilters {
   source?: LeadSource | 'ALL'
   appointmentType?: 'VOR_ORT' | 'ONLINE' | 'ALL'
   search?: string
+  tag?: string
+  excludeSource?: string
   pipelineId?: string
   bucketId?: string
   sortBy?: string
@@ -101,6 +103,8 @@ export function useLeads(filters: LeadFilters = {}) {
   if (filters.source && filters.source !== 'ALL') params.set('source', filters.source)
   if (filters.appointmentType && filters.appointmentType !== 'ALL') params.set('appointmentType', filters.appointmentType)
   if (filters.search) params.set('search', filters.search)
+  if (filters.tag) params.set('tag', filters.tag)
+  if (filters.excludeSource) params.set('excludeSource', filters.excludeSource)
   if (filters.pipelineId) params.set('pipelineId', filters.pipelineId)
   if (filters.bucketId) params.set('bucketId', filters.bucketId)
   if (filters.sortBy) params.set('sortBy', filters.sortBy)

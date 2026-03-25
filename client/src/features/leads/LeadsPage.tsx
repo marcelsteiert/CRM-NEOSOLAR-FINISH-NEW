@@ -13,6 +13,8 @@ import {
   CheckSquare,
   Square,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import {
   useLeads,
@@ -161,12 +163,16 @@ function exportLeadsCsv(leads: Lead[], sourceLabels: Record<string, string>) {
 
 interface LeadsPageProps {
   fixedSource?: LeadSource
+  excludeSource?: string
+  fixedTag?: string
   pageTitle?: string
   pageDescription?: string
   pageIcon?: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+  defaultPageSize?: number
+  headerExtra?: React.ReactNode
 }
 
-export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pageIcon }: LeadsPageProps = {}) {
+export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTitle, pageDescription, pageIcon, defaultPageSize, headerExtra }: LeadsPageProps = {}) {
   const { isAdmin } = useAuth()
   /* ── State ── */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
@@ -184,11 +190,16 @@ export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pag
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams])
+
+  // Seite zuruecksetzen bei Filter-Wechsel
+  useEffect(() => { setCurrentPage(1) }, [fixedTag, fixedSource])
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const effectivePageSize = defaultPageSize ?? 500
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [batchAction, setBatchAction] = useState<'delete' | 'status' | null>(null)
@@ -208,11 +219,14 @@ export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pag
   } = useLeads({
     status: statusFilter === 'ALL' ? 'ACTIVE' : statusFilter as LeadStatus,
     source: fixedSource ?? (sourceFilter !== 'ALL' ? sourceFilter : undefined),
+    excludeSource: excludeSource || undefined,
     appointmentType: appointmentTypeFilter !== 'ALL' ? appointmentTypeFilter : undefined,
     search: searchQuery.trim() || undefined,
+    tag: fixedTag || undefined,
     sortBy,
     sortOrder,
-    pageSize: 500,
+    page: currentPage,
+    pageSize: effectivePageSize,
   })
 
   const deleteAllLeads = useDeleteAllLeads()
@@ -446,6 +460,9 @@ export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pag
           </div>
         </div>
 
+        {/* ── Custom Header Extra (e.g. Kaltakquise tabs) ── */}
+        {headerExtra}
+
         {/* ── Filter Bar ── */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-4">
           {/* Status Tabs */}
@@ -460,7 +477,7 @@ export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pag
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setStatusFilter(tab.key)}
+                onClick={() => { setStatusFilter(tab.key); setCurrentPage(1) }}
                 className={[
                   'px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap',
                   statusFilter === tab.key
@@ -663,6 +680,36 @@ export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pag
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}
             />
+
+            {/* ── Pagination ── */}
+            {(leadsResponse?.total ?? 0) > effectivePageSize && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+                <span className="text-[11px] text-text-dim">
+                  {((currentPage - 1) * effectivePageSize) + 1}–{Math.min(currentPage * effectivePageSize, leadsResponse?.total ?? 0)} von {leadsResponse?.total ?? 0}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage <= 1}
+                    className="btn-secondary w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-30"
+                  >
+                    <ChevronLeft size={14} strokeWidth={2} />
+                  </button>
+                  <span className="text-[12px] font-medium tabular-nums px-2">
+                    {currentPage} / {Math.ceil((leadsResponse?.total ?? 0) / effectivePageSize)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage >= Math.ceil((leadsResponse?.total ?? 0) / effectivePageSize)}
+                    className="btn-secondary w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-30"
+                  >
+                    <ChevronRight size={14} strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

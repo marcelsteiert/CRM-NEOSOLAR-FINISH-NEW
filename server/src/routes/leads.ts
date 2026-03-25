@@ -46,7 +46,7 @@ const moveLeadSchema = z.object({
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { status, source, appointmentType, pipelineId, bucketId, assignedTo, search, page: pp, pageSize: psp, sortBy = 'created_at', sortOrder = 'desc' } = req.query
+    const { status, source, excludeSource, appointmentType, pipelineId, bucketId, assignedTo, search, tag, page: pp, pageSize: psp, sortBy = 'created_at', sortOrder = 'desc' } = req.query
 
     let query = supabase
       .from('leads')
@@ -55,10 +55,23 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (status && typeof status === 'string') query = query.eq('status', status)
     if (source && typeof source === 'string') query = query.eq('source', source)
+    if (excludeSource && typeof excludeSource === 'string') query = query.neq('source', excludeSource)
     if (appointmentType && typeof appointmentType === 'string') query = query.eq('appointment_type', appointmentType)
     if (pipelineId && typeof pipelineId === 'string') query = query.eq('pipeline_id', pipelineId)
     if (bucketId && typeof bucketId === 'string') query = query.eq('bucket_id', bucketId)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
+
+    // Tag-Filter: Nur Leads mit bestimmtem Tag (via inner join)
+    if (tag && typeof tag === 'string') {
+      query = supabase
+        .from('leads')
+        .select('*, contact:contacts(*), lead_tags!inner(tag_id)', { count: 'exact' })
+        .is('deleted_at', null)
+        .eq('lead_tags.tag_id', tag)
+      // Re-apply vorherige Filter
+      if (status && typeof status === 'string') query = query.eq('status', status)
+      if (source && typeof source === 'string') query = query.eq('source', source)
+    }
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Leads
     const ownerFilter = getLeadOwnerFilter(req)

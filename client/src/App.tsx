@@ -112,7 +112,7 @@ export default function App() {
             }
           >
             <Route index element={<ModuleRoute moduleId="dashboard"><DashboardPage /></ModuleRoute>} />
-            <Route path="leads" element={<ModuleRoute moduleId="leads"><LeadsPage /></ModuleRoute>} />
+            <Route path="leads" element={<ModuleRoute moduleId="leads"><LeadsPage excludeSource="KALTAKQUISE" /></ModuleRoute>} />
             <Route path="kaltakquise" element={<ModuleRoute moduleId="kaltakquise"><KaltakquisePage /></ModuleRoute>} />
             <Route path="appointments" element={<ModuleRoute moduleId="appointments"><AppointmentsPage /></ModuleRoute>} />
             <Route path="deals" element={<ModuleRoute moduleId="deals"><DealsPage /></ModuleRoute>} />
