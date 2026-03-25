@@ -143,8 +143,11 @@ export default function UsersRolesSection() {
 
   const getDefaults = (role: UserRole) => editableDefaults[role] ? [...editableDefaults[role]] : roleDefaults[role] ? [...roleDefaults[role]] : []
 
+  const [createError, setCreateError] = useState<string | null>(null)
+
   const handleCreate = () => {
     if (!createForm.firstName.trim() || !createForm.lastName.trim() || !createForm.email.trim()) return
+    setCreateError(null)
     createUser.mutate({
       firstName: createForm.firstName.trim(),
       lastName: createForm.lastName.trim(),
@@ -158,6 +161,10 @@ export default function UsersRolesSection() {
       onSuccess: () => {
         setShowCreate(false)
         setCreateForm({ ...emptyForm })
+        setCreateError(null)
+      },
+      onError: (err: any) => {
+        setCreateError(err?.message || 'Fehler beim Erstellen')
       },
     })
   }
@@ -228,15 +235,22 @@ export default function UsersRolesSection() {
 
       {/* Create Form */}
       {showCreate && (
-        <UserForm
-          form={createForm}
-          setForm={setCreateForm}
-          onSave={handleCreate}
-          onCancel={() => { setShowCreate(false); setCreateForm({ ...emptyForm }) }}
-          isPending={createUser.isPending}
-          getDefaults={getDefaults}
-          showPassword
-        />
+        <>
+          {createError && (
+            <div className="px-4 py-3 rounded-xl text-[12px] text-red" style={{ background: 'color-mix(in srgb, #F87171 8%, transparent)', border: '1px solid color-mix(in srgb, #F87171 20%, transparent)' }}>
+              {createError}
+            </div>
+          )}
+          <UserForm
+            form={createForm}
+            setForm={setCreateForm}
+            onSave={handleCreate}
+            onCancel={() => { setShowCreate(false); setCreateForm({ ...emptyForm }); setCreateError(null) }}
+            isPending={createUser.isPending}
+            getDefaults={getDefaults}
+            showPassword
+          />
+        </>
       )}
 
       {/* Active Users List */}
