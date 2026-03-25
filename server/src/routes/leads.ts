@@ -53,6 +53,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .select('*, contact:contacts(*), lead_tags(tag_id)', { count: 'exact' })
       .is('deleted_at', null)
 
+    // Whitelist gültiger Sort-Felder
+    const allowedSortFields: Record<string, string> = {
+      created_at: 'created_at',
+      createdAt: 'created_at',
+      updated_at: 'updated_at',
+      updatedAt: 'updated_at',
+      source: 'source',
+      status: 'status',
+      lastName: 'created_at',
+      company: 'created_at',
+    }
+
     if (status && typeof status === 'string') query = query.eq('status', status)
     if (source && typeof source === 'string') query = query.eq('source', source)
     if (excludeSource && typeof excludeSource === 'string') query = query.neq('source', excludeSource)
@@ -61,16 +73,75 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (bucketId && typeof bucketId === 'string') query = query.eq('bucket_id', bucketId)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
-    // Tag-Filter: Nur Leads mit bestimmtem Tag (via inner join)
+    // Tag-Filter: Nur Leads mit bestimmtem Tag
     if (tag && typeof tag === 'string') {
-      query = supabase
+      // Lead-IDs mit diesem Tag holen (max 1000 fuer Pagination)
+      const page = Math.max(1, Number(pp) || 1)
+      const pageSize = Math.min(500, Math.max(1, Number(psp) || 50))
+
+      // Zuerst count ermitteln
+      const countQuery = supabase
+        .from('lead_tags')
+        .select('lead_id', { count: 'exact', head: true })
+        .eq('tag_id', tag)
+
+      // Dann die IDs fuer die aktuelle Seite
+      const idsQuery = supabase
+        .from('lead_tags')
+        .select('lead_id')
+        .eq('tag_id', tag)
+        .range((page - 1) * pageSize, page * pageSize - 1)
+
+      // Source-Filter auf leads anwenden
+      if (source && typeof source === 'string') {
+        // Supabase kann nicht direkt ueber lead_tags auf leads filtern
+        // Wir holen die IDs und filtern dann
+      }
+
+      const [{ count: tagCount }, { data: taggedIds }] = await Promise.all([countQuery, idsQuery])
+      const leadIds = (taggedIds ?? []).map((r: any) => r.lead_id)
+
+      if (leadIds.length === 0) {
+        res.json({ data: [], total: tagCount ?? 0, page, pageSize })
+        return
+      }
+
+      // Leads mit diesen IDs laden
+      let tagQuery = supabase
         .from('leads')
-        .select('*, contact:contacts(*), lead_tags!inner(tag_id)', { count: 'exact' })
+        .select('*, contact:contacts(*), lead_tags(tag_id)')
+        .in('id', leadIds)
         .is('deleted_at', null)
-        .eq('lead_tags.tag_id', tag)
-      // Re-apply vorherige Filter
-      if (status && typeof status === 'string') query = query.eq('status', status)
-      if (source && typeof source === 'string') query = query.eq('source', source)
+
+      if (status && typeof status === 'string') tagQuery = tagQuery.eq('status', status)
+      if (source && typeof source === 'string') tagQuery = tagQuery.eq('source', source)
+      if (excludeSource && typeof excludeSource === 'string') tagQuery = tagQuery.neq('source', excludeSource)
+
+      const ownerFilter2 = getLeadOwnerFilter(req)
+      if (ownerFilter2) tagQuery = tagQuery.eq('assigned_to', ownerFilter2)
+
+      const rawSort2 = typeof sortBy === 'string' ? sortBy : 'created_at'
+      const sf2 = allowedSortFields[rawSort2] ?? 'created_at'
+      tagQuery = tagQuery.order(sf2, { ascending: sortOrder !== 'desc' })
+
+      const { data: tagData, error: tagErr } = await tagQuery
+      if (tagErr) { res.json({ data: [], total: 0, page, pageSize }); return }
+
+      const enriched = (tagData ?? []).map((lead: any) => ({
+        ...lead,
+        firstName: lead.contact?.first_name ?? null,
+        lastName: lead.contact?.last_name ?? null,
+        company: lead.contact?.company ?? null,
+        address: lead.contact?.address ?? '',
+        phone: lead.contact?.phone ?? '',
+        email: lead.contact?.email ?? '',
+        tags: (lead.lead_tags ?? []).map((lt: any) => lt.tag_id),
+        lead_tags: undefined,
+        contact: undefined,
+      }))
+
+      res.json({ data: enriched, total: tagCount ?? enriched.length, page, pageSize })
+      return
     }
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Leads
@@ -96,17 +167,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
-    // Whitelist gültiger Sort-Felder (nur Spalten die in leads/contacts existieren)
-    const allowedSortFields: Record<string, string> = {
-      created_at: 'created_at',
-      createdAt: 'created_at',
-      updated_at: 'updated_at',
-      updatedAt: 'updated_at',
-      source: 'source',
-      status: 'status',
-      lastName: 'created_at', // Kontakt-Feld – Fallback auf created_at (JOIN-Sort nicht moeglich)
-      company: 'created_at',  // Kontakt-Feld – Fallback
-    }
     const rawSort = typeof sortBy === 'string' ? sortBy : 'created_at'
     const sf = allowedSortFields[rawSort] ?? allowedSortFields[toSnakeCase(rawSort)] ?? 'created_at'
     const ascending = sortOrder !== 'desc'
