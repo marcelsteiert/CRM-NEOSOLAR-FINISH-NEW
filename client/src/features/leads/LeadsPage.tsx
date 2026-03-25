@@ -280,9 +280,22 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   const filteredLeads = useMemo(() => {
     let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
     // Clientseitige Sortierung fuer Kontakt-Felder und Tags (nicht via DB sortierbar)
-    const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company']
+    const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company', 'value', 'createdAt']
     if (clientSortFields.includes(sortBy)) {
       result = [...result].sort((a, b) => {
+        // Numerische Sortierung fuer value
+        if (sortBy === 'value') {
+          const aNum = a.value ?? 0
+          const bNum = b.value ?? 0
+          return sortOrder === 'asc' ? aNum - bNum : bNum - aNum
+        }
+        // Datums-Sortierung fuer createdAt
+        if (sortBy === 'createdAt') {
+          const aTime = new Date(a.createdAt).getTime()
+          const bTime = new Date(b.createdAt).getTime()
+          return sortOrder === 'asc' ? aTime - bTime : bTime - aTime
+        }
+        // String-Sortierung fuer alle anderen Felder
         let aVal = ''
         let bVal = ''
         if (sortBy === 'tags') { aVal = a.tags?.[0] ?? ''; bVal = b.tags?.[0] ?? '' }

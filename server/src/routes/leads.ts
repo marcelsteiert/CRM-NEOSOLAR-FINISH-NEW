@@ -61,6 +61,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       updatedAt: 'updated_at',
       source: 'source',
       status: 'status',
+      value: 'value',
       lastName: 'created_at',
       company: 'created_at',
     }

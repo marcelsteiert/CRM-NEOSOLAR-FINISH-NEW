@@ -219,7 +219,7 @@ function SettingsPanel({
               >
                 <div
                   className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: sourceColors[key as Lead['source']]?.text ?? '#525E6F' }}
+                  style={{ background: defaultSourceColors[key as Lead['source']]?.text ?? '#525E6F' }}
                 />
                 <input
                   type="text"
