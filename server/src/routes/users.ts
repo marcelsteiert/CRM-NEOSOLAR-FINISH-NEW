@@ -19,8 +19,8 @@ const defaultModulesByRole: Record<UserRole, string[]> = {
   PROJEKTLEITUNG: ['dashboard', 'projects', 'calculations', 'calendar', 'tasks', 'appointments', 'communication', 'documents', 'passwords', 'canViewAllProjects', 'canViewAllTasks', 'canViewAllAppointments'],
   BUCHHALTUNG: ['dashboard', 'provision', 'deals', 'documents', 'passwords', 'export'],
   SUBUNTERNEHMEN: ['dashboard', 'projects', 'calendar', 'tasks', 'documents', 'passwords'],
-  CLOSER: ['dashboard', 'leads', 'appointments', 'documents', 'passwords'],
-  SETTER: ['dashboard', 'leads', 'appointments', 'documents', 'passwords'],
+  CLOSER: ['dashboard', 'leads', 'kaltakquise', 'appointments', 'documents', 'passwords'],
+  SETTER: ['dashboard', 'leads', 'kaltakquise', 'appointments', 'documents', 'passwords'],
 }
 
 // ── Validation ──

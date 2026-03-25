@@ -27,6 +27,7 @@ const roleColors: Record<UserRole, string> = {
 const ALL_MODULES = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'leads', label: 'Leads' },
+  { id: 'kaltakquise', label: 'Kaltakquise' },
   { id: 'appointments', label: 'Termine' },
   { id: 'deals', label: 'Angebote' },
   { id: 'provision', label: 'Provision' },

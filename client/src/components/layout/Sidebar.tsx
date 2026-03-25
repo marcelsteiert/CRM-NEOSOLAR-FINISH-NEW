@@ -21,6 +21,7 @@ import {
   PanelLeft,
   Puzzle,
   KeyRound,
+  PhoneOutgoing,
   X,
   LogOut,
 } from 'lucide-react'
@@ -76,6 +77,7 @@ const allNavGroups: NavGroup[] = [
     label: 'Vertrieb',
     items: [
       { to: '/leads', icon: Users, label: 'Leads', featureId: 'leads', moduleId: 'leads' },
+      { to: '/kaltakquise', icon: PhoneOutgoing, label: 'Kaltakquise', moduleId: 'kaltakquise' },
       { to: '/appointments', icon: CalendarCheck, label: 'Termine', featureId: 'appointments', moduleId: 'appointments' },
       { to: '/deals', icon: FileText, label: 'Angebote', featureId: 'deals', moduleId: 'deals' },
       { to: '/provision', icon: Coins, label: 'Provision', featureId: 'provision', moduleId: 'provision' },

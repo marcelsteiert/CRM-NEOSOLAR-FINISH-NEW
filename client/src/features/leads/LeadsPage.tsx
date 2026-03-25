@@ -159,11 +159,18 @@ function exportLeadsCsv(leads: Lead[], sourceLabels: Record<string, string>) {
 
 /* ── Main Component ── */
 
-export default function LeadsPage() {
+interface LeadsPageProps {
+  fixedSource?: LeadSource
+  pageTitle?: string
+  pageDescription?: string
+  pageIcon?: React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+}
+
+export default function LeadsPage({ fixedSource, pageTitle, pageDescription, pageIcon }: LeadsPageProps = {}) {
   const { isAdmin } = useAuth()
   /* ── State ── */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>('ALL')
+  const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>(fixedSource ?? 'ALL')
   const [tagFilter, setTagFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -200,7 +207,7 @@ export default function LeadsPage() {
     refetch,
   } = useLeads({
     status: statusFilter === 'ALL' ? 'ACTIVE' : statusFilter as LeadStatus,
-    source: sourceFilter !== 'ALL' ? sourceFilter : undefined,
+    source: fixedSource ?? (sourceFilter !== 'ALL' ? sourceFilter : undefined),
     appointmentType: appointmentTypeFilter !== 'ALL' ? appointmentTypeFilter : undefined,
     search: searchQuery.trim() || undefined,
     sortBy,
@@ -343,11 +350,11 @@ export default function LeadsPage() {
                 border: '1px solid color-mix(in srgb, #60A5FA 10%, transparent)',
               }}
             >
-              <Users size={20} className="text-blue" strokeWidth={1.8} />
+              {pageIcon ? <pageIcon size={20} className="text-blue" strokeWidth={1.8} /> : <Users size={20} className="text-blue" strokeWidth={1.8} />}
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Lead Hub</h1>
+                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">{pageTitle ?? 'Lead Hub'}</h1>
                 <span
                   className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
                   style={{
@@ -359,7 +366,7 @@ export default function LeadsPage() {
                 </span>
               </div>
               <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">
-                Leads verwalten und qualifizieren
+                {pageDescription ?? 'Leads verwalten und qualifizieren'}
               </p>
             </div>
           </div>
@@ -516,8 +523,8 @@ export default function LeadsPage() {
               />
             </div>
 
-            {/* Source Dropdown */}
-            <div className="relative">
+            {/* Source Dropdown (hidden when fixedSource) */}
+            {!fixedSource && <div className="relative">
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value as LeadSource | 'ALL')}
@@ -539,7 +546,7 @@ export default function LeadsPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
                 strokeWidth={2}
               />
-            </div>
+            </div>}
 
             {/* Search */}
             <div className="relative">
@@ -667,7 +674,7 @@ export default function LeadsPage() {
 
       {/* ── Create Dialog ── */}
       {createDialogOpen && (
-        <LeadCreateDialog onClose={() => setCreateDialogOpen(false)} />
+        <LeadCreateDialog onClose={() => setCreateDialogOpen(false)} defaultSource={fixedSource} />
       )}
 
       {/* ── Import Dialog ── */}

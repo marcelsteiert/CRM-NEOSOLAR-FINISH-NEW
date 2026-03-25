@@ -12,6 +12,7 @@ import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead, noti
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
   '/leads': 'Lead Hub',
+  '/kaltakquise': 'Kaltakquise',
   '/deals': 'Deal Pipeline',
   '/calculations': 'Kalkulation',
   '/projects': 'Projekte',

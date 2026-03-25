@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react'
 
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
 const LeadsPage = lazy(() => import('@/features/leads/LeadsPage'))
+const KaltakquisePage = lazy(() => import('@/features/leads/KaltakquisePage'))
 const AppointmentsPage = lazy(() => import('@/features/appointments/AppointmentsPage'))
 const DealsPage = lazy(() => import('@/features/deals/DealsPage'))
 const CalculationsPage = lazy(() => import('@/features/calculations/CalculationsPage'))
@@ -112,6 +113,7 @@ export default function App() {
           >
             <Route index element={<ModuleRoute moduleId="dashboard"><DashboardPage /></ModuleRoute>} />
             <Route path="leads" element={<ModuleRoute moduleId="leads"><LeadsPage /></ModuleRoute>} />
+            <Route path="kaltakquise" element={<ModuleRoute moduleId="kaltakquise"><KaltakquisePage /></ModuleRoute>} />
             <Route path="appointments" element={<ModuleRoute moduleId="appointments"><AppointmentsPage /></ModuleRoute>} />
             <Route path="deals" element={<ModuleRoute moduleId="deals"><DealsPage /></ModuleRoute>} />
             <Route path="calculations" element={<ModuleRoute moduleId="calculations"><CalculationsPage /></ModuleRoute>} />

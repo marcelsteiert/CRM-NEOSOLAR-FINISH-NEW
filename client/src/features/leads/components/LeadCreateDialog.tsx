@@ -5,16 +5,17 @@ import { useLeadSources } from '@/hooks/useAdmin'
 
 interface LeadCreateDialogProps {
   onClose: () => void
+  defaultSource?: string
 }
 
-export default function LeadCreateDialog({ onClose }: LeadCreateDialogProps) {
+export default function LeadCreateDialog({ onClose, defaultSource }: LeadCreateDialogProps) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [company, setCompany] = useState('')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [source, setSource] = useState('HOMEPAGE')
+  const [source, setSource] = useState(defaultSource ?? 'HOMEPAGE')
   const [value, setValue] = useState('')
   const [assignedTo, setAssignedTo] = useState('')
   const [notes, setNotes] = useState('')
