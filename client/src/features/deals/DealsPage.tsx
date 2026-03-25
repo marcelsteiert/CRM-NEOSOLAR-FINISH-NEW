@@ -198,7 +198,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
 
               {/* Dismiss note input */}
               {dismissingId === fu.id && (
-                <div className="flex items-center gap-2 mt-1.5 ml-7">
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 ml-0 sm:ml-7">
                   <input
                     type="text"
                     value={dismissNote}

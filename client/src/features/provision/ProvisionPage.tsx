@@ -300,7 +300,7 @@ export default function ProvisionPage() {
                                 if (e.key === 'Enter') saveEdit(deal.id)
                                 if (e.key === 'Escape') setEditingDealId(null)
                               }}
-                              className="w-24 px-2 py-0.5 text-[11px] rounded bg-bg border border-amber/30 text-text tabular-nums text-right focus:outline-none focus:border-amber"
+                              className="w-16 sm:w-24 px-2 py-0.5 text-[11px] rounded bg-bg border border-amber/30 text-text tabular-nums text-right focus:outline-none focus:border-amber"
                               autoFocus
                             />
                             <button type="button" onClick={() => saveEdit(deal.id)} className="text-emerald-400 hover:text-emerald-300 p-0.5" disabled={updateDeal.isPending}>

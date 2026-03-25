@@ -631,7 +631,7 @@ function ArchivView({
                   <p className="text-[11px] text-text-dim truncate">{p.description}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 sm:gap-6 text-right shrink-0 pl-13 sm:pl-0">
+              <div className="flex items-center gap-4 sm:gap-6 text-right shrink-0 pl-4 sm:pl-0">
                 <div>
                   <p className="text-[10px] text-text-dim uppercase">Wert</p>
                   <p className="text-[13px] font-bold tabular-nums text-amber">{formatCHF(p.value)}</p>

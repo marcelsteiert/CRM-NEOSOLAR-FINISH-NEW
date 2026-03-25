@@ -1498,7 +1498,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             }}
           >
             <div
-              className="w-full max-w-[360px] mx-4 p-6 text-center"
+              className="w-full max-w-[360px] mx-2 sm:mx-4 p-4 sm:p-6 text-center"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
@@ -1555,7 +1555,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             }}
           >
             <div
-              className="w-full max-w-[440px] mx-4 p-6"
+              className="w-full max-w-[440px] mx-2 sm:mx-4 p-4 sm:p-6"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
@@ -1718,7 +1718,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
             }}
           >
             <div
-              className="w-full max-w-[400px] mx-4 p-6"
+              className="w-full max-w-[400px] mx-2 sm:mx-4 p-4 sm:p-6"
               style={{
                 background: 'rgba(11, 15, 21, 0.98)',
                 backdropFilter: 'blur(24px)',
