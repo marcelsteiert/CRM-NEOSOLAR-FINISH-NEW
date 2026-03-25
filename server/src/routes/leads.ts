@@ -404,11 +404,11 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
     // Kontaktdaten in contacts-Tabelle aktualisieren
     const contactUpdates: Record<string, unknown> = {}
-    if (result.data.firstName !== undefined) contactUpdates.first_name = result.data.firstName ?? null
-    if (result.data.lastName !== undefined) contactUpdates.last_name = result.data.lastName ?? null
-    if (result.data.email !== undefined) contactUpdates.email = result.data.email ?? null
-    if (result.data.phone !== undefined) contactUpdates.phone = result.data.phone ?? null
-    if (result.data.address !== undefined) contactUpdates.address = result.data.address ?? null
+    if (result.data.firstName !== undefined) contactUpdates.first_name = result.data.firstName ?? ''
+    if (result.data.lastName !== undefined) contactUpdates.last_name = result.data.lastName ?? ''
+    if (result.data.email !== undefined) contactUpdates.email = result.data.email ?? ''
+    if (result.data.phone !== undefined) contactUpdates.phone = result.data.phone ?? ''
+    if (result.data.address !== undefined) contactUpdates.address = result.data.address ?? ''
     if (result.data.company !== undefined) contactUpdates.company = result.data.company ?? null
 
     if (Object.keys(contactUpdates).length > 0) {
