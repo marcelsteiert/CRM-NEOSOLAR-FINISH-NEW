@@ -322,7 +322,7 @@ export function useUpdateRoleDefaults() {
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { firstName: string; lastName: string; email: string; password?: string; phone?: string; role: UserRole; allowedModules?: string[] }) =>
+    mutationFn: (data: { firstName: string; lastName: string; email: string; username?: string; password?: string; phone?: string; role: UserRole; allowedModules?: string[] }) =>
       api.post<{ data: User }>('/users', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
@@ -331,7 +331,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: string; firstName?: string; lastName?: string; email?: string; phone?: string; role?: UserRole; isActive?: boolean; allowedModules?: string[] }) =>
+    mutationFn: ({ id, ...data }: { id: string; firstName?: string; lastName?: string; email?: string; username?: string | null; phone?: string; role?: UserRole; isActive?: boolean; allowedModules?: string[] }) =>
       api.put<{ data: User }>(`/users/${id}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
