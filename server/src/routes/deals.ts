@@ -437,6 +437,26 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
+    // Kontaktdaten auf contacts-Tabelle aktualisieren
+    if (u.contactEmail !== undefined || u.contactPhone !== undefined || u.contactName !== undefined || u.company !== undefined || u.address !== undefined) {
+      const cid = oldDeal?.contact_id
+      if (cid) {
+        const cu: Record<string, unknown> = {}
+        if (u.contactEmail !== undefined) cu.email = u.contactEmail
+        if (u.contactPhone !== undefined) cu.phone = u.contactPhone
+        if (u.company !== undefined) cu.company = u.company || null
+        if (u.address !== undefined) cu.address = u.address
+        if (u.contactName !== undefined) {
+          const parts = (u.contactName ?? '').trim().split(/\s+/)
+          cu.first_name = parts[0] ?? ''
+          cu.last_name = parts.slice(1).join(' ') || ''
+        }
+        if (Object.keys(cu).length > 0) {
+          await supabase.from('contacts').update(cu).eq('id', cid)
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('deals')
       .update(updates)

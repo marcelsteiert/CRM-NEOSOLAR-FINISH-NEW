@@ -261,6 +261,27 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       else updates.completed_at = null
     }
 
+    // Kontaktdaten auf contacts-Tabelle aktualisieren
+    if (u.contactEmail !== undefined || u.contactPhone !== undefined || u.contactName !== undefined || u.company !== undefined || u.address !== undefined) {
+      // Zuerst contact_id ermitteln
+      const { data: apptData } = await supabase.from('appointments').select('contact_id').eq('id', req.params.id).single()
+      if (apptData?.contact_id) {
+        const contactUpdates: Record<string, unknown> = {}
+        if (u.contactEmail !== undefined) contactUpdates.email = u.contactEmail
+        if (u.contactPhone !== undefined) contactUpdates.phone = u.contactPhone
+        if (u.company !== undefined) contactUpdates.company = u.company || null
+        if (u.address !== undefined) contactUpdates.address = u.address
+        if (u.contactName !== undefined) {
+          const parts = (u.contactName ?? '').trim().split(/\s+/)
+          contactUpdates.first_name = parts[0] ?? ''
+          contactUpdates.last_name = parts.slice(1).join(' ') || ''
+        }
+        if (Object.keys(contactUpdates).length > 0) {
+          await supabase.from('contacts').update(contactUpdates).eq('id', apptData.contact_id)
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('appointments')
       .update(updates)
