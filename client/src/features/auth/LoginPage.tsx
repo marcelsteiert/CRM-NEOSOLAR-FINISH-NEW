@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, Lock, Mail } from 'lucide-react'
+import { Loader2, Lock, UserCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function LoginPage() {
@@ -78,19 +78,19 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">
-              E-Mail
+              E-Mail oder Benutzername
             </label>
             <div className="relative">
-              <Mail
+              <UserCircle
                 size={16}
                 strokeWidth={1.8}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim"
               />
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@neosolar.ch"
+                placeholder="name@neosolar.ch oder benutzername"
                 className="glass-input w-full pl-10 pr-4 py-2.5 text-[13px]"
                 autoFocus
                 required

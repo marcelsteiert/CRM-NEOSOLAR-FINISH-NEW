@@ -56,6 +56,7 @@ interface FormData {
   firstName: string
   lastName: string
   email: string
+  username: string
   password: string
   phone: string
   role: UserRole
@@ -66,6 +67,7 @@ const emptyForm: FormData = {
   firstName: '',
   lastName: '',
   email: '',
+  username: '',
   password: '',
   phone: '',
   role: 'VERTRIEB',
@@ -147,6 +149,7 @@ export default function UsersRolesSection() {
       firstName: createForm.firstName.trim(),
       lastName: createForm.lastName.trim(),
       email: createForm.email.trim(),
+      username: createForm.username.trim() || undefined,
       password: createForm.password.trim() || undefined,
       phone: createForm.phone.trim(),
       role: createForm.role,
@@ -165,7 +168,9 @@ export default function UsersRolesSection() {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      username: user.username ?? '',
       phone: user.phone ?? '',
+      password: '',
       role: user.role,
       allowedModules: [...(user.allowedModules ?? [])],
     })
@@ -178,6 +183,7 @@ export default function UsersRolesSection() {
       firstName: editForm.firstName.trim(),
       lastName: editForm.lastName.trim(),
       email: editForm.email.trim(),
+      username: editForm.username.trim() || null,
       phone: editForm.phone.trim(),
       role: editForm.role,
       allowedModules: editForm.allowedModules,
@@ -818,7 +824,7 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">E-Mail</label>
           <input
@@ -827,6 +833,16 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
             placeholder="email@neosolar.ch"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">Benutzername</label>
+          <input
+            type="text"
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value.replace(/[^a-zA-Z0-9._-]/g, '') })}
+            className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50"
+            placeholder="optional"
           />
         </div>
         {showPassword ? (

@@ -29,6 +29,7 @@ const createUserSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email(),
+  username: z.string().min(3).regex(/^[a-zA-Z0-9._-]+$/, 'Nur Buchstaben, Zahlen, Punkt, Bindestrich, Unterstrich').nullable().optional(),
   password: z.string().min(6).optional(),
   phone: z.string().default(''),
   role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']),
@@ -39,6 +40,7 @@ const updateUserSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   email: z.string().email().optional(),
+  username: z.string().min(3).regex(/^[a-zA-Z0-9._-]+$/).nullable().optional(),
   phone: z.string().optional(),
   role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']).optional(),
   isActive: z.boolean().optional(),
@@ -203,23 +205,29 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       ? await bcrypt.hash(password, 10)
       : await bcrypt.hash('Neosolar2026!', 10)
 
+    const insertData: Record<string, unknown> = {
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      password: hashedPassword,
+      phone: phone ?? '',
+      role,
+      is_active: true,
+      allowed_modules: allowedModules ?? defaultModulesByRole[role],
+    }
+    if (parsed.data.username) insertData.username = parsed.data.username.toLowerCase()
+
     const { data, error } = await supabase
       .from('users')
-      .insert({
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        password: hashedPassword,
-        phone: phone ?? '',
-        role,
-        is_active: true,
-        allowed_modules: allowedModules ?? defaultModulesByRole[role],
-      })
+      .insert(insertData)
       .select()
       .single()
 
     if (error) {
-      if (error.code === '23505') throw new AppError('E-Mail-Adresse bereits vergeben', 409)
+      if (error.code === '23505') {
+        if (error.message.includes('username')) throw new AppError('Benutzername bereits vergeben', 409)
+        throw new AppError('E-Mail-Adresse bereits vergeben', 409)
+      }
       throw new AppError(error.message, 500)
     }
 
@@ -269,6 +277,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (d.firstName !== undefined) updates.first_name = d.firstName
     if (d.lastName !== undefined) updates.last_name = d.lastName
     if (d.email !== undefined) updates.email = d.email
+    if (d.username !== undefined) updates.username = d.username ? d.username.toLowerCase() : null
     if (d.phone !== undefined) updates.phone = d.phone
     if (d.isActive !== undefined) updates.is_active = d.isActive
     if (d.allowedModules !== undefined) updates.allowed_modules = d.allowedModules

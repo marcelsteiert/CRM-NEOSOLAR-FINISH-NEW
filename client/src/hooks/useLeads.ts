@@ -284,6 +284,7 @@ export interface User {
   firstName: string
   lastName: string
   email: string
+  username: string | null
   phone: string
   role: UserRole
   avatar: string | null

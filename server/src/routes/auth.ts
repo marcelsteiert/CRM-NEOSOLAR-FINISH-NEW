@@ -33,7 +33,7 @@ function requireAuth(req: Request, _res: Response, next: NextFunction): void {
 }
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1), // Akzeptiert Email oder Username
   password: z.string().min(1),
 })
 
@@ -42,17 +42,24 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
   try {
     const parsed = loginSchema.safeParse(req.body)
     if (!parsed.success) {
-      throw new AppError('E-Mail und Passwort sind erforderlich', 400)
+      throw new AppError('Benutzername/E-Mail und Passwort sind erforderlich', 400)
     }
 
-    const { email, password } = parsed.data
+    const { email: loginId, password } = parsed.data
+    const loginLower = loginId.toLowerCase().trim()
 
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .is('deleted_at', null)
-      .single()
+    // Zuerst per Email suchen, dann per Username
+    const isEmail = loginLower.includes('@')
+    let user: any = null
+    let error: any = null
+
+    if (isEmail) {
+      const res = await supabase.from('users').select('*').eq('email', loginLower).is('deleted_at', null).single()
+      user = res.data; error = res.error
+    } else {
+      const res = await supabase.from('users').select('*').eq('username', loginLower).is('deleted_at', null).single()
+      user = res.data; error = res.error
+    }
 
     if (error || !user) {
       throw new AppError('Ungueltige Anmeldedaten', 401)
@@ -83,6 +90,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
           firstName: user.first_name,
           lastName: user.last_name,
           email: user.email,
+          username: user.username ?? null,
           phone: user.phone ?? '',
           role: user.role,
           avatar: user.avatar_color ?? null,
@@ -125,6 +133,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFun
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
+        username: user.username ?? null,
         phone: user.phone ?? '',
         role: user.role,
         avatar: user.avatar_color ?? null,
