@@ -748,16 +748,16 @@ export default function LeadTable({
 
   // Spaltenbreiten (table-fixed)
   const columnWidths: Record<string, string> = {
-    name: '14%',
-    company: '14%',
-    address: '16%',
-    value: '7%',
+    name: '13%',
+    company: '13%',
+    address: '15%',
+    value: '6%',
     phone: '10%',
-    email: '14%',
+    email: '13%',
     source: '8%',
     status: '7%',
-    tags: '10%',
-    createdAt: '8%',
+    tags: '8%',
+    createdAt: '10%',
   }
 
   if (leads.length === 0) {

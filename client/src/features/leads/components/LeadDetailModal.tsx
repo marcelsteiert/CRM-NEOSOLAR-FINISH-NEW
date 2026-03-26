@@ -383,8 +383,11 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         setSuccessMsg('')
         onClose()
       }, 1500)
-    } catch {
-      setSuccessMsg('')
+    } catch (err: any) {
+      console.error('Termin erstellen fehlgeschlagen:', err)
+      const msg = err?.response?.data?.error ?? err?.message ?? 'Unbekannter Fehler'
+      setSuccessMsg(`Fehler: ${msg}`)
+      setTimeout(() => setSuccessMsg(''), 4000)
     }
   }
 
@@ -1706,10 +1709,10 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 <button
                   type="button"
                   onClick={handleCreateDeal}
-                  disabled={!apptAssignedTo || !apptDate || !apptTime}
+                  disabled={!apptAssignedTo || !apptDate || !apptTime || createAppointment.isPending}
                   className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Termin erstellen
+                  {createAppointment.isPending ? 'Wird erstellt...' : 'Termin erstellen'}
                 </button>
               </div>
             </div>
