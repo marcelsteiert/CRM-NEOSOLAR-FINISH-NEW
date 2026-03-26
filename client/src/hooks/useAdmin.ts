@@ -132,13 +132,17 @@ export interface AuditEntry {
   entityType: string
   entityId: string | null
   description: string
+  oldData?: Record<string, unknown> | null
+  newData?: Record<string, unknown> | null
+  ipAddress?: string | null
   createdAt: string
 }
 
-export function useAuditLog(filters: { userId?: string; action?: string; page?: number; pageSize?: number } = {}) {
+export function useAuditLog(filters: { userId?: string; action?: string; entity?: string; page?: number; pageSize?: number } = {}) {
   const params = new URLSearchParams()
   if (filters.userId) params.set('userId', filters.userId)
   if (filters.action) params.set('action', filters.action)
+  if (filters.entity) params.set('entity', filters.entity)
   if (filters.page) params.set('page', String(filters.page))
   if (filters.pageSize) params.set('pageSize', String(filters.pageSize))
   const qs = params.toString()

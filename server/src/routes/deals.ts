@@ -529,7 +529,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const stageInfo = u.stage && oldDeal?.stage !== u.stage ? ` Phase: ${oldDeal?.stage} → ${u.stage}` : ''
-    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'DEAL', entityId: req.params.id, description: `Angebot "${data.title}" aktualisiert${stageInfo}` })
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'DEAL', entityId: req.params.id, description: `Angebot "${data.title}" aktualisiert${stageInfo}`, oldData: oldDeal ? { stage: oldDeal.stage } : undefined, newData: updates })
 
     res.json({
       data: {

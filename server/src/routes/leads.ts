@@ -545,8 +545,8 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
-    // Audit-Log
-    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'LEAD', entityId: req.params.id, description: `Lead aktualisiert` })
+    // Audit-Log mit Änderungsdetails
+    logAudit({ userId: getAuditUserId(req), action: 'UPDATE', entity: 'LEAD', entityId: req.params.id, description: `Lead aktualisiert`, newData: { ...updates, ...contactUpdates } })
 
     res.json({
       data: {

@@ -7,7 +7,7 @@ const router = Router()
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId, action, from, to, page = '1', pageSize = '20' } = req.query
+    const { userId, action, entity, from, to, page = '1', pageSize = '20' } = req.query
 
     let query = supabase
       .from('audit_logs')
@@ -16,6 +16,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (userId && typeof userId === 'string') query = query.eq('user_id', userId)
     if (action && typeof action === 'string') query = query.eq('action', action)
+    if (entity && typeof entity === 'string') query = query.eq('entity', entity)
     if (from && typeof from === 'string') query = query.gte('created_at', from)
     if (to && typeof to === 'string') query = query.lte('created_at', to)
 
