@@ -143,7 +143,7 @@ function SettingsPanel({
   return (
     <div
       ref={panelRef}
-      className="absolute right-0 top-full mt-2 z-50 w-[340px] max-h-[70vh] overflow-y-auto"
+      className="absolute right-0 top-full mt-2 z-50 w-[min(340px,90vw)] max-h-[70vh] overflow-y-auto"
       style={{
         background: 'rgba(15, 18, 25, 0.95)',
         backdropFilter: 'blur(24px) saturate(1.2)',

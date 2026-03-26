@@ -83,7 +83,7 @@ export default function ProductCatalogSection() {
           <thead>
             <tr className="border-b border-border">
               {['Produkt', 'Hersteller', 'Preis (CHF)', 'Einheit', ''].map((h) => (
-                <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-5 py-3">
+                <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-5 py-3">
                   {h}
                 </th>
               ))}
@@ -92,7 +92,7 @@ export default function ProductCatalogSection() {
           <tbody>
             {products.map((p) => (
               <tr key={p.id} className="border-b border-border hover:bg-surface-hover transition-colors group">
-                <td className="px-5 py-3">
+                <td className="px-3 sm:px-5 py-3">
                   <p className="text-[12px] font-semibold text-text">{p.name}</p>
                   {Object.entries(p.specs).length > 0 && (
                     <p className="text-[10px] text-text-dim mt-0.5">
@@ -100,10 +100,10 @@ export default function ProductCatalogSection() {
                     </p>
                   )}
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-3 sm:px-5 py-3">
                   <span className="text-[12px] text-text-sec">{p.manufacturer}</span>
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-3 sm:px-5 py-3">
                   {editingId === p.id ? (
                     <div className="flex items-center gap-1.5">
                       <input
@@ -127,10 +127,10 @@ export default function ProductCatalogSection() {
                     </button>
                   )}
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-3 sm:px-5 py-3">
                   <span className="text-[11px] text-text-dim">{p.unit}</span>
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-3 sm:px-5 py-3">
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"

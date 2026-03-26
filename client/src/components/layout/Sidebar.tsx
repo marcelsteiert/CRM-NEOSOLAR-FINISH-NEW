@@ -186,7 +186,7 @@ export default function Sidebar() {
           'md:translate-x-0',
         ].join(' ')}
         style={{
-          width: isMobile ? '260px' : expanded ? '220px' : '72px',
+          width: isMobile ? 'min(260px, 75vw)' : expanded ? '220px' : '72px',
           transition: 'width 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
         onMouseEnter={() => !pinned && setHovered(true)}

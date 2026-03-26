@@ -672,7 +672,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
           <>
             {/* Batch-Toolbar */}
             {selectedIds.size > 0 && (
-              <div className="glass-card p-3 mb-3 flex items-center gap-3 border border-amber-500/20">
+              <div className="glass-card p-3 mb-3 flex flex-wrap items-center gap-2 sm:gap-3 border border-amber-500/20">
                 <span className="text-xs text-amber-400 font-medium">
                   {selectedIds.size} ausgewählt
                 </span>
@@ -767,9 +767,9 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
                     type="button"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage <= 1}
-                    className="btn-secondary w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-30"
+                    className="btn-secondary w-10 h-10 flex items-center justify-center rounded-lg disabled:opacity-30"
                   >
-                    <ChevronLeft size={14} strokeWidth={2} />
+                    <ChevronLeft size={16} strokeWidth={2} />
                   </button>
                   <span className="text-[12px] font-medium tabular-nums px-2">
                     {currentPage} / {Math.ceil((leadsResponse?.total ?? 0) / effectivePageSize)}
@@ -778,7 +778,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
                     type="button"
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage >= Math.ceil((leadsResponse?.total ?? 0) / effectivePageSize)}
-                    className="btn-secondary w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-30"
+                    className="btn-secondary w-10 h-10 flex items-center justify-center rounded-lg disabled:opacity-30"
                   >
                     <ChevronRight size={14} strokeWidth={2} />
                   </button>

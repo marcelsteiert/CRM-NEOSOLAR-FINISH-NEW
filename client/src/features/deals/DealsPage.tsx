@@ -56,7 +56,7 @@ function LoadingSkeleton() {
           <thead>
             <tr className="border-b border-border">
               {['Angebot', 'Unternehmen', 'Wert', 'Phase', 'Priorität', 'Wahrsch.', 'Zugewiesen', 'Abschluss', 'Erstellt'].map((h) => (
-                <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-6 py-3.5">{h}</th>
+                <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5">{h}</th>
               ))}
             </tr>
           </thead>
@@ -169,18 +169,18 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
         <div className="px-5 pb-4 space-y-2">
           {visibleFollowUps.map((fu) => (
             <div key={fu.id}>
-              <div className="flex items-center gap-3 px-4 py-3 rounded-lg text-left" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: urgencyColors[fu.urgency], boxShadow: `0 0 8px ${urgencyColors[fu.urgency]}40` }} />
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-lg text-left" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div className="w-2.5 h-2.5 rounded-full shrink-0 hidden sm:block" style={{ background: urgencyColors[fu.urgency], boxShadow: `0 0 8px ${urgencyColors[fu.urgency]}40` }} />
                 <button type="button" onClick={() => onSelectDeal(fu.dealId)} className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-[12px] font-semibold truncate">{fu.dealTitle}</p>
                     <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase" style={{ background: `color-mix(in srgb, ${urgencyColors[fu.urgency]} 15%, transparent)`, color: urgencyColors[fu.urgency] }}>
                       {urgencyLabels[fu.urgency]}
                     </span>
                   </div>
-                  <p className="text-[11px] text-text-sec mt-0.5">{fu.message}</p>
+                  <p className="text-[11px] text-text-sec mt-0.5 line-clamp-1">{fu.message}</p>
                 </button>
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 hidden sm:block">
                   <div className="flex items-center gap-1 text-[11px] text-text-sec"><Phone size={10} strokeWidth={2} /><span>{fu.contactName}</span></div>
                   <div className="flex items-center gap-1 text-[11px] mt-0.5" style={{ color: urgencyColors[fu.urgency] }}><Clock size={10} strokeWidth={2} /><span className="font-semibold">{fu.daysSinceUpdate} Tage</span></div>
                 </div>
@@ -189,7 +189,7 @@ function FollowUpBanner({ followUps, onSelectDeal }: { followUps: FollowUp[]; on
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setDismissingId(dismissingId === fu.id ? null : fu.id); setDismissNote('') }}
-                  className="shrink-0 w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all"
+                  className="shrink-0 w-8 h-8 sm:w-7 sm:h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all"
                   title="Erledigt markieren"
                 >
                   <X size={14} strokeWidth={2} />

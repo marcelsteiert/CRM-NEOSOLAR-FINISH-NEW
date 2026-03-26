@@ -187,7 +187,7 @@ export default function TasksPage() {
 
         {/* ── KPI Stats ── */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
             {[
               { label: 'Offen', value: stats.open, color: taskStatusColors.OFFEN, icon: Circle },
               { label: 'In Bearbeitung', value: stats.inProgress, color: taskStatusColors.IN_BEARBEITUNG, icon: Clock },

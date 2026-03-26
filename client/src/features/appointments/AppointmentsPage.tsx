@@ -282,7 +282,7 @@ function KanbanView({ appointments, users, onSelect, columns }: { appointments: 
             </div>
 
             {/* Cards */}
-            <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-380px)]">
+            <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-380px)]">
               {items.length === 0 ? (
                 <p className="text-[10px] text-text-dim text-center py-6">
                   {isOver ? 'Hier ablegen' : 'Keine Termine'}

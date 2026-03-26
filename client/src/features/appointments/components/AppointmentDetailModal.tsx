@@ -253,15 +253,15 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
         )}
 
         {/* ── Tabs ── */}
-        <div className="px-6 pt-4 pb-0 shrink-0">
-          <div className="flex items-center rounded-full p-0.5" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="px-3 sm:px-6 pt-4 pb-0 shrink-0">
+          <div className="flex items-center rounded-full p-0.5 overflow-x-auto" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 className={[
-                  'flex-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                  'shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold text-center transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap',
                   activeTab === tab.key
                     ? 'bg-amber-soft text-amber'
                     : 'text-text-dim hover:text-text',
