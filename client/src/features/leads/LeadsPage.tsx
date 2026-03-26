@@ -33,6 +33,7 @@ import LeadTable, { type ColumnFilters } from './components/LeadTable'
 import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
 import LeadImportDialog from './components/LeadImportDialog'
+import DuplicateCheckModal from './components/DuplicateCheckModal'
 import { useAuth } from '@/hooks/useAuth'
 import { useSearchParams } from 'react-router-dom'
 import { useIsMobile } from '@/hooks/useIsMobile'
@@ -262,6 +263,13 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>(fixedSource ?? 'ALL')
   const [tagFilter, setTagFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce Suche (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
 
@@ -278,6 +286,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   useEffect(() => { setCurrentPage(1) }, [fixedTag, fixedSource])
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [duplicateCheckOpen, setDuplicateCheckOpen] = useState(false)
   const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE' | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
@@ -305,7 +314,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
     source: fixedSource ?? (sourceFilter !== 'ALL' ? sourceFilter : undefined),
     excludeSource: excludeSource || undefined,
     appointmentType: appointmentTypeFilter !== 'ALL' ? appointmentTypeFilter : undefined,
-    search: searchQuery.trim() || undefined,
+    search: debouncedSearch.trim() || undefined,
     tag: fixedTag || undefined,
     sortBy,
     sortOrder,
@@ -377,8 +386,8 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   const filteredLeads = useMemo(() => {
     let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
 
-    // Client-seitige Suche (Fallback fuer Tag-Pfad + Zusatzfilter)
-    if (searchQuery.trim()) {
+    // Client-seitige Suche nur als Fallback wenn Tag-Filter aktiv (API sucht nicht bei Tag-Pfad)
+    if (searchQuery.trim() && tagFilter !== 'ALL') {
       const q = searchQuery.trim().toLowerCase()
       result = result.filter(lead =>
         (`${lead.firstName ?? ''} ${lead.lastName ?? ''}`).toLowerCase().includes(q) ||
@@ -420,33 +429,11 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
         })
       }
     }
-    // Clientseitige Sortierung fuer Kontakt-Felder und Tags (nicht via DB sortierbar)
-    const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company', 'address', 'value', 'createdAt']
-    if (clientSortFields.includes(sortBy)) {
+    // Clientseitige Sortierung nur fuer Tags (alle anderen via DB/RPC)
+    if (sortBy === 'tags') {
       result = [...result].sort((a, b) => {
-        // Numerische Sortierung fuer value
-        if (sortBy === 'value') {
-          const aNum = a.value ?? 0
-          const bNum = b.value ?? 0
-          return sortOrder === 'asc' ? aNum - bNum : bNum - aNum
-        }
-        // Datums-Sortierung fuer createdAt
-        if (sortBy === 'createdAt') {
-          const aTime = new Date(a.createdAt).getTime()
-          const bTime = new Date(b.createdAt).getTime()
-          return sortOrder === 'asc' ? aTime - bTime : bTime - aTime
-        }
-        // String-Sortierung fuer alle anderen Felder
-        let aVal = ''
-        let bVal = ''
-        if (sortBy === 'tags') { aVal = a.tags?.[0] ?? ''; bVal = b.tags?.[0] ?? '' }
-        else if (sortBy === 'phone') { aVal = a.phone ?? ''; bVal = b.phone ?? '' }
-        else if (sortBy === 'email') { aVal = a.email ?? ''; bVal = b.email ?? '' }
-        else if (sortBy === 'source') { aVal = a.source ?? ''; bVal = b.source ?? '' }
-        else if (sortBy === 'status') { aVal = a.status ?? ''; bVal = b.status ?? '' }
-        else if (sortBy === 'lastName') { aVal = a.lastName ?? ''; bVal = b.lastName ?? '' }
-        else if (sortBy === 'company') { aVal = a.company ?? ''; bVal = b.company ?? '' }
-        else if (sortBy === 'address') { aVal = a.address ?? ''; bVal = b.address ?? '' }
+        const aVal = a.tags?.[0] ?? ''
+        const bVal = b.tags?.[0] ?? ''
         return sortOrder === 'asc'
           ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
           : bVal.toLowerCase().localeCompare(aVal.toLowerCase())
@@ -541,6 +528,17 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+            {/* Duplikate prüfen (nur Admin) */}
+            {isAdmin && (
+              <button
+                type="button"
+                className="btn-secondary flex items-center gap-2 px-3 sm:px-4 py-2.5 text-[12px]"
+                onClick={() => setDuplicateCheckOpen(true)}
+              >
+                <span className="hidden sm:inline">Duplikate</span>
+                <span className="sm:hidden">Dup.</span>
+              </button>
+            )}
             {/* Alle loeschen Button (nur Admin) */}
             {isAdmin && allLeads.length > 0 && !confirmDeleteAll && (
               <button
@@ -898,6 +896,11 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
           onClose={() => setImportDialogOpen(false)}
           defaultStatus={statusFilter === 'AFTER_SALES' ? 'AFTER_SALES' : 'ACTIVE'}
         />
+      )}
+
+      {/* ── Duplikat-Check Modal ── */}
+      {duplicateCheckOpen && (
+        <DuplicateCheckModal onClose={() => setDuplicateCheckOpen(false)} />
       )}
     </>
   )

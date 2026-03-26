@@ -446,3 +446,43 @@ export function useLeadSourceMaps() {
     return { labels, colors, sources }
   }, [sources])
 }
+
+// ── Duplicates ──
+
+export interface DuplicateContact {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string | null
+  company: string | null
+  address: string | null
+  createdAt: string
+  leadCount: number
+}
+
+export interface DuplicateGroup {
+  email: string
+  contacts: DuplicateContact[]
+}
+
+export function useDuplicates(limit = 50) {
+  return useQuery({
+    queryKey: ['duplicates', limit],
+    queryFn: () => api.get<{ data: DuplicateGroup[]; total: number }>(`/admin/duplicates?limit=${limit}`),
+    enabled: false, // nur manuell triggern
+  })
+}
+
+export function useMergeDuplicates() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { keepId: string; removeIds: string[] }) =>
+      api.post<{ data: { keepId: string; removedCount: number; moved: Record<string, number> } }>('/admin/duplicates/merge', payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['duplicates'] })
+      qc.invalidateQueries({ queryKey: ['leads'] })
+      qc.invalidateQueries({ queryKey: ['contacts'] })
+    },
+  })
+}

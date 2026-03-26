@@ -53,8 +53,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .select('*, contact:contacts(*), lead_tags(tag_id)', { count: 'exact' })
       .is('deleted_at', null)
 
-    // Whitelist gültiger Sort-Felder
-    const allowedSortFields: Record<string, string> = {
+    // Whitelist gültiger Sort-Felder (leads-eigene + contact-Felder via View)
+    const leadSortFields: Record<string, string> = {
       created_at: 'created_at',
       createdAt: 'created_at',
       updated_at: 'updated_at',
@@ -62,9 +62,17 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       source: 'source',
       status: 'status',
       value: 'value',
-      lastName: 'created_at',
-      company: 'created_at',
     }
+    // Kontakt-Felder werden über die View sortiert
+    const contactSortFields: Record<string, string> = {
+      lastName: 'contact_last_name',
+      last_name: 'contact_last_name',
+      company: 'contact_company',
+      address: 'contact_address',
+      phone: 'contact_phone',
+      email: 'contact_email',
+    }
+    const allowedSortFields: Record<string, string> = { ...leadSortFields, ...contactSortFields }
 
     if (status && typeof status === 'string') query = query.eq('status', status)
     if (source && typeof source === 'string') query = query.eq('source', source)
@@ -147,35 +155,74 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Leads
     const ownerFilter = getLeadOwnerFilter(req)
-    if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
-
-    if (search && typeof search === 'string' && search.trim()) {
-      // Kontakte durchsuchen (Name, Email, Telefon, Firma, Adresse)
-      const s = search.trim()
-      const { data: matchingContacts } = await supabase
-        .from('contacts')
-        .select('id')
-        .or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%,company.ilike.%${s}%,address.ilike.%${s}%`)
-        .limit(500)
-
-      const contactIds = (matchingContacts ?? []).map((c: any) => c.id)
-
-      if (contactIds.length > 0) {
-        // Leads mit matchenden Kontakten ODER matching notes/source
-        query = query.or(`contact_id.in.(${contactIds.join(',')}),notes.ilike.%${s}%,source.ilike.%${s}%`)
-      } else {
-        // Kein Kontakt gefunden – nur in leads-Feldern suchen
-        query = query.or(`notes.ilike.%${s}%,source.ilike.%${s}%`)
-      }
-    }
 
     const rawSort = typeof sortBy === 'string' ? sortBy : 'created_at'
     const sf = allowedSortFields[rawSort] ?? allowedSortFields[toSnakeCase(rawSort)] ?? 'created_at'
     const ascending = sortOrder !== 'desc'
-    query = query.order(sf, { ascending })
-
     const page = Math.max(1, Number(pp) || 1)
     const pageSize = Math.min(500, Math.max(1, Number(psp) || 20))
+    const searchTrim = (search && typeof search === 'string') ? search.trim() : ''
+
+    // ── Schneller Pfad via RPC (Sortierung über Contact-Felder + integrierte Suche) ──
+    const isContactSort = !!contactSortFields[rawSort] || !!contactSortFields[toSnakeCase(rawSort)]
+    if (isContactSort || searchTrim) {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('get_leads_sorted', {
+        p_status: (status && typeof status === 'string') ? status : null,
+        p_source: (source && typeof source === 'string') ? source : null,
+        p_exclude_source: (excludeSource && typeof excludeSource === 'string') ? excludeSource : null,
+        p_assigned_to: ownerFilter ?? ((assignedTo && typeof assignedTo === 'string') ? assignedTo : null),
+        p_sort_field: sf,
+        p_sort_asc: ascending,
+        p_page: page,
+        p_page_size: pageSize,
+        p_search: searchTrim || null,
+      })
+
+      if (rpcErr) {
+        // Fallback auf alte Methode bei RPC-Fehler
+        console.error('[Leads RPC] Fehler:', rpcErr.message)
+      } else {
+        const rpcRows = rpcData ?? []
+        const total = rpcRows.length > 0 ? Number(rpcRows[0].total_count) : 0
+
+        // Tags nachladen für die gefundenen Lead-IDs
+        const leadIds = rpcRows.map((r: any) => r.lead_id)
+        const { data: tagRows } = leadIds.length > 0
+          ? await supabase.from('lead_tags').select('lead_id, tag_id').in('lead_id', leadIds)
+          : { data: [] }
+        const tagMap: Record<string, string[]> = {}
+        for (const t of tagRows ?? []) { (tagMap[t.lead_id] ??= []).push(t.tag_id) }
+
+        const enriched = rpcRows.map((r: any) => ({
+          id: r.lead_id,
+          contactId: r.contact_id,
+          status: r.status,
+          source: r.source,
+          value: r.value,
+          notes: r.notes,
+          pipelineId: r.pipeline_id,
+          bucketId: r.bucket_id,
+          assignedTo: r.assigned_to,
+          appointmentType: r.appointment_type,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+          firstName: r.contact_first_name,
+          lastName: r.contact_last_name,
+          email: r.contact_email,
+          phone: r.contact_phone,
+          company: r.contact_company,
+          address: r.contact_address,
+          tags: tagMap[r.lead_id] ?? [],
+        }))
+
+        res.json({ data: enriched, total, page, pageSize })
+        return
+      }
+    }
+
+    // ── Standard-Pfad (leads-eigene Sortierung, kein Search) ──
+    if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
+    query = query.order(sf, { ascending })
     const from = (page - 1) * pageSize
     query = query.range(from, from + pageSize - 1)
 
