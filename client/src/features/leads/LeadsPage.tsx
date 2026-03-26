@@ -35,6 +35,7 @@ import LeadCreateDialog from './components/LeadCreateDialog'
 import LeadImportDialog from './components/LeadImportDialog'
 import { useAuth } from '@/hooks/useAuth'
 import { useSearchParams } from 'react-router-dom'
+import { useIsMobile } from '@/hooks/useIsMobile'
 
 /* ── Filter Tab Type ── */
 
@@ -129,6 +130,84 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   )
 }
 
+/* ── Mobile Lead Card List ── */
+
+const mobileStatusColors: Record<string, { bg: string; text: string }> = {
+  ACTIVE: { bg: 'color-mix(in srgb, #34D399 12%, transparent)', text: '#34D399' },
+  CONVERTED: { bg: 'color-mix(in srgb, #60A5FA 12%, transparent)', text: '#60A5FA' },
+  LOST: { bg: 'color-mix(in srgb, #F87171 12%, transparent)', text: '#F87171' },
+  ARCHIVED: { bg: 'color-mix(in srgb, #525E6F 12%, transparent)', text: '#525E6F' },
+  AFTER_SALES: { bg: 'color-mix(in srgb, #A78BFA 12%, transparent)', text: '#A78BFA' },
+}
+
+function LeadMobileList({
+  leads,
+  onSelect,
+}: {
+  leads: Lead[]
+  onSelect: (lead: Lead) => void
+}) {
+  if (leads.length === 0) {
+    return (
+      <div className="rounded-xl p-8 text-center" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <p className="text-text-dim text-sm">Keine Leads gefunden.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {leads.map((lead) => {
+        const sc = mobileStatusColors[lead.status] ?? mobileStatusColors.ACTIVE
+        const name = [lead.firstName?.trim(), lead.lastName?.trim()].filter(Boolean).join(' ') || '--'
+        const initials = `${lead.firstName?.[0]?.toUpperCase() ?? ''}${lead.lastName?.[0]?.toUpperCase() ?? ''}` || '--'
+        return (
+          <button
+            key={lead.id}
+            type="button"
+            onClick={() => onSelect(lead)}
+            className="w-full text-left rounded-xl p-3.5 transition-all duration-150 active:scale-[0.98]"
+            style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <div className="flex items-start gap-3">
+              {/* Avatar */}
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
+                style={{ background: 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 20%, transparent), color-mix(in srgb, #F97316 12%, transparent))', color: '#F59E0B' }}
+              >
+                {initials}
+              </div>
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[13px] font-semibold truncate">{name}</p>
+                  <span
+                    className="shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase"
+                    style={{ background: sc.bg, color: sc.text }}
+                  >
+                    {statusLabels[lead.status]}
+                  </span>
+                </div>
+                {lead.company && (
+                  <p className="text-[11px] text-text-sec truncate mt-0.5">{lead.company}</p>
+                )}
+                <div className="flex items-center gap-3 mt-1.5 text-[11px] text-text-dim">
+                  {lead.phone && <span className="tabular-nums truncate">{lead.phone}</span>}
+                  {lead.value != null && lead.value > 0 && (
+                    <span className="font-semibold text-amber tabular-nums">
+                      {new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(lead.value)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 /* ── CSV Export helper ── */
 
 function exportLeadsCsv(leads: Lead[], sourceLabels: Record<string, string>) {
@@ -174,6 +253,7 @@ interface LeadsPageProps {
 
 export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTitle, pageDescription, pageIcon, defaultPageSize, headerExtra }: LeadsPageProps = {}) {
   const { isAdmin } = useAuth()
+  const isMobile = useIsMobile()
   /* ── State ── */
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'ALL'>(fixedSource ?? 'ALL')
@@ -562,7 +642,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
             ))}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 sm:flex-wrap w-full lg:w-auto">
             {/* Tag Dropdown */}
             <div className="relative">
               <TagIcon
@@ -639,7 +719,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
             </div>}
 
             {/* Search */}
-            <div className="relative">
+            <div className="relative col-span-2 sm:col-span-1">
               <Search
                 size={14}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none"
@@ -730,31 +810,41 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
               </div>
             )}
 
-            {/* Select-All Checkbox */}
-            <div className="flex items-center gap-2 mb-2 px-1">
-              <button onClick={toggleSelectAll} className="text-white/25 hover:text-white/50">
-                {selectedIds.size === allLeads.length && allLeads.length > 0
-                  ? <CheckSquare size={16} strokeWidth={1.8} className="text-amber-500" />
-                  : <Square size={16} strokeWidth={1.8} />
-                }
-              </button>
-              <span className="text-[10px] text-white/20">
-                {selectedIds.size > 0 ? `${selectedIds.size}/${allLeads.length}` : 'Alle auswählen'}
-              </span>
-            </div>
+            {/* Mobile: Card-Ansicht / Desktop: Tabelle */}
+            {isMobile ? (
+              <LeadMobileList
+                leads={filteredLeads}
+                onSelect={handleSelectLead}
+              />
+            ) : (
+              <>
+                {/* Select-All Checkbox */}
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <button onClick={toggleSelectAll} className="text-white/25 hover:text-white/50">
+                    {selectedIds.size === allLeads.length && allLeads.length > 0
+                      ? <CheckSquare size={16} strokeWidth={1.8} className="text-amber-500" />
+                      : <Square size={16} strokeWidth={1.8} />
+                    }
+                  </button>
+                  <span className="text-[10px] text-white/20">
+                    {selectedIds.size > 0 ? `${selectedIds.size}/${allLeads.length}` : 'Alle auswählen'}
+                  </span>
+                </div>
 
-            <LeadTable
-              leads={filteredLeads}
-              onSelectLead={handleSelectLead}
-              sortBy={sortBy}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-              tags={tags}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
-              columnFilters={columnFilters}
-              onColumnFilterChange={handleColumnFilterChange}
-            />
+                <LeadTable
+                  leads={filteredLeads}
+                  onSelectLead={handleSelectLead}
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSort={handleSort}
+                  tags={tags}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
+                  columnFilters={columnFilters}
+                  onColumnFilterChange={handleColumnFilterChange}
+                />
+              </>
+            )}
 
             {/* ── Pagination ── */}
             {(leadsResponse?.total ?? 0) > effectivePageSize && (
