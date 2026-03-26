@@ -429,14 +429,21 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
         })
       }
     }
-    // Clientseitige Sortierung nur fuer Tags (alle anderen via DB/RPC)
-    if (sortBy === 'tags') {
+    // Clientseitige Sortierung fuer Kontakt-Felder + Tags (bei 50 Eintraegen instant)
+    const clientSortFields = ['tags', 'phone', 'email', 'lastName', 'company', 'address']
+    if (clientSortFields.includes(sortBy)) {
       result = [...result].sort((a, b) => {
-        const aVal = a.tags?.[0] ?? ''
-        const bVal = b.tags?.[0] ?? ''
+        let aVal = ''
+        let bVal = ''
+        if (sortBy === 'tags') { aVal = a.tags?.[0] ?? ''; bVal = b.tags?.[0] ?? '' }
+        else if (sortBy === 'lastName') { aVal = a.lastName ?? ''; bVal = b.lastName ?? '' }
+        else if (sortBy === 'company') { aVal = a.company ?? ''; bVal = b.company ?? '' }
+        else if (sortBy === 'address') { aVal = a.address ?? ''; bVal = b.address ?? '' }
+        else if (sortBy === 'phone') { aVal = a.phone ?? ''; bVal = b.phone ?? '' }
+        else if (sortBy === 'email') { aVal = a.email ?? ''; bVal = b.email ?? '' }
         return sortOrder === 'asc'
-          ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
-          : bVal.toLowerCase().localeCompare(aVal.toLowerCase())
+          ? aVal.toLowerCase().localeCompare(bVal.toLowerCase(), 'de-CH')
+          : bVal.toLowerCase().localeCompare(aVal.toLowerCase(), 'de-CH')
       })
     }
     return result

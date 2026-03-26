@@ -163,9 +163,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const pageSize = Math.min(500, Math.max(1, Number(psp) || 20))
     const searchTrim = (search && typeof search === 'string') ? search.trim() : ''
 
-    // ── Schneller Pfad via RPC (Sortierung über Contact-Felder + integrierte Suche) ──
-    const isContactSort = !!contactSortFields[rawSort] || !!contactSortFields[toSnakeCase(rawSort)]
-    if (isContactSort || searchTrim) {
+    // ── RPC-Pfad nur bei Suche (JOIN nötig für Contact-Felder Suche) ──
+    if (searchTrim) {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('get_leads_sorted', {
         p_status: (status && typeof status === 'string') ? status : null,
         p_source: (source && typeof source === 'string') ? source : null,
