@@ -108,6 +108,8 @@ export function useAppointments(filters: AppointmentFilters = {}) {
   return useQuery({
     queryKey: ['appointments', filters],
     queryFn: () => api.get<AppointmentListResponse>(path),
+    staleTime: 60_000,
+    placeholderData: (prev: any) => prev,
   })
 }
 

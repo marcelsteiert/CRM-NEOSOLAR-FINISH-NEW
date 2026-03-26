@@ -172,6 +172,7 @@ function ActivityFeedWidget() {
   const { data } = useQuery({
     queryKey: ['activities', 'recent'],
     queryFn: () => api.get<{ data: { id: string; type: string; title?: string; text?: string; description?: string; createdAt: string; entityType?: string }[] }>('/activities'),
+    staleTime: 2 * 60_000, // 2 Min Cache
   })
 
   const activities = (data?.data ?? []).slice(0, 8)

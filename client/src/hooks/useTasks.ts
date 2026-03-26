@@ -78,6 +78,8 @@ export function useTasks(filters: TaskFilters = {}) {
   return useQuery({
     queryKey: ['tasks', filters],
     queryFn: () => api.get<TaskListResponse>(path),
+    staleTime: 60_000,
+    placeholderData: (prev: any) => prev,
   })
 }
 

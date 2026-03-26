@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onFocus = () => refreshUser()
     window.addEventListener('focus', onFocus)
 
-    const interval = setInterval(refreshUser, 30_000)
+    const interval = setInterval(refreshUser, 120_000) // Alle 2 Minuten statt 30s
 
     return () => {
       window.removeEventListener('focus', onFocus)

@@ -140,6 +140,8 @@ export function useDeals(filters: DealFilters = {}) {
   return useQuery({
     queryKey: ['deals', filters],
     queryFn: () => api.get<DealListResponse>(path),
+    staleTime: 60_000,
+    placeholderData: (prev: any) => prev,
   })
 }
 
@@ -164,7 +166,8 @@ export function useFollowUps(assignedTo?: string) {
   return useQuery({
     queryKey: ['followUps', assignedTo],
     queryFn: () => api.get<FollowUpResponse>(`/deals/follow-ups${qs}`),
-    refetchInterval: 60000,
+    refetchInterval: 120_000, // Alle 2 Minuten statt 60s
+    staleTime: 60_000,
   })
 }
 

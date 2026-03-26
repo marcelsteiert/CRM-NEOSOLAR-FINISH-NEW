@@ -84,6 +84,7 @@ export function useDashboardStats(assignedTo?: string) {
   return useQuery({
     queryKey: ['dashboardStats', assignedTo],
     queryFn: () => api.get<StatsResponse>(`/dashboard/stats${qs}`),
+    staleTime: 2 * 60_000, // 2 Minuten Cache
   })
 }
 
@@ -92,6 +93,7 @@ export function useMonthlyStats(assignedTo?: string) {
   return useQuery({
     queryKey: ['monthlyStats', assignedTo],
     queryFn: () => api.get<MonthlyResponse>(`/dashboard/monthly${qs}`),
+    staleTime: 5 * 60_000, // 5 Minuten Cache (ändert sich selten)
   })
 }
 

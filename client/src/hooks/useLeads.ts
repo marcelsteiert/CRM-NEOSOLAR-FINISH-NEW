@@ -118,6 +118,8 @@ export function useLeads(filters: LeadFilters = {}) {
   return useQuery({
     queryKey: ['leads', filters],
     queryFn: () => api.get<LeadListResponse>(path),
+    staleTime: 60_000,
+    placeholderData: (prev: any) => prev,  // Vorherige Daten während Laden behalten
   })
 }
 
@@ -140,6 +142,7 @@ export function useTags() {
   return useQuery({
     queryKey: ['tags'],
     queryFn: () => api.get<TagListResponse>('/tags'),
+    staleTime: 5 * 60_000, // Tags ändern sich selten – 5 Min Cache
   })
 }
 
@@ -301,6 +304,7 @@ export function useUsers() {
   return useQuery({
     queryKey: ['users'],
     queryFn: () => api.get<{ data: User[] }>('/users'),
+    staleTime: 5 * 60_000, // Users ändern sich selten – 5 Min Cache
   })
 }
 
@@ -436,7 +440,8 @@ export function usePendingReminders() {
   return useQuery({
     queryKey: ['reminders', 'pending'],
     queryFn: () => api.get<{ data: Reminder[] }>('/reminders?pending=true'),
-    refetchInterval: 30000, // check every 30s
+    refetchInterval: 120_000, // Alle 2 Minuten statt 30s
+    staleTime: 60_000,
   })
 }
 
