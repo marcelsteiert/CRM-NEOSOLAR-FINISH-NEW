@@ -309,7 +309,7 @@ function FilterableHeader({
   return (
     <th
       ref={ref}
-      className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5 relative"
+      className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 py-3 relative overflow-hidden"
     >
       <button
         type="button"
@@ -599,9 +599,9 @@ function renderCell(
   switch (key) {
     case 'name':
       return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold"
+            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold"
             style={{
               background:
                 'linear-gradient(135deg, color-mix(in srgb, #F59E0B 20%, transparent), color-mix(in srgb, #F97316 12%, transparent))',
@@ -610,38 +610,38 @@ function renderCell(
           >
             {getInitials(lead.firstName, lead.lastName)}
           </div>
-          <span className="text-[13px] font-semibold whitespace-nowrap">
+          <span className="text-[12px] font-semibold truncate" title={getDisplayName(lead.firstName, lead.lastName)}>
             {getDisplayName(lead.firstName, lead.lastName)}
           </span>
         </div>
       )
     case 'company':
       return (
-        <span className="text-[13px] text-text-sec whitespace-nowrap">
+        <span className="text-[12px] text-text-sec truncate block" title={lead.company || ''}>
           {lead.company || '\u2014'}
         </span>
       )
     case 'address':
       return (
-        <span className="text-[13px] text-text-sec whitespace-nowrap">
+        <span className="text-[12px] text-text-sec truncate block" title={lead.address || ''}>
           {lead.address || '\u2014'}
         </span>
       )
     case 'value':
       return (
-        <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
+        <span className="text-[12px] text-text-sec tabular-nums whitespace-nowrap">
           {lead.value != null ? chfFormatter.format(lead.value) : '\u2014'}
         </span>
       )
     case 'phone':
       return (
-        <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
+        <span className="text-[12px] text-text-sec tabular-nums whitespace-nowrap">
           {lead.phone || '\u2014'}
         </span>
       )
     case 'email':
       return (
-        <span className="text-[13px] text-text-sec whitespace-nowrap">
+        <span className="text-[12px] text-text-sec truncate block" title={lead.email || ''}>
           {lead.email || '\u2014'}
         </span>
       )
@@ -649,8 +649,9 @@ function renderCell(
       const srcC = dynSourceColors?.[lead.source] ?? defaultSourceColors[lead.source] ?? { bg: 'color-mix(in srgb, #525E6F 10%, transparent)', text: '#525E6F' }
       return (
         <span
-          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold truncate"
           style={{ background: srcC.bg, color: srcC.text }}
+          title={customSourceLabels[lead.source] ?? lead.source}
         >
           {customSourceLabels[lead.source] ?? lead.source}
         </span>
@@ -660,7 +661,7 @@ function renderCell(
       const sc = statusColors[lead.status]
       return (
         <span
-          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap"
           style={{ background: sc.bg, color: sc.text }}
         >
           {statusLabels[lead.status]}
@@ -745,6 +746,20 @@ export default function LeadTable({
   // Aktive Filter zaehlen
   const activeFilterCount = columnFilters ? Object.values(columnFilters).filter(v => v !== undefined && v !== '' && (!Array.isArray(v) || v.length > 0)).length : 0
 
+  // Spaltenbreiten (table-fixed)
+  const columnWidths: Record<string, string> = {
+    name: '14%',
+    company: '14%',
+    address: '16%',
+    value: '7%',
+    phone: '10%',
+    email: '14%',
+    source: '8%',
+    status: '7%',
+    tags: '10%',
+    createdAt: '8%',
+  }
+
   if (leads.length === 0) {
     return (
       <div
@@ -805,7 +820,14 @@ export default function LeadTable({
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            {onToggleSelect && <col style={{ width: '40px' }} />}
+            {visibleColumns.map((col) => (
+              <col key={col.key} style={{ width: columnWidths[col.key] ?? 'auto' }} />
+            ))}
+            <col style={{ width: '90px' }} />
+          </colgroup>
           <thead>
             <tr className="border-b border-border">
               {onToggleSelect && (
@@ -829,7 +851,7 @@ export default function LeadTable({
                   />
                 )
               })}
-              <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5">
+              <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-2 py-3">
                 <div className="flex items-center justify-end gap-2 relative">
                   <span>Aktionen</span>
                   <button
@@ -884,13 +906,13 @@ export default function LeadTable({
                   </td>
                 )}
                 {visibleColumns.map((col) => (
-                  <td key={col.key} className="px-3 sm:px-6 py-3 sm:py-4">
+                  <td key={col.key} className="px-3 py-2.5 overflow-hidden max-w-0">
                     {renderCell(col.key, lead, tagMap, { ...dynSourceLabels, ...prefs.sourceLabels }, tags, dynSourceColors)}
                   </td>
                 ))}
 
                 {/* Aktionen */}
-                <td className="px-3 sm:px-6 py-3 sm:py-4">
+                <td className="px-2 py-2.5">
                   <div className="flex items-center justify-end gap-1.5">
                     {confirmDeleteId === lead.id ? (
                       <>
