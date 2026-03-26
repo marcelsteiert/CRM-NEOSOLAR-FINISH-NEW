@@ -290,9 +290,23 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
     })
   }, [])
 
-  /* ── Client-side tag filtering + column filtering + sorting ── */
+  /* ── Client-side search + tag filtering + column filtering + sorting ── */
   const filteredLeads = useMemo(() => {
     let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
+
+    // Client-seitige Suche (Fallback fuer Tag-Pfad + Zusatzfilter)
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      result = result.filter(lead =>
+        (`${lead.firstName ?? ''} ${lead.lastName ?? ''}`).toLowerCase().includes(q) ||
+        (lead.company ?? '').toLowerCase().includes(q) ||
+        (lead.address ?? '').toLowerCase().includes(q) ||
+        (lead.phone ?? '').toLowerCase().includes(q) ||
+        (lead.email ?? '').toLowerCase().includes(q) ||
+        (lead.source ?? '').toLowerCase().includes(q) ||
+        (lead.notes ?? '').toLowerCase().includes(q)
+      )
+    }
 
     // Column-Filter anwenden
     for (const [field, filterVal] of Object.entries(columnFilters)) {
@@ -356,7 +370,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
       })
     }
     return result
-  }, [allLeads, tagFilter, sortBy, sortOrder, columnFilters])
+  }, [allLeads, tagFilter, searchQuery, sortBy, sortOrder, columnFilters])
 
   /* ── Handlers ── */
 
