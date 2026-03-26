@@ -291,7 +291,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
-  const effectivePageSize = defaultPageSize ?? 500
+  const effectivePageSize = defaultPageSize ?? 50
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [batchAction, setBatchAction] = useState<'delete' | 'status' | null>(null)
