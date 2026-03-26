@@ -1,8 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
-import { ChevronUp, ChevronDown, Pencil, Trash2, Settings2, RotateCcw, Eye, EyeOff, Plus, X } from 'lucide-react'
-import { type Lead, type Tag, statusLabels, useDeleteLead, useUpdateLead } from '@/hooks/useLeads'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { ChevronUp, ChevronDown, Pencil, Trash2, Settings2, RotateCcw, Eye, EyeOff, Plus, X, Filter, ArrowUpNarrowWide, ArrowDownWideNarrow, Search } from 'lucide-react'
+import { type Lead, type Tag, type LeadSource, statusLabels, useDeleteLead, useUpdateLead } from '@/hooks/useLeads'
 import { useTablePreferences, defaultColumnPrefs, defaultSourceLabels } from '@/hooks/useTablePreferences'
 import { useLeadSourceMaps } from '@/hooks/useAdmin'
+
+/* ── Column Filter Types ── */
+
+export type ColumnFilters = Record<string, string | string[]>
 
 /* ── Props ── */
 
@@ -16,6 +20,8 @@ interface LeadTableProps {
   onEditLead?: (lead: Lead) => void
   selectedIds?: Set<string>
   onToggleSelect?: (id: string) => void
+  columnFilters?: ColumnFilters
+  onColumnFilterChange?: (field: string, value: string | string[] | undefined) => void
 }
 
 /* ── Status color mapping ── */
@@ -240,33 +246,83 @@ function SettingsPanel({
   )
 }
 
-/* ── Sortable header component ── */
+/* ── Filterable header component with dropdown ── */
 
-function SortableHeader({
-  label,
-  sortField,
-  sortBy,
-  sortOrder,
-  onSort,
-}: {
+type FilterType = 'text' | 'select' | 'none'
+
+interface FilterableHeaderProps {
   label: string
   sortField?: string
+  columnKey: string
   sortBy: string
   sortOrder: 'asc' | 'desc'
   onSort: (field: string) => void
-}) {
+  filterType: FilterType
+  filterOptions?: { value: string; label: string; color?: string }[]
+  filterValue?: string | string[]
+  onFilterChange?: (field: string, value: string | string[] | undefined) => void
+}
+
+function FilterableHeader({
+  label,
+  sortField,
+  columnKey,
+  sortBy,
+  sortOrder,
+  onSort,
+  filterType,
+  filterOptions,
+  filterValue,
+  onFilterChange,
+}: FilterableHeaderProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLThElement>(null)
   const isActive = sortField === sortBy
   const isSortable = !!sortField
+  const hasFilter = filterType !== 'none'
+  const isFiltered = filterValue !== undefined && filterValue !== '' && (Array.isArray(filterValue) ? filterValue.length > 0 : true)
+
+  useEffect(() => {
+    if (!open) return
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleEsc)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleEsc)
+    }
+  }, [open])
+
+  const toggleSelectValue = (val: string) => {
+    if (!onFilterChange) return
+    const current = (Array.isArray(filterValue) ? filterValue : []) as string[]
+    const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val]
+    onFilterChange(columnKey, next.length > 0 ? next : undefined)
+  }
 
   return (
     <th
-      className={`text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5 ${
-        isSortable ? 'cursor-pointer select-none hover:text-text-sec transition-colors' : ''
-      }`}
-      onClick={isSortable ? () => onSort(sortField!) : undefined}
+      ref={ref}
+      className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5 relative"
     >
-      <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => hasFilter ? setOpen(v => !v) : isSortable ? onSort(sortField!) : undefined}
+        className={[
+          'flex items-center gap-1 select-none transition-colors w-full',
+          (isSortable || hasFilter) ? 'cursor-pointer hover:text-text-sec' : '',
+          (open || isFiltered) ? 'text-amber' : '',
+        ].join(' ')}
+      >
         <span>{label}</span>
+        {isFiltered && (
+          <span className="w-1.5 h-1.5 rounded-full bg-amber shrink-0" />
+        )}
         {isSortable && (
           <span className="inline-flex">
             {isActive ? (
@@ -276,11 +332,125 @@ function SortableHeader({
                 <ChevronDown size={13} className="text-white/70" />
               )
             ) : (
-              <ChevronDown size={13} className="text-white/15" />
+              <ChevronDown size={13} className={open ? 'text-amber/60' : 'text-white/15'} />
             )}
           </span>
         )}
-      </div>
+      </button>
+
+      {/* ── Filter Dropdown ── */}
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1 z-50 min-w-[200px]"
+          style={{
+            background: 'rgba(12, 15, 22, 0.97)',
+            backdropFilter: 'blur(24px) saturate(1.2)',
+            WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.6)',
+          }}
+        >
+          {/* Sort-Optionen */}
+          {isSortable && (
+            <div className="p-1.5 border-b border-white/[0.06]">
+              <button
+                type="button"
+                onClick={() => { onSort(sortField!); if (sortBy === sortField && sortOrder === 'asc') { /* already asc */ } setOpen(false) }}
+                className={[
+                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-medium transition-colors',
+                  isActive && sortOrder === 'asc' ? 'text-amber bg-amber/[0.08]' : 'text-text-sec hover:bg-white/[0.04]',
+                ].join(' ')}
+              >
+                <ArrowUpNarrowWide size={14} strokeWidth={1.8} />
+                Aufsteigend sortieren
+              </button>
+              <button
+                type="button"
+                onClick={() => { onSort(sortField!); setOpen(false) }}
+                className={[
+                  'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] font-medium transition-colors',
+                  isActive && sortOrder === 'desc' ? 'text-amber bg-amber/[0.08]' : 'text-text-sec hover:bg-white/[0.04]',
+                ].join(' ')}
+              >
+                <ArrowDownWideNarrow size={14} strokeWidth={1.8} />
+                Absteigend sortieren
+              </button>
+            </div>
+          )}
+
+          {/* Text-Filter */}
+          {filterType === 'text' && (
+            <div className="p-2.5">
+              <div className="relative">
+                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+                <input
+                  type="text"
+                  placeholder="Filtern..."
+                  value={(filterValue as string) ?? ''}
+                  onChange={(e) => onFilterChange?.(columnKey, e.target.value || undefined)}
+                  className="w-full bg-white/[0.04] border border-white/[0.06] rounded-lg pl-8 pr-3 py-2 text-[12px] text-text outline-none focus:border-amber/40 transition-colors placeholder:text-text-dim/50"
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              {isFiltered && (
+                <button
+                  type="button"
+                  onClick={() => { onFilterChange?.(columnKey, undefined); setOpen(false) }}
+                  className="mt-2 w-full text-center text-[10px] font-medium text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Filter entfernen
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Select-Filter (Checkboxen) */}
+          {filterType === 'select' && filterOptions && (
+            <div className="py-1.5 max-h-[240px] overflow-y-auto">
+              {filterOptions.map((opt) => {
+                const checked = Array.isArray(filterValue) && filterValue.includes(opt.value)
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); toggleSelectValue(opt.value) }}
+                    className={[
+                      'w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors',
+                      checked ? 'bg-amber/[0.06]' : 'hover:bg-white/[0.04]',
+                    ].join(' ')}
+                  >
+                    <div
+                      className={[
+                        'w-3.5 h-3.5 rounded-[4px] border flex items-center justify-center shrink-0 transition-all',
+                        checked ? 'bg-amber border-amber' : 'border-white/20',
+                      ].join(' ')}
+                    >
+                      {checked && <span className="text-[9px] text-black font-bold">✓</span>}
+                    </div>
+                    {opt.color && (
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: opt.color }} />
+                    )}
+                    <span className="text-[11px] font-medium text-text-sec">{opt.label}</span>
+                  </button>
+                )
+              })}
+              {isFiltered && (
+                <div className="px-3 pt-2 pb-1 border-t border-white/[0.06] mt-1">
+                  <button
+                    type="button"
+                    onClick={() => { onFilterChange?.(columnKey, undefined); setOpen(false) }}
+                    className="w-full text-center text-[10px] font-medium text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    Alle Filter entfernen
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </th>
   )
 }
@@ -515,11 +685,13 @@ export default function LeadTable({
   onEditLead,
   selectedIds,
   onToggleSelect,
+  columnFilters,
+  onColumnFilterChange,
 }: LeadTableProps) {
   const deleteLead = useDeleteLead()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { colors: dynSourceColors, labels: dynSourceLabels } = useLeadSourceMaps()
+  const { colors: dynSourceColors, labels: dynSourceLabels, sources: dynSources } = useLeadSourceMaps()
 
   const {
     prefs,
@@ -534,6 +706,37 @@ export default function LeadTable({
   // Filter visible columns
   const visibleColumns = columnDefs.filter((col) => prefs.columns[col.key]?.visible !== false)
 
+  // Filter-Optionen pro Spalte berechnen
+  const sourceFilterOptions = useMemo(() =>
+    dynSources.map(s => ({ value: s.id, label: s.name, color: dynSourceColors[s.id]?.text ?? defaultSourceColors[s.id as LeadSource]?.text })),
+    [dynSources, dynSourceColors]
+  )
+  const statusFilterOptions = useMemo(() =>
+    Object.entries(statusLabels).map(([k, v]) => ({ value: k, label: v, color: statusColors[k as Lead['status']]?.text })),
+    []
+  )
+  const tagFilterOptions = useMemo(() =>
+    tags.map(t => ({ value: t.id, label: t.name, color: t.color })),
+    [tags]
+  )
+
+  // Welcher Filter-Typ pro Spalte
+  const getFilterConfig = (colKey: string): { type: FilterType; options?: { value: string; label: string; color?: string }[] } => {
+    switch (colKey) {
+      case 'name': return { type: 'text' }
+      case 'company': return { type: 'text' }
+      case 'phone': return { type: 'text' }
+      case 'email': return { type: 'text' }
+      case 'source': return { type: 'select', options: sourceFilterOptions }
+      case 'status': return { type: 'select', options: statusFilterOptions }
+      case 'tags': return { type: 'select', options: tagFilterOptions }
+      default: return { type: 'none' }
+    }
+  }
+
+  // Aktive Filter zaehlen
+  const activeFilterCount = columnFilters ? Object.values(columnFilters).filter(v => v !== undefined && v !== '' && (!Array.isArray(v) || v.length > 0)).length : 0
+
   if (leads.length === 0) {
     return (
       <div
@@ -544,6 +747,19 @@ export default function LeadTable({
         }}
       >
         <p className="text-text-dim text-sm">Keine Leads gefunden.</p>
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              if (onColumnFilterChange && columnFilters) {
+                Object.keys(columnFilters).forEach(k => onColumnFilterChange(k, undefined))
+              }
+            }}
+            className="mt-3 text-[12px] font-medium text-amber hover:text-amber/80 transition-colors"
+          >
+            {activeFilterCount} Filter entfernen
+          </button>
+        )}
       </div>
     )
   }
@@ -556,6 +772,30 @@ export default function LeadTable({
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
+      {/* Filter-Info Bar */}
+      {activeFilterCount > 0 && (
+        <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.06]" style={{ background: 'rgba(245,158,11,0.04)' }}>
+          <div className="flex items-center gap-2">
+            <Filter size={12} strokeWidth={2} className="text-amber" />
+            <span className="text-[11px] font-medium text-amber">
+              {activeFilterCount} {activeFilterCount === 1 ? 'Filter' : 'Filter'} aktiv
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onColumnFilterChange && columnFilters) {
+                Object.keys(columnFilters).forEach(k => onColumnFilterChange(k, undefined))
+              }
+            }}
+            className="text-[10px] font-medium text-text-dim hover:text-amber transition-colors flex items-center gap-1"
+          >
+            <X size={11} strokeWidth={2} />
+            Alle entfernen
+          </button>
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -563,16 +803,24 @@ export default function LeadTable({
               {onToggleSelect && (
                 <th className="pl-4 pr-1 py-3.5 w-8" />
               )}
-              {visibleColumns.map((col) => (
-                <SortableHeader
-                  key={col.key}
-                  label={prefs.columns[col.key]?.label ?? defaultColumnPrefs[col.key]?.label ?? col.key}
-                  sortField={col.sortField}
-                  sortBy={sortBy}
-                  sortOrder={sortOrder}
-                  onSort={onSort}
-                />
-              ))}
+              {visibleColumns.map((col) => {
+                const fc = getFilterConfig(col.key)
+                return (
+                  <FilterableHeader
+                    key={col.key}
+                    label={prefs.columns[col.key]?.label ?? defaultColumnPrefs[col.key]?.label ?? col.key}
+                    sortField={col.sortField}
+                    columnKey={col.key}
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
+                    onSort={onSort}
+                    filterType={fc.type}
+                    filterOptions={fc.options}
+                    filterValue={columnFilters?.[col.key]}
+                    onFilterChange={onColumnFilterChange}
+                  />
+                )
+              })}
               <th className="text-right text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 sm:px-6 py-3.5">
                 <div className="flex items-center justify-end gap-2 relative">
                   <span>Aktionen</span>

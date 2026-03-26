@@ -29,7 +29,7 @@ import {
 } from '@/hooks/useLeads'
 import { useTablePreferences } from '@/hooks/useTablePreferences'
 import { useLeadSourceMaps } from '@/hooks/useAdmin'
-import LeadTable from './components/LeadTable'
+import LeadTable, { type ColumnFilters } from './components/LeadTable'
 import LeadDetailModal from './components/LeadDetailModal'
 import LeadCreateDialog from './components/LeadCreateDialog'
 import LeadImportDialog from './components/LeadImportDialog'
@@ -204,6 +204,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [batchAction, setBatchAction] = useState<'delete' | 'status' | null>(null)
   const [batchStatus, setBatchStatus] = useState<LeadStatus>('ACTIVE')
+  const [columnFilters, setColumnFilters] = useState<ColumnFilters>({})
   const { labels: dynSourceLabels, sources: dynSources } = useLeadSourceMaps()
 
   /* ── Preferences (custom source labels) ── */
@@ -276,9 +277,51 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
 
   const tags = tagsData?.data ?? []
 
-  /* ── Client-side tag filtering + tag sorting ── */
+  /* ── Column Filter Handler ── */
+  const handleColumnFilterChange = useCallback((field: string, value: string | string[] | undefined) => {
+    setColumnFilters(prev => {
+      const next = { ...prev }
+      if (value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+        delete next[field]
+      } else {
+        next[field] = value
+      }
+      return next
+    })
+  }, [])
+
+  /* ── Client-side tag filtering + column filtering + sorting ── */
   const filteredLeads = useMemo(() => {
     let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
+
+    // Column-Filter anwenden
+    for (const [field, filterVal] of Object.entries(columnFilters)) {
+      if (!filterVal || (Array.isArray(filterVal) && filterVal.length === 0)) continue
+
+      if (typeof filterVal === 'string') {
+        // Text-Filter
+        const q = filterVal.toLowerCase()
+        result = result.filter(lead => {
+          switch (field) {
+            case 'name': return (`${lead.firstName ?? ''} ${lead.lastName ?? ''}`).toLowerCase().includes(q)
+            case 'company': return (lead.company ?? '').toLowerCase().includes(q)
+            case 'phone': return (lead.phone ?? '').toLowerCase().includes(q)
+            case 'email': return (lead.email ?? '').toLowerCase().includes(q)
+            default: return true
+          }
+        })
+      } else if (Array.isArray(filterVal)) {
+        // Select-Filter (Mehrfachauswahl)
+        result = result.filter(lead => {
+          switch (field) {
+            case 'source': return filterVal.includes(lead.source)
+            case 'status': return filterVal.includes(lead.status)
+            case 'tags': return filterVal.some(t => lead.tags.includes(t))
+            default: return true
+          }
+        })
+      }
+    }
     // Clientseitige Sortierung fuer Kontakt-Felder und Tags (nicht via DB sortierbar)
     const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company', 'value', 'createdAt']
     if (clientSortFields.includes(sortBy)) {
@@ -311,7 +354,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
       })
     }
     return result
-  }, [allLeads, tagFilter, sortBy, sortOrder])
+  }, [allLeads, tagFilter, sortBy, sortOrder, columnFilters])
 
   /* ── Handlers ── */
 
@@ -692,6 +735,8 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
               tags={tags}
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}
+              columnFilters={columnFilters}
+              onColumnFilterChange={handleColumnFilterChange}
             />
 
             {/* ── Pagination ── */}
