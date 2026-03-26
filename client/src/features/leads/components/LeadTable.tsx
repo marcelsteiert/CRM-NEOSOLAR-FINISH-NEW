@@ -311,33 +311,45 @@ function FilterableHeader({
       ref={ref}
       className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-3 py-3 relative overflow-hidden"
     >
-      <button
-        type="button"
-        onClick={() => hasFilter ? setOpen(v => !v) : isSortable ? onSort(sortField!) : undefined}
-        className={[
-          'flex items-center gap-1 select-none transition-colors w-full',
-          (isSortable || hasFilter) ? 'cursor-pointer hover:text-text-sec' : '',
-          (open || isFiltered) ? 'text-amber' : '',
-        ].join(' ')}
-      >
-        <span>{label}</span>
-        {isFiltered && (
-          <span className="w-1.5 h-1.5 rounded-full bg-amber shrink-0" />
-        )}
-        {isSortable && (
-          <span className="inline-flex">
-            {isActive ? (
-              sortOrder === 'asc' ? (
-                <ChevronUp size={13} className="text-white/70" />
+      <div className="flex items-center gap-1 w-full">
+        <button
+          type="button"
+          onClick={() => isSortable ? onSort(sortField!) : hasFilter ? setOpen(v => !v) : undefined}
+          className={[
+            'flex items-center gap-1 select-none transition-colors',
+            (isSortable || hasFilter) ? 'cursor-pointer hover:text-text-sec' : '',
+            isActive ? 'text-text-sec' : '',
+          ].join(' ')}
+        >
+          <span>{label}</span>
+          {isSortable && (
+            <span className="inline-flex">
+              {isActive ? (
+                sortOrder === 'asc' ? (
+                  <ChevronUp size={13} className="text-white/70" />
+                ) : (
+                  <ChevronDown size={13} className="text-white/70" />
+                )
               ) : (
-                <ChevronDown size={13} className="text-white/70" />
-              )
-            ) : (
-              <ChevronDown size={13} className={open ? 'text-amber/60' : 'text-white/15'} />
-            )}
-          </span>
+                <ChevronDown size={13} className="text-white/15" />
+              )}
+            </span>
+          )}
+        </button>
+        {hasFilter && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setOpen(v => !v) }}
+            className={[
+              'w-5 h-5 rounded flex items-center justify-center transition-colors shrink-0',
+              (open || isFiltered) ? 'text-amber bg-amber/[0.08]' : 'text-text-dim/40 hover:text-text-dim',
+            ].join(' ')}
+            title="Filtern"
+          >
+            <Filter size={10} strokeWidth={2.5} />
+          </button>
         )}
-      </button>
+      </div>
 
       {/* ── Filter Dropdown ── */}
       {open && (
