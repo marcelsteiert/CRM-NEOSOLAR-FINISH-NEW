@@ -156,6 +156,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         .from('contacts')
         .select('id')
         .or(`first_name.ilike.%${s}%,last_name.ilike.%${s}%,email.ilike.%${s}%,phone.ilike.%${s}%,company.ilike.%${s}%,address.ilike.%${s}%`)
+        .limit(500)
 
       const contactIds = (matchingContacts ?? []).map((c: any) => c.id)
 

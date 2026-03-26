@@ -12,7 +12,7 @@ const router = Router()
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
-    if (q.length < 2) {
+    if (q.length < 1) {
       return res.json({ data: [] })
     }
 

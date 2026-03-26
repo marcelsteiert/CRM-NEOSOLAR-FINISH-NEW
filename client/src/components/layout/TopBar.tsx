@@ -130,7 +130,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
   const { data: searchRes, isFetching } = useQuery({
     queryKey: ['search', query],
     queryFn: () => api.get<{ data: SearchContact[] }>(`/search?q=${encodeURIComponent(query)}`),
-    enabled: query.length >= 2,
+    enabled: query.length >= 1,
     staleTime: 5000,
   })
 
@@ -213,9 +213,9 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
 
         {/* Results */}
         <div className="max-h-[60vh] overflow-y-auto">
-          {query.length < 2 && (
+          {query.length < 1 && (
             <div className="px-5 py-8 text-center text-[12px] text-text-dim">
-              Mindestens 2 Zeichen eingeben...
+              Suchbegriff eingeben...
             </div>
           )}
 
