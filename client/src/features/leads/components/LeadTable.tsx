@@ -70,15 +70,26 @@ function formatDate(dateStr: string): string {
 
 /* ── Helpers ── */
 
-function getInitials(firstName: string | null, lastName: string | null): string {
-  const f = firstName?.trim()?.[0]?.toUpperCase() ?? ''
-  const l = lastName?.trim()?.[0]?.toUpperCase() ?? ''
-  return f + l || '--'
+function cleanVal(s: string | null | undefined): string {
+  const v = s?.trim()
+  return v && v !== '--' && v !== '-' ? v : ''
 }
 
-function getDisplayName(firstName: string | null, lastName: string | null): string {
-  const parts = [firstName?.trim(), lastName?.trim()].filter(Boolean)
-  return parts.length > 0 ? parts.join(' ') : '--'
+function getInitials(firstName: string | null, lastName: string | null): string {
+  const f = cleanVal(firstName)?.[0]?.toUpperCase() ?? ''
+  const l = cleanVal(lastName)?.[0]?.toUpperCase() ?? ''
+  return f + l || '?'
+}
+
+function getDisplayName(firstName: string | null, lastName: string | null, email?: string | null): string {
+  const parts = [cleanVal(firstName), cleanVal(lastName)].filter(Boolean)
+  if (parts.length > 0) return parts.join(' ')
+  // Fallback: E-Mail-Adresse vor dem @ anzeigen
+  if (email) {
+    const local = email.split('@')[0]
+    return local || email
+  }
+  return '–'
 }
 
 /* ── Column definitions ── */
@@ -609,7 +620,8 @@ function renderCell(
   dynSourceColors?: Record<string, { bg: string; text: string }>,
 ) {
   switch (key) {
-    case 'name':
+    case 'name': {
+      const displayName = getDisplayName(lead.firstName, lead.lastName, lead.email)
       return (
         <div className="flex items-center gap-2.5 min-w-0">
           <div
@@ -622,11 +634,12 @@ function renderCell(
           >
             {getInitials(lead.firstName, lead.lastName)}
           </div>
-          <span className="text-[12px] font-semibold truncate" title={getDisplayName(lead.firstName, lead.lastName)}>
-            {getDisplayName(lead.firstName, lead.lastName)}
+          <span className="text-[12px] font-semibold truncate" title={displayName}>
+            {displayName}
           </span>
         </div>
       )
+    }
     case 'company':
       return (
         <span className="text-[12px] text-text-sec truncate block" title={lead.company || ''}>

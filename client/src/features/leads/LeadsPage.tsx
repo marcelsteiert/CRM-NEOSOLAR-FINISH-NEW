@@ -159,8 +159,11 @@ function LeadMobileList({
     <div className="space-y-2">
       {leads.map((lead) => {
         const sc = mobileStatusColors[lead.status] ?? mobileStatusColors.ACTIVE
-        const name = [lead.firstName?.trim(), lead.lastName?.trim()].filter(Boolean).join(' ') || '--'
-        const initials = `${lead.firstName?.[0]?.toUpperCase() ?? ''}${lead.lastName?.[0]?.toUpperCase() ?? ''}` || '--'
+        const clean = (s: string | null | undefined) => { const v = s?.trim(); return v && v !== '--' && v !== '-' ? v : '' }
+        const fName = clean(lead.firstName)
+        const lName = clean(lead.lastName)
+        const name = [fName, lName].filter(Boolean).join(' ') || (lead.email ? lead.email.split('@')[0] : '–')
+        const initials = `${fName?.[0]?.toUpperCase() ?? ''}${lName?.[0]?.toUpperCase() ?? ''}` || '?'
         return (
           <button
             key={lead.id}
@@ -192,7 +195,7 @@ function LeadMobileList({
                   <p className="text-[11px] text-text-sec truncate mt-0.5">{lead.company}</p>
                 )}
                 <div className="flex items-center gap-3 mt-1.5 text-[11px] text-text-dim">
-                  {lead.phone && <span className="tabular-nums truncate">{lead.phone}</span>}
+                  {lead.phone && lead.phone !== '--' && lead.phone !== '-' && <span className="tabular-nums truncate">{lead.phone}</span>}
                   {lead.value != null && lead.value > 0 && (
                     <span className="font-semibold text-amber tabular-nums">
                       {new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(lead.value)}
