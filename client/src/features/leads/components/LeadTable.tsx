@@ -563,7 +563,7 @@ function InlineTagCell({
                     className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ background: tag.color || '#525E6F' }}
                   />
-                  <span className="text-[11px] font-medium flex-1">{tag.name}</span>
+                  <span className="text-[11px] font-medium flex-1 text-white/90">{tag.name}</span>
                   {isActive && (
                     <span className="text-[10px] font-bold text-amber">✓</span>
                   )}
