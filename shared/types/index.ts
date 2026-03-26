@@ -64,7 +64,7 @@ export interface Lead {
 // ── Deal Types ──
 
 export type DealStatus = 'OPEN' | 'WON' | 'LOST'
-export type AppointmentType = 'ONLINE' | 'VOR_ORT'
+export type AppointmentType = 'ONLINE' | 'VOR_ORT' | 'RICHTOFFERTE'
 
 export interface Deal {
   id: string

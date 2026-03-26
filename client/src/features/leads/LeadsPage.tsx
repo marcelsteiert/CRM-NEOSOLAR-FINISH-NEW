@@ -195,7 +195,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   useEffect(() => { setCurrentPage(1) }, [fixedTag, fixedSource])
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'ALL'>('ALL')
+  const [appointmentTypeFilter, setAppointmentTypeFilter] = useState<'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE' | 'ALL'>('ALL')
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -583,13 +583,14 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
             <div className="relative">
               <select
                 value={appointmentTypeFilter}
-                onChange={(e) => setAppointmentTypeFilter(e.target.value as 'VOR_ORT' | 'ONLINE' | 'ALL')}
+                onChange={(e) => setAppointmentTypeFilter(e.target.value as 'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE' | 'ALL')}
                 className="glass-input appearance-none pl-4 pr-9 py-2 text-[12px] font-medium cursor-pointer"
                 style={{ minWidth: 'auto' }}
               >
                 <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Termine</option>
                 <option value="VOR_ORT" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Vor Ort</option>
                 <option value="ONLINE" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Online</option>
+                <option value="RICHTOFFERTE" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Richtofferte</option>
               </select>
               <ChevronDown
                 size={14}

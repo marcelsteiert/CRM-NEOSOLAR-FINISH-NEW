@@ -44,7 +44,7 @@ const createAppointmentSchema = z.object({
   value: z.number().min(0).nullable().optional(),
   status: z.enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'ABGESAGT']).nullable().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).nullable().optional(),
-  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).nullable().optional(),
+  appointmentType: z.enum(['VOR_ORT', 'ONLINE', 'RICHTOFFERTE']).nullable().optional(),
   assignedTo: z.string().nullable().optional(),
   appointmentDate: z.string().nullable().optional(),
   appointmentTime: z.string().nullable().optional(),

@@ -12,7 +12,7 @@ export type AppointmentStatus =
 
 export type AppointmentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 
-export type AppointmentType = 'VOR_ORT' | 'ONLINE'
+export type AppointmentType = 'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE'
 
 export interface ChecklistItem {
   id: string
@@ -190,11 +190,13 @@ export const statusColors: Record<AppointmentStatus, string> = {
 export const appointmentTypeLabels: Record<AppointmentType, string> = {
   VOR_ORT: 'Vor Ort',
   ONLINE: 'Online',
+  RICHTOFFERTE: 'Richtofferte',
 }
 
 export const appointmentTypeColors: Record<AppointmentType, string> = {
   VOR_ORT: '#34D399',
   ONLINE: '#60A5FA',
+  RICHTOFFERTE: '#F59E0B',
 }
 
 export const priorityLabels: Record<AppointmentPriority, string> = {

@@ -1,4 +1,4 @@
-import { ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, Car, MapPin, Globe } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, CheckCircle2, Car, MapPin, Globe, FileText } from 'lucide-react'
 import {
   type Appointment,
   statusLabels,
@@ -108,7 +108,8 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        const next = a.appointmentType === 'VOR_ORT' ? 'ONLINE' : 'VOR_ORT'
+                        const cycle = ['VOR_ORT', 'ONLINE', 'RICHTOFFERTE'] as const
+                        const next = cycle[(cycle.indexOf(a.appointmentType) + 1) % cycle.length]
                         updateAppt.mutate({ id: a.id, appointmentType: next })
                       }}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer hover:opacity-80 transition-opacity"
@@ -118,7 +119,7 @@ export default function AppointmentTable({ appointments, users = [], onSelect, s
                       }}
                       title="Klicken zum Wechseln"
                     >
-                      {a.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
+                      {a.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : a.appointmentType === 'RICHTOFFERTE' ? <FileText size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
                       {appointmentTypeLabels[a.appointmentType]}
                     </button>
                   </td>

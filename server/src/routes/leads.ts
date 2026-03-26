@@ -29,7 +29,7 @@ const createLeadSchema = z.object({
   status: z.enum(['ACTIVE', 'CONVERTED', 'LOST', 'ARCHIVED', 'AFTER_SALES']).optional(),
   value: z.number().min(0).nullable().optional(),
   notes: z.string().nullable().optional(),
-  appointmentType: z.enum(['VOR_ORT', 'ONLINE']).nullable().optional(),
+  appointmentType: z.enum(['VOR_ORT', 'ONLINE', 'RICHTOFFERTE']).nullable().optional(),
   tags: z.array(z.string()).optional(),
   skipDuplicateCheck: z.boolean().optional(),
 })

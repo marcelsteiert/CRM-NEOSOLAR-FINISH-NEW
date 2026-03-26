@@ -369,14 +369,15 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                     <button
                       type="button"
                       onClick={() => {
-                        const next = appt.appointmentType === 'VOR_ORT' ? 'ONLINE' : 'VOR_ORT'
+                        const cycle = ['VOR_ORT', 'ONLINE', 'RICHTOFFERTE'] as const
+                        const next = cycle[(cycle.indexOf(appt.appointmentType) + 1) % cycle.length]
                         updateAppt.mutate({ id: appt.id, appointmentType: next })
                       }}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold cursor-pointer hover:opacity-80 transition-opacity"
                       style={{ background: `color-mix(in srgb, ${appointmentTypeColors[appt.appointmentType]} 12%, transparent)`, color: appointmentTypeColors[appt.appointmentType] }}
                       title="Klicken zum Wechseln"
                     >
-                      {appt.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
+                      {appt.appointmentType === 'ONLINE' ? <Globe size={12} strokeWidth={2} /> : appt.appointmentType === 'RICHTOFFERTE' ? <FileText size={12} strokeWidth={2} /> : <MapPin size={12} strokeWidth={2} />}
                       {appointmentTypeLabels[appt.appointmentType]}
                     </button>
                   </div>

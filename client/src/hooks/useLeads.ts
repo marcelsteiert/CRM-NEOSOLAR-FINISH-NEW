@@ -30,7 +30,7 @@ export interface Lead {
   tags: string[]
   value?: number
   notes?: string
-  appointmentType: 'VOR_ORT' | 'ONLINE' | null
+  appointmentType: 'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE' | null
   createdAt: string
   updatedAt: string
   deletedAt: string | null
@@ -82,7 +82,7 @@ interface TagListResponse {
 export interface LeadFilters {
   status?: LeadStatus | 'ALL'
   source?: LeadSource | 'ALL'
-  appointmentType?: 'VOR_ORT' | 'ONLINE' | 'ALL'
+  appointmentType?: 'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE' | 'ALL'
   search?: string
   tag?: string
   excludeSource?: string

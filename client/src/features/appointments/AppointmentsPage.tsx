@@ -16,6 +16,7 @@ import {
   Globe,
   Car,
   CheckCircle2,
+  FileText,
 } from 'lucide-react'
 import {
   useAppointments,
@@ -145,7 +146,8 @@ function KanbanCard({ appointment: a, users, onSelect }: { appointment: Appointm
           type="button"
           onClick={(e) => {
             e.stopPropagation()
-            const next = a.appointmentType === 'VOR_ORT' ? 'ONLINE' : 'VOR_ORT'
+            const cycle = ['VOR_ORT', 'ONLINE', 'RICHTOFFERTE'] as const
+            const next = cycle[(cycle.indexOf(a.appointmentType) + 1) % cycle.length]
             updateAppt.mutate({ id: a.id, appointmentType: next })
           }}
           className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold hover:opacity-80 transition-opacity"
@@ -155,7 +157,7 @@ function KanbanCard({ appointment: a, users, onSelect }: { appointment: Appointm
           }}
           title="Klicken zum Wechseln"
         >
-          {a.appointmentType === 'ONLINE' ? <Globe size={9} strokeWidth={2} /> : <MapPin size={9} strokeWidth={2} />}
+          {a.appointmentType === 'ONLINE' ? <Globe size={9} strokeWidth={2} /> : a.appointmentType === 'RICHTOFFERTE' ? <FileText size={9} strokeWidth={2} /> : <MapPin size={9} strokeWidth={2} />}
           {appointmentTypeLabels[a.appointmentType]}
         </button>
       </div>

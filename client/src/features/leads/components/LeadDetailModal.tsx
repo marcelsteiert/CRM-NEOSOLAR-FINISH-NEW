@@ -203,7 +203,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const [apptDate, setApptDate] = useState('')
   const [apptTime, setApptTime] = useState('')
   const [apptAddress, setApptAddress] = useState('')
-  const [apptType, setApptType] = useState<'VOR_ORT' | 'ONLINE'>('VOR_ORT')
+  const [apptType, setApptType] = useState<'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE'>('VOR_ORT')
 
   // Success message
   const [successMsg, setSuccessMsg] = useState('')
@@ -429,11 +429,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const buckets = selectedPipeline?.buckets ?? []
 
   // Available tags (not already on the lead)
-  const leadTagNames = lead?.tags ?? []
-  const availableTags = allTags.filter((t) => !leadTagNames.includes(t.name))
+  const leadTagIds = lead?.tags ?? []
+  const leadTagNames = leadTagIds // Keep for backward compat
+  const availableTags = allTags.filter((t) => !leadTagIds.includes(t.id) && !leadTagIds.includes(t.name))
 
-  // Find tag objects for lead tags (match by name)
-  const leadTagObjects = allTags.filter((t) => leadTagNames.includes(t.name))
+  // Find tag objects for lead tags (match by ID or name)
+  const leadTagObjects = allTags.filter((t) => leadTagIds.includes(t.id) || leadTagIds.includes(t.name))
 
   const tabs: { key: DetailTab; label: string }[] = [
     { key: 'overview', label: 'Übersicht' },
@@ -1629,6 +1630,19 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   >
                     <Globe size={14} className="inline mr-1.5 -mt-0.5" strokeWidth={1.8} />
                     Online
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setApptType('RICHTOFFERTE')}
+                    className={[
+                      'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-150 border',
+                      apptType === 'RICHTOFFERTE'
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                        : 'bg-surface-hover border-border text-text-dim hover:text-text',
+                    ].join(' ')}
+                  >
+                    <FileText size={14} className="inline mr-1.5 -mt-0.5" strokeWidth={1.8} />
+                    Richtofferte
                   </button>
                 </div>
               </div>
