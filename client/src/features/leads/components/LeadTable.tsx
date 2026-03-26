@@ -906,7 +906,7 @@ export default function LeadTable({
                   </td>
                 )}
                 {visibleColumns.map((col) => (
-                  <td key={col.key} className="px-3 py-2.5 overflow-hidden max-w-0">
+                  <td key={col.key} className={`px-3 py-2.5 max-w-0 ${col.key === 'tags' ? 'overflow-visible' : 'overflow-hidden'}`}>
                     {renderCell(col.key, lead, tagMap, { ...dynSourceLabels, ...prefs.sourceLabels }, tags, dynSourceColors)}
                   </td>
                 ))}
