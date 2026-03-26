@@ -193,19 +193,21 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         const tagMap: Record<string, string[]> = {}
         for (const t of tagRows ?? []) { (tagMap[t.lead_id] ??= []).push(t.tag_id) }
 
+        // Felder so benennen wie der Standard-Pfad (snake_case → mapKeys macht camelCase)
         const enriched = rpcRows.map((r: any) => ({
           id: r.lead_id,
-          contactId: r.contact_id,
+          contact_id: r.contact_id,
           status: r.status,
           source: r.source,
           value: r.value,
           notes: r.notes,
-          pipelineId: r.pipeline_id,
-          bucketId: r.bucket_id,
-          assignedTo: r.assigned_to,
-          appointmentType: r.appointment_type,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
+          pipeline_id: r.pipeline_id,
+          bucket_id: r.bucket_id,
+          assigned_to: r.assigned_to,
+          appointment_type: r.appointment_type,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+          // Kontakt-Felder flach (wie im Standard-Pfad)
           firstName: r.contact_first_name,
           lastName: r.contact_last_name,
           email: r.contact_email,
