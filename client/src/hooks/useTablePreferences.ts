@@ -19,6 +19,7 @@ export interface TablePreferences {
 export const defaultColumnPrefs: Record<string, ColumnPref> = {
   name: { visible: true, label: 'Name' },
   company: { visible: true, label: 'Unternehmen' },
+  address: { visible: true, label: 'Adresse' },
   value: { visible: true, label: 'Wert' },
   phone: { visible: true, label: 'Telefon' },
   email: { visible: true, label: 'E-Mail' },

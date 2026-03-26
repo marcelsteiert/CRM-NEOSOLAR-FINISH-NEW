@@ -305,6 +305,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
           switch (field) {
             case 'name': return (`${lead.firstName ?? ''} ${lead.lastName ?? ''}`).toLowerCase().includes(q)
             case 'company': return (lead.company ?? '').toLowerCase().includes(q)
+            case 'address': return (lead.address ?? '').toLowerCase().includes(q)
             case 'phone': return (lead.phone ?? '').toLowerCase().includes(q)
             case 'email': return (lead.email ?? '').toLowerCase().includes(q)
             default: return true
@@ -323,7 +324,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
       }
     }
     // Clientseitige Sortierung fuer Kontakt-Felder und Tags (nicht via DB sortierbar)
-    const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company', 'value', 'createdAt']
+    const clientSortFields = ['tags', 'phone', 'email', 'source', 'status', 'lastName', 'company', 'address', 'value', 'createdAt']
     if (clientSortFields.includes(sortBy)) {
       result = [...result].sort((a, b) => {
         // Numerische Sortierung fuer value
@@ -348,6 +349,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
         else if (sortBy === 'status') { aVal = a.status ?? ''; bVal = b.status ?? '' }
         else if (sortBy === 'lastName') { aVal = a.lastName ?? ''; bVal = b.lastName ?? '' }
         else if (sortBy === 'company') { aVal = a.company ?? ''; bVal = b.company ?? '' }
+        else if (sortBy === 'address') { aVal = a.address ?? ''; bVal = b.address ?? '' }
         return sortOrder === 'asc'
           ? aVal.toLowerCase().localeCompare(bVal.toLowerCase())
           : bVal.toLowerCase().localeCompare(aVal.toLowerCase())

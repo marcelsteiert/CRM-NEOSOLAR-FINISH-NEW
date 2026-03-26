@@ -91,6 +91,7 @@ interface ColumnDef {
 const columnDefs: ColumnDef[] = [
   { key: 'name', sortField: 'lastName' },
   { key: 'company', sortField: 'company' },
+  { key: 'address', sortField: 'address' },
   { key: 'value', sortField: 'value' },
   { key: 'phone', sortField: 'phone' },
   { key: 'email', sortField: 'email' },
@@ -620,6 +621,12 @@ function renderCell(
           {lead.company || '\u2014'}
         </span>
       )
+    case 'address':
+      return (
+        <span className="text-[13px] text-text-sec whitespace-nowrap">
+          {lead.address || '\u2014'}
+        </span>
+      )
     case 'value':
       return (
         <span className="text-[13px] text-text-sec tabular-nums whitespace-nowrap">
@@ -725,6 +732,7 @@ export default function LeadTable({
     switch (colKey) {
       case 'name': return { type: 'text' }
       case 'company': return { type: 'text' }
+      case 'address': return { type: 'text' }
       case 'phone': return { type: 'text' }
       case 'email': return { type: 'text' }
       case 'source': return { type: 'select', options: sourceFilterOptions }
