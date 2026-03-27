@@ -49,13 +49,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const { data, error } = await query
     if (error) throw new AppError(error.message, 500)
 
-    // Signierte URLs fuer Download generieren
+    // Signierte URLs fuer Download generieren (Fehler einzelner Dateien ignorieren)
     const enriched = await Promise.all(
       (data ?? []).map(async (doc: any) => {
-        const { data: urlData } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(doc.storage_path, 3600) // 1 Stunde gueltig
-        return { ...doc, downloadUrl: urlData?.signedUrl ?? null }
+        try {
+          if (!doc.storage_path) return { ...doc, downloadUrl: null }
+          const { data: urlData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(doc.storage_path, 3600) // 1 Stunde gueltig
+          return { ...doc, downloadUrl: urlData?.signedUrl ?? null }
+        } catch {
+          return { ...doc, downloadUrl: null }
+        }
       })
     )
 
