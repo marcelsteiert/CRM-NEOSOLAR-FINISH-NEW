@@ -315,7 +315,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
     excludeSource: excludeSource || undefined,
     appointmentType: appointmentTypeFilter !== 'ALL' ? appointmentTypeFilter : undefined,
     search: debouncedSearch.trim() || undefined,
-    tag: fixedTag || undefined,
+    tag: fixedTag || (tagFilter !== 'ALL' ? tagFilter : undefined),
     sortBy,
     sortOrder,
     page: currentPage,
@@ -384,19 +384,17 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
 
   /* ── Client-side search + tag filtering + column filtering + sorting ── */
   const filteredLeads = useMemo(() => {
-    let result = tagFilter === 'ALL' ? allLeads : allLeads.filter((lead) => lead.tags.includes(tagFilter))
+    let result = allLeads
 
-    // Client-seitige Suche nur als Fallback wenn Tag-Filter aktiv (API sucht nicht bei Tag-Pfad)
-    if (searchQuery.trim() && tagFilter !== 'ALL') {
+    // Client-seitige Suche nur als Zusatzfilter auf geladene Daten
+    if (searchQuery.trim() && !debouncedSearch.trim()) {
+      // Sofort-Filter während Debounce läuft
       const q = searchQuery.trim().toLowerCase()
       result = result.filter(lead =>
         (`${lead.firstName ?? ''} ${lead.lastName ?? ''}`).toLowerCase().includes(q) ||
         (lead.company ?? '').toLowerCase().includes(q) ||
-        (lead.address ?? '').toLowerCase().includes(q) ||
         (lead.phone ?? '').toLowerCase().includes(q) ||
-        (lead.email ?? '').toLowerCase().includes(q) ||
-        (lead.source ?? '').toLowerCase().includes(q) ||
-        (lead.notes ?? '').toLowerCase().includes(q)
+        (lead.email ?? '').toLowerCase().includes(q)
       )
     }
 
@@ -660,7 +658,7 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
               />
               <select
                 value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
+                onChange={(e) => { setTagFilter(e.target.value); setCurrentPage(1) }}
                 className="glass-input appearance-none pl-8 pr-9 py-2 text-[12px] font-medium cursor-pointer"
                 style={{ minWidth: 'auto' }}
               >
