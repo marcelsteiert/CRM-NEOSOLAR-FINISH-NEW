@@ -196,6 +196,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
   // Confirmations
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [callLogging, setCallLogging] = useState(false)
   const [showDealConfirm, setShowDealConfirm] = useState(false)
   const [showLostConfirm, setShowLostConfirm] = useState(false)
   const [lostReason, setLostReason] = useState('')
@@ -1470,13 +1471,15 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
         {/* ── Footer Actions ── */}
         <div className="flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-3 sm:py-4 border-t border-border shrink-0 overflow-x-auto">
-          {/* Nicht erreicht → loggt Call + setzt Tag */}
+          {/* Nicht erreicht → loggt Call + setzt Tag (mit Debounce) */}
           <button
             type="button"
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-[12px] font-semibold rounded-full shrink-0 transition-all"
+            disabled={callLogging}
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-[12px] font-semibold rounded-full shrink-0 transition-all disabled:opacity-50"
             style={{ background: 'color-mix(in srgb, #F87171 10%, transparent)', color: '#F87171', border: '1px solid color-mix(in srgb, #F87171 20%, transparent)' }}
             onClick={async () => {
-              if (!lead) return
+              if (!lead || callLogging) return
+              setCallLogging(true)
               // Call loggen
               try {
                 await api.post('/call-logs', { leadId: lead.id, result: 'NICHT_ERREICHT' })
@@ -1490,10 +1493,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
               if (!hasTag1 && !hasTag2) newTags.push(tag1Id)
               else if (hasTag1 && !hasTag2) { newTags = newTags.filter(t => t !== tag1Id); newTags.push(tag2Id) }
               updateLead.mutate({ id: lead.id, tags: newTags })
+              setSuccessMsg('Nicht erreicht – Tag gesetzt')
+              setTimeout(() => { setSuccessMsg(null); setCallLogging(false) }, 1500)
             }}
           >
             <PhoneOff size={13} strokeWidth={1.8} />
-            Nicht erreicht
+            {callLogging ? 'Geloggt...' : 'Nicht erreicht'}
           </button>
           {/* Verloren */}
           <button
