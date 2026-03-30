@@ -53,35 +53,54 @@ router.get('/user/:userId', async (req: Request, res: Response, next: NextFuncti
     const fromDate = from && typeof from === 'string' ? from : null
     const toDate = to && typeof to === 'string' ? to : null
 
-    // Leads die dieser User konvertiert/verloren hat (letzte 90 Tage)
-    let leadsQuery = supabase
+    // Call-Logs dieses Users → Lead-IDs wo er aktiv war
+    let callQuery = supabase
+      .from('call_logs')
+      .select('lead_id, result, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (fromDate) callQuery = callQuery.gte('created_at', fromDate)
+    if (toDate) callQuery = callQuery.lte('created_at', toDate)
+    const { data: callLogs } = await callQuery
+
+    // Lead-IDs aus Call-Logs + assigned_to
+    const callLeadIds = [...new Set((callLogs ?? []).map((c: any) => c.lead_id))]
+
+    // Leads die dieser User bearbeitet hat (via Call-Log ODER assigned_to)
+    let leads: any[] = []
+    if (callLeadIds.length > 0) {
+      const { data: callLeads } = await supabase
+        .from('leads')
+        .select('id, status, source, value, created_at, updated_at, contact:contacts(first_name, last_name, company, phone)')
+        .in('id', callLeadIds)
+        .in('status', ['CONVERTED', 'LOST'])
+        .is('deleted_at', null)
+        .order('updated_at', { ascending: false })
+        .limit(100)
+      leads = callLeads ?? []
+    }
+    // Fallback: auch assigned_to Leads die nicht in Call-Logs sind
+    const { data: assignedLeads } = await supabase
       .from('leads')
       .select('id, status, source, value, created_at, updated_at, contact:contacts(first_name, last_name, company, phone)')
       .eq('assigned_to', userId)
       .in('status', ['CONVERTED', 'LOST'])
       .is('deleted_at', null)
       .order('updated_at', { ascending: false })
-      .limit(100)
+      .limit(50)
+    const existingIds = new Set(leads.map((l: any) => l.id))
+    for (const l of assignedLeads ?? []) {
+      if (!existingIds.has(l.id)) leads.push(l)
+    }
 
-    if (fromDate) leadsQuery = leadsQuery.gte('updated_at', fromDate)
-    if (toDate) leadsQuery = leadsQuery.lte('updated_at', toDate)
-
-    const { data: leads, error: lErr } = await leadsQuery
-    if (lErr) throw new AppError(lErr.message, 500)
-
-    // Termine die dieser User erstellt hat
-    let apptsQuery = supabase
+    // Termine die dieser User ERSTELLT hat (created_by), nicht zugewiesen bekommen
+    const { data: appointments, error: aErr } = await supabase
       .from('appointments')
-      .select('id, status, appointment_date, appointment_time, appointment_type, created_at, contact:contacts(first_name, last_name, company, phone)')
-      .eq('assigned_to', userId)
+      .select('id, status, appointment_date, appointment_time, appointment_type, created_at, assigned_to, contact:contacts(first_name, last_name, company, phone)')
+      .or(`created_by.eq.${userId},assigned_to.eq.${userId}`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(100)
-
-    if (fromDate) apptsQuery = apptsQuery.gte('created_at', fromDate)
-    if (toDate) apptsQuery = apptsQuery.lte('created_at', toDate)
-
-    const { data: appointments, error: aErr } = await apptsQuery
     if (aErr) throw new AppError(aErr.message, 500)
 
     // Tägliche Stats für diesen User
