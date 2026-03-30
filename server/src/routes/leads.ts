@@ -82,42 +82,41 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (bucketId && typeof bucketId === 'string') query = query.eq('bucket_id', bucketId)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
-    // Tag-Filter: Nur Leads mit bestimmtem Tag (mit korrektem Count inkl. Status/Source)
+    // Tag-Filter: Nur Leads mit bestimmtem Tag (via RPC für Performance bei 100k+ Tags)
     if (tag && typeof tag === 'string') {
       const page = Math.max(1, Number(pp) || 1)
       const pageSize = Math.min(500, Math.max(1, Number(psp) || 50))
       const ownerFilter2 = getLeadOwnerFilter(req)
+      const statusFilter = (status && typeof status === 'string') ? status : null
+      const sourceFilter = (source && typeof source === 'string') ? source : null
 
-      // Schritt 1: Alle Lead-IDs mit diesem Tag holen
-      const { data: allTaggedIds } = await supabase
-        .from('lead_tags')
-        .select('lead_id')
-        .eq('tag_id', tag)
-      const taggedLeadIds = (allTaggedIds ?? []).map((r: any) => r.lead_id)
+      // Count + paginierte IDs via SQL-Funktionen (JOIN in der DB, nicht 100k IDs im Client)
+      const [{ data: countData }, { data: pageIds }] = await Promise.all([
+        supabase.rpc('count_leads_by_tag', {
+          p_tag_id: tag, p_status: statusFilter, p_source: sourceFilter, p_assigned_to: ownerFilter2,
+        }).single(),
+        supabase.rpc('get_lead_ids_by_tag', {
+          p_tag_id: tag, p_status: statusFilter, p_source: sourceFilter, p_assigned_to: ownerFilter2,
+          p_limit: pageSize, p_offset: (page - 1) * pageSize,
+        }),
+      ])
 
-      if (taggedLeadIds.length === 0) {
-        res.json({ data: [], total: 0, page, pageSize })
+      const totalCount = Number(countData) || 0
+      const leadIds = (pageIds ?? []).map((r: any) => r.lead_id)
+
+      if (leadIds.length === 0) {
+        res.json({ data: [], total: totalCount, page, pageSize })
         return
       }
 
-      // Schritt 2: Leads mit Filtern + Pagination laden (count inkl. alle Filter!)
-      let tagQuery = supabase
+      // Leads mit Kontaktdaten + Tags laden
+      const { data: tagData, error: tagErr } = await supabase
         .from('leads')
-        .select('*, contact:contacts(*), lead_tags(tag_id)', { count: 'exact' })
-        .in('id', taggedLeadIds)
+        .select('*, contact:contacts(*), lead_tags(tag_id)')
+        .in('id', leadIds)
         .is('deleted_at', null)
+        .order('created_at', { ascending: false })
 
-      if (status && typeof status === 'string') tagQuery = tagQuery.eq('status', status)
-      if (source && typeof source === 'string') tagQuery = tagQuery.eq('source', source)
-      if (excludeSource && typeof excludeSource === 'string') tagQuery = tagQuery.neq('source', excludeSource)
-      if (ownerFilter2) tagQuery = tagQuery.eq('assigned_to', ownerFilter2)
-
-      const rawSort2 = typeof sortBy === 'string' ? sortBy : 'created_at'
-      const sf2 = leadSortFields[rawSort2] ?? leadSortFields[toSnakeCase(rawSort2)] ?? 'created_at'
-      tagQuery = tagQuery.order(sf2, { ascending: sortOrder !== 'desc' })
-      tagQuery = tagQuery.range((page - 1) * pageSize, page * pageSize - 1)
-
-      const { data: tagData, count: tagCount, error: tagErr } = await tagQuery
       if (tagErr) { res.json({ data: [], total: 0, page, pageSize }); return }
 
       const enriched = (tagData ?? []).map((lead: any) => ({
@@ -133,7 +132,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         contact: undefined,
       }))
 
-      res.json({ data: enriched, total: tagCount ?? enriched.length, page, pageSize })
+      res.json({ data: enriched, total: totalCount ?? enriched.length, page, pageSize })
       return
     }
 
