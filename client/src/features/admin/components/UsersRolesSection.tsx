@@ -48,6 +48,8 @@ const ALL_PERMISSIONS = [
   { id: 'canViewAllDeals', label: 'Alle Angebote sehen' },
   { id: 'canViewAllProjects', label: 'Alle Projekte sehen' },
   { id: 'canViewAllTasks', label: 'Alle Aufgaben sehen' },
+  { id: 'canEdit', label: 'Bearbeiten' },
+  { id: 'canAssign', label: 'Zuweisen' },
   { id: 'canDelete', label: 'Löschen' },
   { id: 'canExport', label: 'Export' },
   { id: 'canImport', label: 'Import' },
