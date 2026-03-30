@@ -210,9 +210,16 @@ ${detail.appointments.length > 0 ? `
 
 /* ── User Detail Modal ── */
 
-function UserDetailModal({ userId, userName, onClose }: { userId: string; userName: string; onClose: () => void }) {
+function UserDetailModal({ userId, userName, onClose, autoExportPdf }: { userId: string; userName: string; onClose: () => void; autoExportPdf?: boolean }) {
   const { data: detailRes, isLoading } = useCallcenterUserDetail(userId)
   const detail = detailRes?.data
+  const [pdfTriggered, setPdfTriggered] = useState(false)
+
+  // Auto-PDF-Export wenn gewünscht
+  if (autoExportPdf && detail && !pdfTriggered) {
+    setPdfTriggered(true)
+    setTimeout(() => { exportUserPdf(userName, detail); onClose() }, 100)
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -322,7 +329,7 @@ function UserDetailModal({ userId, userName, onClose }: { userId: string; userNa
 /* ── Main Page ── */
 
 export default function CallcenterPage() {
-  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null)
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; exportPdf?: boolean } | null>(null)
   const { data: statsRes, isLoading } = useCallcenterStats()
   const stats = statsRes?.data
 
@@ -469,9 +476,19 @@ export default function CallcenterPage() {
                         <td className="px-4 py-3">
                           <span className="text-[11px] tabular-nums text-text-dim">{user.active}</span>
                         </td>
-                        {/* Detail */}
+                        {/* Detail + PDF */}
                         <td className="px-4 py-3">
-                          <ChevronDown size={14} className="text-text-dim" />
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setSelectedUser({ id: user.userId, name: `${user.firstName} ${user.lastName}`, exportPdf: true }) }}
+                              className="w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-amber-soft transition-all"
+                              title="PDF Export"
+                            >
+                              <FileDown size={13} strokeWidth={1.8} />
+                            </button>
+                            <ChevronDown size={14} className="text-text-dim" />
+                          </div>
                         </td>
                       </tr>
                     )
@@ -485,7 +502,7 @@ export default function CallcenterPage() {
 
       {/* User Detail Modal */}
       {selectedUser && (
-        <UserDetailModal userId={selectedUser.id} userName={selectedUser.name} onClose={() => setSelectedUser(null)} />
+        <UserDetailModal userId={selectedUser.id} userName={selectedUser.name} onClose={() => setSelectedUser(null)} autoExportPdf={selectedUser.exportPdf} />
       )}
     </>
   )
