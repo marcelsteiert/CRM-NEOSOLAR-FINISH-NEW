@@ -105,7 +105,11 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         upsert: false,
       })
 
-    if (storageError) throw new AppError(`Storage-Upload fehlgeschlagen: ${storageError.message} (path: ${storagePath})`, 500)
+    if (storageError) {
+      console.error(`[DOC-UPLOAD] Storage-Fehler: ${storageError.message}, path: ${storagePath}, size: ${fileBuffer.length} bytes`)
+      throw new AppError(`Storage-Upload fehlgeschlagen: ${storageError.message}`, 500)
+    }
+    console.log(`[DOC-UPLOAD] Storage OK: ${storagePath}, ${fileBuffer.length} bytes`)
 
     // Metadaten in DB speichern
     const { data: doc, error: dbError } = await supabase

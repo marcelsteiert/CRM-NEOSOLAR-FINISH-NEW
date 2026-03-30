@@ -82,58 +82,42 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (bucketId && typeof bucketId === 'string') query = query.eq('bucket_id', bucketId)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
-    // Tag-Filter: Nur Leads mit bestimmtem Tag
+    // Tag-Filter: Nur Leads mit bestimmtem Tag (mit korrektem Count inkl. Status/Source)
     if (tag && typeof tag === 'string') {
-      // Lead-IDs mit diesem Tag holen (max 1000 fuer Pagination)
       const page = Math.max(1, Number(pp) || 1)
       const pageSize = Math.min(500, Math.max(1, Number(psp) || 50))
+      const ownerFilter2 = getLeadOwnerFilter(req)
 
-      // Zuerst count ermitteln
-      const countQuery = supabase
-        .from('lead_tags')
-        .select('lead_id', { count: 'exact', head: true })
-        .eq('tag_id', tag)
-
-      // Dann die IDs fuer die aktuelle Seite
-      const idsQuery = supabase
+      // Schritt 1: Alle Lead-IDs mit diesem Tag holen
+      const { data: allTaggedIds } = await supabase
         .from('lead_tags')
         .select('lead_id')
         .eq('tag_id', tag)
-        .range((page - 1) * pageSize, page * pageSize - 1)
+      const taggedLeadIds = (allTaggedIds ?? []).map((r: any) => r.lead_id)
 
-      // Source-Filter auf leads anwenden
-      if (source && typeof source === 'string') {
-        // Supabase kann nicht direkt ueber lead_tags auf leads filtern
-        // Wir holen die IDs und filtern dann
-      }
-
-      const [{ count: tagCount }, { data: taggedIds }] = await Promise.all([countQuery, idsQuery])
-      const leadIds = (taggedIds ?? []).map((r: any) => r.lead_id)
-
-      if (leadIds.length === 0) {
-        res.json({ data: [], total: tagCount ?? 0, page, pageSize })
+      if (taggedLeadIds.length === 0) {
+        res.json({ data: [], total: 0, page, pageSize })
         return
       }
 
-      // Leads mit diesen IDs laden
+      // Schritt 2: Leads mit Filtern + Pagination laden (count inkl. alle Filter!)
       let tagQuery = supabase
         .from('leads')
-        .select('*, contact:contacts(*), lead_tags(tag_id)')
-        .in('id', leadIds)
+        .select('*, contact:contacts(*), lead_tags(tag_id)', { count: 'exact' })
+        .in('id', taggedLeadIds)
         .is('deleted_at', null)
 
       if (status && typeof status === 'string') tagQuery = tagQuery.eq('status', status)
       if (source && typeof source === 'string') tagQuery = tagQuery.eq('source', source)
       if (excludeSource && typeof excludeSource === 'string') tagQuery = tagQuery.neq('source', excludeSource)
-
-      const ownerFilter2 = getLeadOwnerFilter(req)
       if (ownerFilter2) tagQuery = tagQuery.eq('assigned_to', ownerFilter2)
 
       const rawSort2 = typeof sortBy === 'string' ? sortBy : 'created_at'
-      const sf2 = allowedSortFields[rawSort2] ?? 'created_at'
+      const sf2 = leadSortFields[rawSort2] ?? leadSortFields[toSnakeCase(rawSort2)] ?? 'created_at'
       tagQuery = tagQuery.order(sf2, { ascending: sortOrder !== 'desc' })
+      tagQuery = tagQuery.range((page - 1) * pageSize, page * pageSize - 1)
 
-      const { data: tagData, error: tagErr } = await tagQuery
+      const { data: tagData, count: tagCount, error: tagErr } = await tagQuery
       if (tagErr) { res.json({ data: [], total: 0, page, pageSize }); return }
 
       const enriched = (tagData ?? []).map((lead: any) => ({

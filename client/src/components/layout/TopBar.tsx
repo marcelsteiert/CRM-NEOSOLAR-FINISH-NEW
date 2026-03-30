@@ -183,9 +183,9 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
       <div
         className="relative w-full max-w-2xl mx-4 rounded-2xl overflow-hidden"
         style={{
-          background: 'rgba(12, 14, 20, 0.95)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+          background: '#0B0F15',
+          border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.7)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -257,7 +257,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-[13px] font-semibold text-text truncate">
+                        <span className="text-[13px] font-bold truncate" style={{ color: '#F0F2F5' }}>
                           {contact.firstName} {contact.lastName}
                         </span>
                         {contact.company && (
