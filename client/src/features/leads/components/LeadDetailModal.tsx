@@ -396,6 +396,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   /* ── Mark as lost ── */
   const handleMarkLost = () => {
     if (!lead || !lostReason.trim()) return
+    // Anruf loggen (erreicht + abgesagt)
+    api.post('/call-logs', { leadId: lead.id, result: 'ABGESAGT', notes: lostReason.trim() }).catch(() => {})
     const prevNotes = lead.notes ?? ''
     const lostNote = `[VERLOREN] ${new Date().toLocaleDateString('de-CH')}: ${lostReason.trim()}`
     const updatedNotes = prevNotes ? `${lostNote}\n\n${prevNotes}` : lostNote
