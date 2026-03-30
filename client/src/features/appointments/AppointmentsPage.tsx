@@ -332,7 +332,7 @@ export default function AppointmentsPage() {
   const { data: kanbanColumnsRes } = useKanbanColumns()
   const kanbanCols = kanbanColumnsRes?.data ?? defaultColumns
 
-  const canViewAll = isAdmin
+  const canViewAll = isAdmin || authUser?.allowedModules?.includes('canViewAllAppointments')
   const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
 
   // Map filter to API status

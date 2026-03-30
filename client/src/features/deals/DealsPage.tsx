@@ -451,7 +451,7 @@ export default function DealsPage() {
   const { data: kanbanColumnsRes } = useDealKanbanColumns()
   const kanbanCols = kanbanColumnsRes?.data ?? defaultDealColumns
 
-  const canViewAll = isAdmin
+  const canViewAll = isAdmin || authUser?.allowedModules?.includes('canViewAllDeals')
   const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
 
   const stageQueryMap: Record<StageFilter, DealStage | undefined> = {
