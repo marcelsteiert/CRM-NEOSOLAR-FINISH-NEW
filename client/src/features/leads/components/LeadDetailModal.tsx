@@ -1042,6 +1042,21 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 error={generateLeadSummary.error?.message || (generateLeadSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
                 compact
               />
+
+              {/* Erstellt / Bearbeitet */}
+              <div className="flex flex-col gap-1 text-[11px] text-text-dim px-1">
+                <div className="flex items-center gap-2">
+                  <Clock size={12} strokeWidth={1.8} />
+                  Erstellt {relativeTime(lead.createdAt)}
+                  {(() => { const u = users.find((x) => x.id === lead.assignedTo); return u ? ` · von ${u.firstName} ${u.lastName}` : '' })()}
+                </div>
+                {lead.updatedAt && lead.updatedAt !== lead.createdAt && (
+                  <div className="flex items-center gap-2">
+                    <Clock size={12} strokeWidth={1.8} />
+                    Bearbeitet {relativeTime(lead.updatedAt)}
+                  </div>
+                )}
+              </div>
             </>
           )}
 

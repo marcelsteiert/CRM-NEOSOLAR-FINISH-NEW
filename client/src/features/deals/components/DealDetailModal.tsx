@@ -595,6 +595,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 <div className="flex items-center gap-2">
                   <Clock size={12} strokeWidth={1.8} />
                   Erstellt {relativeTime(deal.createdAt)}
+                  {(() => { const u = users.find((x) => x.id === deal.assignedTo); return u ? ` · von ${u.firstName} ${u.lastName}` : '' })()}
                 </div>
                 {deal.updatedAt && deal.updatedAt !== deal.createdAt && (() => {
                   const lastAct = [...deal.activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]

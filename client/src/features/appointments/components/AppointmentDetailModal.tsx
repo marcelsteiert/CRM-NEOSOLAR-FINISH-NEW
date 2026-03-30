@@ -433,10 +433,19 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                 </div>
               )}
 
-              {/* Erstellt */}
-              <div className="flex items-center gap-2 text-[11px] text-text-dim px-1">
-                <Clock size={12} strokeWidth={1.8} />
-                Erstellt {relativeTime(appt.createdAt)}
+              {/* Erstellt / Zugewiesen */}
+              <div className="flex flex-col gap-1 text-[11px] text-text-dim px-1">
+                <div className="flex items-center gap-2">
+                  <Clock size={12} strokeWidth={1.8} />
+                  Erstellt {relativeTime(appt.createdAt)}
+                  {(() => { const u = users.find((x) => x.id === appt.assignedTo); return u ? ` · von ${u.firstName} ${u.lastName}` : '' })()}
+                </div>
+                {appt.updatedAt && appt.updatedAt !== appt.createdAt && (
+                  <div className="flex items-center gap-2">
+                    <Clock size={12} strokeWidth={1.8} />
+                    Bearbeitet {relativeTime(appt.updatedAt)}
+                  </div>
+                )}
               </div>
             </>
           )}
