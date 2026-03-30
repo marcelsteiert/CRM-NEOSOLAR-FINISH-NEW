@@ -53,7 +53,10 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
 
   const togglePhase = (phase: string) => setExpandedPhases(prev => ({ ...prev, [phase]: !prev[phase] }))
 
-  // ── Upload-Funktion (direkt Base64 → API) ──
+  // ── Upload direkt zu Supabase Storage (kein Umweg ueber Netlify Function) ──
+  const SUPABASE_URL = 'https://tzoquorcgygmrougevgm.supabase.co'
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6b3F1b3JjZ3lnbXJvdWdldmdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3OTEzODQsImV4cCI6MjA4ODM2NzM4NH0.79OVK4Zy0q08WvxOPpHZWrklcRWSmHYl2K3VPe1xZmU'
+
   const uploadFiles = useCallback(async (files: FileList | File[], targetPhase: EntityType) => {
     if (files.length === 0 || uploading) return
     setUploading(true)
@@ -62,28 +65,41 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
       const file = files[i]
       setUploadProgress(`${i + 1}/${files.length}: ${file.name}`)
       try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => {
-            const result = reader.result as string
-            resolve(result.split(',')[1] || result)
-          }
-          reader.onerror = reject
-          reader.readAsDataURL(file)
+        // 1) Direkt zu Supabase Storage hochladen (kein Base64, kein Function-Timeout)
+        const timestamp = Date.now()
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `${contactId}/${targetPhase.toLowerCase()}/${timestamp}_${safeName}`
+
+        const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON,
+            'Authorization': `Bearer ${SUPABASE_ANON}`,
+            'Content-Type': file.type || 'application/octet-stream',
+          },
+          body: file,
         })
 
-        await api.post('/documents', {
+        if (!uploadRes.ok) {
+          const errText = await uploadRes.text()
+          throw new Error(`Storage: ${uploadRes.status} ${errText}`)
+        }
+
+        // 2) Metadaten in DB speichern (kleine JSON-Anfrage, kein Timeout)
+        await api.post('/documents/metadata', {
           contactId,
           fileName: file.name,
           fileSize: file.size,
           mimeType: file.type || 'application/octet-stream',
           entityType: targetPhase,
           entityId,
+          storagePath,
           uploadedBy: user?.id,
-          fileBase64: base64,
         })
       } catch (err: any) {
         console.error('Upload fehlgeschlagen:', file.name, err?.message)
+        setUploadProgress(`Fehler: ${file.name}`)
+        await new Promise(r => setTimeout(r, 2000))
       }
     }
 

@@ -151,6 +151,60 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 })
 
 // ---------------------------------------------------------------------------
+// POST /api/v1/documents/metadata – Nur Metadaten speichern (Datei schon in Storage)
+// ---------------------------------------------------------------------------
+
+const metadataSchema = z.object({
+  contactId: z.string().min(1),
+  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']),
+  entityId: z.string().optional(),
+  storagePath: z.string().min(1),
+  fileName: z.string().min(1),
+  fileSize: z.number().min(0),
+  mimeType: z.string().min(1),
+  uploadedBy: z.string().optional(),
+  notes: z.string().optional(),
+})
+
+router.post('/metadata', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = metadataSchema.safeParse(req.body)
+    if (!result.success) {
+      const messages = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
+      throw new AppError(`Validierungsfehler: ${messages}`, 422)
+    }
+
+    const d = result.data
+
+    const { data: doc, error: dbError } = await supabase
+      .from('documents')
+      .insert({
+        contact_id: d.contactId,
+        entity_type: d.entityType,
+        entity_id: d.entityId ?? null,
+        file_name: d.fileName,
+        file_size: d.fileSize,
+        mime_type: d.mimeType,
+        storage_path: d.storagePath,
+        uploaded_by: d.uploadedBy || req.user?.userId,
+        notes: d.notes ?? null,
+      })
+      .select()
+      .single()
+
+    if (dbError) throw new AppError(`DB-Fehler: ${dbError.message}`, 500)
+
+    const supabaseUrl = process.env.SUPABASE_URL ?? ''
+    const downloadUrl = `${supabaseUrl}/storage/v1/object/public/documents/${d.storagePath}`
+
+    logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DOCUMENT', entityId: doc?.id, description: `Dokument "${d.fileName}" hochgeladen` })
+    res.status(201).json({ data: { ...doc, downloadUrl } })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ---------------------------------------------------------------------------
 // GET /api/v1/documents/:id/download – Download-URL generieren
 // ---------------------------------------------------------------------------
 
