@@ -328,9 +328,20 @@ function UserDetailModal({ userId, userName, onClose, autoExportPdf }: { userId:
 
 /* ── Main Page ── */
 
+const PRESETS = [
+  { label: 'Heute', from: () => new Date().toISOString().slice(0, 10), to: () => new Date().toISOString().slice(0, 10) },
+  { label: 'Diese Woche', from: () => { const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d.toISOString().slice(0, 10) }, to: () => new Date().toISOString().slice(0, 10) },
+  { label: 'Dieser Monat', from: () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10), to: () => new Date().toISOString().slice(0, 10) },
+  { label: 'Letzter Monat', from: () => new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 10), to: () => new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().slice(0, 10) },
+  { label: 'Gesamt', from: () => '', to: () => '' },
+]
+
 export default function CallcenterPage() {
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; exportPdf?: boolean } | null>(null)
-  const { data: statsRes, isLoading } = useCallcenterStats()
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const { data: statsRes, isLoading } = useCallcenterStats(dateFrom || undefined, dateTo ? dateTo + 'T23:59:59' : undefined)
   const stats = statsRes?.data
 
   const leadStats = stats?.leadStats ?? []
@@ -369,6 +380,50 @@ export default function CallcenterPage() {
             <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Callcenter</h1>
             <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Lead-Konvertierung und Termin-Performance</p>
           </div>
+        </div>
+
+        {/* Datums-Filter */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {/* Presets */}
+          <div className="flex items-center rounded-full p-0.5 overflow-x-auto" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            {PRESETS.map((p) => {
+              const isActive = dateFrom === p.from() && dateTo === p.to()
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => { setDateFrom(p.from()); setDateTo(p.to()) }}
+                  className={[
+                    'px-3 sm:px-4 py-1.5 rounded-full text-[11px] sm:text-[12px] font-semibold transition-all whitespace-nowrap',
+                    isActive ? 'bg-amber-soft text-amber' : 'text-text-dim hover:text-text',
+                  ].join(' ')}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
+          {/* Custom Date Range */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="glass-input px-3 py-1.5 text-[12px] tabular-nums"
+            />
+            <span className="text-text-dim text-[11px]">bis</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="glass-input px-3 py-1.5 text-[12px] tabular-nums"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <span className="text-[10px] text-text-dim">
+              {dateFrom ? formatDate(dateFrom) : '∞'} – {dateTo ? formatDate(dateTo) : 'Heute'}
+            </span>
+          )}
         </div>
 
         {/* KPI Cards */}
