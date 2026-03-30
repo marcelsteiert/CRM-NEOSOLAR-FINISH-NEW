@@ -31,6 +31,7 @@ import adminAppointmentKanbanRouter from './routes/admin/appointmentKanban.js'
 import adminDealKanbanRouter from './routes/admin/dealKanban.js'
 import adminDuplicatesRouter from './routes/admin/duplicates.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
+import callLogsRouter from './routes/callLogs.js'
 import searchRouter from './routes/search.js'
 import aiRouter from './routes/ai.js'
 import passwordsRouter from './routes/passwords.js'
@@ -94,6 +95,7 @@ export function createApp() {
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
   app.use('/api/v1/search', authMiddleware, searchRouter)
   app.use('/api/v1/passwords', authMiddleware, passwordsRouter)
+  app.use('/api/v1/call-logs', authMiddleware, callLogsRouter)
   app.use('/api/v1/notifications', authMiddleware, notificationsRouter)
   app.use('/api/v1/calendar', authMiddleware, calendarRouter)
   // Outlook: callback + tracking pixel sind oeffentlich, Rest braucht Auth

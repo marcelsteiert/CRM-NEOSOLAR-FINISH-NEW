@@ -60,6 +60,29 @@ function useCallcenterStats(from?: string, to?: string) {
   })
 }
 
+interface CallStat {
+  userId: string
+  firstName: string
+  lastName: string
+  totalCalls: number
+  nichtErreicht: number
+  erreicht: number
+  termin: number
+  abgesagt: number
+}
+
+function useCallStats(from?: string, to?: string) {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const qs = params.toString()
+  return useQuery({
+    queryKey: ['callStats', from, to],
+    queryFn: () => api.get<{ data: CallStat[] }>(`/call-logs/stats${qs ? `?${qs}` : ''}`),
+    staleTime: 60_000,
+  })
+}
+
 function useCallcenterUserDetail(userId: string | null) {
   return useQuery({
     queryKey: ['callcenter', 'user', userId],
@@ -341,16 +364,24 @@ export default function CallcenterPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  const { data: statsRes, isLoading } = useCallcenterStats(dateFrom || undefined, dateTo ? dateTo + 'T23:59:59' : undefined)
+  const fromParam = dateFrom || undefined
+  const toParam = dateTo ? dateTo + 'T23:59:59' : undefined
+  const { data: statsRes, isLoading } = useCallcenterStats(fromParam, toParam)
+  const { data: callStatsRes } = useCallStats(fromParam, toParam)
   const stats = statsRes?.data
+  const callStats = callStatsRes?.data ?? []
 
   const leadStats = stats?.leadStats ?? []
   const apptStats = stats?.appointmentStats ?? []
 
-  // Merge lead + appointment stats per user
-  const merged = new Map<string, LeadStat & Partial<ApptStat>>()
+  // Call-Stats Map
+  const callMap = new Map<string, CallStat>()
+  for (const cs of callStats) callMap.set(cs.userId, cs)
+
+  // Merge lead + appointment + call stats per user
+  const merged = new Map<string, LeadStat & Partial<ApptStat> & { calls?: CallStat }>()
   for (const ls of leadStats) {
-    merged.set(ls.userId, { ...ls })
+    merged.set(ls.userId, { ...ls, calls: callMap.get(ls.userId) })
   }
   for (const as2 of apptStats) {
     const existing = merged.get(as2.userId)
@@ -363,10 +394,13 @@ export default function CallcenterPage() {
   const allUsers = [...merged.values()].sort((a, b) => b.converted - a.converted)
 
   // Totals
+  const totalCalls = callStats.reduce((s, c) => s + c.totalCalls, 0)
+  const totalNichtErreicht = callStats.reduce((s, c) => s + c.nichtErreicht, 0)
   const totalConverted = allUsers.reduce((s, u) => s + u.converted, 0)
   const totalLost = allUsers.reduce((s, u) => s + u.lost, 0)
   const totalAppts = allUsers.reduce((s, u) => s + (u.totalAppointments ?? 0), 0)
   const totalRate = (totalConverted + totalLost) > 0 ? Math.round(totalConverted / (totalConverted + totalLost) * 100) : 0
+  const totalErreichtRate = totalCalls > 0 ? Math.round((totalCalls - totalNichtErreicht) / totalCalls * 100) : 0
 
   return (
     <>
@@ -427,7 +461,7 @@ export default function CallcenterPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <div className="glass-card px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)' }}>
@@ -464,6 +498,24 @@ export default function CallcenterPage() {
             </div>
             <p className="text-[22px] font-bold tabular-nums text-amber">{totalRate}%</p>
           </div>
+          <div className="glass-card px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #A78BFA 12%, transparent)' }}>
+                <Phone size={14} className="text-violet-400" strokeWidth={1.8} />
+              </div>
+              <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">Anrufe</span>
+            </div>
+            <p className="text-[22px] font-bold tabular-nums text-violet-400">{totalCalls}</p>
+          </div>
+          <div className="glass-card px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #22D3EE 12%, transparent)' }}>
+                <PhoneOff size={14} className="text-cyan-400" strokeWidth={1.8} />
+              </div>
+              <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">Erreicht</span>
+            </div>
+            <p className="text-[22px] font-bold tabular-nums text-cyan-400">{totalErreichtRate}%</p>
+          </div>
         </div>
 
         {/* User Table */}
@@ -477,7 +529,7 @@ export default function CallcenterPage() {
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Mitarbeiter', 'Rolle', 'Konvertiert', 'Verloren', 'Rate', 'Termine', 'Offen', ''].map((h) => (
+                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Konvertiert', 'Verloren', 'Rate', 'Termine', ''].map((h) => (
                       <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -504,6 +556,18 @@ export default function CallcenterPage() {
                         <td className="px-4 py-3">
                           <span className="text-[11px] text-text-dim">{roleLabels[user.role] ?? user.role}</span>
                         </td>
+                        {/* Anrufe */}
+                        <td className="px-4 py-3">
+                          <span className="text-[13px] font-bold tabular-nums text-violet-400">{user.calls?.totalCalls ?? 0}</span>
+                        </td>
+                        {/* Erreicht */}
+                        <td className="px-4 py-3">
+                          {(user.calls?.totalCalls ?? 0) > 0 ? (
+                            <span className="text-[11px] font-semibold tabular-nums text-cyan-400">
+                              {Math.round(((user.calls?.totalCalls ?? 0) - (user.calls?.nichtErreicht ?? 0)) / (user.calls?.totalCalls ?? 1) * 100)}%
+                            </span>
+                          ) : <span className="text-[11px] text-text-dim">–</span>}
+                        </td>
                         {/* Konvertiert */}
                         <td className="px-4 py-3">
                           <span className="text-[13px] font-bold tabular-nums text-emerald-400">{user.converted}</span>
@@ -526,10 +590,6 @@ export default function CallcenterPage() {
                         {/* Termine total */}
                         <td className="px-4 py-3">
                           <span className="text-[13px] font-bold tabular-nums text-blue-400">{user.totalAppointments ?? 0}</span>
-                        </td>
-                        {/* Offen */}
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] tabular-nums text-text-dim">{user.active}</span>
                         </td>
                         {/* Detail + PDF */}
                         <td className="px-4 py-3">

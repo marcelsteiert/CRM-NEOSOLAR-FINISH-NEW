@@ -15,6 +15,7 @@ import {
   Plus,
   Trash2,
   PhoneCall,
+  PhoneOff,
   Send,
   Globe,
   GitBranch,
@@ -45,6 +46,7 @@ import {
 } from '@/hooks/useLeads'
 import { useLeadSourceMaps } from '@/hooks/useAdmin'
 import { useCreateAppointment } from '@/hooks/useAppointments'
+import { api } from '@/lib/api'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
 import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
@@ -1465,54 +1467,67 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         </div>
 
         {/* ── Footer Actions ── */}
-        <div className="flex items-center gap-2.5 px-6 py-4 border-t border-border shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-3 sm:py-4 border-t border-border shrink-0 overflow-x-auto">
+          {/* Nicht erreicht → loggt Call + setzt Tag */}
           <button
             type="button"
-            className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold"
-            onClick={() => {
-              if (lead.phone) window.open(`tel:${lead.phone}`)
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-[12px] font-semibold rounded-full shrink-0 transition-all"
+            style={{ background: 'color-mix(in srgb, #F87171 10%, transparent)', color: '#F87171', border: '1px solid color-mix(in srgb, #F87171 20%, transparent)' }}
+            onClick={async () => {
+              if (!lead) return
+              // Call loggen
+              try {
+                await api.post('/call-logs', { leadId: lead.id, result: 'NICHT_ERREICHT' })
+              } catch {}
+              // Tag setzen: wenn noch kein "Abtelefonieren Tag1" → Tag1, sonst Tag2
+              const tag1Id = '1ff9b6a0-c38c-4542-b33c-46c5d494f9f1'
+              const tag2Id = 'f5a9f35b-acc5-4602-b359-aca89165da01'
+              const hasTag1 = lead.tags.includes(tag1Id)
+              const hasTag2 = lead.tags.includes(tag2Id)
+              let newTags = [...lead.tags]
+              if (!hasTag1 && !hasTag2) newTags.push(tag1Id)
+              else if (hasTag1 && !hasTag2) { newTags = newTags.filter(t => t !== tag1Id); newTags.push(tag2Id) }
+              updateLead.mutate({ id: lead.id, tags: newTags })
             }}
           >
-            <PhoneCall size={14} strokeWidth={1.8} />
-            Anrufen
+            <PhoneOff size={13} strokeWidth={1.8} />
+            Nicht erreicht
           </button>
-          <button
-            type="button"
-            className="btn-secondary flex items-center gap-2 px-4 py-2.5 text-[12px] font-semibold"
-            onClick={() => setActiveTab('emails')}
-          >
-            <Send size={14} strokeWidth={1.8} />
-            E-Mail
-          </button>
+          {/* Verloren */}
           <button
             type="button"
             onClick={() => setShowLostConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-semibold text-text-dim hover:text-red transition-colors duration-150 rounded-full"
+            className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] sm:text-[12px] font-semibold text-text-dim hover:text-red transition-colors duration-150 rounded-full shrink-0"
             style={{ border: '1px solid rgba(248,113,113,0.15)' }}
           >
             <AlertTriangle size={13} strokeWidth={1.8} />
             Verloren
           </button>
+          {/* Termin vereinbaren → loggt Call als TERMIN */}
           <button
             type="button"
-            className="btn-primary flex items-center gap-2 px-4 py-2.5 text-[12px] flex-1 justify-center"
-            onClick={() => {
-              if (lead) {
-                setApptAddress(lead.address ?? '')
-                setApptAssignedTo('')
-                setApptDate('')
-                setApptTime('')
-              }
+            className="btn-primary flex items-center gap-2 px-4 sm:px-5 py-2.5 text-[12px] flex-1 justify-center shrink-0"
+            onClick={async () => {
+              if (!lead) return
+              // Call als TERMIN loggen
+              try {
+                await api.post('/call-logs', { leadId: lead.id, result: 'TERMIN' })
+              } catch {}
+              setApptAddress(lead.address ?? '')
+              setApptAssignedTo('')
+              setApptDate('')
+              setApptTime('')
               setShowDealConfirm(true)
             }}
           >
             <CalendarCheck size={14} strokeWidth={2} />
             Termin vereinbaren
           </button>
+          {/* Löschen */}
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium text-text-dim hover:text-red transition-colors duration-150"
+            className="flex items-center gap-1.5 px-3 py-2.5 text-[11px] font-medium text-text-dim hover:text-red transition-colors duration-150 shrink-0"
           >
             <Trash2 size={13} strokeWidth={1.8} />
             Löschen
