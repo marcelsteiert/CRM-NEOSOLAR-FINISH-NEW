@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import {
   Headphones, Phone, PhoneOff, ArrowRight, CalendarCheck, TrendingUp,
-  ChevronDown, ChevronUp, X, Users, Target, Award,
+  ChevronDown, ChevronUp, X, Users, Target, Award, FileDown, Printer,
 } from 'lucide-react'
 
 /* ── Types ── */
@@ -80,6 +80,134 @@ const roleLabels: Record<string, string> = {
   PROJEKTLEITUNG: 'PL', GL: 'GL', BUCHHALTUNG: 'Buchhaltung', SUBUNTERNEHMEN: 'Sub',
 }
 
+/* ── PDF Export Funktion ── */
+
+function exportUserPdf(userName: string, detail: UserDetail, leadStats?: LeadStat) {
+  const today = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const converted = detail.leads.filter((l: any) => l.status === 'CONVERTED')
+  const lost = detail.leads.filter((l: any) => l.status === 'LOST')
+  const rate = (converted.length + lost.length) > 0
+    ? Math.round(converted.length / (converted.length + lost.length) * 100)
+    : 0
+
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Callcenter Report – ${userName}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1a1a1a; padding: 40px; font-size: 12px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 12px; margin-bottom: 24px; }
+  .logo { font-size: 14px; font-weight: 700; color: #F59E0B; margin-bottom: 4px; }
+  .kpi-row { display: flex; gap: 16px; margin-bottom: 24px; }
+  .kpi { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; text-align: center; }
+  .kpi-value { font-size: 28px; font-weight: 800; }
+  .kpi-label { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  .green { color: #059669; }
+  .red { color: #dc2626; }
+  .blue { color: #2563eb; }
+  .amber { color: #d97706; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #999; padding: 6px 8px; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; font-size: 11px; }
+  .section { margin-top: 24px; }
+  .section-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid #F59E0B; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+  .badge-green { background: #d1fae5; color: #059669; }
+  .badge-red { background: #fee2e2; color: #dc2626; }
+  .footer { margin-top: 32px; text-align: center; color: #999; font-size: 10px; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+  @media print { body { padding: 20px; } }
+</style>
+</head><body>
+<div class="logo">NeoSolar CRM</div>
+<h1>Callcenter Report – ${userName}</h1>
+<div class="subtitle">Erstellt am ${today}</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-value green">${converted.length}</div><div class="kpi-label">Konvertiert</div></div>
+  <div class="kpi"><div class="kpi-value red">${lost.length}</div><div class="kpi-label">Verloren</div></div>
+  <div class="kpi"><div class="kpi-value blue">${detail.appointments.length}</div><div class="kpi-label">Termine</div></div>
+  <div class="kpi"><div class="kpi-value amber">${rate}%</div><div class="kpi-label">Conversion</div></div>
+</div>
+
+${detail.daily.length > 0 ? `
+<div class="section">
+  <div class="section-title">Tägliche Aktivität</div>
+  <table>
+    <thead><tr><th>Datum</th><th>Konvertiert</th><th>Verloren</th><th>Termine erstellt</th></tr></thead>
+    <tbody>
+      ${detail.daily.slice(0, 30).map((d: any) => `<tr>
+        <td>${new Date(d.day).toLocaleDateString('de-CH')}</td>
+        <td class="green">${d.converted || '–'}</td>
+        <td class="red">${d.lost || '–'}</td>
+        <td class="blue">${d.appointmentsCreated || '–'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>` : ''}
+
+${converted.length > 0 ? `
+<div class="section">
+  <div class="section-title">Konvertierte Leads (${converted.length})</div>
+  <table>
+    <thead><tr><th>Status</th><th>Name</th><th>Firma</th><th>Datum</th></tr></thead>
+    <tbody>
+      ${converted.map((l: any) => `<tr>
+        <td><span class="badge badge-green">TERMIN</span></td>
+        <td>${l.contact?.firstName ?? ''} ${l.contact?.lastName ?? ''}</td>
+        <td>${l.contact?.company ?? '–'}</td>
+        <td>${new Date(l.updatedAt).toLocaleDateString('de-CH')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>` : ''}
+
+${lost.length > 0 ? `
+<div class="section">
+  <div class="section-title">Verlorene Leads (${lost.length})</div>
+  <table>
+    <thead><tr><th>Status</th><th>Name</th><th>Firma</th><th>Datum</th></tr></thead>
+    <tbody>
+      ${lost.map((l: any) => `<tr>
+        <td><span class="badge badge-red">VERLOREN</span></td>
+        <td>${l.contact?.firstName ?? ''} ${l.contact?.lastName ?? ''}</td>
+        <td>${l.contact?.company ?? '–'}</td>
+        <td>${new Date(l.updatedAt).toLocaleDateString('de-CH')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>` : ''}
+
+${detail.appointments.length > 0 ? `
+<div class="section">
+  <div class="section-title">Termine (${detail.appointments.length})</div>
+  <table>
+    <thead><tr><th>Status</th><th>Name</th><th>Typ</th><th>Datum</th><th>Uhrzeit</th></tr></thead>
+    <tbody>
+      ${detail.appointments.map((a: any) => `<tr>
+        <td>${a.status}</td>
+        <td>${a.contact?.firstName ?? ''} ${a.contact?.lastName ?? ''}</td>
+        <td>${a.appointmentType ?? '–'}</td>
+        <td>${a.appointmentDate ? new Date(a.appointmentDate).toLocaleDateString('de-CH') : '–'}</td>
+        <td>${a.appointmentTime ?? '–'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>` : ''}
+
+<div class="footer">NeoSolar AG – Callcenter Report – ${today}</div>
+</body></html>`
+
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) return
+  printWindow.document.write(html)
+  printWindow.document.close()
+  printWindow.onload = () => {
+    printWindow.print()
+  }
+}
+
 /* ── User Detail Modal ── */
 
 function UserDetailModal({ userId, userName, onClose }: { userId: string; userName: string; onClose: () => void }) {
@@ -100,9 +228,21 @@ function UserDetailModal({ userId, userName, onClose }: { userId: string; userNa
               <p className="text-[11px] text-text-dim">Detail-Ansicht Aktivitäten</p>
             </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
-            <X size={18} strokeWidth={1.8} />
-          </button>
+          <div className="flex items-center gap-2">
+            {detail && (
+              <button
+                onClick={() => exportUserPdf(userName, detail)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold text-amber hover:bg-amber-soft transition-all"
+                style={{ border: '1px solid rgba(245,158,11,0.2)' }}
+              >
+                <FileDown size={13} strokeWidth={1.8} />
+                PDF Export
+              </button>
+            )}
+            <button onClick={onClose} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
+              <X size={18} strokeWidth={1.8} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
