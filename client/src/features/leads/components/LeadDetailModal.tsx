@@ -200,6 +200,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const [showDealConfirm, setShowDealConfirm] = useState(false)
   const [showLostConfirm, setShowLostConfirm] = useState(false)
   const [lostReason, setLostReason] = useState('')
+  const [lostCategory, setLostCategory] = useState('')
 
   // Termin-Formular
   const [apptAssignedTo, setApptAssignedTo] = useState('')
@@ -395,22 +396,36 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   }
 
   /* ── Mark as lost ── */
+  const lostLabels: Record<string, string> = {
+    kein_interesse: 'Kein Interesse',
+    anderer_anbieter: 'Anderer Anbieter',
+    kein_budget: 'Kein Budget',
+    zu_teuer: 'Zu teuer',
+    falsche_nummer: 'Falsche Nummer',
+    duplikat: 'Duplikat',
+    sonstiges: 'Sonstiges',
+  }
+  const LOST_REASONS_WITH_CALL = ['kein_interesse', 'anderer_anbieter', 'kein_budget', 'zu_teuer']
   const handleMarkLost = () => {
-    if (!lead || !lostReason.trim()) return
-    // Anruf loggen (erreicht + abgesagt)
-    api.post('/call-logs', { leadId: lead.id, result: 'ABGESAGT', notes: lostReason.trim() }).catch(() => {})
+    if (!lead || !lostCategory) return
+    const reasonText = lostCategory === 'sonstiges' ? (lostReason.trim() || 'Sonstiges') : lostLabels[lostCategory] + (lostReason.trim() ? `: ${lostReason.trim()}` : '')
+    // Nur als Anruf loggen wenn Person tatsächlich erreicht wurde
+    if (LOST_REASONS_WITH_CALL.includes(lostCategory)) {
+      api.post('/call-logs', { leadId: lead.id, result: 'ABGESAGT', notes: reasonText }).catch(() => {})
+    }
     const prevNotes = lead.notes ?? ''
-    const lostNote = `[VERLOREN] ${new Date().toLocaleDateString('de-CH')}: ${lostReason.trim()}`
+    const lostNote = `[VERLOREN] ${new Date().toLocaleDateString('de-CH')}: ${reasonText}`
     const updatedNotes = prevNotes ? `${lostNote}\n\n${prevNotes}` : lostNote
     updateLead.mutate({ id: lead.id, status: 'LOST' as LeadStatus, notes: updatedNotes })
     createActivity.mutate({
       leadId: lead.id,
       type: 'STATUS_CHANGE' as ActivityType,
       title: 'Lead als verloren markiert',
-      description: lostReason.trim(),
+      description: reasonText,
     })
     setShowLostConfirm(false)
     setLostReason('')
+    setLostCategory('')
     setSuccessMsg('Lead als verloren markiert')
     setTimeout(() => {
       setSuccessMsg('')
@@ -1802,25 +1817,52 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
               >
                 <AlertTriangle size={20} className="text-red" strokeWidth={1.8} />
               </div>
-              <h3 className="text-[15px] font-bold mb-1 text-center">Lead als verloren markieren?</h3>
+              <h3 className="text-[15px] font-bold mb-1 text-center">Warum ist der Lead verloren?</h3>
               <p className="text-[12px] text-text-sec mb-4 text-center">
-                Bitte gib eine Begruendung an, warum der Lead verloren ist.
+                Wähle einen Grund – bei telefonischem Kontakt wird ein Anruf geloggt.
               </p>
-              <textarea
-                value={lostReason}
-                onChange={(e) => setLostReason(e.target.value)}
-                placeholder="z.B. Kein Budget, anderer Anbieter gewaehlt, kein Interesse mehr..."
-                rows={3}
-                className="glass-input w-full px-4 py-2.5 text-[12px] resize-none mb-4"
-                autoFocus
-              />
+
+              {/* Grund-Buttons */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {Object.entries(lostLabels).map(([key, label]) => {
+                  const isCall = LOST_REASONS_WITH_CALL.includes(key)
+                  const isActive = lostCategory === key
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setLostCategory(key)}
+                      className={[
+                        'px-3 py-2.5 rounded-lg text-[11px] font-semibold text-left transition-all',
+                        isActive ? 'ring-2 ring-amber' : 'hover:bg-surface-hover',
+                      ].join(' ')}
+                      style={{
+                        background: isActive ? 'color-mix(in srgb, #F87171 12%, transparent)' : 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      <span>{label}</span>
+                      {isCall && <span className="block text-[9px] text-text-dim mt-0.5">→ zählt als Anruf</span>}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Optionaler Kommentar */}
+              {lostCategory && (
+                <input
+                  type="text"
+                  value={lostReason}
+                  onChange={(e) => setLostReason(e.target.value)}
+                  placeholder="Kommentar (optional)..."
+                  className="glass-input w-full px-4 py-2 text-[12px] mb-3"
+                />
+              )}
+
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowLostConfirm(false)
-                    setLostReason('')
-                  }}
+                  onClick={() => { setShowLostConfirm(false); setLostReason(''); setLostCategory('') }}
                   className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
                 >
                   Abbrechen
@@ -1828,7 +1870,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 <button
                   type="button"
                   onClick={handleMarkLost}
-                  disabled={!lostReason.trim()}
+                  disabled={!lostCategory}
                   className="flex-1 px-4 py-2.5 text-[12px] font-bold text-center rounded-full cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
                     background: 'color-mix(in srgb, #F87171 15%, transparent)',
