@@ -469,7 +469,7 @@ export default function CallcenterPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="glass-card px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)' }}>
@@ -496,15 +496,6 @@ export default function CallcenterPage() {
               <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">Termine</span>
             </div>
             <p className="text-[22px] font-bold tabular-nums text-blue-400">{totalAppts}</p>
-          </div>
-          <div className="glass-card px-4 py-3">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)' }}>
-                <Target size={14} className="text-amber" strokeWidth={1.8} />
-              </div>
-              <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">Conversion</span>
-            </div>
-            <p className="text-[22px] font-bold tabular-nums text-amber">{totalRate}%</p>
           </div>
           <div className="glass-card px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
