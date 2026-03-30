@@ -6,7 +6,7 @@ export type FeatureFlag =
   | 'dashboard' | 'leads' | 'appointments' | 'deals' | 'projects' | 'admin'
   | 'provision' | 'calculations'
   | 'communication' | 'ai' | 'tasks'
-  | 'calendar'
+  | 'calendar' | 'callcenter'
   | 'documents' | 'notifications' | 'export'
 
 const STORAGE_KEY = 'neosolar-feature-flags'
@@ -29,6 +29,7 @@ const defaultFlags: Record<FeatureFlag, boolean> = {
   ai: false,
   tasks: false,
   documents: false,
+  callcenter: true,
   notifications: true,
   export: false,
 }

@@ -29,6 +29,7 @@ const features: FeatureInfo[] = [
   { id: 'admin', name: 'Administration', description: '14 Admin-Sektionen: Benutzer, Produkte, Integrationen, etc.', icon: Shield, color: '#94A3B8', category: 'core', status: 'live', isCore: true },
 
   // Sales (toggleable)
+  { id: 'callcenter', name: 'Callcenter', description: 'Anruf-Tracking, Conversion-Auswertung und Performance pro Mitarbeiter', icon: Users, color: '#F59E0B', category: 'sales', status: 'live' },
   { id: 'provision', name: 'Provision', description: 'Monatsbasierte Provisionsberechnung mit 5% auf Angebotswert', icon: Coins, color: '#F59E0B', category: 'sales', status: 'live' },
   { id: 'calendar', name: 'Kalender', description: 'Montage-, Elektro- und Wartungstermine planen – mit Berechtigungssteuerung', icon: CalendarDays, color: '#10B981', category: 'sales', status: 'live' },
   { id: 'calculations', name: 'Kalkulation', description: 'PV-Anlagen kalkulieren: Module, Speicher, Wechselrichter, Arbeitszeit', icon: Calculator, color: '#A78BFA', category: 'sales', status: 'coming' },
