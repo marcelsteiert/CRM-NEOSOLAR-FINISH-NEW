@@ -49,20 +49,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const { data, error } = await query
     if (error) throw new AppError(error.message, 500)
 
-    // Signierte URLs fuer Download generieren (Fehler einzelner Dateien ignorieren)
-    const enriched = await Promise.all(
-      (data ?? []).map(async (doc: any) => {
-        try {
-          if (!doc.storage_path) return { ...doc, downloadUrl: null }
-          const { data: urlData } = await supabase.storage
-            .from('documents')
-            .createSignedUrl(doc.storage_path, 3600) // 1 Stunde gueltig
-          return { ...doc, downloadUrl: urlData?.signedUrl ?? null }
-        } catch {
-          return { ...doc, downloadUrl: null }
-        }
-      })
-    )
+    // Public URLs generieren (Bucket ist public – kein signierter URL noetig)
+    const supabaseUrl = process.env.SUPABASE_URL ?? ''
+    const enriched = (data ?? []).map((doc: any) => ({
+      ...doc,
+      downloadUrl: doc.storage_path
+        ? `${supabaseUrl}/storage/v1/object/public/documents/${doc.storage_path}`
+        : null,
+    }))
 
     res.json({ data: enriched, total: enriched.length })
   } catch (err) {
@@ -142,13 +136,12 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
       })
     }
 
-    // Signierte URL mitgeben
-    const { data: urlData } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(storagePath, 3600)
+    // Public URL generieren
+    const supabaseUrl = process.env.SUPABASE_URL ?? ''
+    const downloadUrl = `${supabaseUrl}/storage/v1/object/public/documents/${storagePath}`
 
     logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DOCUMENT', entityId: doc?.id, description: `Dokument "${d.fileName}" hochgeladen` })
-    res.status(201).json({ data: { ...doc, downloadUrl: urlData?.signedUrl ?? null } })
+    res.status(201).json({ data: { ...doc, downloadUrl } })
   } catch (err: any) {
     const msg = err?.message || 'Unbekannter Fehler'
     const code = err?.statusCode || 500
@@ -171,13 +164,12 @@ router.get('/:id/download', async (req: Request, res: Response, next: NextFuncti
 
     if (error || !doc) throw new AppError('Dokument nicht gefunden', 404)
 
-    const { data: urlData } = await supabase.storage
-      .from('documents')
-      .createSignedUrl(doc.storage_path, 3600)
+    const supabaseUrl = process.env.SUPABASE_URL ?? ''
+    const downloadUrl = doc.storage_path
+      ? `${supabaseUrl}/storage/v1/object/public/documents/${doc.storage_path}`
+      : null
 
-    if (!urlData?.signedUrl) throw new AppError('Download-URL konnte nicht erstellt werden', 500)
-
-    res.json({ data: { ...doc, downloadUrl: urlData.signedUrl } })
+    res.json({ data: { ...doc, downloadUrl } })
   } catch (err) {
     next(err)
   }
