@@ -98,6 +98,11 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+function formatDateTime(d: string) {
+  const date = new Date(d)
+  return `${date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}`
+}
+
 const roleLabels: Record<string, string> = {
   ADMIN: 'Admin', VERTRIEB: 'Vertrieb', SETTER: 'Setter', CLOSER: 'Closer',
   PROJEKTLEITUNG: 'PL', GL: 'GL', BUCHHALTUNG: 'Buchhaltung', SUBUNTERNEHMEN: 'Sub',
@@ -180,7 +185,7 @@ ${converted.length > 0 ? `
         <td><span class="badge badge-green">TERMIN</span></td>
         <td>${l.contact?.firstName ?? ''} ${l.contact?.lastName ?? ''}</td>
         <td>${l.contact?.company ?? '–'}</td>
-        <td>${new Date(l.updatedAt).toLocaleDateString('de-CH')}</td>
+        <td>${new Date(l.updatedAt).toLocaleDateString('de-CH')} ${new Date(l.updatedAt).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</td>
       </tr>`).join('')}
     </tbody>
   </table>
@@ -196,7 +201,7 @@ ${lost.length > 0 ? `
         <td><span class="badge badge-red">VERLOREN</span></td>
         <td>${l.contact?.firstName ?? ''} ${l.contact?.lastName ?? ''}</td>
         <td>${l.contact?.company ?? '–'}</td>
-        <td>${new Date(l.updatedAt).toLocaleDateString('de-CH')}</td>
+        <td>${new Date(l.updatedAt).toLocaleDateString('de-CH')} ${new Date(l.updatedAt).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })}</td>
       </tr>`).join('')}
     </tbody>
   </table>
@@ -335,7 +340,7 @@ function UserDetailModal({ userId, userName, onClose, autoExportPdf }: { userId:
                           {l.contact?.firstName} {l.contact?.lastName}
                         </span>
                         {l.contact?.company && <span className="text-text-dim truncate hidden sm:inline">({l.contact.company})</span>}
-                        <span className="ml-auto text-text-dim tabular-nums shrink-0">{formatDate(l.updatedAt)}</span>
+                        <span className="ml-auto text-text-dim tabular-nums shrink-0">{formatDateTime(l.updatedAt)}</span>
                       </div>
                     ))}
                   </div>
