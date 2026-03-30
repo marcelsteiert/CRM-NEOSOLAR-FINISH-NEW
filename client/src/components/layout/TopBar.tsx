@@ -190,8 +190,8 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Input */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-          <Search size={18} className="text-text-dim shrink-0" />
+        <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)', background: '#0B0F15' }}>
+          <Search size={18} style={{ color: '#6B7280' }} className="shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -199,7 +199,8 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Name, E-Mail, Telefonnummer suchen..."
-            className="flex-1 bg-transparent text-[15px] text-text placeholder:text-text-dim focus:outline-none"
+            className="flex-1 bg-transparent text-[15px] focus:outline-none"
+            style={{ color: '#F0F2F5' }}
           />
           {query && (
             <button type="button" onClick={() => setQuery('')} className="text-text-dim hover:text-text transition-colors">
@@ -212,7 +213,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Results */}
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="max-h-[60vh] overflow-y-auto" style={{ background: '#0B0F15' }}>
           {query.length < 1 && (
             <div className="px-5 py-8 text-center text-[12px] text-text-dim">
               Suchbegriff eingeben...
@@ -261,15 +262,15 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
                           {contact.firstName} {contact.lastName}
                         </span>
                         {contact.company && (
-                          <span className="text-[11px] text-text-dim truncate">({contact.company})</span>
+                          <span className="text-[11px] truncate" style={{ color: '#8A929E' }}>({contact.company})</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-[11px] text-text-dim">
+                      <div className="flex items-center gap-3 mt-0.5 text-[11px]" style={{ color: '#9CA3AF' }}>
                         {contact.email && <span className="truncate">{contact.email}</span>}
                         {contact.phone && <span>{contact.phone}</span>}
                       </div>
                       {contact.address && (
-                        <div className="text-[10px] text-text-dim mt-0.5 truncate">{contact.address}</div>
+                        <div className="text-[10px] mt-0.5 truncate" style={{ color: '#6B7280' }}>{contact.address}</div>
                       )}
 
                       {/* Linked entities – klickbar mit Status */}
@@ -330,7 +331,7 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="px-5 py-2.5 border-t border-border flex items-center gap-4 text-[10px] text-text-dim">
+          <div className="px-5 py-2.5 border-t border-border flex items-center gap-4 text-[10px] text-text-dim" style={{ background: '#0B0F15' }}>
             <span><kbd className="px-1 py-0.5 rounded border border-border font-mono text-[9px]">↑↓</kbd> Navigieren</span>
             <span><kbd className="px-1 py-0.5 rounded border border-border font-mono text-[9px]">Enter</kbd> Oeffnen</span>
             <span><kbd className="px-1 py-0.5 rounded border border-border font-mono text-[9px]">Esc</kbd> Schliessen</span>
