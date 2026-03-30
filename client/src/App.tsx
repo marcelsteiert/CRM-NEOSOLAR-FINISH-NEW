@@ -25,6 +25,7 @@ const DocumentsPage = lazy(() => import('@/features/documents/DocumentsPage'))
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'))
 const FeaturesPage = lazy(() => import('@/features/features/FeaturesPage'))
 const PasswordsPage = lazy(() => import('@/features/passwords/PasswordsPage'))
+const CallcenterPage = lazy(() => import('@/features/callcenter/CallcenterPage'))
 
 /* ── Page Loading Spinner ── */
 
@@ -124,6 +125,7 @@ export default function App() {
             <Route path="tasks" element={<ModuleRoute moduleId="tasks"><TasksPage /></ModuleRoute>} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+            <Route path="callcenter" element={<AdminRoute><CallcenterPage /></AdminRoute>} />
             <Route path="export" element={<ModuleRoute moduleId="export"><ExportPage /></ModuleRoute>} />
             <Route path="calendar" element={<ModuleRoute moduleId="calendar"><CalendarPage /></ModuleRoute>} />
             <Route path="documents" element={<ModuleRoute moduleId="documents"><DocumentsPage /></ModuleRoute>} />

@@ -30,6 +30,7 @@ import adminDbExportRouter from './routes/admin/dbExport.js'
 import adminAppointmentKanbanRouter from './routes/admin/appointmentKanban.js'
 import adminDealKanbanRouter from './routes/admin/dealKanban.js'
 import adminDuplicatesRouter from './routes/admin/duplicates.js'
+import callcenterRouter from './routes/dashboard/callcenter.js'
 import searchRouter from './routes/search.js'
 import aiRouter from './routes/ai.js'
 import passwordsRouter from './routes/passwords.js'
@@ -126,6 +127,7 @@ export function createApp() {
   app.use('/api/v1/admin/appointment-kanban', ...adminGuard, adminAppointmentKanbanRouter)
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
   app.use('/api/v1/admin/duplicates', ...adminGuard, adminDuplicatesRouter)
+  app.use('/api/v1/dashboard/callcenter', ...adminGuard, callcenterRouter)
 
   app.use(errorHandler)
 
