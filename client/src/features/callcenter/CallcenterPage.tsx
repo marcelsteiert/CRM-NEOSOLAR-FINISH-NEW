@@ -405,7 +405,10 @@ export default function CallcenterPage() {
   const totalLost = allUsers.reduce((s, u) => s + u.lost, 0)
   const totalAppts = allUsers.reduce((s, u) => s + (u.totalAppointments ?? 0), 0)
   const totalRate = (totalConverted + totalLost) > 0 ? Math.round(totalConverted / (totalConverted + totalLost) * 100) : 0
-  const totalErreichtRate = totalCalls > 0 ? Math.round((totalCalls - totalNichtErreicht) / totalCalls * 100) : 0
+  const totalErreicht = totalCalls - totalNichtErreicht
+  const totalErreichtRate = totalCalls > 0 ? Math.round(totalErreicht / totalCalls * 100) : 0
+  const totalTerminCalls = callStats.reduce((s, c) => s + c.termin, 0)
+  const totalTerminRate = totalErreicht > 0 ? Math.round(totalTerminCalls / totalErreicht * 100) : 0
 
   return (
     <>
@@ -466,7 +469,7 @@ export default function CallcenterPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           <div className="glass-card px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)' }}>
@@ -521,6 +524,15 @@ export default function CallcenterPage() {
             </div>
             <p className="text-[22px] font-bold tabular-nums text-cyan-400">{totalErreichtRate}%</p>
           </div>
+          <div className="glass-card px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #FB923C 12%, transparent)' }}>
+                <CalendarCheck size={14} className="text-orange-400" strokeWidth={1.8} />
+              </div>
+              <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">Terminierung</span>
+            </div>
+            <p className="text-[22px] font-bold tabular-nums text-orange-400">{totalTerminRate}%</p>
+          </div>
         </div>
 
         {/* User Table */}
@@ -534,7 +546,7 @@ export default function CallcenterPage() {
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Konvertiert', 'Verloren', 'Rate', 'Termine', ''].map((h) => (
+                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Terminierung', 'Konvertiert', 'Verloren', 'Termine', ''].map((h) => (
                       <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -573,6 +585,23 @@ export default function CallcenterPage() {
                             </span>
                           ) : <span className="text-[11px] text-text-dim">–</span>}
                         </td>
+                        {/* Terminierungsrate */}
+                        <td className="px-4 py-3">
+                          {(() => {
+                            const erreicht = (user.calls?.totalCalls ?? 0) - (user.calls?.nichtErreicht ?? 0)
+                            const termRate = erreicht > 0 ? Math.round((user.calls?.termin ?? 0) / erreicht * 100) : 0
+                            return erreicht > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                  <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, termRate)}%`, background: termRate >= 30 ? '#34D399' : termRate >= 15 ? '#F59E0B' : '#F87171' }} />
+                                </div>
+                                <span className="text-[11px] font-semibold tabular-nums" style={{ color: termRate >= 30 ? '#34D399' : termRate >= 15 ? '#F59E0B' : '#F87171' }}>
+                                  {termRate}%
+                                </span>
+                              </div>
+                            ) : <span className="text-[11px] text-text-dim">–</span>
+                          })()}
+                        </td>
                         {/* Konvertiert */}
                         <td className="px-4 py-3">
                           <span className="text-[13px] font-bold tabular-nums text-emerald-400">{user.converted}</span>
@@ -580,17 +609,6 @@ export default function CallcenterPage() {
                         {/* Verloren */}
                         <td className="px-4 py-3">
                           <span className="text-[13px] font-bold tabular-nums text-red-400">{user.lost}</span>
-                        </td>
-                        {/* Rate */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                              <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(100, rate)}%`, background: rate >= 60 ? '#34D399' : rate >= 30 ? '#F59E0B' : '#F87171' }} />
-                            </div>
-                            <span className="text-[11px] font-semibold tabular-nums" style={{ color: rate >= 60 ? '#34D399' : rate >= 30 ? '#F59E0B' : '#F87171' }}>
-                              {rate}%
-                            </span>
-                          </div>
                         </td>
                         {/* Termine total */}
                         <td className="px-4 py-3">
