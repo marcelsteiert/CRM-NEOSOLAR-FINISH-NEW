@@ -1043,19 +1043,34 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 compact
               />
 
-              {/* Erstellt / Bearbeitet */}
-              <div className="flex flex-col gap-1 text-[11px] text-text-dim px-1">
+              {/* Erstellt / Bearbeitet / Konvertiert */}
+              <div className="flex flex-col gap-1.5 text-[11px] text-text-dim px-1">
                 <div className="flex items-center gap-2">
                   <Clock size={12} strokeWidth={1.8} />
                   Erstellt {relativeTime(lead.createdAt)}
                   {(() => { const u = users.find((x) => x.id === lead.assignedTo); return u ? ` · von ${u.firstName} ${u.lastName}` : '' })()}
                 </div>
-                {lead.updatedAt && lead.updatedAt !== lead.createdAt && (
-                  <div className="flex items-center gap-2">
-                    <Clock size={12} strokeWidth={1.8} />
-                    Bearbeitet {relativeTime(lead.updatedAt)}
-                  </div>
-                )}
+                {lead.updatedAt && lead.updatedAt !== lead.createdAt && (() => {
+                  const sorted = [...activities].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  const lastAct = sorted[0]
+                  const editor = lastAct?.createdBy ? users.find((u) => u.id === lastAct.createdBy) : null
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Clock size={12} strokeWidth={1.8} />
+                      Bearbeitet {relativeTime(lead.updatedAt)}{editor ? ` · von ${editor.firstName} ${editor.lastName}` : ''}
+                    </div>
+                  )
+                })()}
+                {lead.status === 'CONVERTED' && (() => {
+                  const convertAct = [...activities].find((a) => a.type === 'STATUS_CHANGE' && (a.text?.includes('CONVERTED') || a.text?.includes('Termin')))
+                  const converter = convertAct?.createdBy ? users.find((u) => u.id === convertAct.createdBy) : null
+                  return convertAct ? (
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <ArrowRight size={12} strokeWidth={1.8} />
+                      Zu Termin konvertiert {relativeTime(convertAct.createdAt)}{converter ? ` · von ${converter.firstName} ${converter.lastName}` : ''}
+                    </div>
+                  ) : null
+                })()}
               </div>
             </>
           )}
