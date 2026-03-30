@@ -54,11 +54,17 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     let error: any = null
 
     if (isEmail) {
-      const res = await supabase.from('users').select('*').eq('email', loginLower).is('deleted_at', null).single()
+      const res = await supabase.from('users').select('*').ilike('email', loginLower).is('deleted_at', null).single()
       user = res.data; error = res.error
     } else {
-      const res = await supabase.from('users').select('*').eq('username', loginLower).is('deleted_at', null).single()
+      // Username oder Vorname (case-insensitive)
+      const res = await supabase.from('users').select('*').ilike('username', loginLower).is('deleted_at', null).single()
       user = res.data; error = res.error
+      // Fallback: Vorname suchen
+      if (!user) {
+        const res2 = await supabase.from('users').select('*').ilike('first_name', loginLower).is('deleted_at', null).single()
+        user = res2.data; error = res2.error
+      }
     }
 
     if (error || !user) {
