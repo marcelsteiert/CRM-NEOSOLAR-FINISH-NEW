@@ -129,7 +129,7 @@ export function createApp() {
   app.use('/api/v1/admin/appointment-kanban', ...adminGuard, adminAppointmentKanbanRouter)
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
   app.use('/api/v1/admin/duplicates', ...adminGuard, adminDuplicatesRouter)
-  app.use('/api/v1/dashboard/callcenter', ...adminGuard, callcenterRouter)
+  app.use('/api/v1/dashboard/callcenter', authMiddleware, callcenterRouter)
 
   app.use(errorHandler)
 

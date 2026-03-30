@@ -125,7 +125,7 @@ export default function App() {
             <Route path="tasks" element={<ModuleRoute moduleId="tasks"><TasksPage /></ModuleRoute>} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-            <Route path="callcenter" element={<AdminRoute><CallcenterPage /></AdminRoute>} />
+            <Route path="callcenter" element={<ModuleRoute moduleId="callcenter"><CallcenterPage /></ModuleRoute>} />
             <Route path="export" element={<ModuleRoute moduleId="export"><ExportPage /></ModuleRoute>} />
             <Route path="calendar" element={<ModuleRoute moduleId="calendar"><CalendarPage /></ModuleRoute>} />
             <Route path="documents" element={<ModuleRoute moduleId="documents"><DocumentsPage /></ModuleRoute>} />

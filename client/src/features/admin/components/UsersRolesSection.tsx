@@ -36,6 +36,7 @@ const ALL_MODULES = [
   { id: 'projects', label: 'Projekte' },
   { id: 'tasks', label: 'Aufgaben' },
   { id: 'admin', label: 'Administration' },
+  { id: 'callcenter', label: 'Callcenter' },
   { id: 'communication', label: 'Kommunikation' },
   { id: 'documents', label: 'Dokumente' },
   { id: 'passwords', label: 'Passwörter' },

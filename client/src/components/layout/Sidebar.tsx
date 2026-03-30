@@ -104,7 +104,7 @@ const allNavGroups: NavGroup[] = [
     label: 'System',
     items: [
       { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true, featureId: 'notifications' },
-      { to: '/callcenter', icon: Headphones, label: 'Callcenter', adminOnly: true, featureId: 'callcenter' as any },
+      { to: '/callcenter', icon: Headphones, label: 'Callcenter', featureId: 'callcenter' as any, moduleId: 'callcenter' },
       { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin', adminOnly: true, moduleId: 'admin' },
       { to: '/export', icon: Download, label: 'Export', featureId: 'export', moduleId: 'export' },
       { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents', moduleId: 'documents' },
