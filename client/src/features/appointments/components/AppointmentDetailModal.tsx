@@ -140,12 +140,19 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
     }
   }
 
+  // Optimistic Checklist – sofort UI updaten, im Hintergrund speichern
+  const [optimisticChecklist, setOptimisticChecklist] = useState<{ id: string; label: string; checked: boolean }[] | null>(null)
+
   const handleChecklistToggle = (itemId: string) => {
     if (!appt) return
-    const updated = appt.checklist.map((c) =>
+    const current = optimisticChecklist ?? appt.checklist
+    const updated = current.map((c) =>
       c.id === itemId ? { ...c, checked: !c.checked } : c,
     )
-    updateAppt.mutate({ id: appt.id, checklist: updated } as never)
+    setOptimisticChecklist(updated) // sofort UI updaten
+    updateAppt.mutate({ id: appt.id, checklist: updated } as never, {
+      onSettled: () => setOptimisticChecklist(null), // nach API-Antwort zurücksetzen
+    })
   }
 
   const handleDelete = () => {
@@ -194,8 +201,9 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
   }
 
   const isClosed = appt.status === 'DURCHGEFUEHRT' || appt.status === 'ABGESAGT'
-  const checkedCount = appt.checklist.filter((c) => c.checked).length
-  const totalCount = appt.checklist.length
+  const checklist = optimisticChecklist ?? appt.checklist
+  const checkedCount = checklist.filter((c) => c.checked).length
+  const totalCount = checklist.length
   const progress = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
 
   const tabs: { key: DetailTab; label: string }[] = [
@@ -471,7 +479,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                   <div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, background: progress === 100 ? '#34D399' : progress >= 50 ? '#F59E0B' : '#F87171' }} />
                 </div>
                 <div className="space-y-1">
-                  {appt.checklist.map((item) => (
+                  {checklist.map((item) => (
                     <button
                       key={item.id}
                       type="button"

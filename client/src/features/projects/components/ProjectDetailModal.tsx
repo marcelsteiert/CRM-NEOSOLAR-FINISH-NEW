@@ -193,8 +193,19 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     if (e.target === backdropRef.current) onClose()
   }
 
+  // Optimistic Progress
+  const [optimisticProgress, setOptimisticProgress] = useState<Record<string, boolean[]> | null>(null)
+
   const handleToggleStep = (phase: ProjectPhase, stepIndex: number) => {
-    toggleStep.mutate({ projectId, phase, stepIndex })
+    // Sofort UI updaten
+    const current = optimisticProgress ?? project.progress
+    const phaseProgress = [...(current[phase] ?? [])]
+    phaseProgress[stepIndex] = !phaseProgress[stepIndex]
+    setOptimisticProgress({ ...current, [phase]: phaseProgress })
+
+    toggleStep.mutate({ projectId, phase, stepIndex }, {
+      onSettled: () => setOptimisticProgress(null),
+    })
   }
 
   const handleSaveKalk = () => {
@@ -249,8 +260,9 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     )
   }
 
-  const totalDone = Object.values(project.progress).flat().filter(Boolean).length
-  const totalSteps = Object.values(project.progress).flat().length
+  const effectiveProgress = optimisticProgress ?? project.progress
+  const totalDone = Object.values(effectiveProgress).flat().filter(Boolean).length
+  const totalSteps = Object.values(effectiveProgress).flat().length
   const totalPercent = totalSteps ? Math.round((totalDone / totalSteps) * 100) : 0
 
   const kalkDiff = project.kalkulation.ist !== null ? project.kalkulation.ist - project.kalkulation.soll : null
@@ -260,7 +272,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
 
   const activePhaseDef = phases.find((p) => p.id === activePhaseTab)
   const activePhaseSteps = activePhaseDef?.steps ?? []
-  const activePhaseProgress = project.progress[activePhaseTab] ?? []
+  const activePhaseProgress = effectiveProgress[activePhaseTab] ?? []
 
   const montagePartners = partners.filter((p) => p.type === 'montage')
   const elektroPartners = partners.filter((p) => p.type === 'elektro')
@@ -546,7 +558,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {phaseOrder.map((ph) => {
-                      const pp = computePhaseProgress(project.progress, ph)
+                      const pp = computePhaseProgress(effectiveProgress, ph)
                       const color = phaseColors[ph]
                       const Icon = phaseIcons[ph]
                       return (
@@ -572,7 +584,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                       const active = activePhaseTab === ph
                       const color = phaseColors[ph]
                       const Icon = phaseIcons[ph]
-                      const pp = computePhaseProgress(project.progress, ph)
+                      const pp = computePhaseProgress(effectiveProgress, ph)
                       return (
                         <button
                           key={ph}
