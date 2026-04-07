@@ -181,11 +181,12 @@ function SearchOverlay({ onClose }: { onClose: () => void }) {
 
       {/* Search Panel */}
       <div
-        className="relative w-full max-w-2xl mx-4 rounded-2xl overflow-hidden"
+        className="relative w-full max-w-2xl mx-4 rounded-2xl overflow-hidden text-white"
         style={{
           background: '#0B0F15',
           border: '1px solid rgba(255,255,255,0.1)',
           boxShadow: '0 25px 60px rgba(0,0,0,0.7)',
+          colorScheme: 'dark',
         }}
         onClick={(e) => e.stopPropagation()}
       >

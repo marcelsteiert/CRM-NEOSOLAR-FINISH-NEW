@@ -117,6 +117,51 @@ html.light .btn-secondary:hover {
   color: var(--color-text);
 }
 
+/* ── Modals/Overlays immer dunkel (auch im Light Mode) ── */
+html.light .fixed[style*="backdrop-filter"],
+html.light .fixed[style*="blur"] {
+  --color-text: #F0F2F5;
+  --color-text-sec: #8B95A5;
+  --color-text-dim: #525E6F;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  color-scheme: dark;
+}
+
+html.light .fixed[style*="backdrop-filter"] .glass-input,
+html.light .fixed[style*="blur"] .glass-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #F0F2F5;
+}
+
+html.light .fixed[style*="backdrop-filter"] .glass-input:focus,
+html.light .fixed[style*="blur"] .glass-input:focus {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  color: #F0F2F5;
+}
+
+html.light .fixed[style*="backdrop-filter"] .glass-card,
+html.light .fixed[style*="blur"] .glass-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+html.light .fixed[style*="backdrop-filter"] .btn-secondary,
+html.light .fixed[style*="blur"] .btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #8B95A5;
+}
+
+html.light .fixed[style*="backdrop-filter"] select option,
+html.light .fixed[style*="blur"] select option {
+  background: #0B0F15;
+  color: #F0F2F5;
+}
+
 html.light ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.1);
 }
