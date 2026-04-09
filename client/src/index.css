@@ -118,48 +118,72 @@ html.light .btn-secondary:hover {
 }
 
 /* ── Modals/Overlays immer dunkel (auch im Light Mode) ── */
-html.light .fixed[style*="backdrop-filter"],
-html.light .fixed[style*="blur"] {
+/* Alle z-[90]+ fixed Overlays (Detail-Modals, Dialoge, Suche) */
+html.light .fixed.z-\[90\],
+html.light .fixed.z-\[95\],
+html.light .fixed.z-\[100\] {
   --color-text: #F0F2F5;
   --color-text-sec: #8B95A5;
   --color-text-dim: #525E6F;
   --color-border: rgba(255, 255, 255, 0.06);
   --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-glass: rgba(255, 255, 255, 0.04);
+  --color-glass-border: rgba(255, 255, 255, 0.07);
+  --color-card: rgba(255, 255, 255, 0.025);
   color-scheme: dark;
-}
-
-html.light .fixed[style*="backdrop-filter"] .glass-input,
-html.light .fixed[style*="blur"] .glass-input {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   color: #F0F2F5;
 }
 
-html.light .fixed[style*="backdrop-filter"] .glass-input:focus,
-html.light .fixed[style*="blur"] .glass-input:focus {
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-  color: #F0F2F5;
+html.light .fixed.z-\[90\] .glass-input,
+html.light .fixed.z-\[95\] .glass-input,
+html.light .fixed.z-\[100\] .glass-input {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #F0F2F5 !important;
 }
 
-html.light .fixed[style*="backdrop-filter"] .glass-card,
-html.light .fixed[style*="blur"] .glass-card {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+html.light .fixed.z-\[90\] .glass-input:focus,
+html.light .fixed.z-\[95\] .glass-input:focus,
+html.light .fixed.z-\[100\] .glass-input:focus {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
 }
 
-html.light .fixed[style*="backdrop-filter"] .btn-secondary,
-html.light .fixed[style*="blur"] .btn-secondary {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #8B95A5;
+html.light .fixed.z-\[90\] .glass-card,
+html.light .fixed.z-\[95\] .glass-card,
+html.light .fixed.z-\[100\] .glass-card {
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
-html.light .fixed[style*="backdrop-filter"] select option,
-html.light .fixed[style*="blur"] select option {
+html.light .fixed.z-\[90\] .btn-secondary,
+html.light .fixed.z-\[95\] .btn-secondary,
+html.light .fixed.z-\[100\] .btn-secondary {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #8B95A5 !important;
+}
+
+html.light .fixed.z-\[90\] .btn-primary,
+html.light .fixed.z-\[95\] .btn-primary,
+html.light .fixed.z-\[100\] .btn-primary {
+  color: #FFFFFF !important;
+}
+
+html.light .fixed.z-\[90\] select option,
+html.light .fixed.z-\[95\] select option,
+html.light .fixed.z-\[100\] select option {
   background: #0B0F15;
   color: #F0F2F5;
+}
+
+html.light .fixed.z-\[90\] textarea,
+html.light .fixed.z-\[95\] textarea,
+html.light .fixed.z-\[100\] textarea {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #F0F2F5 !important;
 }
 
 html.light ::-webkit-scrollbar-thumb {
