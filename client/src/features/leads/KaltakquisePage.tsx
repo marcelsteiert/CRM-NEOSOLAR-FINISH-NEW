@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { PhoneOutgoing, Users, Building2, Sun } from 'lucide-react'
+import { PhoneOutgoing, Users, Building2, Sun, Flame } from 'lucide-react'
 import LeadsPage from './LeadsPage'
 
 const TABS = [
   { id: 'ALL', label: 'Alle', icon: PhoneOutgoing, count: null },
+  { id: 'ka-heiss', label: 'Heisse Leads', icon: Flame, color: '#F87171' },
   { id: 'ka-b2c', label: 'B2C Privat', icon: Users, color: '#34D399' },
   { id: 'ka-b2b', label: 'B2B Firmen', icon: Building2, color: '#60A5FA' },
   { id: 'ka-solar', label: 'Solaranfragen', icon: Sun, color: '#F59E0B' },
