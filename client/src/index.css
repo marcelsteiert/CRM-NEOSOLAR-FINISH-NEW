@@ -157,20 +157,40 @@ html.light [class*="fixed"][class*="z-[10"] .glass-card {
   color: #F0F2F5 !important;
 }
 
-/* glass-input innerhalb von Modals */
-html.light [class*="fixed"][class*="z-[9"] .glass-input,
-html.light [class*="fixed"][class*="z-[10"] .glass-input {
+/* ALLE Inputs, Textareas, Selects innerhalb von Modals dunkel */
+html.light [class*="fixed"][class*="z-[9"] input,
+html.light [class*="fixed"][class*="z-[10"] input,
+html.light [class*="fixed"][class*="z-[9"] textarea,
+html.light [class*="fixed"][class*="z-[10"] textarea,
+html.light [class*="fixed"][class*="z-[9"] select,
+html.light [class*="fixed"][class*="z-[10"] select {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #F0F2F5 !important;
+  -webkit-text-fill-color: #F0F2F5 !important;
+  caret-color: #F0F2F5 !important;
 }
 
-html.light [class*="fixed"][class*="z-[9"] .glass-input:focus,
-html.light [class*="fixed"][class*="z-[10"] .glass-input:focus {
+html.light [class*="fixed"][class*="z-[9"] input:focus,
+html.light [class*="fixed"][class*="z-[10"] input:focus,
+html.light [class*="fixed"][class*="z-[9"] textarea:focus,
+html.light [class*="fixed"][class*="z-[10"] textarea:focus,
+html.light [class*="fixed"][class*="z-[9"] select:focus,
+html.light [class*="fixed"][class*="z-[10"] select:focus {
   border-color: rgba(245, 158, 11, 0.4) !important;
   background: rgba(255, 255, 255, 0.06) !important;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
   color: #F0F2F5 !important;
+  -webkit-text-fill-color: #F0F2F5 !important;
+  outline: none !important;
+}
+
+html.light [class*="fixed"][class*="z-[9"] input::placeholder,
+html.light [class*="fixed"][class*="z-[10"] input::placeholder,
+html.light [class*="fixed"][class*="z-[9"] textarea::placeholder,
+html.light [class*="fixed"][class*="z-[10"] textarea::placeholder {
+  color: #525E6F !important;
+  -webkit-text-fill-color: #525E6F !important;
 }
 
 /* btn-secondary innerhalb von Modals */
@@ -227,11 +247,10 @@ html.light [class*="fixed"][class*="z-[10"] select option {
   color: #F0F2F5;
 }
 
-/* Textareas */
-html.light [class*="fixed"][class*="z-[9"] textarea,
-html.light [class*="fixed"][class*="z-[10"] textarea {
+/* Notes-Textareas mit notes-textarea Klasse oder Standard-Notes-Style */
+html.light [class*="fixed"][class*="z-[9"] [class*="notes"],
+html.light [class*="fixed"][class*="z-[10"] [class*="notes"] {
   background: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
   color: #F0F2F5 !important;
 }
 
