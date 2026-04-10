@@ -118,69 +118,118 @@ html.light .btn-secondary:hover {
 }
 
 /* ── Modals/Overlays immer dunkel (auch im Light Mode) ── */
-/* Alle z-[90]+ fixed Overlays (Detail-Modals, Dialoge, Suche) */
-html.light .fixed.z-\[90\],
-html.light .fixed.z-\[95\],
-html.light .fixed.z-\[100\] {
+/* Globaler Override: Alle Elemente innerhalb von fixed Overlays mit hohem z-Index */
+
+html.light [class*="fixed"][class*="z-["] {
+  color-scheme: dark;
+}
+
+html.light [class*="fixed"][class*="z-[9"] *,
+html.light [class*="fixed"][class*="z-[10"] * {
+  --color-bg: #06080C;
+  --color-bg-sub: #0B0F15;
   --color-text: #F0F2F5;
   --color-text-sec: #8B95A5;
   --color-text-dim: #525E6F;
   --color-border: rgba(255, 255, 255, 0.06);
+  --color-surface: rgba(255, 255, 255, 0.03);
   --color-surface-hover: rgba(255, 255, 255, 0.06);
   --color-glass: rgba(255, 255, 255, 0.04);
   --color-glass-border: rgba(255, 255, 255, 0.07);
+  --color-glass-hover: rgba(255, 255, 255, 0.08);
   --color-card: rgba(255, 255, 255, 0.025);
-  color-scheme: dark;
-  color: #F0F2F5;
 }
 
-html.light .fixed.z-\[90\] .glass-input,
-html.light .fixed.z-\[95\] .glass-input,
-html.light .fixed.z-\[100\] .glass-input {
+/* Forciere dunkles Modal-Panel via inline rgba style */
+html.light [class*="fixed"][class*="z-[9"] [style*="rgba(255,255,255,0.035)"],
+html.light [class*="fixed"][class*="z-[10"] [style*="rgba(255,255,255,0.035)"] {
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: #F0F2F5 !important;
+}
+
+/* glass-card innerhalb von Modals */
+html.light [class*="fixed"][class*="z-[9"] .glass-card,
+html.light [class*="fixed"][class*="z-[10"] .glass-card {
+  background: rgba(255, 255, 255, 0.035) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+  color: #F0F2F5 !important;
+}
+
+/* glass-input innerhalb von Modals */
+html.light [class*="fixed"][class*="z-[9"] .glass-input,
+html.light [class*="fixed"][class*="z-[10"] .glass-input {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #F0F2F5 !important;
 }
 
-html.light .fixed.z-\[90\] .glass-input:focus,
-html.light .fixed.z-\[95\] .glass-input:focus,
-html.light .fixed.z-\[100\] .glass-input:focus {
+html.light [class*="fixed"][class*="z-[9"] .glass-input:focus,
+html.light [class*="fixed"][class*="z-[10"] .glass-input:focus {
   border-color: rgba(245, 158, 11, 0.4) !important;
   background: rgba(255, 255, 255, 0.06) !important;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
+  color: #F0F2F5 !important;
 }
 
-html.light .fixed.z-\[90\] .glass-card,
-html.light .fixed.z-\[95\] .glass-card,
-html.light .fixed.z-\[100\] .glass-card {
-  background: rgba(255, 255, 255, 0.035) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-html.light .fixed.z-\[90\] .btn-secondary,
-html.light .fixed.z-\[95\] .btn-secondary,
-html.light .fixed.z-\[100\] .btn-secondary {
+/* btn-secondary innerhalb von Modals */
+html.light [class*="fixed"][class*="z-[9"] .btn-secondary,
+html.light [class*="fixed"][class*="z-[10"] .btn-secondary {
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #8B95A5 !important;
 }
 
-html.light .fixed.z-\[90\] .btn-primary,
-html.light .fixed.z-\[95\] .btn-primary,
-html.light .fixed.z-\[100\] .btn-primary {
+html.light [class*="fixed"][class*="z-[9"] .btn-secondary:hover,
+html.light [class*="fixed"][class*="z-[10"] .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #F0F2F5 !important;
+}
+
+html.light [class*="fixed"][class*="z-[9"] .btn-primary,
+html.light [class*="fixed"][class*="z-[10"] .btn-primary {
   color: #FFFFFF !important;
 }
 
-html.light .fixed.z-\[90\] select option,
-html.light .fixed.z-\[95\] select option,
-html.light .fixed.z-\[100\] select option {
+/* Tailwind text-Klassen innerhalb von Modals neu definieren */
+html.light [class*="fixed"][class*="z-[9"] .text-text,
+html.light [class*="fixed"][class*="z-[10"] .text-text {
+  color: #F0F2F5 !important;
+}
+
+html.light [class*="fixed"][class*="z-[9"] .text-text-sec,
+html.light [class*="fixed"][class*="z-[10"] .text-text-sec {
+  color: #8B95A5 !important;
+}
+
+html.light [class*="fixed"][class*="z-[9"] .text-text-dim,
+html.light [class*="fixed"][class*="z-[10"] .text-text-dim {
+  color: #525E6F !important;
+}
+
+html.light [class*="fixed"][class*="z-[9"] .border-border,
+html.light [class*="fixed"][class*="z-[10"] .border-border {
+  border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+html.light [class*="fixed"][class*="z-[9"] .bg-surface-hover:hover,
+html.light [class*="fixed"][class*="z-[10"] .bg-surface-hover:hover,
+html.light [class*="fixed"][class*="z-[9"] .hover\:bg-surface-hover:hover,
+html.light [class*="fixed"][class*="z-[10"] .hover\:bg-surface-hover:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Select Optionen */
+html.light [class*="fixed"][class*="z-[9"] select option,
+html.light [class*="fixed"][class*="z-[10"] select option {
   background: #0B0F15;
   color: #F0F2F5;
 }
 
-html.light .fixed.z-\[90\] textarea,
-html.light .fixed.z-\[95\] textarea,
-html.light .fixed.z-\[100\] textarea {
+/* Textareas */
+html.light [class*="fixed"][class*="z-[9"] textarea,
+html.light [class*="fixed"][class*="z-[10"] textarea {
   background: rgba(255, 255, 255, 0.04) !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   color: #F0F2F5 !important;
