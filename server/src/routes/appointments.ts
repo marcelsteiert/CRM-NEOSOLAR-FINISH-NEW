@@ -79,7 +79,32 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
 
     if (search && typeof search === 'string') {
-      query = query.or(`notes.ilike.%${search}%,status.ilike.%${search}%`)
+      // Sonderzeichen escapen, die PostgREST .or() als Trennzeichen interpretiert
+      const safe = search.replace(/[,()]/g, ' ').trim()
+      if (safe) {
+        // Zuerst Contact-IDs suchen, die Name/Firma/Email/Telefon/Adresse matchen
+        const pattern = `%${safe}%`
+        const { data: matchedContacts } = await supabase
+          .from('contacts')
+          .select('id')
+          .or(
+            [
+              `first_name.ilike.${pattern}`,
+              `last_name.ilike.${pattern}`,
+              `email.ilike.${pattern}`,
+              `phone.ilike.${pattern}`,
+              `company.ilike.${pattern}`,
+              `address.ilike.${pattern}`,
+            ].join(','),
+          )
+        const contactIds = (matchedContacts ?? []).map((c: any) => c.id)
+
+        const orParts = [`notes.ilike.${pattern}`, `status.ilike.${pattern}`]
+        if (contactIds.length > 0) {
+          orParts.push(`contact_id.in.(${contactIds.join(',')})`)
+        }
+        query = query.or(orParts.join(','))
+      }
     }
 
     const sf = typeof sortBy === 'string' ? toSnakeCase(sortBy) : 'appointment_date'
