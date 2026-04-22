@@ -99,7 +99,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
           )
         const contactIds = (matchedContacts ?? []).map((c: any) => c.id)
 
-        const orParts = [`notes.ilike.${pattern}`, `status.ilike.${pattern}`]
+        const orParts = [`notes.ilike.${pattern}`]
         if (contactIds.length > 0) {
           orParts.push(`contact_id.in.(${contactIds.join(',')})`)
         }
