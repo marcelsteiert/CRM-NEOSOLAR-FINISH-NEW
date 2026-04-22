@@ -69,7 +69,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .select('*, contact:contacts(*)', { count: 'exact' })
       .is('deleted_at', null)
 
-    if (status && typeof status === 'string') query = query.eq('status', status)
+    if (status && typeof status === 'string') {
+      query = query.eq('status', status)
+    } else {
+      // Ohne expliziten Filter: abgeschlossene/abgesagte Termine ausblenden,
+      // damit neue Termine nicht durch 100er-pageSize herausfallen
+      query = query.not('status', 'in', '(DURCHGEFUEHRT,ABGESAGT)')
+    }
     if (priority && typeof priority === 'string') query = query.eq('priority', priority)
     if (appointmentType && typeof appointmentType === 'string') query = query.eq('appointment_type', appointmentType)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
