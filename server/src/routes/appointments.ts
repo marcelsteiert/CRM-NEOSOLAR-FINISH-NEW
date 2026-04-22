@@ -42,7 +42,7 @@ const createAppointmentSchema = z.object({
   address: z.string().nullable().optional(),
   leadId: z.string().nullable().optional(),
   value: z.number().min(0).nullable().optional(),
-  status: z.enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'ABGESAGT']).nullable().optional(),
+  status: z.enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'NO_SHOW', 'ABGESAGT']).nullable().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).nullable().optional(),
   appointmentType: z.enum(['VOR_ORT', 'ONLINE', 'RICHTOFFERTE']).nullable().optional(),
   assignedTo: z.string().nullable().optional(),
@@ -80,9 +80,15 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (appointmentType && typeof appointmentType === 'string') query = query.eq('appointment_type', appointmentType)
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
-    // Per-User Filter: Nicht-Admins sehen nur eigene Termine
+    // Per-User Filter: Nicht-Admins sehen nur eigene Termine.
+    // Ausnahme: NO_SHOW-Termine sieht auch der Ersteller (z.B. Callcenter),
+    // damit er den Kunden erneut anrufen und den Termin neu planen kann.
     const ownerFilter = getAppointmentOwnerFilter(req)
-    if (ownerFilter) query = query.eq('assigned_to', ownerFilter)
+    if (ownerFilter) {
+      query = query.or(
+        `assigned_to.eq.${ownerFilter},and(status.eq.NO_SHOW,created_by.eq.${ownerFilter})`,
+      )
+    }
 
     if (search && typeof search === 'string') {
       // Sonderzeichen escapen, die PostgREST .or() als Trennzeichen interpretiert

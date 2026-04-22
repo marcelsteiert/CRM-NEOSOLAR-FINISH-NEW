@@ -595,6 +595,22 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                   {isRichtofferte ? 'Zum Angebot konvertieren' : 'Angebot erstellen'}
                 </button>
               )}
+              {!isClosed && !isRichtofferte && appt.status !== 'NO_SHOW' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateAppt.mutate({ id: appt.id, status: 'NO_SHOW' as AppointmentStatus })
+                    setSuccessMsg('Als No Show markiert. Callcenter kann Kontakt erneut anrufen.')
+                    setTimeout(() => setSuccessMsg(''), 2500)
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors"
+                  style={{ border: '1px solid rgba(248,113,113,0.15)' }}
+                  title="Kunde nicht erschienen – Termin geht an Callcenter zurück"
+                >
+                  <AlertTriangle size={14} strokeWidth={1.8} />
+                  No Show
+                </button>
+              )}
               <a href={`tel:${appt.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Phone size={14} strokeWidth={1.8} />
                 Anrufen

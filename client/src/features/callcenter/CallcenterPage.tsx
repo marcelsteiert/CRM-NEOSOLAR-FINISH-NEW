@@ -28,6 +28,7 @@ interface ApptStat {
   geplant: number
   bestaetigt: number
   durchgefuehrt: number
+  noShow: number
   termine: number
   richtofferten: number
 }
@@ -407,6 +408,7 @@ export default function CallcenterPage() {
   const totalLost = allUsers.reduce((s, u) => s + u.lost, 0)
   const totalAppts = allUsers.reduce((s, u) => s + (u.termine ?? 0), 0)
   const totalRichtofferten = allUsers.reduce((s, u) => s + (u.richtofferten ?? 0), 0)
+  const totalNoShow = allUsers.reduce((s, u) => s + (u.noShow ?? 0), 0)
   const totalRate = (totalConverted + totalLost) > 0 ? Math.round(totalConverted / (totalConverted + totalLost) * 100) : 0
   const totalErreicht = totalCalls - totalNichtErreicht
   const totalErreichtRate = totalCalls > 0 ? Math.round(totalErreicht / totalCalls * 100) : 0
@@ -511,6 +513,15 @@ export default function CallcenterPage() {
           </div>
           <div className="glass-card px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}>
+                <PhoneOff size={14} className="text-red" strokeWidth={1.8} />
+              </div>
+              <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">No Show</span>
+            </div>
+            <p className="text-[22px] font-bold tabular-nums text-red">{totalNoShow}</p>
+          </div>
+          <div className="glass-card px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #A78BFA 12%, transparent)' }}>
                 <Phone size={14} className="text-violet-400" strokeWidth={1.8} />
               </div>
@@ -549,7 +560,7 @@ export default function CallcenterPage() {
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Terminierung', 'Konvertiert', 'Verloren', 'Termine', 'Richtofferten', ''].map((h) => (
+                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Terminierung', 'Konvertiert', 'Verloren', 'Termine', 'Richtofferten', 'No Show', ''].map((h) => (
                       <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -620,6 +631,10 @@ export default function CallcenterPage() {
                         {/* Richtofferten */}
                         <td className="px-4 py-3">
                           <span className="text-[13px] font-bold tabular-nums text-amber">{user.richtofferten ?? 0}</span>
+                        </td>
+                        {/* No Show */}
+                        <td className="px-4 py-3">
+                          <span className="text-[13px] font-bold tabular-nums text-red">{user.noShow ?? 0}</span>
                         </td>
                         {/* Detail + PDF */}
                         <td className="px-4 py-3">

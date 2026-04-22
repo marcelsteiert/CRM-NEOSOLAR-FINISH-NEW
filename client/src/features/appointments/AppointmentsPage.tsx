@@ -40,7 +40,7 @@ import { useKanbanColumns, type KanbanColumn } from '@/hooks/useAdmin'
 
 /* ── Filter Types ── */
 
-type StatusFilter = 'ALL' | 'GEPLANT' | 'BESTAETIGT' | 'VORBEREITUNG'
+type StatusFilter = 'ALL' | 'GEPLANT' | 'BESTAETIGT' | 'VORBEREITUNG' | 'NO_SHOW'
 type ViewMode = 'kanban' | 'list'
 
 /* ── Loading Skeleton ── */
@@ -212,6 +212,7 @@ const defaultColumns: KanbanColumn[] = [
   { status: 'GEPLANT', label: 'Geplant', color: '#60A5FA', order: 0 },
   { status: 'BESTAETIGT', label: 'Bestätigt', color: '#34D399', order: 1 },
   { status: 'VORBEREITUNG', label: 'In Vorbereitung', color: '#F59E0B', order: 2 },
+  { status: 'NO_SHOW', label: 'No Show', color: '#F87171', order: 3 },
 ]
 
 function KanbanView({ appointments, users, onSelect, columns }: { appointments: Appointment[]; users: UserInfo[]; onSelect: (a: Appointment) => void; columns: KanbanColumn[] }) {
@@ -344,6 +345,7 @@ export default function AppointmentsPage() {
     GEPLANT: 'GEPLANT',
     BESTAETIGT: 'BESTAETIGT',
     VORBEREITUNG: 'VORBEREITUNG',
+    NO_SHOW: 'NO_SHOW',
   }
 
   const {
@@ -387,6 +389,7 @@ export default function AppointmentsPage() {
     { key: 'GEPLANT', label: 'Geplant' },
     { key: 'BESTAETIGT', label: 'Bestätigt' },
     { key: 'VORBEREITUNG', label: 'Vorbereitung' },
+    { key: 'NO_SHOW', label: 'No Show' },
   ]
 
   const priorityOptions: { value: AppointmentPriority | 'ALL'; label: string }[] = [

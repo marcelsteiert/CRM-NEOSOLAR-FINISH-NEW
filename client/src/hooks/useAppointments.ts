@@ -8,6 +8,7 @@ export type AppointmentStatus =
   | 'BESTAETIGT'
   | 'VORBEREITUNG'
   | 'DURCHGEFUEHRT'
+  | 'NO_SHOW'
   | 'ABGESAGT'
 
 export type AppointmentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
@@ -178,6 +179,7 @@ export const statusLabels: Record<AppointmentStatus, string> = {
   BESTAETIGT: 'Bestätigt',
   VORBEREITUNG: 'In Vorbereitung',
   DURCHGEFUEHRT: 'Durchgeführt',
+  NO_SHOW: 'No Show',
   ABGESAGT: 'Abgesagt',
 }
 
@@ -186,6 +188,7 @@ export const statusColors: Record<AppointmentStatus, string> = {
   BESTAETIGT: '#34D399',
   VORBEREITUNG: '#F59E0B',
   DURCHGEFUEHRT: '#A78BFA',
+  NO_SHOW: '#F87171',
   ABGESAGT: '#F87171',
 }
 
