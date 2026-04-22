@@ -54,6 +54,7 @@ const createAppointmentSchema = z.object({
 
 const updateAppointmentSchema = createAppointmentSchema.partial().extend({
   checklist: z.array(z.object({ id: z.string(), label: z.string(), checked: z.boolean() })).optional(),
+  noShowPhase: z.string().nullable().optional(),
 })
 
 // ---------------------------------------------------------------------------
@@ -298,7 +299,17 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
       updates.status = u.status
       if (u.status === 'DURCHGEFUEHRT') updates.completed_at = new Date().toISOString()
       else updates.completed_at = null
+      // Automatisch NO_SHOW-Phase auf "NEW" setzen bei Wechsel zu NO_SHOW
+      if (u.status === 'NO_SHOW' && u.noShowPhase === undefined) {
+        updates.no_show_phase = 'NEW'
+      }
+      // Beim Verlassen von NO_SHOW: Phase leeren
+      if (u.status !== 'NO_SHOW') {
+        updates.no_show_phase = null
+      }
     }
+
+    if (u.noShowPhase !== undefined) updates.no_show_phase = u.noShowPhase
 
     // Kontaktdaten auf contacts-Tabelle aktualisieren
     if (u.contactEmail !== undefined || u.contactPhone !== undefined || u.contactName !== undefined || u.company !== undefined || u.address !== undefined) {

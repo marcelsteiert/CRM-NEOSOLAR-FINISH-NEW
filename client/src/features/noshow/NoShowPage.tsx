@@ -6,17 +6,16 @@ import {
   ChevronDown,
   AlertTriangle,
   RefreshCw,
+  Users,
+  RotateCcw,
   MapPin,
   Globe,
   Receipt,
-  Users,
-  RotateCcw,
 } from 'lucide-react'
 import {
   useAppointments,
   useUpdateAppointment,
   type Appointment,
-  type AppointmentType,
   type AppointmentPriority,
   priorityLabels,
   appointmentTypeLabels,
@@ -24,31 +23,23 @@ import {
 } from '@/hooks/useAppointments'
 import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
+import { useNoShowKanbanColumns, type NoShowKanbanColumn } from '@/hooks/useAdmin'
 import AppointmentDetailModal from '@/features/appointments/components/AppointmentDetailModal'
 
-/* ── Typ-basierte Kanban-Spalten ── */
-interface BucketDef {
-  type: AppointmentType
-  label: string
-  color: string
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>
-}
-
-const buckets: BucketDef[] = [
-  { type: 'VOR_ORT', label: 'Termine – Vor Ort', color: '#34D399', icon: MapPin },
-  { type: 'ONLINE', label: 'Termine – Online', color: '#60A5FA', icon: Globe },
-  { type: 'RICHTOFFERTE', label: 'Richtofferten', color: '#F59E0B', icon: Receipt },
+const defaultColumns: NoShowKanbanColumn[] = [
+  { key: 'NEW', label: 'Neu No-Show', color: '#F87171', order: 0 },
+  { key: 'CALL_1', label: '1. Rückruf versucht', color: '#FB923C', order: 1 },
+  { key: 'CALL_2', label: '2. Rückruf versucht', color: '#F59E0B', order: 2 },
+  { key: 'REACHED', label: 'Erreicht – neuer Termin', color: '#34D399', order: 3 },
 ]
-
-type TypeFilter = 'ALL' | AppointmentType
 
 /* ── Loading / Error States ── */
 
-function LoadingSkeleton() {
+function LoadingSkeleton({ cols }: { cols: NoShowKanbanColumn[] }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {buckets.map((b) => (
-        <div key={b.type} className="glass-card min-h-[200px] animate-pulse" style={{ background: 'rgba(255,255,255,0.02)' }}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {cols.map((c) => (
+        <div key={c.key} className="glass-card min-h-[200px] animate-pulse" style={{ background: 'rgba(255,255,255,0.02)' }}>
           <div className="p-4 border-b border-border">
             <div className="h-4 w-24 rounded" style={{ background: 'rgba(255,255,255,0.06)' }} />
           </div>
@@ -78,10 +69,23 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 interface UserInfo { id: string; firstName: string; lastName: string; role: string }
 
+function TypeBadge({ type }: { type: Appointment['appointmentType'] }) {
+  const color = appointmentTypeColors[type]
+  const Icon = type === 'ONLINE' ? Globe : type === 'RICHTOFFERTE' ? Receipt : MapPin
+  return (
+    <span
+      className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+      style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+    >
+      <Icon size={9} strokeWidth={2} />
+      {appointmentTypeLabels[type]}
+    </span>
+  )
+}
+
 function NoShowCard({ item, users, onSelect }: { item: Appointment; users: UserInfo[]; onSelect: (a: Appointment) => void }) {
   const updateAppt = useUpdateAppointment()
   const assignee = users.find((u) => u.id === item.assignedTo)
-  const color = appointmentTypeColors[item.appointmentType]
 
   const handleRevert = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -99,12 +103,7 @@ function NoShowCard({ item, users, onSelect }: { item: Appointment; users: UserI
           <p className="text-[13px] font-semibold text-text truncate">{item.contactName}</p>
           {item.company && <p className="text-[10px] text-text-dim truncate">{item.company}</p>}
         </div>
-        <span
-          className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
-          style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
-        >
-          {appointmentTypeLabels[item.appointmentType]}
-        </span>
+        <TypeBadge type={item.appointmentType} />
       </div>
 
       {item.contactPhone && (
@@ -149,9 +148,35 @@ function NoShowCard({ item, users, onSelect }: { item: Appointment; users: UserI
   )
 }
 
-/* ── Kanban ── */
+/* ── Kanban mit Drag & Drop zwischen Phasen ── */
 
-function KanbanView({ items, users, onSelect }: { items: Appointment[]; users: UserInfo[]; onSelect: (a: Appointment) => void }) {
+function KanbanView({ items, users, onSelect, columns }: { items: Appointment[]; users: UserInfo[]; onSelect: (a: Appointment) => void; columns: NoShowKanbanColumn[] }) {
+  const updateAppt = useUpdateAppointment()
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('appointmentId', id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, key: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverCol(key)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault()
+    setDragOverCol(null)
+    const id = e.dataTransfer.getData('appointmentId')
+    const found = items.find((a) => a.id === id)
+    if (found && found.noShowPhase !== targetKey) {
+      updateAppt.mutate({ id, noShowPhase: targetKey })
+    }
+  }
+
+  const sorted = [...columns].sort((a, b) => a.order - b.order)
+
   if (items.length === 0) {
     return (
       <div className="glass-card p-12 text-center">
@@ -161,19 +186,29 @@ function KanbanView({ items, users, onSelect }: { items: Appointment[]; users: U
     )
   }
 
+  // Columns dynamisch: Grid auf bis zu 4-Spalten pro Zeile
+  const gridCols = sorted.length >= 4 ? 'lg:grid-cols-4' : sorted.length === 3 ? 'lg:grid-cols-3' : sorted.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {buckets.map((col) => {
-        const colItems = items.filter((a) => a.appointmentType === col.type)
-        const Icon = col.icon
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${gridCols} gap-4`}>
+      {sorted.map((col) => {
+        // Karten ohne Phase oder ohne Match landen in erster Spalte (NEW) als Fallback
+        const colItems = items.filter((a) => (a.noShowPhase ?? sorted[0]?.key ?? 'NEW') === col.key)
+        const isOver = dragOverCol === col.key
         return (
           <div
-            key={col.type}
-            className="flex flex-col rounded-xl min-h-[200px]"
-            style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.04)' }}
+            key={col.key}
+            className="flex flex-col rounded-xl min-h-[200px] transition-all duration-150"
+            style={{
+              background: isOver ? `color-mix(in srgb, ${col.color} 4%, transparent)` : 'rgba(255,255,255,0.015)',
+              border: isOver ? `1px solid color-mix(in srgb, ${col.color} 30%, transparent)` : '1px solid rgba(255,255,255,0.04)',
+            }}
+            onDragOver={(e) => handleDragOver(e, col.key)}
+            onDragLeave={() => setDragOverCol(null)}
+            onDrop={(e) => handleDrop(e, col.key)}
           >
             <div className="flex items-center gap-2.5 px-4 py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
-              <Icon size={14} strokeWidth={1.8} />
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: col.color }} />
               <span className="text-[12px] font-bold" style={{ color: col.color }}>{col.label}</span>
               <span
                 className="ml-auto text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full"
@@ -184,9 +219,13 @@ function KanbanView({ items, users, onSelect }: { items: Appointment[]; users: U
             </div>
             <div className="flex-1 p-2 space-y-2 overflow-y-auto max-h-[calc(100vh-320px)] sm:max-h-[calc(100vh-380px)]">
               {colItems.length === 0 ? (
-                <p className="text-[10px] text-text-dim text-center py-6">Keine Eintraege</p>
+                <p className="text-[10px] text-text-dim text-center py-6">{isOver ? 'Hier ablegen' : 'Keine Eintraege'}</p>
               ) : (
-                colItems.map((a) => <NoShowCard key={a.id} item={a} users={users} onSelect={onSelect} />)
+                colItems.map((a) => (
+                  <div key={a.id} draggable onDragStart={(e) => handleDragStart(e, a.id)}>
+                    <NoShowCard item={a} users={users} onSelect={onSelect} />
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -200,7 +239,7 @@ function KanbanView({ items, users, onSelect }: { items: Appointment[]; users: U
 
 export default function NoShowPage() {
   const { user: authUser, isAdmin } = useAuth()
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE'>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<AppointmentPriority | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -215,6 +254,9 @@ export default function NoShowPage() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams])
+
+  const { data: colsRes } = useNoShowKanbanColumns()
+  const columns = colsRes?.data ?? defaultColumns
 
   const canViewAll = isAdmin || authUser?.allowedModules?.includes('canViewAllAppointments')
   const assignedTo = canViewAll
@@ -246,7 +288,7 @@ export default function NoShowPage() {
 
   const handleSelect = (a: Appointment) => setSelectedId(a.id)
 
-  const typeTabs: { key: TypeFilter; label: string }[] = [
+  const typeTabs: { key: 'ALL' | 'VOR_ORT' | 'ONLINE' | 'RICHTOFFERTE'; label: string }[] = [
     { key: 'ALL', label: 'Alle' },
     { key: 'VOR_ORT', label: 'Vor Ort' },
     { key: 'ONLINE', label: 'Online' },
@@ -290,7 +332,7 @@ export default function NoShowPage() {
                   {isLoading ? '—' : items.length}
                 </span>
               </div>
-              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Kunden, die nicht zum Termin erschienen sind – Callcenter ruft erneut an</p>
+              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Callcenter-Rückruf-Workflow – Drag&Drop zwischen Phasen</p>
             </div>
           </div>
 
@@ -389,14 +431,14 @@ export default function NoShowPage() {
 
         {/* ── Content ── */}
         {isLoading ? (
-          <LoadingSkeleton />
+          <LoadingSkeleton cols={columns} />
         ) : isError ? (
           <ErrorState
             message={error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.'}
             onRetry={() => refetch()}
           />
         ) : (
-          <KanbanView items={items} users={users} onSelect={handleSelect} />
+          <KanbanView items={items} users={users} onSelect={handleSelect} columns={columns} />
         )}
       </div>
 

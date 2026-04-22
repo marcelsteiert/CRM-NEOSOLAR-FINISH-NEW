@@ -17,6 +17,7 @@ import {
   KeyRound,
   CalendarCheck,
   FileText,
+  PhoneOff,
 } from 'lucide-react'
 
 export type AdminSection =
@@ -29,6 +30,7 @@ export type AdminSection =
   | 'projectPhases'
   | 'appointmentKanban'
   | 'dealKanban'
+  | 'noShowKanban'
   | 'integrations'
   | 'webhooks'
   | 'templates'
@@ -69,6 +71,7 @@ const navGroups: AdminNavGroup[] = [
       { id: 'projectPhases', icon: ClipboardList, label: 'Projekt-Phasen', color: '#34D399' },
       { id: 'appointmentKanban', icon: CalendarCheck, label: 'Termin-Kanban', color: '#34D399' },
       { id: 'dealKanban', icon: FileText, label: 'Angebote-Kanban', color: '#A78BFA' },
+      { id: 'noShowKanban', icon: PhoneOff, label: 'No-Show-Kanban', color: '#F87171' },
     ],
   },
   {

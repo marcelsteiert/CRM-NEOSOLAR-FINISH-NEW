@@ -19,6 +19,7 @@ import ProjectPhasesSection from './components/ProjectPhasesSection'
 import SharedPasswordsSection from './components/SharedPasswordsSection'
 import AppointmentKanbanSection from './components/AppointmentKanbanSection'
 import DealKanbanSection from './components/DealKanbanSection'
+import NoShowKanbanSection from './components/NoShowKanbanSection'
 
 const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   users: { title: 'Benutzer & Rollen', desc: 'Benutzer verwalten, Rollen und Modul-Berechtigungen zuweisen' },
@@ -30,6 +31,7 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   projectPhases: { title: 'Projekt-Phasen', desc: 'Checklisten-Schritte pro Projektphase konfigurieren' },
   appointmentKanban: { title: 'Termin-Kanban', desc: 'Kanban-Spalten benennen, einfärben und sortieren' },
   dealKanban: { title: 'Angebote-Kanban', desc: 'Angebote-Kanban-Spalten benennen, einfärben und sortieren' },
+  noShowKanban: { title: 'No-Show-Kanban', desc: 'Rückruf-Phasen für Callcenter konfigurieren' },
   integrations: { title: 'Integrationen', desc: 'Outlook, 3CX, Zoom und Bexio verbinden' },
   webhooks: { title: 'Webhook-Verwaltung', desc: 'Leadquellen und Webhooks konfigurieren' },
   templates: { title: 'Dokumenten-Vorlagen', desc: 'Ordnerstruktur-Templates pro Entität definieren' },
@@ -51,6 +53,7 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   projectPhases: ProjectPhasesSection,
   appointmentKanban: AppointmentKanbanSection,
   dealKanban: DealKanbanSection,
+  noShowKanban: NoShowKanbanSection,
   integrations: IntegrationsSection,
   webhooks: WebhookSection,
   templates: DocumentTemplatesSection,

@@ -407,6 +407,31 @@ export function useUpdateKanbanColumns() {
   })
 }
 
+// ── No-Show Kanban Columns ──
+
+export interface NoShowKanbanColumn {
+  key: string
+  label: string
+  color: string
+  order: number
+}
+
+export function useNoShowKanbanColumns() {
+  return useQuery({
+    queryKey: ['noShowKanbanColumns'],
+    queryFn: () => api.get<{ data: NoShowKanbanColumn[] }>('/admin/no-show-kanban'),
+  })
+}
+
+export function useUpdateNoShowKanbanColumns() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (columns: NoShowKanbanColumn[]) =>
+      api.put<{ data: NoShowKanbanColumn[] }>('/admin/no-show-kanban', { columns }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['noShowKanbanColumns'] }),
+  })
+}
+
 // ── Lead Sources ──
 
 export interface LeadSourceDef {
