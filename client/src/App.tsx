@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
 const LeadsPage = lazy(() => import('@/features/leads/LeadsPage'))
 const KaltakquisePage = lazy(() => import('@/features/leads/KaltakquisePage'))
 const AppointmentsPage = lazy(() => import('@/features/appointments/AppointmentsPage'))
+const RichtoffertenPage = lazy(() => import('@/features/richtofferten/RichtoffertenPage'))
 const DealsPage = lazy(() => import('@/features/deals/DealsPage'))
 const CalculationsPage = lazy(() => import('@/features/calculations/CalculationsPage'))
 const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'))
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="leads" element={<ModuleRoute moduleId="leads"><LeadsPage excludeSource="KALTAKQUISE" /></ModuleRoute>} />
             <Route path="kaltakquise" element={<ModuleRoute moduleId="kaltakquise"><KaltakquisePage /></ModuleRoute>} />
             <Route path="appointments" element={<ModuleRoute moduleId="appointments"><AppointmentsPage /></ModuleRoute>} />
+            <Route path="richtofferten" element={<ModuleRoute moduleId="appointments"><RichtoffertenPage /></ModuleRoute>} />
             <Route path="deals" element={<ModuleRoute moduleId="deals"><DealsPage /></ModuleRoute>} />
             <Route path="calculations" element={<ModuleRoute moduleId="calculations"><CalculationsPage /></ModuleRoute>} />
             <Route path="projects" element={<ModuleRoute moduleId="projects"><ProjectsPage /></ModuleRoute>} />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   X,
   Pencil,
@@ -132,6 +133,8 @@ type DetailTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 
 /* ── Component ── */
 
 export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProps) {
+  const navigate = useNavigate()
+
   /* ── Data hooks ── */
   const { data: leadResponse, isLoading } = useLead(leadId)
   const lead = leadResponse?.data ?? null
@@ -356,11 +359,15 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
   /* ── Termin erstellen (Lead → Termin) ── */
   const handleCreateDeal = async () => {
-    if (!lead || !apptAssignedTo || !apptDate || !apptTime) return
+    if (!lead || !apptAssignedTo) return
+    const isRichtofferte = apptType === 'RICHTOFFERTE'
+    // Fuer Termine (VOR_ORT/ONLINE) sind Datum/Zeit Pflicht, fuer Richtofferten nicht
+    if (!isRichtofferte && (!apptDate || !apptTime)) return
+
     const name = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unbekannt'
 
     try {
-      await createAppointment.mutateAsync({
+      const createdAppt = await createAppointment.mutateAsync({
         contactName: name,
         contactEmail: lead.email,
         contactPhone: lead.phone,
@@ -369,8 +376,8 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
         value: lead.value ?? 0,
         leadId: lead.id,
         assignedTo: apptAssignedTo,
-        appointmentDate: apptDate,
-        appointmentTime: apptTime,
+        appointmentDate: apptDate || undefined,
+        appointmentTime: apptTime || undefined,
         appointmentType: apptType,
         notes: lead.notes ?? undefined,
       })
@@ -378,15 +385,21 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
       createActivity.mutate({
         leadId: lead.id,
         type: 'DEAL_CREATED' as ActivityType,
-        title: 'Termin erstellt',
-        description: `Lead wurde zu Termin konvertiert – ${name} (zugewiesen an ${users.find(u => u.id === apptAssignedTo)?.firstName ?? apptAssignedTo})`,
+        title: isRichtofferte ? 'Richtofferte erstellt' : 'Termin erstellt',
+        description: isRichtofferte
+          ? `Lead wurde zu Richtofferte konvertiert – ${name} (zugewiesen an ${users.find(u => u.id === apptAssignedTo)?.firstName ?? apptAssignedTo})`
+          : `Lead wurde zu Termin konvertiert – ${name} (zugewiesen an ${users.find(u => u.id === apptAssignedTo)?.firstName ?? apptAssignedTo})`,
       })
       setShowDealConfirm(false)
-      setSuccessMsg('Termin erstellt! Lead wurde konvertiert.')
+      setSuccessMsg(isRichtofferte ? 'Richtofferte erstellt!' : 'Termin erstellt! Lead wurde konvertiert.')
+      const newId = createdAppt?.data?.id
       setTimeout(() => {
         setSuccessMsg('')
         onClose()
-      }, 1500)
+        if (isRichtofferte && newId) {
+          navigate(`/richtofferten?open=${newId}`)
+        }
+      }, 1200)
     } catch (err: any) {
       console.error('Termin erstellen fehlgeschlagen:', err)
       const msg = err?.response?.data?.error ?? err?.message ?? 'Unbekannter Fehler'
@@ -1645,8 +1658,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                   <CalendarCheck size={18} className="text-amber" strokeWidth={1.8} />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-bold">Termin vereinbaren</h3>
-                  <p className="text-[11px] text-text-sec">Verkäufer, Datum, Zeit und Ort festlegen</p>
+                  <h3 className="text-[15px] font-bold">{apptType === 'RICHTOFFERTE' ? 'Richtofferte erstellen' : 'Termin vereinbaren'}</h3>
+                  <p className="text-[11px] text-text-sec">
+                    {apptType === 'RICHTOFFERTE'
+                      ? 'Verkäufer zuweisen – Offerte ohne Vor-Ort-Termin'
+                      : 'Verkäufer, Datum, Zeit und Ort festlegen'}
+                  </p>
                 </div>
               </div>
 
@@ -1717,31 +1734,33 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 </div>
               </div>
 
-              {/* Datum & Zeit */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
-                    Datum *
-                  </label>
-                  <input
-                    type="date"
-                    value={apptDate}
-                    onChange={(e) => setApptDate(e.target.value)}
-                    className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
-                  />
+              {/* Datum & Zeit – bei Richtofferte ausgeblendet */}
+              {apptType !== 'RICHTOFFERTE' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                      Datum *
+                    </label>
+                    <input
+                      type="date"
+                      value={apptDate}
+                      onChange={(e) => setApptDate(e.target.value)}
+                      className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                      Zeit *
+                    </label>
+                    <input
+                      type="time"
+                      value={apptTime}
+                      onChange={(e) => setApptTime(e.target.value)}
+                      className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
-                    Zeit *
-                  </label>
-                  <input
-                    type="time"
-                    value={apptTime}
-                    onChange={(e) => setApptTime(e.target.value)}
-                    className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Adresse / Ort */}
               <div className="mb-5">
@@ -1762,7 +1781,11 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 className="mb-5 px-3 py-2.5 rounded-lg text-[11px] text-text-sec"
                 style={{ background: 'color-mix(in srgb, #F59E0B 6%, transparent)' }}
               >
-                Der Termin erscheint beim zugewiesenen Verkäufer unter <strong className="text-amber">Meine Termine</strong>. Der Lead-Status wird auf &quot;Konvertiert&quot; gesetzt.
+                {apptType === 'RICHTOFFERTE' ? (
+                  <>Die Richtofferte erscheint beim zugewiesenen Verkäufer unter <strong className="text-amber">Meine Richtofferten</strong>. Der Lead-Status wird auf &quot;Konvertiert&quot; gesetzt.</>
+                ) : (
+                  <>Der Termin erscheint beim zugewiesenen Verkäufer unter <strong className="text-amber">Meine Termine</strong>. Der Lead-Status wird auf &quot;Konvertiert&quot; gesetzt.</>
+                )}
               </div>
 
               <div className="flex items-center gap-2.5">
@@ -1776,10 +1799,12 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                 <button
                   type="button"
                   onClick={handleCreateDeal}
-                  disabled={!apptAssignedTo || !apptDate || !apptTime || createAppointment.isPending}
+                  disabled={!apptAssignedTo || (apptType !== 'RICHTOFFERTE' && (!apptDate || !apptTime)) || createAppointment.isPending}
                   className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {createAppointment.isPending ? 'Wird erstellt...' : 'Termin erstellen'}
+                  {createAppointment.isPending
+                    ? 'Wird erstellt...'
+                    : apptType === 'RICHTOFFERTE' ? 'Richtofferte erstellen' : 'Termin erstellen'}
                 </button>
               </div>
             </div>

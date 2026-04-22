@@ -361,7 +361,10 @@ export default function AppointmentsPage() {
 
   const allItems: Appointment[] = listResponse?.data ?? []
   // Only show open appointments (exclude old DURCHGEFUEHRT/ABGESAGT)
-  const filteredItems = allItems.filter((a) => a.status !== 'DURCHGEFUEHRT' && a.status !== 'ABGESAGT')
+  // Richtofferten haben eigenen Hub (/richtofferten) und werden hier ausgeblendet
+  const filteredItems = allItems.filter(
+    (a) => a.status !== 'DURCHGEFUEHRT' && a.status !== 'ABGESAGT' && a.appointmentType !== 'RICHTOFFERTE',
+  )
 
   const { data: statsResponse } = useAppointmentStats(assignedTo)
   const stats = statsResponse?.data

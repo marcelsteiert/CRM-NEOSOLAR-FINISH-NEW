@@ -201,10 +201,12 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
   }
 
   const isClosed = appt.status === 'DURCHGEFUEHRT' || appt.status === 'ABGESAGT'
+  const isRichtofferte = appt.appointmentType === 'RICHTOFFERTE'
   const checklist = optimisticChecklist ?? appt.checklist
   const checkedCount = checklist.filter((c) => c.checked).length
   const totalCount = checklist.length
-  const progress = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0
+  // Richtofferten haben keine Checkliste-Pflicht – direkt zu Angebot erlaubt
+  const progress = isRichtofferte ? 100 : (totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0)
 
   const tabs: { key: DetailTab; label: string }[] = [
     { key: 'overview', label: 'Übersicht' },
@@ -590,7 +592,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
               {!isClosed && (
                 <button type="button" onClick={() => setShowCreateOffer(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(52,211,153,0.15)' }}>
                   <ArrowRight size={14} strokeWidth={1.8} />
-                  Angebot erstellen
+                  {isRichtofferte ? 'Zum Angebot konvertieren' : 'Angebot erstellen'}
                 </button>
               )}
               <a href={`tel:${appt.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
