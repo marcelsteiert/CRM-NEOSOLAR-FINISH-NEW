@@ -29,6 +29,8 @@ const ALL_MODULES = [
   { id: 'leads', label: 'Leads' },
   { id: 'kaltakquise', label: 'Kaltakquise' },
   { id: 'appointments', label: 'Termine' },
+  { id: 'richtofferten', label: 'Richtofferten' },
+  { id: 'noshow', label: 'No Show' },
   { id: 'deals', label: 'Angebote' },
   { id: 'provision', label: 'Provision' },
   { id: 'calendar', label: 'Kalender' },
