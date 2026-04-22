@@ -7,7 +7,7 @@ import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
   statusLabels, statusColors, priorityLabels, priorityColors,
   appointmentTypeLabels, appointmentTypeColors,
-  type AppointmentStatus, type AppointmentPriority,
+  type AppointmentStatus, type AppointmentPriority, type AppointmentType,
 } from '@/hooks/useAppointments'
 import { useCreateDeal } from '@/hooks/useDeals'
 import { useUsers } from '@/hooks/useLeads'
@@ -64,6 +64,12 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showCreateOffer, setShowCreateOffer] = useState(false)
+  const [showReschedule, setShowReschedule] = useState(false)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTime, setRescheduleTime] = useState('')
+  const [rescheduleType, setRescheduleType] = useState<AppointmentType>('VOR_ORT')
+  const [rescheduleAddress, setRescheduleAddress] = useState('')
+  const [rescheduleNotes, setRescheduleNotes] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
   // Notes (auto-save)
@@ -95,13 +101,14 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       if (e.key === 'Escape') {
         if (showDeleteConfirm) setShowDeleteConfirm(false)
         else if (showCreateOffer) setShowCreateOffer(false)
+        else if (showReschedule) setShowReschedule(false)
         else if (isEditing) setIsEditing(false)
         else onClose()
       }
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose, isEditing, showDeleteConfirm, showCreateOffer])
+  }, [onClose, isEditing, showDeleteConfirm, showCreateOffer, showReschedule])
 
   useEffect(() => {
     dialogRef.current?.focus()
@@ -619,11 +626,13 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                 <button
                   type="button"
                   onClick={() => {
-                    updateAppt.mutate({ id: appt.id, status: 'GEPLANT' as AppointmentStatus })
-                    setSuccessMsg(isRichtofferte
-                      ? 'Richtofferte wieder aktiviert – erscheint unter Richtofferten.'
-                      : 'Termin wieder aktiviert – erscheint unter Termine.')
-                    setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
+                    // Prefill mit bestehenden Werten
+                    setRescheduleDate('')
+                    setRescheduleTime('')
+                    setRescheduleType(appt.appointmentType)
+                    setRescheduleAddress(appt.address ?? '')
+                    setRescheduleNotes('')
+                    setShowReschedule(true)
                   }}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
                   style={{ border: '1px solid rgba(52,211,153,0.25)' }}
@@ -650,6 +659,166 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
           )}
         </div>
       </div>
+
+      {/* ── Reschedule Dialog (Zurueck zu Termin) ── */}
+      {showReschedule && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center"
+          style={{ background: 'rgba(6,8,12,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowReschedule(false) }}
+        >
+          <div
+            className="w-full max-w-[480px] mx-2 sm:mx-4 p-5 sm:p-6"
+            style={{
+              background: 'rgba(11,15,21,0.98)',
+              backdropFilter: 'blur(24px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'linear-gradient(135deg, color-mix(in srgb, #34D399 15%, transparent), color-mix(in srgb, #22D3EE 10%, transparent))' }}
+              >
+                <CalendarPlus size={18} className="text-emerald-400" strokeWidth={1.8} />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-bold">
+                  {isRichtofferte ? 'Richtofferte neu planen' : 'Neuen Termin vereinbaren'}
+                </h3>
+                <p className="text-[11px] text-text-sec">
+                  {isRichtofferte ? 'Neues Follow-Up-Datum optional' : 'Neues Datum und Zeit festlegen'}
+                </p>
+              </div>
+            </div>
+
+            {/* Datum & Zeit */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                  Datum {isRichtofferte ? '' : '*'}
+                </label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-emerald-400/50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                  Zeit {isRichtofferte ? '' : '*'}
+                </label>
+                <input
+                  type="time"
+                  value={rescheduleTime}
+                  onChange={(e) => setRescheduleTime(e.target.value)}
+                  className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-emerald-400/50"
+                />
+              </div>
+            </div>
+
+            {/* Termin-Typ */}
+            <div className="mb-3">
+              <label className="block text-[11px] font-semibold text-text-sec mb-1.5">Termin-Typ</label>
+              <div className="flex gap-2">
+                {(['VOR_ORT', 'ONLINE', 'RICHTOFFERTE'] as AppointmentType[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setRescheduleType(t)}
+                    className={[
+                      'flex-1 px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-150',
+                      rescheduleType === t
+                        ? 'text-text'
+                        : 'bg-surface-hover text-text-dim hover:text-text',
+                    ].join(' ')}
+                    style={rescheduleType === t ? {
+                      background: `color-mix(in srgb, ${appointmentTypeColors[t]} 15%, transparent)`,
+                      border: `1px solid color-mix(in srgb, ${appointmentTypeColors[t]} 40%, transparent)`,
+                      color: appointmentTypeColors[t],
+                    } : { border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    {appointmentTypeLabels[t]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Adresse (nur bei VOR_ORT) */}
+            {rescheduleType === 'VOR_ORT' && (
+              <div className="mb-3">
+                <label className="block text-[11px] font-semibold text-text-sec mb-1.5">Adresse</label>
+                <input
+                  type="text"
+                  value={rescheduleAddress}
+                  onChange={(e) => setRescheduleAddress(e.target.value)}
+                  placeholder="Strasse, PLZ Ort"
+                  className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-emerald-400/50"
+                />
+              </div>
+            )}
+
+            {/* Notiz */}
+            <div className="mb-5">
+              <label className="block text-[11px] font-semibold text-text-sec mb-1.5">
+                Notiz zum Rueckruf (optional)
+              </label>
+              <textarea
+                value={rescheduleNotes}
+                onChange={(e) => setRescheduleNotes(e.target.value)}
+                placeholder="z.B. Kunde bevorzugt Rueckruf am Nachmittag..."
+                rows={2}
+                className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-emerald-400/50 resize-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowReschedule(false)}
+                className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Validierung: bei Terminen Datum/Zeit Pflicht
+                  if (!isRichtofferte && (!rescheduleDate || !rescheduleTime)) return
+                  const existingNotes = appt.notes ?? ''
+                  const combinedNotes = rescheduleNotes.trim()
+                    ? (existingNotes ? `${existingNotes}\n\n[Neu geplant] ${rescheduleNotes.trim()}` : `[Neu geplant] ${rescheduleNotes.trim()}`)
+                    : existingNotes
+                  updateAppt.mutate({
+                    id: appt.id,
+                    status: 'GEPLANT' as AppointmentStatus,
+                    appointmentDate: rescheduleDate || null,
+                    appointmentTime: rescheduleTime || null,
+                    appointmentType: rescheduleType,
+                    address: rescheduleType === 'VOR_ORT' ? rescheduleAddress : appt.address,
+                    notes: combinedNotes || null,
+                  })
+                  setShowReschedule(false)
+                  setSuccessMsg(rescheduleType === 'RICHTOFFERTE'
+                    ? 'Richtofferte neu geplant – erscheint unter Richtofferten.'
+                    : 'Termin neu geplant – erscheint unter Termine.')
+                  setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
+                }}
+                disabled={
+                  (!isRichtofferte && rescheduleType !== 'RICHTOFFERTE' && (!rescheduleDate || !rescheduleTime)) ||
+                  updateAppt.isPending
+                }
+                className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {updateAppt.isPending ? 'Wird gespeichert...' : 'Termin aktivieren'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
