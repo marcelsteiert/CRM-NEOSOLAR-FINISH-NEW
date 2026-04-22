@@ -10,7 +10,7 @@ import {
   type AppointmentStatus, type AppointmentPriority, type AppointmentType,
 } from '@/hooks/useAppointments'
 import { useCreateDeal } from '@/hooks/useDeals'
-import { useUsers } from '@/hooks/useLeads'
+import { useUsers, useUpdateLead } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
@@ -44,6 +44,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
   const updateAppt = useUpdateAppointment()
   const deleteAppt = useDeleteAppointment()
   const createDeal = useCreateDeal()
+  const updateLead = useUpdateLead()
 
   const { data: usersResponse } = useUsers()
   const users = usersResponse?.data ?? []
@@ -70,6 +71,9 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
   const [rescheduleType, setRescheduleType] = useState<AppointmentType>('VOR_ORT')
   const [rescheduleAddress, setRescheduleAddress] = useState('')
   const [rescheduleNotes, setRescheduleNotes] = useState('')
+  const [rescheduleAssignedTo, setRescheduleAssignedTo] = useState('')
+  const [showLostConfirm, setShowLostConfirm] = useState(false)
+  const [lostReason, setLostReason] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
   // Notes (auto-save)
@@ -102,13 +106,14 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
         if (showDeleteConfirm) setShowDeleteConfirm(false)
         else if (showCreateOffer) setShowCreateOffer(false)
         else if (showReschedule) setShowReschedule(false)
+        else if (showLostConfirm) setShowLostConfirm(false)
         else if (isEditing) setIsEditing(false)
         else onClose()
       }
     }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose, isEditing, showDeleteConfirm, showCreateOffer, showReschedule])
+  }, [onClose, isEditing, showDeleteConfirm, showCreateOffer, showReschedule, showLostConfirm])
 
   useEffect(() => {
     dialogRef.current?.focus()
@@ -623,26 +628,42 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                 </button>
               )}
               {appt.status === 'NO_SHOW' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Prefill mit bestehenden Werten
-                    setRescheduleDate('')
-                    setRescheduleTime('')
-                    setRescheduleType(appt.appointmentType)
-                    setRescheduleAddress(appt.address ?? '')
-                    setRescheduleNotes('')
-                    setShowReschedule(true)
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
-                  style={{ border: '1px solid rgba(52,211,153,0.25)' }}
-                  title={isRichtofferte
-                    ? 'Richtofferte wieder aktivieren'
-                    : 'Neuen Termin vereinbaren – zurueck zu Geplant'}
-                >
-                  <CalendarPlus size={14} strokeWidth={1.8} />
-                  {isRichtofferte ? 'Als Richtofferte aktivieren' : 'Zurueck zu Termin'}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Prefill mit bestehenden Werten
+                      setRescheduleDate('')
+                      setRescheduleTime('')
+                      setRescheduleType(appt.appointmentType)
+                      setRescheduleAddress(appt.address ?? '')
+                      setRescheduleNotes('')
+                      setRescheduleAssignedTo(appt.assignedTo ?? '')
+                      setShowReschedule(true)
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
+                    style={{ border: '1px solid rgba(52,211,153,0.25)' }}
+                    title={isRichtofferte
+                      ? 'Richtofferte wieder aktivieren'
+                      : 'Neuen Termin vereinbaren – zurueck zu Geplant'}
+                  >
+                    <CalendarPlus size={14} strokeWidth={1.8} />
+                    {isRichtofferte ? 'Als Richtofferte aktivieren' : 'Zurueck zu Termin'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLostReason('')
+                      setShowLostConfirm(true)
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-red/10 transition-colors"
+                    style={{ border: '1px solid rgba(248,113,113,0.3)' }}
+                    title="Kunde endgueltig verloren – Termin abgesagt, Lead auf verloren setzen"
+                  >
+                    <AlertTriangle size={14} strokeWidth={1.8} />
+                    Als verloren markieren
+                  </button>
+                </>
               )}
               <a href={`tel:${appt.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Phone size={14} strokeWidth={1.8} />
@@ -747,6 +768,23 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
               </div>
             </div>
 
+            {/* Verkaeufer zuweisen */}
+            <div className="mb-3">
+              <label className="block text-[11px] font-semibold text-text-sec mb-1.5">Verkaeufer uebernimmt *</label>
+              <select
+                value={rescheduleAssignedTo}
+                onChange={(e) => setRescheduleAssignedTo(e.target.value)}
+                className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-emerald-400/50"
+              >
+                <option value="" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Benutzer auswaehlen...</option>
+                {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL' || u.role === 'ADMIN').map((u) => (
+                  <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                    {u.firstName} {u.lastName} – {u.role}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Adresse (nur bei VOR_ORT) */}
             {rescheduleType === 'VOR_ORT' && (
               <div className="mb-3">
@@ -786,8 +824,9 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
               <button
                 type="button"
                 onClick={() => {
-                  // Validierung: bei Terminen Datum/Zeit Pflicht
-                  if (!isRichtofferte && (!rescheduleDate || !rescheduleTime)) return
+                  // Validierung: Verkaeufer immer Pflicht, Datum/Zeit bei Terminen Pflicht
+                  if (!rescheduleAssignedTo) return
+                  if (rescheduleType !== 'RICHTOFFERTE' && (!rescheduleDate || !rescheduleTime)) return
                   const existingNotes = appt.notes ?? ''
                   const combinedNotes = rescheduleNotes.trim()
                     ? (existingNotes ? `${existingNotes}\n\n[Neu geplant] ${rescheduleNotes.trim()}` : `[Neu geplant] ${rescheduleNotes.trim()}`)
@@ -798,6 +837,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                     appointmentDate: rescheduleDate || null,
                     appointmentTime: rescheduleTime || null,
                     appointmentType: rescheduleType,
+                    assignedTo: rescheduleAssignedTo,
                     address: rescheduleType === 'VOR_ORT' ? rescheduleAddress : appt.address,
                     notes: combinedNotes || null,
                   })
@@ -808,12 +848,99 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                   setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
                 }}
                 disabled={
-                  (!isRichtofferte && rescheduleType !== 'RICHTOFFERTE' && (!rescheduleDate || !rescheduleTime)) ||
+                  !rescheduleAssignedTo ||
+                  (rescheduleType !== 'RICHTOFFERTE' && (!rescheduleDate || !rescheduleTime)) ||
                   updateAppt.isPending
                 }
                 className="btn-primary flex-1 px-4 py-2.5 text-[12px] text-center disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {updateAppt.isPending ? 'Wird gespeichert...' : 'Termin aktivieren'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Verloren-Dialog (Grund pflicht) ── */}
+      {showLostConfirm && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center"
+          style={{ background: 'rgba(6,8,12,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLostConfirm(false) }}
+        >
+          <div
+            className="w-full max-w-[400px] mx-2 sm:mx-4 p-5 sm:p-6"
+            style={{
+              background: 'rgba(11,15,21,0.98)',
+              backdropFilter: 'blur(24px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+            }}
+          >
+            <div
+              className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+              style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)' }}
+            >
+              <AlertTriangle size={20} className="text-red" strokeWidth={1.8} />
+            </div>
+            <h3 className="text-[15px] font-bold text-center mb-1">Kunde verloren?</h3>
+            <p className="text-[12px] text-text-sec text-center mb-5">
+              {appt.leadId
+                ? 'Termin wird abgesagt und der verknuepfte Lead auf "Verloren" gesetzt.'
+                : 'Termin wird abgesagt. Bitte Grund angeben.'}
+            </p>
+
+            <div className="mb-5">
+              <label className="block text-[11px] font-semibold text-text-sec mb-1.5">Grund *</label>
+              <textarea
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                placeholder="z.B. Kunde hat sich fuer Mitbewerber entschieden, nicht erreichbar nach 3 Rueckrufen..."
+                rows={3}
+                className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-red/50 resize-none"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowLostConfirm(false)}
+                className="btn-secondary flex-1 px-4 py-2.5 text-[12px] font-semibold text-center"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!lostReason.trim()) return
+                  const existingNotes = appt.notes ?? ''
+                  const combinedNotes = existingNotes
+                    ? `${existingNotes}\n\n[Verloren] ${lostReason.trim()}`
+                    : `[Verloren] ${lostReason.trim()}`
+                  updateAppt.mutate({
+                    id: appt.id,
+                    status: 'ABGESAGT' as AppointmentStatus,
+                    notes: combinedNotes,
+                  })
+                  // Verknuepften Lead auch auf LOST setzen
+                  if (appt.leadId) {
+                    updateLead.mutate({
+                      id: appt.leadId,
+                      status: 'LOST' as any,
+                      lostReason: lostReason.trim(),
+                    } as any)
+                  }
+                  setShowLostConfirm(false)
+                  setSuccessMsg('Kunde als verloren markiert.')
+                  setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
+                }}
+                disabled={!lostReason.trim() || updateAppt.isPending}
+                className="flex-1 px-4 py-2.5 rounded-lg text-[12px] font-semibold text-white text-center disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: '#F87171' }}
+              >
+                {updateAppt.isPending ? 'Wird gespeichert...' : 'Verloren markieren'}
               </button>
             </div>
           </div>
