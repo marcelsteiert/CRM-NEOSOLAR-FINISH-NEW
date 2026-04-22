@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Clock,
-  Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle, Globe,
+  Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle, Globe, CalendarPlus,
 } from 'lucide-react'
 import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
@@ -613,6 +613,26 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                 >
                   <AlertTriangle size={14} strokeWidth={1.8} />
                   No Show
+                </button>
+              )}
+              {appt.status === 'NO_SHOW' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateAppt.mutate({ id: appt.id, status: 'GEPLANT' as AppointmentStatus })
+                    setSuccessMsg(isRichtofferte
+                      ? 'Richtofferte wieder aktiviert – erscheint unter Richtofferten.'
+                      : 'Termin wieder aktiviert – erscheint unter Termine.')
+                    setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
+                  style={{ border: '1px solid rgba(52,211,153,0.25)' }}
+                  title={isRichtofferte
+                    ? 'Richtofferte wieder aktivieren'
+                    : 'Neuen Termin vereinbaren – zurueck zu Geplant'}
+                >
+                  <CalendarPlus size={14} strokeWidth={1.8} />
+                  {isRichtofferte ? 'Als Richtofferte aktivieren' : 'Zurueck zu Termin'}
                 </button>
               )}
               <a href={`tel:${appt.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
