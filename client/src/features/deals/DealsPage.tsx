@@ -446,13 +446,16 @@ export default function DealsPage() {
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [viewAll, setViewAll] = useState(false)
+  const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
 
   const { data: kanbanColumnsRes } = useDealKanbanColumns()
   const kanbanCols = kanbanColumnsRes?.data ?? defaultDealColumns
 
   const canViewAll = isAdmin || authUser?.allowedModules?.includes('canViewAllDeals')
-  const assignedTo = (canViewAll && viewAll) ? undefined : authUser?.id
+  const assignedTo = canViewAll
+    ? (selectedSellerId ?? (viewAll ? undefined : authUser?.id))
+    : authUser?.id
 
   const stageQueryMap: Record<StageFilter, DealStage | undefined> = {
     ALL: undefined,
@@ -602,10 +605,10 @@ export default function DealsPage() {
               <div className="relative">
                 <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
                 <select
-                  value={assignedTo ?? 'ALL'}
+                  value={selectedSellerId ?? 'ALL'}
                   onChange={(e) => {
                     const val = e.target.value
-                    if (val === 'ALL') setViewAll(true)
+                    setSelectedSellerId(val === 'ALL' ? null : val)
                   }}
                   className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
                   style={{ minWidth: 'auto' }}
