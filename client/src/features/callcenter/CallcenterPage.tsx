@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import {
   Headphones, Phone, PhoneOff, ArrowRight, CalendarCheck, TrendingUp,
-  ChevronDown, ChevronUp, X, Users, Target, Award, FileDown, Printer,
+  ChevronDown, ChevronUp, X, Users, Target, Award, FileDown, Printer, Receipt,
 } from 'lucide-react'
 
 /* ── Types ── */
@@ -28,6 +28,8 @@ interface ApptStat {
   geplant: number
   bestaetigt: number
   durchgefuehrt: number
+  termine: number
+  richtofferten: number
 }
 
 interface DailyStat {
@@ -403,7 +405,8 @@ export default function CallcenterPage() {
   const totalNichtErreicht = callStats.reduce((s, c) => s + c.nichtErreicht, 0)
   const totalConverted = allUsers.reduce((s, u) => s + u.converted, 0)
   const totalLost = allUsers.reduce((s, u) => s + u.lost, 0)
-  const totalAppts = allUsers.reduce((s, u) => s + (u.totalAppointments ?? 0), 0)
+  const totalAppts = allUsers.reduce((s, u) => s + (u.termine ?? 0), 0)
+  const totalRichtofferten = allUsers.reduce((s, u) => s + (u.richtofferten ?? 0), 0)
   const totalRate = (totalConverted + totalLost) > 0 ? Math.round(totalConverted / (totalConverted + totalLost) * 100) : 0
   const totalErreicht = totalCalls - totalNichtErreicht
   const totalErreichtRate = totalCalls > 0 ? Math.round(totalErreicht / totalCalls * 100) : 0
@@ -499,6 +502,15 @@ export default function CallcenterPage() {
           </div>
           <div className="glass-card px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)' }}>
+                <Receipt size={14} className="text-amber" strokeWidth={1.8} />
+              </div>
+              <span className="text-[10px] text-text-dim uppercase tracking-[0.06em] font-bold">Richtofferten</span>
+            </div>
+            <p className="text-[22px] font-bold tabular-nums text-amber">{totalRichtofferten}</p>
+          </div>
+          <div className="glass-card px-4 py-3">
+            <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-[8px] flex items-center justify-center" style={{ background: 'color-mix(in srgb, #A78BFA 12%, transparent)' }}>
                 <Phone size={14} className="text-violet-400" strokeWidth={1.8} />
               </div>
@@ -537,7 +549,7 @@ export default function CallcenterPage() {
               <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b border-border">
-                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Terminierung', 'Konvertiert', 'Verloren', 'Termine', ''].map((h) => (
+                    {['Mitarbeiter', 'Rolle', 'Anrufe', 'Erreicht', 'Terminierung', 'Konvertiert', 'Verloren', 'Termine', 'Richtofferten', ''].map((h) => (
                       <th key={h} className="text-left text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-4 py-3">{h}</th>
                     ))}
                   </tr>
@@ -601,9 +613,13 @@ export default function CallcenterPage() {
                         <td className="px-4 py-3">
                           <span className="text-[13px] font-bold tabular-nums text-red-400">{user.lost}</span>
                         </td>
-                        {/* Termine total */}
+                        {/* Termine (nur VOR_ORT/ONLINE) */}
                         <td className="px-4 py-3">
-                          <span className="text-[13px] font-bold tabular-nums text-blue-400">{user.totalAppointments ?? 0}</span>
+                          <span className="text-[13px] font-bold tabular-nums text-blue-400">{user.termine ?? 0}</span>
+                        </td>
+                        {/* Richtofferten */}
+                        <td className="px-4 py-3">
+                          <span className="text-[13px] font-bold tabular-nums text-amber">{user.richtofferten ?? 0}</span>
                         </td>
                         {/* Detail + PDF */}
                         <td className="px-4 py-3">
