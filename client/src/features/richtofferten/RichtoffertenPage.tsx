@@ -221,7 +221,8 @@ export default function RichtoffertenPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [viewAll, setViewAll] = useState(false)
+  // Admins sehen per Default alle Richtofferten – sonst nur eigene
+  const [viewAll, setViewAll] = useState(isAdmin)
 
   useEffect(() => {
     const openId = searchParams.get('open')
