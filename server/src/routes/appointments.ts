@@ -83,10 +83,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     if (assignedTo && typeof assignedTo === 'string') query = query.eq('assigned_to', assignedTo)
 
     // Per-User Filter: Nicht-Admins sehen nur eigene Termine.
-    // Ausnahme: NO_SHOW-Termine sieht auch der Ersteller (z.B. Callcenter),
-    // damit er den Kunden erneut anrufen und den Termin neu planen kann.
+    // Ausnahmen:
+    // - NO_SHOW-Termine sieht auch der Ersteller (z.B. Callcenter), damit er
+    //   den Kunden erneut anrufen und den Termin neu planen kann.
+    // - Richtofferten: alle sichtbar fuer alle (Owner-Filter wird umgangen),
+    //   damit jeder Verkaeufer offene Richtofferten sehen kann.
     const ownerFilter = getAppointmentOwnerFilter(req)
-    if (ownerFilter) {
+    const isRichtoffertenView = appointmentType === 'RICHTOFFERTE'
+    if (ownerFilter && !isRichtoffertenView) {
       query = query.or(
         `assigned_to.eq.${ownerFilter},and(status.eq.NO_SHOW,created_by.eq.${ownerFilter})`,
       )

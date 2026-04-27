@@ -215,14 +215,14 @@ function KanbanView({ items, users, onSelect }: { items: Appointment[]; users: U
 /* ── Main ── */
 
 export default function RichtoffertenPage() {
-  const { user: authUser, isAdmin } = useAuth()
+  const { user: authUser } = useAuth()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [priorityFilter, setPriorityFilter] = useState<AppointmentPriority | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  // Admins sehen per Default alle Richtofferten – sonst nur eigene
-  const [viewAll, setViewAll] = useState(isAdmin)
+  // Richtofferten sind fuer ALLE sichtbar (kein Owner-Filter im Backend bei
+  // appointmentType=RICHTOFFERTE). Verkaeufer-Filter dient zur gezielten Suche.
   const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -233,10 +233,9 @@ export default function RichtoffertenPage() {
     }
   }, [searchParams, setSearchParams])
 
-  const canViewAll = isAdmin || authUser?.allowedModules?.includes('canViewAllAppointments')
-  const assignedTo = canViewAll
-    ? (selectedSellerId ?? (viewAll ? undefined : authUser?.id))
-    : authUser?.id
+  // Richtofferten: Backend liefert immer alle (kein Owner-Filter).
+  // Frontend filtert optional auf einen ausgewaehlten Verkaeufer.
+  const assignedTo = selectedSellerId ?? undefined
 
   const statusQueryMap: Record<StatusFilter, AppointmentStatus | undefined> = {
     ALL: undefined,
@@ -309,14 +308,7 @@ export default function RichtoffertenPage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">
-                  {canViewAll && viewAll ? 'Richtofferten – Alle' : 'Meine Richtofferten'}
-                </h1>
-                {currentUser && !viewAll && (
-                  <span className="text-[11px] text-text-sec font-medium hidden sm:inline">
-                    ({currentUser.firstName} {currentUser.lastName})
-                  </span>
-                )}
+                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Richtofferten</h1>
                 <span
                   className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
                   style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)', color: '#F59E0B' }}
@@ -324,26 +316,8 @@ export default function RichtoffertenPage() {
                   {isLoading ? '—' : filteredItems.length}
                 </span>
               </div>
-              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Offerten ohne Vor-Ort-Termin erstellen und versenden</p>
+              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Sichtbar fuer alle Verkaeufer – nach Verkaeufer filterbar</p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            {canViewAll && (
-              <button
-                type="button"
-                onClick={() => setViewAll(!viewAll)}
-                className={[
-                  'flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors',
-                  viewAll ? 'bg-amber-soft text-amber' : 'text-text-dim hover:text-text hover:bg-surface-hover',
-                ].join(' ')}
-                style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-              >
-                <Users size={14} strokeWidth={1.8} />
-                <span className="hidden sm:inline">{viewAll ? 'Alle Richtofferten' : 'Meine Richtofferten'}</span>
-                <span className="sm:hidden">{viewAll ? 'Alle' : 'Meine'}</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -391,29 +365,27 @@ export default function RichtoffertenPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
-            {/* Verkäufer Filter */}
-            {canViewAll && viewAll && (
-              <div className="relative">
-                <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
-                <select
-                  value={selectedSellerId ?? 'ALL'}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setSelectedSellerId(val === 'ALL' ? null : val)
-                  }}
-                  className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
-                  style={{ minWidth: 'auto' }}
-                >
-                  <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
-                  {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL').map((u) => (
-                    <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
-                      {u.firstName} {u.lastName}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
-              </div>
-            )}
+            {/* Verkaeufer-Filter immer sichtbar (Richtofferten = alle sehen alles) */}
+            <div className="relative">
+              <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+              <select
+                value={selectedSellerId ?? 'ALL'}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setSelectedSellerId(val === 'ALL' ? null : val)
+                }}
+                className="glass-input appearance-none pl-9 pr-9 py-2 text-[12px] font-medium cursor-pointer"
+                style={{ minWidth: 'auto' }}
+              >
+                <option value="ALL" style={{ background: '#0B0F15', color: '#F0F2F5' }}>Alle Verkäufer</option>
+                {users.filter((u) => u.role === 'VERTRIEB' || u.role === 'GL').map((u) => (
+                  <option key={u.id} value={u.id} style={{ background: '#0B0F15', color: '#F0F2F5' }}>
+                    {u.firstName} {u.lastName}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-dim pointer-events-none" strokeWidth={2} />
+            </div>
 
             <div className="relative">
               <select
