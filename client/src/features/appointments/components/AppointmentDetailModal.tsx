@@ -628,42 +628,42 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
                 </button>
               )}
               {appt.status === 'NO_SHOW' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Prefill mit bestehenden Werten
-                      setRescheduleDate('')
-                      setRescheduleTime('')
-                      setRescheduleType(appt.appointmentType)
-                      setRescheduleAddress(appt.address ?? '')
-                      setRescheduleNotes('')
-                      setRescheduleAssignedTo(appt.assignedTo ?? '')
-                      setShowReschedule(true)
-                    }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
-                    style={{ border: '1px solid rgba(52,211,153,0.25)' }}
-                    title={isRichtofferte
-                      ? 'Richtofferte wieder aktivieren'
-                      : 'Neuen Termin vereinbaren – zurueck zu Geplant'}
-                  >
-                    <CalendarPlus size={14} strokeWidth={1.8} />
-                    {isRichtofferte ? 'Als Richtofferte aktivieren' : 'Zurueck zu Termin'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLostReason('')
-                      setShowLostConfirm(true)
-                    }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-red/10 transition-colors"
-                    style={{ border: '1px solid rgba(248,113,113,0.3)' }}
-                    title="Kunde endgueltig verloren – Termin abgesagt, Lead auf verloren setzen"
-                  >
-                    <AlertTriangle size={14} strokeWidth={1.8} />
-                    Als verloren markieren
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Prefill mit bestehenden Werten
+                    setRescheduleDate('')
+                    setRescheduleTime('')
+                    setRescheduleType(appt.appointmentType)
+                    setRescheduleAddress(appt.address ?? '')
+                    setRescheduleNotes('')
+                    setRescheduleAssignedTo(appt.assignedTo ?? '')
+                    setShowReschedule(true)
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-emerald-400 hover:bg-surface-hover transition-colors"
+                  style={{ border: '1px solid rgba(52,211,153,0.25)' }}
+                  title={isRichtofferte
+                    ? 'Richtofferte wieder aktivieren'
+                    : 'Neuen Termin vereinbaren – zurueck zu Geplant'}
+                >
+                  <CalendarPlus size={14} strokeWidth={1.8} />
+                  {isRichtofferte ? 'Als Richtofferte aktivieren' : 'Zurueck zu Termin'}
+                </button>
+              )}
+              {!isClosed && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLostReason('')
+                    setShowLostConfirm(true)
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-red/10 transition-colors"
+                  style={{ border: '1px solid rgba(248,113,113,0.3)' }}
+                  title="Kunde endgueltig verloren – Termin abgesagt, Lead auf verloren setzen"
+                >
+                  <AlertTriangle size={14} strokeWidth={1.8} />
+                  Verloren
+                </button>
               )}
               <a href={`tel:${appt.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Phone size={14} strokeWidth={1.8} />
