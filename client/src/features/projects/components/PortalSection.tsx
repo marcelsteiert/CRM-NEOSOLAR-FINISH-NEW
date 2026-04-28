@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Globe, Mail, Send, Power, PowerOff, CheckCircle2, Circle, Clock, AlertCircle,
   FileCheck, Wrench, Zap, Sparkles, Loader2, Link as LinkIcon, Copy, Check, X,
-  MessageSquare, ChevronDown, ChevronRight,
+  MessageSquare, ChevronDown, ChevronRight, Pencil, Plus, Trash2,
 } from 'lucide-react'
 import {
   useAdminPortalProject,
@@ -10,6 +10,8 @@ import {
   useDeactivatePortal,
   useGeneratePortalLink,
   useUpdateMilestone,
+  useCreateMilestone,
+  useDeleteMilestone,
   useInitMilestones,
   milestoneStatusLabels,
   milestoneStatusColors,
@@ -51,6 +53,8 @@ export default function PortalSection({ projectId, customerEmail, customerName, 
   const deactivatePortal = useDeactivatePortal(projectId)
   const generateLink = useGeneratePortalLink(projectId)
   const updateMilestone = useUpdateMilestone(projectId)
+  const createMilestone = useCreateMilestone(projectId)
+  const deleteMilestone = useDeleteMilestone(projectId)
   const initMilestones = useInitMilestones(projectId)
 
   const [showActivate, setShowActivate] = useState(false)
@@ -59,6 +63,11 @@ export default function PortalSection({ projectId, customerEmail, customerName, 
   const [showEmailLog, setShowEmailLog] = useState(false)
   const [editingComment, setEditingComment] = useState<string | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
+  const [editingLabel, setEditingLabel] = useState<string | null>(null)
+  const [labelDraft, setLabelDraft] = useState('')
+  const [addingToGroup, setAddingToGroup] = useState<GroupKey | null>(null)
+  const [newMilestoneLabel, setNewMilestoneLabel] = useState('')
+  const [confirmDeleteMilestone, setConfirmDeleteMilestone] = useState<string | null>(null)
   const [generatedLink, setGeneratedLink] = useState<{ url: string; sent: boolean; recipient: string } | null>(null)
   const [linkCopied, setLinkCopied] = useState(false)
 
@@ -179,6 +188,41 @@ export default function PortalSection({ projectId, customerEmail, customerName, 
         comment: commentDraft.trim() || null,
       })
       setEditingComment(null)
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleSaveLabel = async (m: PortalMilestone) => {
+    const trimmed = labelDraft.trim()
+    if (!trimmed || trimmed === m.label) {
+      setEditingLabel(null)
+      return
+    }
+    try {
+      await updateMilestone.mutateAsync({ id: m.id, label: trimmed })
+      setEditingLabel(null)
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleAddMilestone = async (groupKey: GroupKey) => {
+    const trimmed = newMilestoneLabel.trim()
+    if (!trimmed) return
+    try {
+      await createMilestone.mutateAsync({ groupKey, label: trimmed })
+      setNewMilestoneLabel('')
+      setAddingToGroup(null)
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleDeleteMilestone = async (id: string) => {
+    try {
+      await deleteMilestone.mutateAsync(id)
+      setConfirmDeleteMilestone(null)
     } catch (err: any) {
       alert(`Fehler: ${err.message}`)
     }
@@ -468,16 +512,81 @@ export default function PortalSection({ projectId, customerEmail, customerName, 
                     onScheduleDate={(date) => handleScheduleDate(m, date)}
                     onSaveComment={() => handleSaveComment(m)}
                     editingComment={editingComment === m.id}
-                    onStartEdit={() => {
+                    onStartEditComment={() => {
                       setEditingComment(m.id)
                       setCommentDraft(m.comment ?? '')
                     }}
-                    onCancelEdit={() => setEditingComment(null)}
+                    onCancelEditComment={() => setEditingComment(null)}
                     commentDraft={commentDraft}
                     setCommentDraft={setCommentDraft}
+                    editingLabel={editingLabel === m.id}
+                    onStartEditLabel={() => {
+                      setEditingLabel(m.id)
+                      setLabelDraft(m.label)
+                    }}
+                    onCancelEditLabel={() => setEditingLabel(null)}
+                    onSaveLabel={() => handleSaveLabel(m)}
+                    labelDraft={labelDraft}
+                    setLabelDraft={setLabelDraft}
+                    confirmDelete={confirmDeleteMilestone === m.id}
+                    onStartDelete={() => setConfirmDeleteMilestone(m.id)}
+                    onCancelDelete={() => setConfirmDeleteMilestone(null)}
+                    onConfirmDelete={() => handleDeleteMilestone(m.id)}
                     color={groupColor}
                   />
                 ))}
+
+                {/* Add new milestone */}
+                {addingToGroup === groupKey ? (
+                  <div className="px-5 py-3 flex items-center gap-2" style={{ background: `color-mix(in srgb, ${groupColor} 4%, transparent)` }}>
+                    <Plus size={14} strokeWidth={1.8} style={{ color: groupColor }} />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={newMilestoneLabel}
+                      onChange={(e) => setNewMilestoneLabel(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddMilestone(groupKey)
+                        if (e.key === 'Escape') {
+                          setAddingToGroup(null)
+                          setNewMilestoneLabel('')
+                        }
+                      }}
+                      placeholder="Bezeichnung des neuen Schritts..."
+                      className="glass-input flex-1 text-xs py-1.5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddMilestone(groupKey)}
+                      disabled={!newMilestoneLabel.trim() || createMilestone.isPending}
+                      className="btn-primary text-[11px] py-1.5 px-3"
+                    >
+                      Hinzufuegen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddingToGroup(null)
+                        setNewMilestoneLabel('')
+                      }}
+                      className="btn-secondary text-[11px] py-1.5 px-3"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAddingToGroup(groupKey)
+                      setNewMilestoneLabel('')
+                    }}
+                    className="w-full px-5 py-2.5 text-left text-[12px] text-text-dim hover:text-amber hover:bg-surface-hover transition-colors flex items-center gap-1.5"
+                  >
+                    <Plus size={13} strokeWidth={1.8} />
+                    Schritt hinzufuegen
+                  </button>
+                )}
               </div>
             </div>
           )
@@ -568,35 +677,42 @@ export default function PortalSection({ projectId, customerEmail, customerName, 
 
 // ── Milestone-Row ──
 
-function MilestoneRow({
-  milestone,
-  onStatusChange,
-  onScheduleDate,
-  onSaveComment,
-  editingComment,
-  onStartEdit,
-  onCancelEdit,
-  commentDraft,
-  setCommentDraft,
-  color,
-}: {
+interface MilestoneRowProps {
   milestone: PortalMilestone
   onStatusChange: (s: MilestoneStatus) => void
   onScheduleDate: (d: string) => void
   onSaveComment: () => void
   editingComment: boolean
-  onStartEdit: () => void
-  onCancelEdit: () => void
+  onStartEditComment: () => void
+  onCancelEditComment: () => void
   commentDraft: string
   setCommentDraft: (s: string) => void
+  editingLabel: boolean
+  onStartEditLabel: () => void
+  onCancelEditLabel: () => void
+  onSaveLabel: () => void
+  labelDraft: string
+  setLabelDraft: (s: string) => void
+  confirmDelete: boolean
+  onStartDelete: () => void
+  onCancelDelete: () => void
+  onConfirmDelete: () => void
   color: string
-}) {
-  const m = milestone
+}
+
+function MilestoneRow(props: MilestoneRowProps) {
+  const {
+    milestone: m, onStatusChange, onScheduleDate, onSaveComment,
+    editingComment, onStartEditComment, onCancelEditComment, commentDraft, setCommentDraft,
+    editingLabel, onStartEditLabel, onCancelEditLabel, onSaveLabel, labelDraft, setLabelDraft,
+    confirmDelete, onStartDelete, onCancelDelete, onConfirmDelete,
+  } = props
+
   const StatusIcon = m.status === 'DONE' ? CheckCircle2 : m.status === 'IN_PROGRESS' ? Clock : m.status === 'BLOCKED' ? AlertCircle : Circle
   const statusColor = milestoneStatusColors[m.status]
 
   return (
-    <div className="px-5 py-3 hover:bg-surface-hover transition-colors">
+    <div className="px-5 py-3 hover:bg-surface-hover transition-colors group">
       <div className="flex items-start gap-3">
         <button
           type="button"
@@ -613,9 +729,46 @@ function MilestoneRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex-1 min-w-0">
-              <div className={`text-sm font-medium ${m.status === 'DONE' ? 'text-text-sec line-through' : 'text-text'}`}>
-                {m.label}
-              </div>
+              {editingLabel ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={labelDraft}
+                    onChange={(e) => setLabelDraft(e.target.value)}
+                    className="glass-input text-sm flex-1 py-1"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') onSaveLabel()
+                      if (e.key === 'Escape') onCancelEditLabel()
+                    }}
+                  />
+                  <button type="button" onClick={onSaveLabel} className="btn-primary text-[11px] py-1 px-2">
+                    <Check size={12} strokeWidth={2} />
+                  </button>
+                  <button type="button" onClick={onCancelEditLabel} className="btn-secondary text-[11px] py-1 px-2">
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={onStartEditLabel}
+                    className={`text-sm font-medium text-left hover:text-amber transition-colors ${m.status === 'DONE' ? 'text-text-sec line-through' : 'text-text'}`}
+                    title="Klicken zum Umbenennen"
+                  >
+                    {m.label}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onStartEditLabel}
+                    className="opacity-0 group-hover:opacity-100 text-text-dim hover:text-amber transition-all"
+                    title="Bezeichnung bearbeiten"
+                  >
+                    <Pencil size={11} strokeWidth={1.8} />
+                  </button>
+                </div>
+              )}
               {m.completedAt && (
                 <div className="text-[11px] text-green mt-0.5">
                   Erledigt: {new Date(m.completedAt).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -642,6 +795,34 @@ function MilestoneRow({
                 style={{ minWidth: 'auto', width: 'auto' }}
                 title="Geplantes Datum"
               />
+              {confirmDelete ? (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={onConfirmDelete}
+                    className="px-2 py-1 rounded-md text-[10px] font-semibold"
+                    style={{ background: '#F87171', color: '#0B0F15' }}
+                  >
+                    Loeschen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onCancelDelete}
+                    className="px-2 py-1 rounded-md text-[10px] text-text-dim hover:text-text"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onStartDelete}
+                  className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-md flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-all"
+                  title="Schritt loeschen"
+                >
+                  <Trash2 size={11} strokeWidth={1.8} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -657,20 +838,20 @@ function MilestoneRow({
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onSaveComment()
-                  if (e.key === 'Escape') onCancelEdit()
+                  if (e.key === 'Escape') onCancelEditComment()
                 }}
               />
               <button type="button" onClick={onSaveComment} className="btn-primary text-[11px] py-1 px-2">
                 Speichern
               </button>
-              <button type="button" onClick={onCancelEdit} className="btn-secondary text-[11px] py-1 px-2">
+              <button type="button" onClick={onCancelEditComment} className="btn-secondary text-[11px] py-1 px-2">
                 Abbrechen
               </button>
             </div>
           ) : m.comment ? (
             <button
               type="button"
-              onClick={onStartEdit}
+              onClick={onStartEditComment}
               className="mt-1.5 text-[11px] text-text-sec hover:text-text text-left flex items-start gap-1.5"
             >
               <MessageSquare size={11} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
@@ -679,7 +860,7 @@ function MilestoneRow({
           ) : (
             <button
               type="button"
-              onClick={onStartEdit}
+              onClick={onStartEditComment}
               className="mt-1.5 text-[11px] text-text-dim hover:text-text-sec underline"
             >
               + Notiz hinzufuegen

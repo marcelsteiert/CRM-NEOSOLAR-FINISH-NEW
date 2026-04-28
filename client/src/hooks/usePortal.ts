@@ -122,14 +122,38 @@ export function useUpdateMilestone(projectId: string) {
       status?: MilestoneStatus
       scheduledDate?: string | null
       comment?: string | null
+      label?: string
       sendEmail?: boolean
     }) =>
       api.put<{ data: PortalMilestone }>(`/admin/portal/milestones/${params.id}`, {
         status: params.status,
         scheduledDate: params.scheduledDate,
         comment: params.comment,
+        label: params.label,
         sendEmail: params.sendEmail,
       }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-portal', projectId] }),
+  })
+}
+
+export function useCreateMilestone(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: {
+      groupKey: GroupKey
+      label: string
+      scheduledDate?: string | null
+      comment?: string | null
+    }) =>
+      api.post<{ data: PortalMilestone }>(`/admin/portal/projects/${projectId}/milestones`, params),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-portal', projectId] }),
+  })
+}
+
+export function useDeleteMilestone(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ message: string }>(`/admin/portal/milestones/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-portal', projectId] }),
   })
 }

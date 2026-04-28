@@ -332,6 +332,7 @@ const updateMilestoneSchema = z.object({
   status: z.enum(['OPEN', 'IN_PROGRESS', 'DONE', 'BLOCKED']).optional(),
   scheduledDate: z.string().nullable().optional(),
   comment: z.string().nullable().optional(),
+  label: z.string().min(1).max(120).optional(),
   sendEmail: z.boolean().optional(),
 })
 
@@ -363,6 +364,9 @@ router.put('/milestones/:id', async (req: Request, res: Response, next: NextFunc
     }
     if (parsed.data.comment !== undefined) {
       updates.comment = parsed.data.comment
+    }
+    if (parsed.data.label !== undefined) {
+      updates.label = parsed.data.label.trim()
     }
 
     const { data: updated, error } = await supabase
@@ -457,6 +461,111 @@ router.post('/projects/:projectId/init-milestones', async (req: Request, res: Re
     if (error) throw new AppError(error.message, 500)
 
     res.json({ data: created ?? [] })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ============================================================================
+// POST /portal/projects/:projectId/milestones – Custom Milestone hinzufuegen
+// ============================================================================
+
+const createMilestoneSchema = z.object({
+  groupKey: z.enum(['BEWILLIGUNGEN', 'MONTAGE', 'INBETRIEBNAHME', 'ABSCHLUSS']),
+  label: z.string().min(1).max(120),
+  scheduledDate: z.string().nullable().optional(),
+  comment: z.string().nullable().optional(),
+})
+
+router.post('/projects/:projectId/milestones', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const projectId = req.params.projectId as string
+    const parsed = createMilestoneSchema.safeParse(req.body)
+    if (!parsed.success) throw new AppError('Ungueltige Daten', 400)
+
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .single()
+
+    if (!project) throw new AppError('Projekt nicht gefunden', 404)
+
+    // Naechste sort_order finden
+    const { data: existing } = await supabase
+      .from('portal_milestones')
+      .select('sort_order')
+      .eq('project_id', projectId)
+      .order('sort_order', { ascending: false })
+      .limit(1)
+
+    const nextOrder = existing && existing.length > 0 ? (existing[0].sort_order ?? 0) + 1 : 0
+
+    // Custom-Key mit Timestamp
+    const customKey = `CUSTOM_${Date.now()}`
+
+    const { data: created, error } = await supabase
+      .from('portal_milestones')
+      .insert({
+        project_id: projectId,
+        milestone_key: customKey,
+        group_key: parsed.data.groupKey,
+        label: parsed.data.label.trim(),
+        sort_order: nextOrder,
+        status: 'OPEN',
+        scheduled_date: parsed.data.scheduledDate ?? null,
+        comment: parsed.data.comment ?? null,
+        updated_by: req.user?.userId ?? null,
+      })
+      .select('*')
+      .single()
+
+    if (error) throw new AppError(error.message, 500)
+
+    logAudit({
+      userId: getAuditUserId(req),
+      action: 'CREATE',
+      entity: 'PORTAL_MILESTONE',
+      entityId: created.id,
+      description: `Milestone "${parsed.data.label}" erstellt`,
+    })
+
+    res.status(201).json({ data: created })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ============================================================================
+// DELETE /portal/milestones/:id – Milestone loeschen
+// ============================================================================
+
+router.delete('/milestones/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { data: milestone } = await supabase
+      .from('portal_milestones')
+      .select('id, label')
+      .eq('id', req.params.id)
+      .single()
+
+    if (!milestone) throw new AppError('Milestone nicht gefunden', 404)
+
+    const { error } = await supabase
+      .from('portal_milestones')
+      .delete()
+      .eq('id', req.params.id)
+
+    if (error) throw new AppError(error.message, 500)
+
+    logAudit({
+      userId: getAuditUserId(req),
+      action: 'DELETE',
+      entity: 'PORTAL_MILESTONE',
+      entityId: req.params.id,
+      description: `Milestone "${milestone.label}" geloescht`,
+    })
+
+    res.json({ message: 'Milestone geloescht' })
   } catch (err) {
     next(err)
   }
