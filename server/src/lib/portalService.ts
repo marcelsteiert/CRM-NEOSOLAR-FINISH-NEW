@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import { supabase } from './supabase.js'
 import { getMilestoneTemplate } from './portalConfig.js'
+import { loadBranding } from '../routes/admin/branding.js'
 
 // ── JWT ──
 
@@ -149,16 +150,22 @@ export async function sendPortalEmail(params: PortalEmailParams): Promise<void> 
 
 const PORTAL_BASE_URL = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://crm-neosolar.netlify.app'
 
-function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: string): string {
+async function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: string): Promise<string> {
   const logoUrl = `${PORTAL_BASE_URL}/neosolar-logo.jpeg`
+  const b = await loadBranding()
+
+  const addressLine = [b.companyAddress, [b.companyZip, b.companyCity].filter(Boolean).join(' ')]
+    .filter(Boolean).join(' &middot; ')
+  const contactLine = [b.companyPhone, b.companyEmail].filter(Boolean).join(' &middot; ')
+
   return `<!doctype html>
-<html><head><meta charset="utf-8"><title>NeoSolar</title></head>
+<html><head><meta charset="utf-8"><title>${b.companyName}</title></head>
 <body style="margin:0;padding:0;background:#0B0F15;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;color:#F0F2F5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B0F15;padding:40px 20px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;">
         <tr><td align="center" style="padding:32px 32px 24px;background:#FFFFFF;border-bottom:1px solid rgba(255,255,255,0.06);">
-          <img src="${logoUrl}" alt="NeoSolar" style="height:48px;display:block;" />
+          <img src="${logoUrl}" alt="${b.companyName}" style="height:48px;display:block;" />
         </td></tr>
         <tr><td style="padding:8px 32px 0;background:linear-gradient(180deg,rgba(245,158,11,0.06),transparent);">
           <div style="font-size:12px;color:#8B95A5;padding-top:18px;">Ihr Kundenportal</div>
@@ -166,11 +173,14 @@ function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: string
         <tr><td style="padding:24px 32px 32px;">
           <div style="font-size:15px;line-height:1.65;color:#F0F2F5;">${content}</div>
           ${ctaUrl ? `<div style="margin-top:32px;text-align:center;">
-            <a href="${ctaUrl}" style="display:inline-block;background:#F59E0B;color:#0B0F15;text-decoration:none;font-weight:600;padding:14px 32px;border-radius:12px;font-size:14px;letter-spacing:0.02em;">${ctaLabel ?? 'Zum Portal'}</a>
+            <a href="${ctaUrl}" style="display:inline-block;background:${b.primaryColor};color:#0B0F15;text-decoration:none;font-weight:600;padding:14px 32px;border-radius:12px;font-size:14px;letter-spacing:0.02em;">${ctaLabel ?? 'Zum Portal'}</a>
           </div>` : ''}
         </td></tr>
-        <tr><td style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.06);font-size:12px;color:#525E6F;text-align:center;">
-          <strong style="color:#8B95A5;">NEOSOLAR AG</strong> &middot; <a href="${PORTAL_BASE_URL}/portal" style="color:#F59E0B;text-decoration:none;">Kundenportal oeffnen</a>
+        <tr><td style="padding:24px 32px;border-top:1px solid rgba(255,255,255,0.06);font-size:11px;color:#525E6F;text-align:center;line-height:1.7;">
+          <div style="color:#8B95A5;font-weight:600;font-size:12px;margin-bottom:4px;">${b.companyName}</div>
+          ${addressLine ? `<div>${addressLine}</div>` : ''}
+          ${contactLine ? `<div style="margin-top:2px;">${contactLine}</div>` : ''}
+          ${b.companyWebsite ? `<div style="margin-top:6px;"><a href="https://${b.companyWebsite.replace(/^https?:\/\//, '')}" style="color:${b.primaryColor};text-decoration:none;">${b.companyWebsite}</a> &middot; <a href="${PORTAL_BASE_URL}/portal" style="color:${b.primaryColor};text-decoration:none;">Kundenportal</a></div>` : ''}
         </td></tr>
       </table>
     </td></tr>
@@ -178,23 +188,25 @@ function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: string
 </body></html>`
 }
 
-export function buildMagicLinkEmail(magicLink: string): { subject: string; html: string } {
+export async function buildMagicLinkEmail(magicLink: string): Promise<{ subject: string; html: string }> {
   const url = `${PORTAL_BASE_URL}/portal/login?token=${magicLink}`
+  const b = await loadBranding()
   const content = `
     <p style="font-size:18px;font-weight:600;margin:0 0 16px;color:#F0F2F5;">Anmeldung Kundenportal</p>
-    <p style="margin:0 0 16px;">Klicken Sie auf den Button, um sich in Ihrem persoenlichen NeoSolar-Kundenportal anzumelden.</p>
+    <p style="margin:0 0 16px;">Klicken Sie auf den Button, um sich in Ihrem persoenlichen ${b.companyName}-Kundenportal anzumelden.</p>
     <p style="margin:0 0 16px;color:#8B95A5;font-size:13px;">Der Link ist 30 Minuten gueltig und kann nur einmal verwendet werden.</p>
   `
   return {
-    subject: 'Ihr Anmeldelink fuer das NeoSolar Kundenportal',
-    html: brandedEmailWrapper(content, url, 'Jetzt anmelden'),
+    subject: `Ihr Anmeldelink fuer das ${b.companyName} Kundenportal`,
+    html: await brandedEmailWrapper(content, url, 'Jetzt anmelden'),
   }
 }
 
-export function buildMilestoneCompletedEmail(milestoneKey: string, customerName: string, projectName: string): { subject: string; html: string } | null {
+export async function buildMilestoneCompletedEmail(milestoneKey: string, customerName: string, projectName: string): Promise<{ subject: string; html: string } | null> {
   const tpl = getMilestoneTemplate(milestoneKey)
   if (!tpl) return null
   const url = `${PORTAL_BASE_URL}/portal`
+  const b = await loadBranding()
   const content = `
     <p style="font-size:18px;font-weight:600;margin:0 0 16px;color:#F0F2F5;">${tpl.emailSubject}</p>
     <p style="margin:0 0 16px;">Hallo ${customerName},</p>
@@ -203,19 +215,20 @@ export function buildMilestoneCompletedEmail(milestoneKey: string, customerName:
     <p style="margin:0 0 16px;color:#8B95A5;font-size:13px;">Den aktuellen Stand sehen Sie jederzeit in Ihrem Kundenportal.</p>
   `
   return {
-    subject: `${tpl.emailSubject} | NeoSolar`,
-    html: brandedEmailWrapper(content, url, 'Zum Kundenportal'),
+    subject: `${tpl.emailSubject} | ${b.companyName}`,
+    html: await brandedEmailWrapper(content, url, 'Zum Kundenportal'),
   }
 }
 
-export function buildPortalActivatedEmail(magicLink: string, customerName: string, projectName: string): { subject: string; html: string } {
+export async function buildPortalActivatedEmail(magicLink: string, customerName: string, projectName: string): Promise<{ subject: string; html: string }> {
   const url = `${PORTAL_BASE_URL}/portal/login?token=${magicLink}`
+  const b = await loadBranding()
   const content = `
-    <p style="font-size:20px;font-weight:600;margin:0 0 16px;color:#F0F2F5;">Willkommen im NeoSolar Kundenportal</p>
+    <p style="font-size:20px;font-weight:600;margin:0 0 16px;color:#F0F2F5;">Willkommen im ${b.companyName} Kundenportal</p>
     <p style="margin:0 0 16px;">Hallo ${customerName},</p>
     <p style="margin:0 0 16px;">wir haben fuer Sie ein persoenliches Kundenportal eingerichtet. Hier sehen Sie jederzeit den aktuellen Stand Ihrer PV-Anlage <strong style="color:#F0F2F5;">${projectName}</strong>:</p>
     <ul style="padding-left:20px;color:#8B95A5;line-height:1.9;font-size:14px;">
-      <li>Live-Status zu allen 14 Projektphasen</li>
+      <li>Live-Status zu allen Projektphasen</li>
       <li>Dokumente und Vertraege zum Download</li>
       <li>Anstehende Termine und Ansprechpartner</li>
       <li>Fortschrittsuebersicht von Bewilligung bis Inbetriebnahme</li>
@@ -224,7 +237,7 @@ export function buildPortalActivatedEmail(magicLink: string, customerName: strin
     <p style="margin:0;color:#525E6F;font-size:12px;">Der Link ist 30 Minuten gueltig. Sie koennen jederzeit einen neuen Link unter "Anmelden" anfordern.</p>
   `
   return {
-    subject: 'Ihr persoenliches NeoSolar Kundenportal ist bereit',
-    html: brandedEmailWrapper(content, url, 'Portal oeffnen'),
+    subject: `Ihr persoenliches ${b.companyName} Kundenportal ist bereit`,
+    html: await brandedEmailWrapper(content, url, 'Portal oeffnen'),
   }
 }

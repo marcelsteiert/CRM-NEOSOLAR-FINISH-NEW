@@ -181,7 +181,7 @@ router.post('/projects/:projectId/activate', async (req: Request, res: Response,
     if (parsed.data.sendEmail) {
       const rawToken = await createMagicLinkForPortalUser(portalUserId)
       const customerName = `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'Kunde'
-      const { subject, html } = buildPortalActivatedEmail(rawToken, customerName, project.name)
+      const { subject, html } = await buildPortalActivatedEmail(rawToken, customerName, project.name)
       await sendPortalEmail({
         portalUserId,
         projectId,
@@ -245,7 +245,7 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
 
     let sent = false
     if (parsed.data.sendEmail) {
-      const { subject, html } = buildMagicLinkEmail(rawToken)
+      const { subject, html } = await buildMagicLinkEmail(rawToken)
       await sendPortalEmail({
         portalUserId: portalUser.id,
         projectId,
@@ -409,7 +409,7 @@ router.put('/milestones/:id', async (req: Request, res: Response, next: NextFunc
 
         if (portalUser?.is_active && contact) {
           const customerName = `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'Kunde'
-          const built = buildMilestoneCompletedEmail(milestone.milestone_key, customerName, project.name)
+          const built = await buildMilestoneCompletedEmail(milestone.milestone_key, customerName, project.name)
           if (built) {
             await sendPortalEmail({
               portalUserId: portalUser.id,

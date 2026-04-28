@@ -161,6 +161,13 @@ export interface BrandingSettings {
   primaryColor: string
   offerTemplate: string
   footerText: string
+  companyAddress: string
+  companyZip: string
+  companyCity: string
+  companyPhone: string
+  companyEmail: string
+  companyWebsite: string
+  companyOpeningHours: string
 }
 
 export function useBranding() {

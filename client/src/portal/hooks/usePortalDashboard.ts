@@ -86,6 +86,19 @@ export interface PortalContact {
   company: string | null
 }
 
+export interface PortalBranding {
+  companyName: string
+  companySlogan: string
+  primaryColor: string
+  companyAddress: string
+  companyZip: string
+  companyCity: string
+  companyPhone: string
+  companyEmail: string
+  companyWebsite: string
+  companyOpeningHours: string
+}
+
 export interface PortalDashboardData {
   contact: PortalContact
   projects: PortalProject[]
@@ -95,6 +108,7 @@ export interface PortalDashboardData {
   contactPersons: PortalContactPerson[]
   milestoneTemplates: MilestoneTemplate[]
   milestoneGroups: Record<GroupKey, MilestoneGroup>
+  branding: PortalBranding
 }
 
 export function usePortalDashboard() {

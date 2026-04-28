@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Building2 } from 'lucide-react'
+import { Save, Building2, Phone, Mail, Globe, MapPin, Clock } from 'lucide-react'
 import { useBranding, useUpdateBranding, type BrandingSettings } from '@/hooks/useAdmin'
 
 const TEMPLATES = [
@@ -83,13 +83,112 @@ export default function CompanyBrandingSection() {
       </div>
 
       <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
-        <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">Fusszeile</label>
+        <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">Fusszeile (Slogan unter dem Logo)</label>
         <input
           type="text"
           value={form.footerText}
           onChange={(e) => setForm({ ...form, footerText: e.target.value })}
           className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
         />
+      </div>
+
+      {/* Kontaktdaten */}
+      <div className="glass-card p-5" style={{ borderRadius: 'var(--radius-lg)' }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 size={14} strokeWidth={1.8} className="text-amber" />
+          <h3 className="text-sm font-semibold text-text">Kontaktdaten der Firma</h3>
+          <span className="text-[10px] text-text-sec ml-auto">Wird im Kundenportal &amp; in E-Mails angezeigt</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Adresse */}
+          <div className="sm:col-span-2">
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">
+              <MapPin size={10} strokeWidth={2} /> Strasse / Hausnummer
+            </label>
+            <input
+              type="text"
+              value={form.companyAddress ?? ''}
+              onChange={(e) => setForm({ ...form, companyAddress: e.target.value })}
+              placeholder="Industriestrasse 12"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">PLZ</label>
+            <input
+              type="text"
+              value={form.companyZip ?? ''}
+              onChange={(e) => setForm({ ...form, companyZip: e.target.value })}
+              placeholder="9430"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">Ort</label>
+            <input
+              type="text"
+              value={form.companyCity ?? ''}
+              onChange={(e) => setForm({ ...form, companyCity: e.target.value })}
+              placeholder="St. Margrethen"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">
+              <Phone size={10} strokeWidth={2} /> Telefon
+            </label>
+            <input
+              type="tel"
+              value={form.companyPhone ?? ''}
+              onChange={(e) => setForm({ ...form, companyPhone: e.target.value })}
+              placeholder="+41 71 000 00 00"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">
+              <Mail size={10} strokeWidth={2} /> E-Mail
+            </label>
+            <input
+              type="email"
+              value={form.companyEmail ?? ''}
+              onChange={(e) => setForm({ ...form, companyEmail: e.target.value })}
+              placeholder="info@neosolar.ch"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">
+              <Globe size={10} strokeWidth={2} /> Website
+            </label>
+            <input
+              type="text"
+              value={form.companyWebsite ?? ''}
+              onChange={(e) => setForm({ ...form, companyWebsite: e.target.value })}
+              placeholder="www.neosolar.ch"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-1.5 text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">
+              <Clock size={10} strokeWidth={2} /> Oeffnungszeiten
+            </label>
+            <input
+              type="text"
+              value={form.companyOpeningHours ?? ''}
+              onChange={(e) => setForm({ ...form, companyOpeningHours: e.target.value })}
+              placeholder="Mo–Fr 08:00–17:00 Uhr"
+              className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-hover border border-border text-text focus:outline-none focus:border-amber/50"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Offer Template */}

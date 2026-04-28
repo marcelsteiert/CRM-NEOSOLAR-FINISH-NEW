@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Sun, LogOut, Loader2, AlertCircle, CheckCircle2, Circle, Clock,
   FileCheck, Wrench, Zap, Sparkles, FileText, Download, Calendar,
-  Phone, Mail, User as UserIcon, MapPin, Building2, CalendarClock,
+  Phone, Mail, User as UserIcon, MapPin, Building2, CalendarClock, Globe,
 } from 'lucide-react'
 import { usePortalDashboard, type GroupKey, type PortalMilestone, type PortalProject } from './hooks/usePortalDashboard'
 import { clearPortalSession, portalApi } from './portalApi'
@@ -335,8 +335,52 @@ export default function PortalDashboard() {
           </SectionCard>
         )}
 
+        {/* Firma erreichen */}
+        {(data.data.branding?.companyPhone || data.data.branding?.companyEmail) && (
+          <SectionCard title={`So erreichen Sie ${data.data.branding.companyName}`} icon={Building2}>
+            <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(data.data.branding.companyAddress || data.data.branding.companyCity) && (
+                <div className="flex items-start gap-2 text-sm text-text-sec">
+                  <MapPin size={14} strokeWidth={1.8} className="text-text-dim mt-0.5" />
+                  <div>
+                    {data.data.branding.companyAddress && <div>{data.data.branding.companyAddress}</div>}
+                    {(data.data.branding.companyZip || data.data.branding.companyCity) && (
+                      <div>{[data.data.branding.companyZip, data.data.branding.companyCity].filter(Boolean).join(' ')}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {data.data.branding.companyPhone && (
+                <a href={`tel:${data.data.branding.companyPhone}`} className="flex items-center gap-2 text-sm text-text-sec hover:text-amber transition-colors">
+                  <Phone size={14} strokeWidth={1.8} className="text-text-dim" />
+                  {data.data.branding.companyPhone}
+                </a>
+              )}
+              {data.data.branding.companyEmail && (
+                <a href={`mailto:${data.data.branding.companyEmail}`} className="flex items-center gap-2 text-sm text-text-sec hover:text-amber transition-colors">
+                  <Mail size={14} strokeWidth={1.8} className="text-text-dim" />
+                  {data.data.branding.companyEmail}
+                </a>
+              )}
+              {data.data.branding.companyWebsite && (
+                <a href={`https://${data.data.branding.companyWebsite.replace(/^https?:\/\//, '')}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-text-sec hover:text-amber transition-colors">
+                  <Globe size={14} strokeWidth={1.8} className="text-text-dim" />
+                  {data.data.branding.companyWebsite}
+                </a>
+              )}
+              {data.data.branding.companyOpeningHours && (
+                <div className="flex items-center gap-2 text-sm text-text-sec sm:col-span-2">
+                  <Clock size={14} strokeWidth={1.8} className="text-text-dim" />
+                  {data.data.branding.companyOpeningHours}
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
+
         <div className="text-center pt-4 pb-8 text-[11px] text-text-dim">
-          NEOSOLAR AG &middot; Bei Fragen kontaktieren Sie Ihren Ansprechpartner
+          {data.data.branding?.companyName ?? 'NEOSOLAR AG'}
+          {data.data.branding?.companySlogan ? ` · ${data.data.branding.companySlogan}` : ''}
         </div>
       </main>
     </div>

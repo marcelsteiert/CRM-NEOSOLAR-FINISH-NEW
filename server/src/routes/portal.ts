@@ -16,6 +16,7 @@ import {
 } from '../lib/portalService.js'
 import { milestoneTemplates, milestoneGroups } from '../lib/portalConfig.js'
 import { portalAuthMiddleware } from '../middleware/portalAuth.js'
+import { loadBranding } from './admin/branding.js'
 
 const router = Router()
 
@@ -50,7 +51,7 @@ router.post('/auth/request-link', async (req: Request, res: Response, next: Next
     const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.ip
     const rawToken = await createMagicLinkForPortalUser(portalUser.id, ip)
 
-    const { subject, html } = buildMagicLinkEmail(rawToken)
+    const { subject, html } = await buildMagicLinkEmail(rawToken)
     await sendPortalEmail({
       portalUserId: portalUser.id,
       projectId: null,
@@ -201,6 +202,8 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
           .in('id', userIds)
       : { data: [] }
 
+    const branding = await loadBranding()
+
     res.json({
       data: {
         contact,
@@ -211,6 +214,7 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
         contactPersons: contactPersons ?? [],
         milestoneTemplates,
         milestoneGroups,
+        branding,
       },
     })
   } catch (err) {
