@@ -210,9 +210,15 @@ router.post('/projects/:projectId/activate', async (req: Request, res: Response,
 // POST /portal/projects/:projectId/send-link – Neuer Magic Link
 // ============================================================================
 
+const sendLinkSchema = z.object({
+  sendEmail: z.boolean().optional().default(false),
+})
+
 router.post('/projects/:projectId/send-link', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const projectId = req.params.projectId as string
+    const parsed = sendLinkSchema.safeParse(req.body ?? {})
+    if (!parsed.success) throw new AppError('Ungueltige Daten', 400)
 
     const { data: project } = await supabase
       .from('projects')
@@ -234,25 +240,41 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
     }
 
     const rawToken = await createMagicLinkForPortalUser(portalUser.id)
-    const { subject, html } = buildMagicLinkEmail(rawToken)
-    await sendPortalEmail({
-      portalUserId: portalUser.id,
-      projectId,
-      emailType: 'MAGIC_LINK',
-      recipient: portalUser.email,
-      subject,
-      bodyHtml: html,
-    })
+    const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://crm-neosolar.netlify.app'
+    const loginUrl = `${baseUrl}/portal/login?token=${rawToken}`
+
+    let sent = false
+    if (parsed.data.sendEmail) {
+      const { subject, html } = buildMagicLinkEmail(rawToken)
+      await sendPortalEmail({
+        portalUserId: portalUser.id,
+        projectId,
+        emailType: 'MAGIC_LINK',
+        recipient: portalUser.email,
+        subject,
+        bodyHtml: html,
+      })
+      sent = true
+    }
 
     logAudit({
       userId: getAuditUserId(req),
       action: 'UPDATE',
       entity: 'PORTAL_USER',
       entityId: portalUser.id,
-      description: `Anmeldelink an ${portalUser.email} gesendet`,
+      description: parsed.data.sendEmail
+        ? `Anmeldelink an ${portalUser.email} gesendet`
+        : `Anmeldelink generiert fuer ${portalUser.email} (manueller Versand)`,
     })
 
-    res.json({ message: 'Anmeldelink versendet', recipient: portalUser.email })
+    res.json({
+      data: {
+        loginUrl,
+        recipient: portalUser.email,
+        sent,
+        expiresInMinutes: 30,
+      },
+    })
   } catch (err) {
     next(err)
   }

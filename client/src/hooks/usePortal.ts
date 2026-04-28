@@ -102,13 +102,13 @@ export function useDeactivatePortal(projectId: string) {
   })
 }
 
-export function useSendPortalLink(projectId: string) {
+export function useGeneratePortalLink(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () =>
-      api.post<{ message: string; recipient: string }>(
+    mutationFn: (params: { sendEmail?: boolean } = {}) =>
+      api.post<{ data: { loginUrl: string; recipient: string; sent: boolean; expiresInMinutes: number } }>(
         `/admin/portal/projects/${projectId}/send-link`,
-        {},
+        { sendEmail: params.sendEmail ?? false },
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-portal', projectId] }),
   })

@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import {
   Globe, Mail, Send, Power, PowerOff, CheckCircle2, Circle, Clock, AlertCircle,
-  FileCheck, Wrench, Zap, Sparkles, ExternalLink, Loader2,
-  Calendar, MessageSquare, ChevronDown, ChevronRight,
+  FileCheck, Wrench, Zap, Sparkles, Loader2, Link as LinkIcon, Copy, Check, X,
+  MessageSquare, ChevronDown, ChevronRight,
 } from 'lucide-react'
 import {
   useAdminPortalProject,
   useActivatePortal,
   useDeactivatePortal,
-  useSendPortalLink,
+  useGeneratePortalLink,
   useUpdateMilestone,
   useInitMilestones,
   milestoneStatusLabels,
@@ -47,7 +47,7 @@ export default function PortalSection({ projectId, customerEmail, customerName }
   const { data, isLoading } = useAdminPortalProject(projectId)
   const activatePortal = useActivatePortal(projectId)
   const deactivatePortal = useDeactivatePortal(projectId)
-  const sendLink = useSendPortalLink(projectId)
+  const generateLink = useGeneratePortalLink(projectId)
   const updateMilestone = useUpdateMilestone(projectId)
   const initMilestones = useInitMilestones(projectId)
 
@@ -57,6 +57,8 @@ export default function PortalSection({ projectId, customerEmail, customerName }
   const [showEmailLog, setShowEmailLog] = useState(false)
   const [editingComment, setEditingComment] = useState<string | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
+  const [generatedLink, setGeneratedLink] = useState<{ url: string; sent: boolean; recipient: string } | null>(null)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   if (isLoading || !data?.data) {
     return (
@@ -104,12 +106,36 @@ export default function PortalSection({ projectId, customerEmail, customerName }
     }
   }
 
-  const handleSendLink = async () => {
+  const handleGenerateLink = async (sendEmail: boolean) => {
     try {
-      const res = await sendLink.mutateAsync()
-      alert(`Anmeldelink gesendet an ${res.recipient}`)
+      const res = await generateLink.mutateAsync({ sendEmail })
+      setGeneratedLink({ url: res.data.loginUrl, sent: res.data.sent, recipient: res.data.recipient })
+      setLinkCopied(false)
+      if (sendEmail && !generatedLink) {
+        // Beim ersten Generieren mit E-Mail: kurz Hinweis
+        setTimeout(() => {}, 0)
+      }
     } catch (err: any) {
       alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (!generatedLink) return
+    try {
+      await navigator.clipboard.writeText(generatedLink.url)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea')
+      ta.value = generatedLink.url
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
     }
   }
 
@@ -213,13 +239,31 @@ export default function PortalSection({ projectId, customerEmail, customerName }
               <>
                 <button
                   type="button"
-                  onClick={handleSendLink}
-                  disabled={sendLink.isPending}
+                  onClick={() => handleGenerateLink(false)}
+                  disabled={generateLink.isPending}
                   className="btn-secondary text-xs"
-                  title="Neuen Anmeldelink an den Kunden senden"
+                  title="Neuen Anmeldelink generieren – zum manuellen Versand (WhatsApp, SMS, ...)"
                 >
-                  {sendLink.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} strokeWidth={1.8} />}
-                  Link senden
+                  {generateLink.isPending && !generateLink.variables?.sendEmail ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <LinkIcon size={14} strokeWidth={1.8} />
+                  )}
+                  Link generieren
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateLink(true)}
+                  disabled={generateLink.isPending}
+                  className="btn-secondary text-xs"
+                  title="Neuen Anmeldelink per E-Mail an den Kunden senden"
+                >
+                  {generateLink.isPending && generateLink.variables?.sendEmail ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Send size={14} strokeWidth={1.8} />
+                  )}
+                  Per Mail senden
                 </button>
                 <button
                   type="button"
@@ -235,6 +279,60 @@ export default function PortalSection({ projectId, customerEmail, customerName }
             )}
           </div>
         </div>
+
+        {/* Generierter Link – Anzeige */}
+        {generatedLink && (
+          <div
+            className="mt-4 pt-4 border-t border-border space-y-2"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={14} strokeWidth={2} style={{ color: '#34D399' }} />
+              <span className="text-xs font-semibold text-text">
+                {generatedLink.sent
+                  ? `Anmeldelink an ${generatedLink.recipient} versendet`
+                  : 'Anmeldelink generiert (30 Min gueltig, einmal verwendbar)'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setGeneratedLink(null)}
+                className="ml-auto text-text-dim hover:text-text"
+                title="Schliessen"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg"
+              style={{
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid rgba(245,158,11,0.2)',
+              }}
+            >
+              <input
+                type="text"
+                readOnly
+                value={generatedLink.url}
+                className="flex-1 bg-transparent text-[11px] text-text-sec font-mono outline-none truncate"
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="btn-primary text-[11px] py-1 px-2.5 flex-shrink-0"
+                title="Link in Zwischenablage kopieren"
+              >
+                {linkCopied ? <Check size={12} strokeWidth={2.5} /> : <Copy size={12} strokeWidth={1.8} />}
+                {linkCopied ? 'Kopiert' : 'Kopieren'}
+              </button>
+            </div>
+
+            <div className="text-[11px] text-text-dim">
+              Du kannst den Link manuell per WhatsApp, SMS oder Telefon weitergeben.
+              {generatedLink.sent && ' Zusaetzlich wurde er per E-Mail versendet.'}
+            </div>
+          </div>
+        )}
 
         {/* Aktivierungs-Form */}
         {showActivate && (
