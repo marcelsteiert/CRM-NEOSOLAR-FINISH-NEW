@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Sun, Mail, ArrowRight, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { Mail, ArrowRight, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
 import { portalApi, setPortalToken, getPortalToken } from './portalApi'
 
 export default function PortalLoginPage() {
@@ -73,17 +73,16 @@ export default function PortalLoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div
-            className="inline-flex items-center justify-center mb-4"
+            className="inline-flex items-center justify-center mb-4 rounded-[14px] overflow-hidden"
             style={{
-              width: 56, height: 56, borderRadius: 16,
-              background: 'rgba(245,158,11,0.15)',
-              border: '1px solid rgba(245,158,11,0.25)',
-              boxShadow: '0 0 24px rgba(245,158,11,0.2)',
+              background: '#FFFFFF',
+              padding: '10px 18px',
+              boxShadow: '0 8px 32px rgba(245,158,11,0.15)',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <Sun size={26} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
+            <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="h-10 object-contain" />
           </div>
-          <div className="text-[11px] uppercase tracking-[0.2em] text-amber font-semibold">NEOSOLAR</div>
           <div className="text-[13px] text-text-sec mt-1">Kundenportal</div>
         </div>
 

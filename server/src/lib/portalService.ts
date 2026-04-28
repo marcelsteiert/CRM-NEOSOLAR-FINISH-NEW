@@ -150,24 +150,27 @@ export async function sendPortalEmail(params: PortalEmailParams): Promise<void> 
 const PORTAL_BASE_URL = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://crm-neosolar.netlify.app'
 
 function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: string): string {
+  const logoUrl = `${PORTAL_BASE_URL}/neosolar-logo.jpeg`
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>NeoSolar</title></head>
-<body style="margin:0;padding:0;background:#0B0F15;font-family:'Outfit','Segoe UI',sans-serif;color:#F0F2F5;">
+<body style="margin:0;padding:0;background:#0B0F15;font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;color:#F0F2F5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0B0F15;padding:40px 20px;">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;">
-        <tr><td style="padding:32px 32px 16px;border-bottom:1px solid rgba(255,255,255,0.06);">
-          <div style="font-size:11px;letter-spacing:0.18em;color:#F59E0B;text-transform:uppercase;font-weight:600;">NEOSOLAR</div>
-          <div style="font-size:13px;color:#8B95A5;margin-top:4px;">Ihre PV-Anlage</div>
+        <tr><td align="center" style="padding:32px 32px 24px;background:#FFFFFF;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <img src="${logoUrl}" alt="NeoSolar" style="height:48px;display:block;" />
         </td></tr>
-        <tr><td style="padding:32px;">
-          <div style="font-size:15px;line-height:1.6;color:#F0F2F5;">${content}</div>
+        <tr><td style="padding:8px 32px 0;background:linear-gradient(180deg,rgba(245,158,11,0.06),transparent);">
+          <div style="font-size:12px;color:#8B95A5;padding-top:18px;">Ihr Kundenportal</div>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px;">
+          <div style="font-size:15px;line-height:1.65;color:#F0F2F5;">${content}</div>
           ${ctaUrl ? `<div style="margin-top:32px;text-align:center;">
-            <a href="${ctaUrl}" style="display:inline-block;background:#F59E0B;color:#0B0F15;text-decoration:none;font-weight:600;padding:14px 28px;border-radius:12px;font-size:14px;">${ctaLabel ?? 'Zum Portal'}</a>
+            <a href="${ctaUrl}" style="display:inline-block;background:#F59E0B;color:#0B0F15;text-decoration:none;font-weight:600;padding:14px 32px;border-radius:12px;font-size:14px;letter-spacing:0.02em;">${ctaLabel ?? 'Zum Portal'}</a>
           </div>` : ''}
         </td></tr>
-        <tr><td style="padding:24px 32px;border-top:1px solid rgba(255,255,255,0.06);font-size:12px;color:#525E6F;text-align:center;">
-          NEOSOLAR AG &middot; <a href="${PORTAL_BASE_URL}/portal" style="color:#8B95A5;text-decoration:none;">Kundenportal</a>
+        <tr><td style="padding:20px 32px;border-top:1px solid rgba(255,255,255,0.06);font-size:12px;color:#525E6F;text-align:center;">
+          <strong style="color:#8B95A5;">NEOSOLAR AG</strong> &middot; <a href="${PORTAL_BASE_URL}/portal" style="color:#F59E0B;text-decoration:none;">Kundenportal oeffnen</a>
         </td></tr>
       </table>
     </td></tr>

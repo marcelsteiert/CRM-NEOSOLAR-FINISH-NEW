@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Sun, LogOut, Loader2, AlertCircle, CheckCircle2, Circle, Clock,
   FileCheck, Wrench, Zap, Sparkles, FileText, Download, Calendar,
-  Phone, Mail, User as UserIcon, MapPin, Building2, ChevronRight,
+  Phone, Mail, User as UserIcon, MapPin, Building2,
 } from 'lucide-react'
 import { usePortalDashboard, type GroupKey, type PortalMilestone, type PortalProject } from './hooks/usePortalDashboard'
 import { clearPortalSession, portalApi } from './portalApi'
@@ -94,19 +94,12 @@ export default function PortalDashboard() {
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="flex items-center justify-center"
-              style={{
-                width: 38, height: 38, borderRadius: 12,
-                background: 'rgba(245,158,11,0.15)',
-                border: '1px solid rgba(245,158,11,0.25)',
-              }}
+              className="rounded-[10px] overflow-hidden flex items-center justify-center"
+              style={{ background: '#FFFFFF', padding: '6px 10px' }}
             >
-              <Sun size={18} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
+              <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="h-7 object-contain" />
             </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.18em] text-amber font-semibold">NEOSOLAR</div>
-              <div className="text-[12px] text-text-sec">Kundenportal</div>
-            </div>
+            <div className="text-[12px] text-text-sec hidden sm:block">Kundenportal</div>
           </div>
 
           <div className="flex items-center gap-3">
