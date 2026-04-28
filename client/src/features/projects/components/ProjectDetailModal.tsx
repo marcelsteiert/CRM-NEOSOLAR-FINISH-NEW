@@ -907,6 +907,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                 projectId={project.id}
                 customerEmail={project.email}
                 customerName={project.name}
+                contactId={project.contactId}
               />
             </div>
           )}

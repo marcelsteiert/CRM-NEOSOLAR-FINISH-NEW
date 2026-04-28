@@ -164,6 +164,8 @@ const metadataSchema = z.object({
   mimeType: z.string().min(1),
   uploadedBy: z.string().optional(),
   notes: z.string().optional(),
+  folderPath: z.string().nullable().optional(),
+  portalVisible: z.boolean().optional(),
 })
 
 router.post('/metadata', async (req: Request, res: Response, next: NextFunction) => {
@@ -188,6 +190,8 @@ router.post('/metadata', async (req: Request, res: Response, next: NextFunction)
         storage_path: d.storagePath,
         uploaded_by: d.uploadedBy || req.user?.userId,
         notes: d.notes ?? null,
+        folder_path: d.folderPath ?? null,
+        portal_visible: d.portalVisible ?? false,
       })
       .select()
       .single()

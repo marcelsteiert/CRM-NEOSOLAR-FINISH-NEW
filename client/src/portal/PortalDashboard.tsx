@@ -195,39 +195,80 @@ export default function PortalDashboard() {
           </SectionCard>
         )}
 
-        {/* Dokumente */}
-        {documents.length > 0 && (
-          <SectionCard title="Dokumente" icon={FileText}>
-            <div className="divide-y divide-border">
-              {documents.map((doc) => (
-                <button
-                  key={doc.id}
-                  type="button"
-                  onClick={() => handleDownload(doc.id)}
-                  className="w-full px-5 py-3 flex items-center gap-3 hover:bg-surface-hover transition-colors text-left"
-                >
-                  <div
-                    className="flex-shrink-0 flex items-center justify-center"
-                    style={{
-                      width: 38, height: 38, borderRadius: 10,
-                      background: 'rgba(245,158,11,0.08)',
-                      border: '1px solid rgba(245,158,11,0.15)',
-                    }}
-                  >
-                    <FileText size={16} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-text truncate">{doc.fileName}</div>
-                    <div className="text-[11px] text-text-sec mt-0.5">
-                      {(doc.fileSize / 1024).toFixed(0)} KB &middot; {formatDate(doc.createdAt)}
+        {/* Dokumente – gruppiert nach Kategorie */}
+        {documents.length > 0 && (() => {
+          const CATEGORY_COLORS: Record<string, string> = {
+            Vertraege: '#F59E0B',
+            Bewilligungen: '#60A5FA',
+            Datenblaetter: '#A78BFA',
+            Plaene: '#22D3EE',
+            Messprotokolle: '#FB923C',
+            Rechnungen: '#34D399',
+            Bilder: '#F472B6',
+            Sonstiges: '#94A3B8',
+          }
+          const grouped: Record<string, typeof documents> = {}
+          for (const d of documents) {
+            const key = d.folderPath ?? 'Sonstiges'
+            if (!grouped[key]) grouped[key] = []
+            grouped[key].push(d)
+          }
+          const order = ['Vertraege', 'Bewilligungen', 'Plaene', 'Datenblaetter', 'Messprotokolle', 'Rechnungen', 'Bilder', 'Sonstiges']
+          const sortedKeys = order.filter((k) => grouped[k]).concat(
+            Object.keys(grouped).filter((k) => !order.includes(k)),
+          )
+
+          return (
+            <SectionCard title="Dokumente" icon={FileText}>
+              <div className="divide-y divide-border">
+                {sortedKeys.map((catKey) => {
+                  const items = grouped[catKey]
+                  const color = CATEGORY_COLORS[catKey] ?? '#94A3B8'
+                  return (
+                    <div key={catKey}>
+                      <div
+                        className="px-5 py-2 flex items-center gap-2"
+                        style={{ background: `color-mix(in srgb, ${color} 5%, transparent)` }}
+                      >
+                        <div className="w-1 h-3 rounded-full" style={{ background: color }} />
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-text">{catKey}</span>
+                        <span className="text-[11px] text-text-sec ml-auto">{items.length}</span>
+                      </div>
+                      <div className="divide-y divide-border">
+                        {items.map((doc) => (
+                          <button
+                            key={doc.id}
+                            type="button"
+                            onClick={() => handleDownload(doc.id)}
+                            className="w-full px-5 py-3 flex items-center gap-3 hover:bg-surface-hover transition-colors text-left"
+                          >
+                            <div
+                              className="flex-shrink-0 flex items-center justify-center"
+                              style={{
+                                width: 38, height: 38, borderRadius: 10,
+                                background: `color-mix(in srgb, ${color} 12%, transparent)`,
+                                border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
+                              }}
+                            >
+                              <FileText size={16} strokeWidth={1.8} style={{ color }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-text truncate">{doc.fileName}</div>
+                              <div className="text-[11px] text-text-sec mt-0.5">
+                                {(doc.fileSize / 1024).toFixed(0)} KB &middot; {formatDate(doc.createdAt)}
+                              </div>
+                            </div>
+                            <Download size={16} strokeWidth={1.8} className="text-text-sec flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <Download size={16} strokeWidth={1.8} className="text-text-sec flex-shrink-0" />
-                </button>
-              ))}
-            </div>
-          </SectionCard>
-        )}
+                  )
+                })}
+              </div>
+            </SectionCard>
+          )
+        })()}
 
         {/* Ansprechpartner */}
         {contactPersons.length > 0 && (

@@ -17,11 +17,13 @@ import {
   type GroupKey,
   type PortalMilestone,
 } from '@/hooks/usePortal'
+import PortalDocuments from './PortalDocuments'
 
 interface Props {
   projectId: string
   customerEmail: string
   customerName: string
+  contactId: string
 }
 
 const groupIcons: Record<GroupKey, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
@@ -43,7 +45,7 @@ function relativeTime(date: string): string {
   return new Date(date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-export default function PortalSection({ projectId, customerEmail, customerName }: Props) {
+export default function PortalSection({ projectId, customerEmail, customerName, contactId }: Props) {
   const { data, isLoading } = useAdminPortalProject(projectId)
   const activatePortal = useActivatePortal(projectId)
   const deactivatePortal = useDeactivatePortal(projectId)
@@ -481,6 +483,9 @@ export default function PortalSection({ projectId, customerEmail, customerName }
           )
         })}
       </div>
+
+      {/* Dokumenten-Ablage */}
+      <PortalDocuments projectId={projectId} contactId={contactId} />
 
       {/* E-Mail-Log */}
       <div className="glass-card overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
