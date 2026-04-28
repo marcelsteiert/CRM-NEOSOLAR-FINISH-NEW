@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Sun, LogOut, Loader2, AlertCircle, CheckCircle2, Circle, Clock,
   FileCheck, Wrench, Zap, Sparkles, FileText, Download, Calendar,
-  Phone, Mail, User as UserIcon, MapPin, Building2,
+  Phone, Mail, User as UserIcon, MapPin, Building2, CalendarClock,
 } from 'lucide-react'
 import { usePortalDashboard, type GroupKey, type PortalMilestone, type PortalProject } from './hooks/usePortalDashboard'
 import { clearPortalSession, portalApi } from './portalApi'
@@ -155,6 +155,7 @@ export default function PortalDashboard() {
                   nextMilestone={nextMilestone ?? null}
                   customerName={customerName}
                 />
+                <KeyDatesCard milestones={projectMilestones} />
                 <MilestoneTimeline
                   milestones={projectMilestones}
                   groups={milestoneGroups}
@@ -544,6 +545,7 @@ function MilestoneTimeline({
                               <div className="text-[11px] text-amber mt-0.5 flex items-center gap-1">
                                 <Calendar size={10} strokeWidth={2} />
                                 Geplant: {formatDate(m.scheduledDate)}
+                                {m.scheduledTime && <span> &middot; {m.scheduledTime} Uhr</span>}
                               </div>
                             )}
                             {isProgress && (
@@ -587,6 +589,95 @@ function SectionCard({
         <span className="text-sm font-semibold text-text">{title}</span>
       </div>
       {children}
+    </div>
+  )
+}
+
+// ── Wichtige Termine fuer den Kunden ──
+
+const KEY_DATE_KEYS: { key: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; color: string }[] = [
+  { key: 'DC_MONTAGE_TERMIN', icon: Wrench, color: '#FB923C' },
+  { key: 'AC_TERMIN', icon: Zap, color: '#F59E0B' },
+  { key: 'KOMPLETT_ERLEDIGT', icon: CheckCircle2, color: '#34D399' },
+]
+
+function daysUntilLabel(date: string | null): { text: string; color: string } | null {
+  if (!date) return null
+  const target = new Date(date).setHours(0, 0, 0, 0)
+  const today = new Date().setHours(0, 0, 0, 0)
+  const diff = Math.round((target - today) / (1000 * 60 * 60 * 24))
+  if (diff < 0) return { text: `vor ${Math.abs(diff)} Tag${Math.abs(diff) === 1 ? '' : 'en'}`, color: '#525E6F' }
+  if (diff === 0) return { text: 'Heute', color: '#F59E0B' }
+  if (diff === 1) return { text: 'Morgen', color: '#F59E0B' }
+  if (diff <= 7) return { text: `in ${diff} Tagen`, color: '#FB923C' }
+  return { text: `in ${diff} Tagen`, color: '#8B95A5' }
+}
+
+function KeyDatesCard({ milestones }: { milestones: any[] }) {
+  const items = KEY_DATE_KEYS
+    .map((tpl) => {
+      const m = milestones.find((m) => m.milestoneKey === tpl.key && m.scheduledDate)
+      return m ? { tpl, m } : null
+    })
+    .filter(Boolean) as { tpl: typeof KEY_DATE_KEYS[0]; m: any }[]
+
+  if (items.length === 0) return null
+
+  return (
+    <div
+      className="overflow-hidden"
+      style={{
+        borderRadius: 'var(--radius-lg)',
+        background: 'linear-gradient(180deg, rgba(245,158,11,0.06), rgba(255,255,255,0.02))',
+        border: '1px solid rgba(245,158,11,0.18)',
+      }}
+    >
+      <div className="px-5 py-3 border-b border-border flex items-center gap-2">
+        <CalendarClock size={16} strokeWidth={1.8} className="text-amber" />
+        <span className="text-sm font-semibold text-text">Geplante Termine</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
+        {items.map(({ tpl, m }) => {
+          const Icon = tpl.icon
+          const cd = daysUntilLabel(m.scheduledDate)
+          const dateStr = new Date(m.scheduledDate).toLocaleDateString('de-CH', {
+            weekday: 'short',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          })
+          return (
+            <div key={tpl.key} className="px-5 py-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    width: 30, height: 30, borderRadius: 8,
+                    background: `color-mix(in srgb, ${tpl.color} 14%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${tpl.color} 25%, transparent)`,
+                  }}
+                >
+                  <Icon size={14} strokeWidth={1.8} />
+                </div>
+                <div className="text-[11px] uppercase tracking-wider text-text-sec font-semibold flex-1 truncate">
+                  {m.label}
+                </div>
+              </div>
+              <div className="text-base font-semibold text-text">
+                {dateStr}
+                {m.scheduledTime && (
+                  <span className="text-text-sec font-normal text-sm"> &middot; {m.scheduledTime} Uhr</span>
+                )}
+              </div>
+              {cd && (
+                <div className="text-[12px] mt-1 font-medium" style={{ color: cd.color }}>
+                  {cd.text}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

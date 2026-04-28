@@ -20,6 +20,7 @@ import {
   type PortalMilestone,
 } from '@/hooks/usePortal'
 import PortalDocuments from './PortalDocuments'
+import PortalTermine from './PortalTermine'
 
 interface Props {
   projectId: string
@@ -459,6 +460,9 @@ export default function PortalSection({ projectId, customerEmail, customerName, 
           </div>
         </div>
       </div>
+
+      {/* Wichtige Termine fuer den Kunden – prominent oben */}
+      <PortalTermine projectId={projectId} milestones={milestones} />
 
       {/* Milestone-Gruppen */}
       <div className="space-y-3">

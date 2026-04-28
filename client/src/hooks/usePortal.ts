@@ -18,6 +18,7 @@ export interface PortalMilestone {
   status: MilestoneStatus
   completedAt: string | null
   scheduledDate: string | null
+  scheduledTime: string | null
   comment: string | null
   updatedBy: string | null
   createdAt: string
@@ -121,6 +122,7 @@ export function useUpdateMilestone(projectId: string) {
       id: string
       status?: MilestoneStatus
       scheduledDate?: string | null
+      scheduledTime?: string | null
       comment?: string | null
       label?: string
       sendEmail?: boolean
@@ -128,6 +130,7 @@ export function useUpdateMilestone(projectId: string) {
       api.put<{ data: PortalMilestone }>(`/admin/portal/milestones/${params.id}`, {
         status: params.status,
         scheduledDate: params.scheduledDate,
+        scheduledTime: params.scheduledTime,
         comment: params.comment,
         label: params.label,
         sendEmail: params.sendEmail,

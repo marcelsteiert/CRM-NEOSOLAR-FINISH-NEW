@@ -331,6 +331,7 @@ router.post('/projects/:projectId/deactivate', async (req: Request, res: Respons
 const updateMilestoneSchema = z.object({
   status: z.enum(['OPEN', 'IN_PROGRESS', 'DONE', 'BLOCKED']).optional(),
   scheduledDate: z.string().nullable().optional(),
+  scheduledTime: z.string().nullable().optional(),
   comment: z.string().nullable().optional(),
   label: z.string().min(1).max(120).optional(),
   sendEmail: z.boolean().optional(),
@@ -361,6 +362,9 @@ router.put('/milestones/:id', async (req: Request, res: Response, next: NextFunc
     }
     if (parsed.data.scheduledDate !== undefined) {
       updates.scheduled_date = parsed.data.scheduledDate
+    }
+    if (parsed.data.scheduledTime !== undefined) {
+      updates.scheduled_time = parsed.data.scheduledTime
     }
     if (parsed.data.comment !== undefined) {
       updates.comment = parsed.data.comment

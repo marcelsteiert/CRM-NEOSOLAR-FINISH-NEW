@@ -27,6 +27,7 @@ export interface PortalMilestone {
   status: MilestoneStatus
   completedAt: string | null
   scheduledDate: string | null
+  scheduledTime: string | null
   comment: string | null
 }
 
