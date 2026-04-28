@@ -39,6 +39,8 @@ import passwordsRouter from './routes/passwords.js'
 import notificationsRouter from './routes/notifications.js'
 import calendarRouter from './routes/calendar.js'
 import outlookRouter from './routes/outlook.js'
+import portalRouter from './routes/portal.js'
+import adminPortalRouter from './routes/admin/portal.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { mapKeys } from './lib/caseMapper.js'
 import { authMiddleware, requireRole } from './middleware/auth.js'
@@ -78,6 +80,8 @@ export function createApp() {
   // Oeffentliche Routes (kein Auth noetig)
   app.use('/api/v1/auth', authRouter)
   app.use('/api/v1/health', healthRouter)
+  // Kundenportal: eigener Auth-Layer (Magic Link), interne Auth siehe portal.ts
+  app.use('/api/v1/portal', portalRouter)
   // Geschuetzte Routes (authMiddleware pro Route)
   app.use('/api/v1/contacts', authMiddleware, contactsRouter)
   app.use('/api/v1/leads', authMiddleware, leadsRouter)
@@ -131,6 +135,7 @@ export function createApp() {
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
   app.use('/api/v1/admin/no-show-kanban', ...adminGuard, adminNoShowKanbanRouter)
   app.use('/api/v1/admin/duplicates', ...adminGuard, adminDuplicatesRouter)
+  app.use('/api/v1/admin/portal', ...adminGuard, adminPortalRouter)
   app.use('/api/v1/dashboard/callcenter', authMiddleware, callcenterRouter)
 
   app.use(errorHandler)

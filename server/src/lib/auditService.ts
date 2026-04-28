@@ -8,6 +8,7 @@ export type AuditEntity =
   | 'LEAD' | 'DEAL' | 'APPOINTMENT' | 'PROJECT' | 'TASK'
   | 'CONTACT' | 'USER' | 'DOCUMENT' | 'PASSWORD'
   | 'PIPELINE' | 'TAG' | 'CALENDAR' | 'SETTING' | 'AUTH'
+  | 'PORTAL_USER' | 'PORTAL_MILESTONE'
 
 interface AuditOptions {
   userId: string

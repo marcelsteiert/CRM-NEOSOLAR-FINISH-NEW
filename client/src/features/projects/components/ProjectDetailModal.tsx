@@ -21,6 +21,7 @@ import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
 import TaskSection from '@/components/ui/TaskSection'
 import ContactTimeline from '@/components/ui/ContactTimeline'
 import { useGenerateContactSummary } from '@/hooks/useAi'
+import PortalSection from './PortalSection'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
 const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
@@ -39,7 +40,7 @@ const activityIcons: Record<ProjectActivityType, React.ComponentType<{ size?: nu
   SYSTEM: Zap,
 }
 
-type ProjectTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks' | 'timeline'
+type ProjectTab = 'overview' | 'activities' | 'notes' | 'documents' | 'emails' | 'tasks' | 'timeline' | 'portal'
 
 function relativeTime(date: string): string {
   const diffMs = Date.now() - new Date(date).getTime()
@@ -287,6 +288,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     { key: 'emails', label: 'E-Mail' },
     { key: 'tasks', label: 'Aufgaben' },
     { key: 'timeline', label: 'Timeline' },
+    { key: 'portal', label: 'Kundenportal' },
   ]
 
   return (
@@ -896,6 +898,17 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
           {/* ────── TAB: Timeline ────── */}
           {activeTab === 'timeline' && project && (
             <ContactTimeline contactId={project.contactId} />
+          )}
+
+          {/* ────── TAB: Kundenportal ────── */}
+          {activeTab === 'portal' && project && (
+            <div className="px-4 sm:px-6 py-5">
+              <PortalSection
+                projectId={project.id}
+                customerEmail={project.email}
+                customerName={project.name}
+              />
+            </div>
           )}
         </div>
       </div>

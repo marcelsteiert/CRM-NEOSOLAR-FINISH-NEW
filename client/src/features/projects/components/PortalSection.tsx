@@ -1,0 +1,589 @@
+import { useState } from 'react'
+import {
+  Globe, Mail, Send, Power, PowerOff, CheckCircle2, Circle, Clock, AlertCircle,
+  FileCheck, Wrench, Zap, Sparkles, ExternalLink, Loader2,
+  Calendar, MessageSquare, ChevronDown, ChevronRight,
+} from 'lucide-react'
+import {
+  useAdminPortalProject,
+  useActivatePortal,
+  useDeactivatePortal,
+  useSendPortalLink,
+  useUpdateMilestone,
+  useInitMilestones,
+  milestoneStatusLabels,
+  milestoneStatusColors,
+  type MilestoneStatus,
+  type GroupKey,
+  type PortalMilestone,
+} from '@/hooks/usePortal'
+
+interface Props {
+  projectId: string
+  customerEmail: string
+  customerName: string
+}
+
+const groupIcons: Record<GroupKey, React.ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  BEWILLIGUNGEN: FileCheck,
+  MONTAGE: Wrench,
+  INBETRIEBNAHME: Zap,
+  ABSCHLUSS: Sparkles,
+}
+
+function relativeTime(date: string): string {
+  const diffMs = Date.now() - new Date(date).getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffH = Math.floor(diffMs / 3600000)
+  const diffD = Math.floor(diffMs / 86400000)
+  if (diffMin < 1) return 'gerade eben'
+  if (diffMin < 60) return `vor ${diffMin} Min.`
+  if (diffH < 24) return `vor ${diffH} Std.`
+  if (diffD < 7) return `vor ${diffD} Tagen`
+  return new Date(date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+export default function PortalSection({ projectId, customerEmail, customerName }: Props) {
+  const { data, isLoading } = useAdminPortalProject(projectId)
+  const activatePortal = useActivatePortal(projectId)
+  const deactivatePortal = useDeactivatePortal(projectId)
+  const sendLink = useSendPortalLink(projectId)
+  const updateMilestone = useUpdateMilestone(projectId)
+  const initMilestones = useInitMilestones(projectId)
+
+  const [showActivate, setShowActivate] = useState(false)
+  const [activateEmail, setActivateEmail] = useState(customerEmail)
+  const [activateSendEmail, setActivateSendEmail] = useState(true)
+  const [showEmailLog, setShowEmailLog] = useState(false)
+  const [editingComment, setEditingComment] = useState<string | null>(null)
+  const [commentDraft, setCommentDraft] = useState('')
+
+  if (isLoading || !data?.data) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 size={20} className="animate-spin text-text-sec" />
+      </div>
+    )
+  }
+
+  const { portalUser, milestones, milestoneGroups, emailLog } = data.data
+
+  const total = milestones.length
+  const done = milestones.filter((m) => m.status === 'DONE').length
+  const inProgress = milestones.filter((m) => m.status === 'IN_PROGRESS').length
+  const percent = total ? Math.round((done / total) * 100) : 0
+
+  const groupedMilestones: Record<GroupKey, PortalMilestone[]> = {
+    BEWILLIGUNGEN: [],
+    MONTAGE: [],
+    INBETRIEBNAHME: [],
+    ABSCHLUSS: [],
+  }
+  for (const m of milestones) {
+    groupedMilestones[m.groupKey]?.push(m)
+  }
+
+  const handleActivate = async () => {
+    try {
+      await activatePortal.mutateAsync({
+        email: activateEmail.trim() || undefined,
+        sendEmail: activateSendEmail,
+      })
+      setShowActivate(false)
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleDeactivate = async () => {
+    if (!confirm('Portal-Zugang wirklich deaktivieren?')) return
+    try {
+      await deactivatePortal.mutateAsync()
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleSendLink = async () => {
+    try {
+      const res = await sendLink.mutateAsync()
+      alert(`Anmeldelink gesendet an ${res.recipient}`)
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleStatusChange = async (m: PortalMilestone, status: MilestoneStatus) => {
+    const sendEmail = status === 'DONE' && m.status !== 'DONE'
+    let confirmEmail = false
+    if (sendEmail && portalUser?.isActive) {
+      confirmEmail = confirm(
+        `Status auf "Erledigt" setzen?\n\nKunde wird automatisch per E-Mail informiert.\nFortfahren?`,
+      )
+      if (!confirmEmail) return
+    }
+    try {
+      await updateMilestone.mutateAsync({
+        id: m.id,
+        status,
+        sendEmail: confirmEmail,
+      })
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleScheduleDate = async (m: PortalMilestone, date: string) => {
+    try {
+      await updateMilestone.mutateAsync({
+        id: m.id,
+        scheduledDate: date || null,
+      })
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  const handleSaveComment = async (m: PortalMilestone) => {
+    try {
+      await updateMilestone.mutateAsync({
+        id: m.id,
+        comment: commentDraft.trim() || null,
+      })
+      setEditingComment(null)
+    } catch (err: any) {
+      alert(`Fehler: ${err.message}`)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Portal-Status-Card */}
+      <div
+        className="glass-card p-5"
+        style={{
+          borderRadius: 'var(--radius-lg)',
+          background: portalUser?.isActive
+            ? 'linear-gradient(180deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02))'
+            : undefined,
+          border: portalUser?.isActive ? '1px solid rgba(245,158,11,0.25)' : undefined,
+        }}
+      >
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: portalUser?.isActive ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+            >
+              <Globe size={20} strokeWidth={1.8} style={{ color: portalUser?.isActive ? '#F59E0B' : '#8B95A5' }} />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-text">Kundenportal</div>
+              <div className="text-xs text-text-sec mt-0.5">
+                {portalUser?.isActive
+                  ? `Aktiv – ${portalUser.email}`
+                  : portalUser
+                  ? 'Deaktiviert'
+                  : 'Nicht aktiviert'}
+              </div>
+              {portalUser?.lastLoginAt && (
+                <div className="text-[11px] text-text-dim mt-1">
+                  Letzter Login: {relativeTime(portalUser.lastLoginAt)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {!portalUser?.isActive && (
+              <button
+                type="button"
+                onClick={() => setShowActivate(true)}
+                className="btn-primary text-xs"
+              >
+                <Power size={14} strokeWidth={1.8} />
+                Portal aktivieren
+              </button>
+            )}
+            {portalUser?.isActive && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleSendLink}
+                  disabled={sendLink.isPending}
+                  className="btn-secondary text-xs"
+                  title="Neuen Anmeldelink an den Kunden senden"
+                >
+                  {sendLink.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} strokeWidth={1.8} />}
+                  Link senden
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeactivate}
+                  disabled={deactivatePortal.isPending}
+                  className="btn-secondary text-xs"
+                  style={{ color: '#F87171' }}
+                >
+                  <PowerOff size={14} strokeWidth={1.8} />
+                  Deaktivieren
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Aktivierungs-Form */}
+        {showActivate && (
+          <div className="mt-4 pt-4 border-t border-border space-y-3">
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">
+                E-Mail des Kunden
+              </label>
+              <input
+                type="email"
+                value={activateEmail}
+                onChange={(e) => setActivateEmail(e.target.value)}
+                className="glass-input mt-1 w-full text-sm"
+                placeholder="kunde@beispiel.ch"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-xs text-text-sec cursor-pointer">
+              <input
+                type="checkbox"
+                checked={activateSendEmail}
+                onChange={(e) => setActivateSendEmail(e.target.checked)}
+              />
+              Willkommens-Mail mit Anmeldelink direkt versenden
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleActivate}
+                disabled={activatePortal.isPending || !activateEmail.trim()}
+                className="btn-primary text-xs"
+              >
+                {activatePortal.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                Aktivieren
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowActivate(false)}
+                className="btn-secondary text-xs"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fortschritt */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] uppercase tracking-wider text-text-sec font-semibold">
+              Fortschritt
+            </span>
+            <span className="text-sm font-semibold text-text">
+              {done} / {total} <span className="text-text-sec text-xs font-normal">({percent}%)</span>
+            </span>
+          </div>
+          <div
+            className="w-full overflow-hidden"
+            style={{
+              height: 8,
+              borderRadius: 999,
+              background: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <div
+              className="h-full transition-all duration-500"
+              style={{
+                width: `${percent}%`,
+                background: 'linear-gradient(90deg, #F59E0B, #FB923C)',
+                borderRadius: 999,
+                boxShadow: '0 0 12px rgba(245,158,11,0.4)',
+              }}
+            />
+          </div>
+          <div className="flex gap-4 mt-3 text-xs text-text-sec">
+            <span><span className="text-green font-semibold">{done}</span> erledigt</span>
+            <span><span className="text-amber font-semibold">{inProgress}</span> in Arbeit</span>
+            <span><span className="font-semibold">{total - done - inProgress}</span> offen</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Milestone-Gruppen */}
+      <div className="space-y-3">
+        {(Object.keys(groupedMilestones) as GroupKey[]).map((groupKey) => {
+          const items = groupedMilestones[groupKey]
+          if (!items.length) return null
+          const groupInfo = milestoneGroups[groupKey]
+          const GroupIcon = groupIcons[groupKey]
+          const groupDone = items.filter((m) => m.status === 'DONE').length
+          const groupColor = groupInfo.color
+
+          return (
+            <div
+              key={groupKey}
+              className="glass-card overflow-hidden"
+              style={{ borderRadius: 'var(--radius-lg)' }}
+            >
+              <div
+                className="flex items-center justify-between px-5 py-3 border-b border-border"
+                style={{
+                  background: `color-mix(in srgb, ${groupColor} 8%, transparent)`,
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="flex items-center justify-center"
+                    style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      background: `color-mix(in srgb, ${groupColor} 16%, transparent)`,
+                    }}
+                  >
+                    <GroupIcon size={16} strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-text">{groupInfo.label}</div>
+                    <div className="text-[11px] text-text-sec">{groupInfo.description}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-text-sec">
+                  <span style={{ color: groupColor }} className="font-semibold">{groupDone}</span>
+                  <span className="text-text-dim"> / {items.length}</span>
+                </div>
+              </div>
+
+              <div className="divide-y divide-border">
+                {items.map((m) => (
+                  <MilestoneRow
+                    key={m.id}
+                    milestone={m}
+                    onStatusChange={(status) => handleStatusChange(m, status)}
+                    onScheduleDate={(date) => handleScheduleDate(m, date)}
+                    onSaveComment={() => handleSaveComment(m)}
+                    editingComment={editingComment === m.id}
+                    onStartEdit={() => {
+                      setEditingComment(m.id)
+                      setCommentDraft(m.comment ?? '')
+                    }}
+                    onCancelEdit={() => setEditingComment(null)}
+                    commentDraft={commentDraft}
+                    setCommentDraft={setCommentDraft}
+                    color={groupColor}
+                  />
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* E-Mail-Log */}
+      <div className="glass-card overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
+        <button
+          type="button"
+          onClick={() => setShowEmailLog((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-3 hover:bg-surface-hover transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Mail size={16} strokeWidth={1.8} className="text-text-sec" />
+            <span className="text-sm font-semibold text-text">E-Mail-Verlauf</span>
+            <span className="text-xs text-text-sec">({emailLog.length})</span>
+          </div>
+          {showEmailLog ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </button>
+        {showEmailLog && (
+          <div className="border-t border-border max-h-64 overflow-y-auto">
+            {emailLog.length === 0 ? (
+              <div className="px-5 py-6 text-center text-xs text-text-sec">
+                Noch keine E-Mails versendet
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {emailLog.map((entry) => (
+                  <div key={entry.id} className="px-5 py-2.5 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-text truncate">{entry.subject}</div>
+                        <div className="text-text-sec mt-0.5 truncate">
+                          {entry.recipient} &middot; {relativeTime(entry.createdAt)}
+                        </div>
+                      </div>
+                      <span
+                        className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold"
+                        style={{
+                          background:
+                            entry.status === 'SENT' ? 'rgba(52,211,153,0.12)'
+                            : entry.status === 'FAILED' ? 'rgba(248,113,113,0.12)'
+                            : 'rgba(245,158,11,0.12)',
+                          color:
+                            entry.status === 'SENT' ? '#34D399'
+                            : entry.status === 'FAILED' ? '#F87171'
+                            : '#F59E0B',
+                        }}
+                      >
+                        {entry.status === 'SENT' ? 'Gesendet' : entry.status === 'FAILED' ? 'Fehler' : entry.status === 'LOGGED' ? 'Geloggt' : 'Pending'}
+                      </span>
+                    </div>
+                    {entry.errorMessage && (
+                      <div className="mt-1 text-red text-[11px]">{entry.errorMessage}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Reset (Danger Zone) */}
+      <div className="text-right">
+        <button
+          type="button"
+          onClick={async () => {
+            if (!confirm('Alle Milestones zuruecksetzen? Vorhandener Status geht verloren.')) return
+            try {
+              await initMilestones.mutateAsync()
+            } catch (err: any) {
+              alert(`Fehler: ${err.message}`)
+            }
+          }}
+          className="text-[11px] text-text-dim hover:text-red transition-colors underline"
+        >
+          Milestones zuruecksetzen
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Milestone-Row ──
+
+function MilestoneRow({
+  milestone,
+  onStatusChange,
+  onScheduleDate,
+  onSaveComment,
+  editingComment,
+  onStartEdit,
+  onCancelEdit,
+  commentDraft,
+  setCommentDraft,
+  color,
+}: {
+  milestone: PortalMilestone
+  onStatusChange: (s: MilestoneStatus) => void
+  onScheduleDate: (d: string) => void
+  onSaveComment: () => void
+  editingComment: boolean
+  onStartEdit: () => void
+  onCancelEdit: () => void
+  commentDraft: string
+  setCommentDraft: (s: string) => void
+  color: string
+}) {
+  const m = milestone
+  const StatusIcon = m.status === 'DONE' ? CheckCircle2 : m.status === 'IN_PROGRESS' ? Clock : m.status === 'BLOCKED' ? AlertCircle : Circle
+  const statusColor = milestoneStatusColors[m.status]
+
+  return (
+    <div className="px-5 py-3 hover:bg-surface-hover transition-colors">
+      <div className="flex items-start gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            const next: MilestoneStatus = m.status === 'DONE' ? 'OPEN' : 'DONE'
+            onStatusChange(next)
+          }}
+          className="flex-shrink-0 mt-0.5"
+          title={m.status === 'DONE' ? 'Auf "Offen" setzen' : 'Als erledigt markieren'}
+        >
+          <StatusIcon size={20} strokeWidth={1.8} style={{ color: statusColor }} />
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className={`text-sm font-medium ${m.status === 'DONE' ? 'text-text-sec line-through' : 'text-text'}`}>
+                {m.label}
+              </div>
+              {m.completedAt && (
+                <div className="text-[11px] text-green mt-0.5">
+                  Erledigt: {new Date(m.completedAt).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={m.status}
+                onChange={(e) => onStatusChange(e.target.value as MilestoneStatus)}
+                className="glass-input text-[11px] py-1 px-2"
+                style={{ minWidth: 'auto', width: 'auto' }}
+              >
+                {(Object.keys(milestoneStatusLabels) as MilestoneStatus[]).map((s) => (
+                  <option key={s} value={s}>{milestoneStatusLabels[s]}</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={m.scheduledDate ?? ''}
+                onChange={(e) => onScheduleDate(e.target.value)}
+                className="glass-input text-[11px] py-1 px-2"
+                style={{ minWidth: 'auto', width: 'auto' }}
+                title="Geplantes Datum"
+              />
+            </div>
+          </div>
+
+          {/* Kommentar */}
+          {editingComment ? (
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                className="glass-input text-xs flex-1"
+                placeholder="Notiz fuer Kunde (sichtbar im Portal)"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onSaveComment()
+                  if (e.key === 'Escape') onCancelEdit()
+                }}
+              />
+              <button type="button" onClick={onSaveComment} className="btn-primary text-[11px] py-1 px-2">
+                Speichern
+              </button>
+              <button type="button" onClick={onCancelEdit} className="btn-secondary text-[11px] py-1 px-2">
+                Abbrechen
+              </button>
+            </div>
+          ) : m.comment ? (
+            <button
+              type="button"
+              onClick={onStartEdit}
+              className="mt-1.5 text-[11px] text-text-sec hover:text-text text-left flex items-start gap-1.5"
+            >
+              <MessageSquare size={11} strokeWidth={1.8} className="mt-0.5 flex-shrink-0" />
+              <span className="flex-1">{m.comment}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onStartEdit}
+              className="mt-1.5 text-[11px] text-text-dim hover:text-text-sec underline"
+            >
+              + Notiz hinzufuegen
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

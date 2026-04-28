@@ -28,6 +28,7 @@ const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'))
 const FeaturesPage = lazy(() => import('@/features/features/FeaturesPage'))
 const PasswordsPage = lazy(() => import('@/features/passwords/PasswordsPage'))
 const CallcenterPage = lazy(() => import('@/features/callcenter/CallcenterPage'))
+const PortalApp = lazy(() => import('@/portal/PortalApp'))
 
 /* ── Page Loading Spinner ── */
 
@@ -96,6 +97,9 @@ export default function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          {/* Kundenportal - komplett separat, eigene Auth */}
+          <Route path="/portal/*" element={<PortalApp />} />
+
           {/* Login - oeffentlich */}
           <Route
             path="/login"
