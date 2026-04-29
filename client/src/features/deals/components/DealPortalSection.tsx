@@ -208,6 +208,7 @@ function DealActivePortalView({
   const deactivatePortal = useDeactivatePortal(projectId)
   const generateLink = useGeneratePortalLink(projectId)
   const updateMilestone = useUpdateMilestone(projectId)
+  const reactivateMutation = useSetupPortalFromDeal(dealId)
 
   const [linkCopied, setLinkCopied] = useState(false)
   const [editingDate, setEditingDate] = useState(false)
@@ -224,6 +225,74 @@ function DealActivePortalView({
 
   const { portalUser, milestones, loginUrl } = data.data
   const dcMontage = milestones.find((m) => m.milestoneKey === 'DC_MONTAGE_TERMIN')
+  const isInactive = portalUser && !portalUser.isActive
+
+  // Wenn Portal deaktiviert: zeige Reaktivierungs-Card
+  if (isInactive) {
+    const handleReactivate = async () => {
+      try {
+        await reactivateMutation.mutateAsync({
+          email: portalUser.email,
+          sendEmail: false,
+        })
+      } catch (err: any) {
+        alert(`Fehler: ${err.message}`)
+      }
+    }
+    return (
+      <div
+        className="glass-card p-6"
+        style={{
+          borderRadius: 'var(--radius-lg)',
+          background: 'linear-gradient(180deg, rgba(248,113,113,0.08), rgba(248,113,113,0.02))',
+          border: '1px solid rgba(248,113,113,0.25)',
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="flex items-center justify-center"
+            style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: 'rgba(248,113,113,0.12)',
+              border: '1px solid rgba(248,113,113,0.25)',
+            }}
+          >
+            <PowerOff size={20} strokeWidth={1.8} style={{ color: '#F87171' }} />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-text">Kundenportal deaktiviert</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold" style={{ background: 'rgba(248,113,113,0.12)', color: '#F87171' }}>
+                Inaktiv
+              </span>
+            </div>
+            <div className="text-xs text-text-sec mt-1">
+              {portalUser.email} kann sich aktuell nicht einloggen.
+            </div>
+            <div className="text-[11px] text-text-dim mt-2 leading-relaxed">
+              Beim Reaktivieren bleibt alles erhalten: Login-Link, Dokumente, Milestones, Termine.
+              Der Kunde kann sich danach sofort wieder mit dem gleichen Link einloggen.
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleReactivate}
+                disabled={reactivateMutation.isPending}
+                className="btn-primary text-xs"
+              >
+                {reactivateMutation.isPending ? (
+                  <><Loader2 size={14} className="animate-spin" /> Reaktivieren…</>
+                ) : (
+                  <><Globe size={14} strokeWidth={1.8} /> Portal reaktivieren</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleCopy = async (url: string) => {
     try {

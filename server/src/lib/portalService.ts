@@ -51,8 +51,8 @@ function hashToken(token: string): string {
 
 /**
  * Liefert den existierenden Permanent-Token zurueck oder erstellt einen neuen.
- * Klartext wird in der DB gespeichert damit der Admin den Link beliebig oft
- * abrufen kann. Tradeoff: bei DB-Leak haben Angreifer den Login.
+ * Token: 9 bytes = 12 Zeichen base64url, 72 bit Entropy (sicher gegen Brute-Force).
+ * Bestehende laenger Tokens (43 Zeichen) bleiben funktional.
  */
 export async function getOrCreateAccessToken(portalUserId: string): Promise<string> {
   const { data: existing } = await supabase
@@ -62,11 +62,11 @@ export async function getOrCreateAccessToken(portalUserId: string): Promise<stri
     .maybeSingle()
 
   const currentToken = (existing as any)?.access_token
-  if (currentToken && typeof currentToken === 'string' && currentToken.length > 20) {
+  if (currentToken && typeof currentToken === 'string' && currentToken.length >= 8) {
     return currentToken
   }
 
-  const rawToken = crypto.randomBytes(32).toString('base64url')
+  const rawToken = crypto.randomBytes(9).toString('base64url')
   await supabase
     .from('portal_users')
     .update({ access_token: rawToken })
@@ -79,7 +79,7 @@ export async function getOrCreateAccessToken(portalUserId: string): Promise<stri
  * Erzeugt einen neuen Permanent-Token, alter wird dadurch ungueltig.
  */
 export async function rotateAccessToken(portalUserId: string): Promise<string> {
-  const rawToken = crypto.randomBytes(32).toString('base64url')
+  const rawToken = crypto.randomBytes(9).toString('base64url')
   await supabase
     .from('portal_users')
     .update({ access_token: rawToken })
@@ -247,7 +247,7 @@ async function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: 
 }
 
 export async function buildMagicLinkEmail(magicLink: string): Promise<{ subject: string; html: string }> {
-  const url = `${PORTAL_BASE_URL}/portal/login?token=${magicLink}`
+  const url = `${PORTAL_BASE_URL}/p/${magicLink}`
   const b = await loadBranding()
   const content = `
     <p style="font-size:18px;font-weight:600;margin:0 0 16px;color:#F0F2F5;">Anmeldung Kundenportal</p>
@@ -279,7 +279,7 @@ export async function buildMilestoneCompletedEmail(milestoneKey: string, custome
 }
 
 export async function buildPortalActivatedEmail(magicLink: string, customerName: string, projectName: string): Promise<{ subject: string; html: string }> {
-  const url = `${PORTAL_BASE_URL}/portal/login?token=${magicLink}`
+  const url = `${PORTAL_BASE_URL}/p/${magicLink}`
   const b = await loadBranding()
   const content = `
     <p style="font-size:20px;font-weight:600;margin:0 0 16px;color:#F0F2F5;">Willkommen im ${b.companyName} Kundenportal</p>

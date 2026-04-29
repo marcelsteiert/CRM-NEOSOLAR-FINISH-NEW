@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import AppLayout from '@/components/layout/AppLayout'
 import LoginPage from '@/features/auth/LoginPage'
 import { useAuth } from '@/hooks/useAuth'
@@ -74,6 +74,11 @@ function ModuleRoute({ moduleId, children }: { moduleId: string; children: React
   return <>{children}</>
 }
 
+function ShortPortalRedirect() {
+  const { token } = useParams<{ token: string }>()
+  return <Navigate to={`/portal/login?token=${token ?? ''}`} replace />
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
 
@@ -99,6 +104,8 @@ export default function App() {
         <Routes>
           {/* Kundenportal - komplett separat, eigene Auth */}
           <Route path="/portal/*" element={<PortalApp />} />
+          {/* Kurzer Login-Link: /p/<token> -> redirect zu Portal-Login */}
+          <Route path="/p/:token" element={<ShortPortalRedirect />} />
 
           {/* Login - oeffentlich */}
           <Route

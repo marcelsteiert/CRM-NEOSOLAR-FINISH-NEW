@@ -58,7 +58,7 @@ router.get('/projects/:projectId', async (req: Request, res: Response, next: Nex
     if (portalUser && portalUser.is_active) {
       const rawToken = await getOrCreateAccessToken(portalUser.id)
       const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://neosolar-crm.com'
-      loginUrl = `${baseUrl}/portal/login?token=${rawToken}`
+      loginUrl = `${baseUrl}/p/${rawToken}`
     }
 
     // Milestones
@@ -256,7 +256,7 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
       ? await rotateAccessToken(portalUser.id)
       : await getOrCreateAccessToken(portalUser.id)
     const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://neosolar-crm.com'
-    const loginUrl = `${baseUrl}/portal/login?token=${rawToken}`
+    const loginUrl = `${baseUrl}/p/${rawToken}`
 
     let sent = false
     if (parsed.data.sendEmail) {
