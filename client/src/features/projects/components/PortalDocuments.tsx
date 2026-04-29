@@ -77,7 +77,6 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [uploadMode, setUploadMode] = useState<'file' | 'link'>('file')
   const [linkUrl, setLinkUrl] = useState('')
   const [linkLabel, setLinkLabel] = useState('')
 
@@ -268,87 +267,81 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
           </div>
         </div>
 
-        {/* Mode Toggle: Datei / Link */}
-        <div className="flex items-center gap-1 p-0.5 rounded-lg w-fit" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <button
-            type="button"
-            onClick={() => setUploadMode('file')}
-            className="px-3 py-1 rounded-md text-[11px] font-semibold transition-colors"
+        {/* DATEI-UPLOAD */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <Upload size={11} strokeWidth={1.8} className="text-text-sec" />
+            <span className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">
+              Datei hochladen
+            </span>
+          </div>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileRef.current?.click()}
+            className="cursor-pointer rounded-xl border-2 border-dashed transition-all py-5 px-4 text-center"
             style={{
-              background: uploadMode === 'file' ? 'rgba(245,158,11,0.15)' : 'transparent',
-              color: uploadMode === 'file' ? '#F59E0B' : '#8B95A5',
+              borderColor: dragOver ? '#F59E0B' : 'rgba(255,255,255,0.1)',
+              background: dragOver ? 'rgba(245,158,11,0.05)' : 'transparent',
             }}
           >
-            <Upload size={11} className="inline mr-1" strokeWidth={1.8} />
-            Datei hochladen
-          </button>
-          <button
-            type="button"
-            onClick={() => setUploadMode('link')}
-            className="px-3 py-1 rounded-md text-[11px] font-semibold transition-colors"
-            style={{
-              background: uploadMode === 'link' ? 'rgba(245,158,11,0.15)' : 'transparent',
-              color: uploadMode === 'link' ? '#F59E0B' : '#8B95A5',
-            }}
-          >
-            🔗 Link einfügen
-          </button>
+            {uploading ? (
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 size={20} className="animate-spin text-amber" />
+                <span className="text-xs text-text-sec">{uploadProgress}</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5">
+                <Upload size={18} strokeWidth={1.8} className="text-text-sec" />
+                <span className="text-xs text-text-sec">
+                  <span className="text-text font-medium">Datei wählen</span> oder hierher ziehen
+                </span>
+                <span className="text-[10px] text-text-dim">PDF, Bilder, Office – max. 50 MB</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {uploadMode === 'link' ? (
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={linkLabel}
-              onChange={(e) => setLinkLabel(e.target.value)}
-              className="glass-input w-full text-sm"
-              placeholder="Bezeichnung (z.B. Offerte als Google-Doc)"
-            />
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                className="glass-input flex-1 text-sm"
-                placeholder="https://docs.google.com/..."
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddLink() }}
-              />
-              <button type="button" onClick={handleAddLink} disabled={!linkUrl.trim()} className="btn-primary text-xs">
-                Link hinzufügen
-              </button>
-            </div>
-            <div className="text-[10px] text-text-dim">
-              z.B. zu einer externen Offerte (Google Docs, OneDrive, DocuSign, externe URL...)
-            </div>
-          </div>
-        ) : (
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          onClick={() => fileRef.current?.click()}
-          className="cursor-pointer rounded-xl border-2 border-dashed transition-all py-6 px-4 text-center"
-          style={{
-            borderColor: dragOver ? '#F59E0B' : 'rgba(255,255,255,0.1)',
-            background: dragOver ? 'rgba(245,158,11,0.05)' : 'transparent',
-          }}
-        >
-          {uploading ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 size={20} className="animate-spin text-amber" />
-              <span className="text-xs text-text-sec">{uploadProgress}</span>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1.5">
-              <Upload size={18} strokeWidth={1.8} className="text-text-sec" />
-              <span className="text-xs text-text-sec">
-                <span className="text-text font-medium">Datei wählen</span> oder hierher ziehen
-              </span>
-              <span className="text-[10px] text-text-dim">PDF, Bilder, Office – max. 50 MB pro Datei</span>
-            </div>
-          )}
+        {/* TRENNER */}
+        <div className="flex items-center gap-3 my-3">
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          <span className="text-[10px] text-text-dim uppercase tracking-wider">oder zusätzlich</span>
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
         </div>
-        )}
+
+        {/* LINK-BEREICH */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: 11 }}>🔗</span>
+            <span className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">
+              Link einfügen
+            </span>
+          </div>
+          <input
+            type="text"
+            value={linkLabel}
+            onChange={(e) => setLinkLabel(e.target.value)}
+            className="glass-input w-full text-sm"
+            placeholder="Bezeichnung (z.B. Offerte als Google-Doc)"
+          />
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              className="glass-input flex-1 text-sm"
+              placeholder="https://docs.google.com/..."
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddLink() }}
+            />
+            <button type="button" onClick={handleAddLink} disabled={!linkUrl.trim()} className="btn-primary text-xs">
+              Hinzufügen
+            </button>
+          </div>
+          <div className="text-[10px] text-text-dim">
+            z.B. zu einer externen Offerte (Google Docs, OneDrive, DocuSign, externe URL...)
+          </div>
+        </div>
 
         <input
           ref={fileRef}
