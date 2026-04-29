@@ -170,10 +170,14 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
     if (dealIds.length > 0) {
       const { data: dealStatus } = await supabase
         .from('deals')
-        .select('id, status')
+        .select('id, stage')
         .in('id', dealIds)
       for (const d of dealStatus ?? []) {
-        if ((d as any).status === 'OPEN') openDealIds.add((d as any).id)
+        const stage = (d as any).stage
+        // Alle Stages ausser GEWONNEN und VERLOREN gelten als "noch im Angebot"
+        if (stage && stage !== 'GEWONNEN' && stage !== 'VERLOREN') {
+          openDealIds.add((d as any).id)
+        }
       }
     }
 
