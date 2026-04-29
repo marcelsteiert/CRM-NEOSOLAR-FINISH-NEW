@@ -141,7 +141,10 @@ export function createApp() {
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
   app.use('/api/v1/admin/no-show-kanban', ...adminGuard, adminNoShowKanbanRouter)
   app.use('/api/v1/admin/duplicates', ...adminGuard, adminDuplicatesRouter)
-  app.use('/api/v1/admin/portal', ...adminGuard, adminPortalRouter)
+  // Portal-Routes: alle eingeloggten User (Verkaeufer + Projektleitung + Admin)
+  // Der Frontend-Filter zeigt eh nur eigene Deals; Datenzugriff ist auf
+  // Kontakt-Email begrenzt
+  app.use('/api/v1/admin/portal', authMiddleware, adminPortalRouter)
   app.use('/api/v1/dashboard/callcenter', authMiddleware, callcenterRouter)
 
   app.use(errorHandler)
