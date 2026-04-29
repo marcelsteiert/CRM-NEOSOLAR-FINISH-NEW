@@ -45,6 +45,7 @@ const updateUserSchema = z.object({
   role: z.enum(['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']).optional(),
   isActive: z.boolean().optional(),
   allowedModules: z.array(z.string()).optional(),
+  signature: z.string().nullable().optional(),
 })
 
 // ── Routes ──
@@ -69,6 +70,7 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
       avatar: u.avatar_color ?? null,
       isActive: u.is_active,
       allowedModules: u.allowed_modules ?? defaultModulesByRole[u.role as UserRole] ?? [],
+      signature: u.signature ?? null,
       createdAt: u.created_at,
     }))
 
@@ -281,6 +283,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (d.phone !== undefined) updates.phone = d.phone
     if (d.isActive !== undefined) updates.is_active = d.isActive
     if (d.allowedModules !== undefined) updates.allowed_modules = d.allowedModules
+    if (d.signature !== undefined) updates.signature = d.signature
 
     if (d.role !== undefined) {
       updates.role = d.role

@@ -55,7 +55,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       ...doc,
       downloadUrl: doc.storage_path
         ? `${supabaseUrl}/storage/v1/object/public/documents/${doc.storage_path}`
-        : null,
+        : (doc.external_url ?? null),
     }))
 
     res.json({ data: enriched, total: enriched.length })
@@ -158,14 +158,17 @@ const metadataSchema = z.object({
   contactId: z.string().min(1),
   entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']),
   entityId: z.string().optional(),
-  storagePath: z.string().min(1),
+  storagePath: z.string().nullable().optional(),
+  externalUrl: z.string().url().nullable().optional(),
   fileName: z.string().min(1),
-  fileSize: z.number().min(0),
-  mimeType: z.string().min(1),
+  fileSize: z.number().min(0).optional().default(0),
+  mimeType: z.string().min(1).optional().default('application/octet-stream'),
   uploadedBy: z.string().optional(),
   notes: z.string().optional(),
   folderPath: z.string().nullable().optional(),
   portalVisible: z.boolean().optional(),
+}).refine((d) => d.storagePath || d.externalUrl, {
+  message: 'Entweder storagePath (Datei) oder externalUrl (Link) erforderlich',
 })
 
 router.post('/metadata', async (req: Request, res: Response, next: NextFunction) => {
@@ -187,7 +190,8 @@ router.post('/metadata', async (req: Request, res: Response, next: NextFunction)
         file_name: d.fileName,
         file_size: d.fileSize,
         mime_type: d.mimeType,
-        storage_path: d.storagePath,
+        storage_path: d.storagePath ?? null,
+        external_url: d.externalUrl ?? null,
         uploaded_by: d.uploadedBy || req.user?.userId,
         notes: d.notes ?? null,
         folder_path: d.folderPath ?? null,
@@ -199,7 +203,9 @@ router.post('/metadata', async (req: Request, res: Response, next: NextFunction)
     if (dbError) throw new AppError(`DB-Fehler: ${dbError.message}`, 500)
 
     const supabaseUrl = process.env.SUPABASE_URL ?? ''
-    const downloadUrl = `${supabaseUrl}/storage/v1/object/public/documents/${d.storagePath}`
+    const downloadUrl = d.storagePath
+      ? `${supabaseUrl}/storage/v1/object/public/documents/${d.storagePath}`
+      : d.externalUrl ?? null
 
     logAudit({ userId: getAuditUserId(req), action: 'CREATE', entity: 'DOCUMENT', entityId: doc?.id, description: `Dokument "${d.fileName}" hochgeladen` })
     res.status(201).json({ data: { ...doc, downloadUrl } })

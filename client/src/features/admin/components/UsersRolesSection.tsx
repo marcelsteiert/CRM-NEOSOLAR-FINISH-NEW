@@ -67,6 +67,7 @@ interface FormData {
   phone: string
   role: UserRole
   allowedModules: string[]
+  signature: string
 }
 
 const emptyForm: FormData = {
@@ -78,6 +79,7 @@ const emptyForm: FormData = {
   phone: '',
   role: 'VERTRIEB',
   allowedModules: [],
+  signature: '',
 }
 
 export default function UsersRolesSection() {
@@ -186,6 +188,7 @@ export default function UsersRolesSection() {
       password: '',
       role: user.role,
       allowedModules: [...(user.allowedModules ?? [])],
+      signature: (user as any).signature ?? '',
     })
   }
 
@@ -200,7 +203,8 @@ export default function UsersRolesSection() {
       phone: editForm.phone.trim(),
       role: editForm.role,
       allowedModules: editForm.allowedModules,
-    }, {
+      signature: editForm.signature.trim() || null,
+    } as any, {
       onSuccess: () => setEditingUser(null),
     })
   }
@@ -904,6 +908,20 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
           </div>
         </div>
       )}
+
+      {/* Signatur (fuer Kundenportal + Mails) */}
+      <div>
+        <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">
+          Signatur · wird im Kundenportal als Ansprechpartner-Notiz angezeigt
+        </label>
+        <textarea
+          value={form.signature}
+          onChange={(e) => setForm({ ...form, signature: e.target.value })}
+          className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50 resize-none"
+          rows={3}
+          placeholder="z.B. Mit freundlichen Grüssen&#10;Eileen Müller · Solar-Beraterin&#10;Tel direkt: +41 71 ..."
+        />
+      </div>
 
       {/* Rolle */}
       <div>

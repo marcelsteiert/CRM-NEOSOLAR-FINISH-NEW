@@ -199,7 +199,7 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
     // Sichtbare Dokumente (portal_visible = true)
     const { data: documents } = await supabase
       .from('documents')
-      .select('id, file_name, file_size, mime_type, entity_type, entity_id, folder_path, created_at, uploaded_by')
+      .select('id, file_name, file_size, mime_type, entity_type, entity_id, folder_path, created_at, uploaded_by, storage_path, external_url')
       .eq('contact_id', portal.contactId)
       .eq('portal_visible', true)
       .order('created_at', { ascending: false })
@@ -226,7 +226,7 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
     const { data: contactPersons } = userIds.length
       ? await supabase
           .from('users')
-          .select('id, first_name, last_name, email, phone, role, avatar_color')
+          .select('id, first_name, last_name, email, phone, role, avatar_color, signature')
           .in('id', userIds)
       : { data: [] }
 
@@ -257,13 +257,20 @@ router.get('/documents/:id/download', async (req: Request, res: Response, next: 
 
     const { data: doc } = await supabase
       .from('documents')
-      .select('id, contact_id, storage_path, file_name, portal_visible')
+      .select('id, contact_id, storage_path, external_url, file_name, portal_visible')
       .eq('id', req.params.id)
       .single()
 
     if (!doc) throw new AppError('Dokument nicht gefunden', 404)
     if (doc.contact_id !== portal.contactId) throw new AppError('Kein Zugriff', 403)
     if (!doc.portal_visible) throw new AppError('Dokument nicht freigegeben', 403)
+
+    // Externer Link: direkt zurueckgeben
+    if (doc.external_url) {
+      return res.json({ data: { url: doc.external_url, fileName: doc.file_name, external: true } })
+    }
+
+    if (!doc.storage_path) throw new AppError('Datei nicht verfuegbar', 404)
 
     const { data: signed, error } = await supabase
       .storage

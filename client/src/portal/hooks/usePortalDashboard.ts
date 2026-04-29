@@ -76,6 +76,7 @@ export interface PortalContactPerson {
   phone: string | null
   role: string
   avatarColor: string | null
+  signature: string | null
 }
 
 export interface PortalContact {

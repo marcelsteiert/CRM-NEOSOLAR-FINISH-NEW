@@ -95,10 +95,10 @@ export default function DealPortalSection({
               <Sparkles size={20} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-text">Kundenportal aus Angebot eroeffnen</h3>
+              <h3 className="text-base font-semibold text-text">Kundenportal aus Angebot eröffnen</h3>
               <p className="text-[12px] text-text-sec mt-1 leading-relaxed">
-                Aktiviere fuer <strong>{customerName}</strong> einen persoenlichen Login-Bereich. Der Kunde sieht
-                die Offerte zum Download, den voraussichtlichen Montagetermin und einen Workflow was als Naechstes passiert.
+                Aktiviere für <strong>{customerName}</strong> einen persönlichen Login-Bereich. Der Kunde sieht
+                die Offerte zum Download, den voraussichtlichen Montagetermin und einen Workflow was als Nächstes passiert.
               </p>
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function DealPortalSection({
               className="glass-input mt-1 w-full text-sm"
               placeholder="kunde@beispiel.ch"
             />
-            <div className="text-[11px] text-text-dim mt-1">An diese Adresse geht der Anmeldelink fuer das Portal</div>
+            <div className="text-[11px] text-text-dim mt-1">An diese Adresse geht der Anmeldelink für das Portal</div>
           </div>
 
           <div>
@@ -164,7 +164,7 @@ export default function DealPortalSection({
             {setupMutation.isPending ? (
               <><Loader2 size={14} className="animate-spin" /> Wird eingerichtet...</>
             ) : (
-              <><Globe size={14} strokeWidth={1.8} /> Kundenportal jetzt eroeffnen</>
+              <><Globe size={14} strokeWidth={1.8} /> Kundenportal jetzt eröffnen</>
             )}
           </button>
 
@@ -240,7 +240,7 @@ function DealActivePortalView({
   }
 
   const handleRotate = async () => {
-    if (!confirm('Soll ein neuer Link erstellt werden?\n\nDer alte Link wird sofort ungueltig.')) return
+    if (!confirm('Soll ein neuer Link erstellt werden?\n\nDer alte Link wird sofort ungültig.')) return
     try {
       await generateLink.mutateAsync({ rotate: true })
     } catch (err: any) { alert(`Fehler: ${err.message}`) }
@@ -347,7 +347,7 @@ function DealActivePortalView({
                 onClick={handleRotate}
                 disabled={generateLink.isPending}
                 className="ml-auto text-[10px] text-text-dim hover:text-amber transition-colors flex items-center gap-1"
-                title="Neuen Link erstellen – alter wird ungueltig"
+                title="Neuen Link erstellen – alter wird ungültig"
               >
                 <RefreshCw size={10} strokeWidth={1.8} />
                 Link erneuern
@@ -428,13 +428,13 @@ function DealActivePortalView({
         </div>
       </div>
 
-      {/* Dokumente fuer den Kunden – als ANGEBOT verknuepft */}
+      {/* Dokumente für den Kunden – als ANGEBOT verknuepft */}
       <PortalDocuments
         projectId={projectId}
         contactId={contactId}
         entityType="ANGEBOT"
         entityId={dealId}
-        title="Offerte &amp; Dokumente fuer den Kunden"
+        title="Offerte &amp; Dokumente für den Kunden"
       />
 
       {/* Hinweis */}
@@ -446,7 +446,7 @@ function DealActivePortalView({
         <div className="text-[12px] text-text-sec leading-relaxed">
           <strong className="text-text">Bewilligungen, Montage-Schritte etc.</strong> werden automatisch im Portal sichtbar,
           sobald der Deal als "Gewonnen" markiert ist. Im Angebots-Modus zeigen wir dem Kunden bewusst nur
-          das Wesentliche: Offerte, Montagetermin und einen klaren Workflow was als Naechstes passiert.
+          das Wesentliche: Offerte, Montagetermin und einen klaren Workflow was als Nächstes passiert.
         </div>
       </div>
     </div>

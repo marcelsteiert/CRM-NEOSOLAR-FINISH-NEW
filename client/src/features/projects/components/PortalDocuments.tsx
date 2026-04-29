@@ -15,7 +15,8 @@ interface PortalDocument {
   fileName: string
   fileSize: number
   mimeType: string
-  storagePath: string
+  storagePath: string | null
+  externalUrl?: string | null
   folderPath: string | null
   portalVisible: boolean
   notes: string | null
@@ -76,6 +77,9 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
   const [error, setError] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [uploadMode, setUploadMode] = useState<'file' | 'link'>('file')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkLabel, setLinkLabel] = useState('')
 
   const SUPABASE_URL = 'https://tzoquorcgygmrougevgm.supabase.co'
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6b3F1b3JjZ3lnbXJvdWdldmdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3OTEzODQsImV4cCI6MjA4ODM2NzM4NH0.79OVK4Zy0q08WvxOPpHZWrklcRWSmHYl2K3VPe1xZmU'
@@ -147,6 +151,36 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
     void loadDocs()
     qc.invalidateQueries({ queryKey: ['admin-portal', projectId] })
   }, [contactId, effectiveEntityType, effectiveEntityId, uploadCategory, uploadVisible, uploading, user, loadDocs, qc, projectId])
+
+  const handleAddLink = async () => {
+    setError('')
+    let url = linkUrl.trim()
+    if (!url) return setError('Bitte URL eingeben')
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url
+    }
+    const label = linkLabel.trim() || url.replace(/^https?:\/\//, '').slice(0, 60)
+    try {
+      await api.post('/documents/metadata', {
+        contactId,
+        entityType: effectiveEntityType,
+        entityId: effectiveEntityId,
+        externalUrl: url,
+        fileName: label,
+        fileSize: 0,
+        mimeType: 'application/x-link',
+        uploadedBy: user?.id,
+        folderPath: uploadCategory,
+        portalVisible: uploadVisible,
+      })
+      setLinkUrl('')
+      setLinkLabel('')
+      void loadDocs()
+      qc.invalidateQueries({ queryKey: ['admin-portal', projectId] })
+    } catch (err: any) {
+      setError(err.message)
+    }
+  }
 
   const handleToggleVisibility = async (doc: PortalDocument) => {
     try {
@@ -234,6 +268,60 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
           </div>
         </div>
 
+        {/* Mode Toggle: Datei / Link */}
+        <div className="flex items-center gap-1 p-0.5 rounded-lg w-fit" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            type="button"
+            onClick={() => setUploadMode('file')}
+            className="px-3 py-1 rounded-md text-[11px] font-semibold transition-colors"
+            style={{
+              background: uploadMode === 'file' ? 'rgba(245,158,11,0.15)' : 'transparent',
+              color: uploadMode === 'file' ? '#F59E0B' : '#8B95A5',
+            }}
+          >
+            <Upload size={11} className="inline mr-1" strokeWidth={1.8} />
+            Datei hochladen
+          </button>
+          <button
+            type="button"
+            onClick={() => setUploadMode('link')}
+            className="px-3 py-1 rounded-md text-[11px] font-semibold transition-colors"
+            style={{
+              background: uploadMode === 'link' ? 'rgba(245,158,11,0.15)' : 'transparent',
+              color: uploadMode === 'link' ? '#F59E0B' : '#8B95A5',
+            }}
+          >
+            🔗 Link einfügen
+          </button>
+        </div>
+
+        {uploadMode === 'link' ? (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={linkLabel}
+              onChange={(e) => setLinkLabel(e.target.value)}
+              className="glass-input w-full text-sm"
+              placeholder="Bezeichnung (z.B. Offerte als Google-Doc)"
+            />
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                className="glass-input flex-1 text-sm"
+                placeholder="https://docs.google.com/..."
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddLink() }}
+              />
+              <button type="button" onClick={handleAddLink} disabled={!linkUrl.trim()} className="btn-primary text-xs">
+                Link hinzufügen
+              </button>
+            </div>
+            <div className="text-[10px] text-text-dim">
+              z.B. zu einer externen Offerte (Google Docs, OneDrive, DocuSign, externe URL...)
+            </div>
+          </div>
+        ) : (
         <div
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
@@ -254,12 +342,13 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
             <div className="flex flex-col items-center gap-1.5">
               <Upload size={18} strokeWidth={1.8} className="text-text-sec" />
               <span className="text-xs text-text-sec">
-                <span className="text-text font-medium">Datei waehlen</span> oder hierher ziehen
+                <span className="text-text font-medium">Datei wählen</span> oder hierher ziehen
               </span>
               <span className="text-[10px] text-text-dim">PDF, Bilder, Office – max. 50 MB pro Datei</span>
             </div>
           )}
         </div>
+        )}
 
         <input
           ref={fileRef}
@@ -319,8 +408,11 @@ export default function PortalDocuments({ projectId, contactId, entityType = 'PR
 
               <div className="divide-y divide-border">
                 {items.map((doc) => {
-                  const downloadUrl = `${SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`
-                  const Icon = isImage(doc.mimeType) ? ImageIcon : FileText
+                  const isLink = !!doc.externalUrl
+                  const downloadUrl = isLink
+                    ? doc.externalUrl!
+                    : `${SUPABASE_URL}/storage/v1/object/public/documents/${doc.storagePath}`
+                  const Icon = isLink ? FileText : (isImage(doc.mimeType) ? ImageIcon : FileText)
                   const isConfirmingDelete = confirmDeleteId === doc.id
 
                   return (

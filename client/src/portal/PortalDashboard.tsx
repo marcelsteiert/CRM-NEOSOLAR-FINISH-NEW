@@ -302,7 +302,7 @@ export default function PortalDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-text">{person.firstName} {person.lastName}</div>
                       <div className="text-[11px] text-text-sec uppercase tracking-wider">
-                        {person.role === 'VERTRIEB' ? 'Verkauf' : person.role === 'PROJEKTLEITUNG' ? 'Projektleitung' : person.role === 'ADMIN' ? 'Geschaeftsleitung' : person.role}
+                        {person.role === 'VERTRIEB' ? 'Verkauf' : person.role === 'PROJEKTLEITUNG' ? 'Projektleitung' : person.role === 'ADMIN' ? 'Geschäftsleitung' : person.role === 'GL' ? 'Geschäftsleitung' : person.role}
                       </div>
                       <div className="mt-2 space-y-1">
                         {person.email && (
@@ -318,6 +318,14 @@ export default function PortalDashboard() {
                           </a>
                         )}
                       </div>
+                      {person.signature && (
+                        <div
+                          className="mt-3 pt-3 text-[11px] text-text-sec leading-relaxed whitespace-pre-line border-t"
+                          style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                        >
+                          {person.signature}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -328,7 +336,7 @@ export default function PortalDashboard() {
 
         {/* Kontakt-Adresse */}
         {(contact.address || contact.company) && (
-          <SectionCard title="Anlagen-Standort" icon={MapPin}>
+          <SectionCard title="Anlagen-Standort" icon={MapPin}>{/* Standort der zukünftigen PV-Anlage */}
             <div className="px-5 py-4">
               {contact.company && (
                 <div className="flex items-center gap-2 text-sm text-text mb-1">
@@ -435,7 +443,7 @@ function ProjectHeroCard({
 
       <div className="relative">
         <div className="text-[10px] uppercase tracking-[0.18em] text-amber font-semibold mb-2">
-          {project.inOfferMode ? 'Ihr persoenliches Angebot' : 'Ihre PV-Anlage'}
+          {project.inOfferMode ? 'Ihr persönliches Angebot' : 'Ihre PV-Anlage'}
         </div>
         <h2 className="text-xl sm:text-2xl font-semibold text-text mb-1">{project.name}</h2>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-sec">
@@ -448,7 +456,7 @@ function ProjectHeroCard({
             style={{ background: 'rgba(96,165,250,0.12)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.25)' }}
           >
             <FileText size={11} strokeWidth={2} />
-            In Pruefung – Angebot eingereicht
+            In Prüfung – Angebot eingereicht
           </div>
         )}
 
@@ -657,7 +665,7 @@ function SectionCard({
   )
 }
 
-// ── Wichtige Termine fuer den Kunden ──
+// ── Wichtige Termine für den Kunden ──
 
 const KEY_DATE_KEYS: { key: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; color: string }[] = [
   { key: 'DC_MONTAGE_TERMIN', icon: Wrench, color: '#FB923C' },
@@ -769,7 +777,95 @@ function OfferModeView({
 
   return (
     <div className="space-y-5">
-      {/* Voraussichtlicher Montagetermin – PROMINENT */}
+      {/* OFFERTE – Hero, ganz prominent oben */}
+      <div
+        className="overflow-hidden relative"
+        style={{
+          borderRadius: 'var(--radius-xl)',
+          background: 'linear-gradient(135deg, rgba(245,158,11,0.16), rgba(251,146,60,0.06) 70%, rgba(255,255,255,0.02))',
+          border: '1px solid rgba(245,158,11,0.3)',
+          boxShadow: '0 0 40px rgba(245,158,11,0.12)',
+        }}
+      >
+        <div className="absolute -top-10 -right-10 opacity-10 pointer-events-none" style={{ width: 220, height: 220 }}>
+          <FileText size={220} strokeWidth={0.6} style={{ color: '#F59E0B' }} />
+        </div>
+
+        <div className="relative px-6 sm:px-8 pt-7 pb-5">
+          <div className="flex items-center gap-2 mb-2">
+            <FileText size={16} strokeWidth={1.8} className="text-amber" />
+            <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-amber">
+              Ihr persönliches Angebot
+            </span>
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-text mb-2">
+            {project.name}
+          </div>
+          <div className="text-[13px] text-text-sec leading-relaxed max-w-2xl">
+            Wir freuen uns, Ihnen Ihre persönliche Offerte präsentieren zu dürfen.
+            Hier finden Sie alle Unterlagen zum Durchlesen, den voraussichtlichen Montagetermin
+            sowie Ihren Ansprechpartner für alle Fragen.
+          </div>
+        </div>
+
+        {/* Offerte-Liste direkt im Hero */}
+        {allOfferDocs.length > 0 ? (
+          <div className="border-t" style={{ borderColor: 'rgba(245,158,11,0.18)' }}>
+            <div className="divide-y" style={{ borderColor: 'rgba(245,158,11,0.10)' }}>
+              {allOfferDocs.map((doc) => {
+                const isLink = !!doc.externalUrl
+                return (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => onDownload(doc.id)}
+                    className="w-full px-6 sm:px-8 py-4 flex items-center gap-4 hover:bg-surface-hover transition-colors text-left group"
+                  >
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center"
+                      style={{
+                        width: 52, height: 52, borderRadius: 14,
+                        background: 'rgba(245,158,11,0.18)',
+                        border: '1px solid rgba(245,158,11,0.35)',
+                      }}
+                    >
+                      <FileText size={22} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-semibold text-text truncate">{doc.fileName}</div>
+                      <div className="text-[11px] text-text-sec mt-0.5">
+                        {isLink ? 'Externer Link' : `${(doc.fileSize / 1024).toFixed(0)} KB`} · {formatDate(doc.createdAt)}
+                      </div>
+                    </div>
+                    <div
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all group-hover:bg-amber group-hover:text-bg"
+                      style={{
+                        background: 'linear-gradient(135deg, #F59E0B, #F97316)',
+                        color: '#06080C',
+                        boxShadow: '0 0 16px rgba(245,158,11,0.3)',
+                      }}
+                    >
+                      <Download size={14} strokeWidth={2.5} />
+                      {isLink ? 'Öffnen' : 'Herunterladen'}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          <div
+            className="border-t mx-6 sm:mx-8 mb-6 mt-2 px-5 py-5 text-center rounded-xl"
+            style={{ borderColor: 'rgba(245,158,11,0.18)', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.10)' }}
+          >
+            <FileText size={20} className="mx-auto mb-2 text-text-dim" />
+            <div className="text-sm text-text-sec">Ihre Offerte wird in Kürze hier verfügbar sein</div>
+            <div className="text-[11px] text-text-dim mt-1">Wir laden sie für Sie hoch sobald sie fertig ist</div>
+          </div>
+        )}
+      </div>
+
+      {/* Voraussichtlicher Montagetermin */}
       {dcMontage?.scheduledDate && (
         <div
           className="overflow-hidden p-6 sm:p-8 relative"
@@ -814,80 +910,9 @@ function OfferModeView({
             <div className="mt-4 text-[13px] text-text-sec leading-relaxed max-w-2xl">
               Sobald wir Ihre Bestellung erhalten haben, beginnen wir mit der Vorbereitung Ihrer
               PV-Anlage. Der Termin kann sich noch leicht verschieben – wir informieren Sie
-              rechtzeitig ueber den definitiven Termin.
+              rechtzeitig über den definitiven Termin.
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Offerte zum Download */}
-      {allOfferDocs.length > 0 ? (
-        <div
-          className="overflow-hidden"
-          style={{
-            borderRadius: 'var(--radius-lg)',
-            background: 'linear-gradient(180deg, rgba(245,158,11,0.06), rgba(255,255,255,0.02))',
-            border: '1px solid rgba(245,158,11,0.2)',
-          }}
-        >
-          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-            <FileText size={16} strokeWidth={1.8} className="text-amber" />
-            <span className="text-sm font-semibold text-text">Ihr persoenliches Angebot</span>
-            <span className="text-[11px] text-text-sec ml-auto">{allOfferDocs.length} Dokument{allOfferDocs.length === 1 ? '' : 'e'}</span>
-          </div>
-          <div className="px-5 py-3 text-[13px] text-text-sec border-b border-border">
-            Hier finden Sie Ihre Offerte und alle Vertragsunterlagen zum Durchlesen.
-          </div>
-          <div className="divide-y divide-border">
-            {allOfferDocs.map((doc) => (
-              <button
-                key={doc.id}
-                type="button"
-                onClick={() => onDownload(doc.id)}
-                className="w-full px-5 py-4 flex items-center gap-3 hover:bg-surface-hover transition-colors text-left group"
-              >
-                <div
-                  className="flex-shrink-0 flex items-center justify-center"
-                  style={{
-                    width: 44, height: 44, borderRadius: 12,
-                    background: 'rgba(245,158,11,0.12)',
-                    border: '1px solid rgba(245,158,11,0.25)',
-                  }}
-                >
-                  <FileText size={18} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-text truncate">{doc.fileName}</div>
-                  <div className="text-[11px] text-text-sec mt-0.5">
-                    {(doc.fileSize / 1024).toFixed(0)} KB &middot; {formatDate(doc.createdAt)}
-                  </div>
-                </div>
-                <div
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all group-hover:bg-amber group-hover:text-bg"
-                  style={{
-                    background: 'rgba(245,158,11,0.12)',
-                    color: '#F59E0B',
-                    border: '1px solid rgba(245,158,11,0.25)',
-                  }}
-                >
-                  <Download size={12} strokeWidth={2} />
-                  Download
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div
-          className="px-5 py-6 text-center"
-          style={{
-            borderRadius: 'var(--radius-lg)',
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px dashed rgba(255,255,255,0.08)',
-          }}
-        >
-          <FileText size={20} className="mx-auto mb-2 text-text-dim" />
-          <div className="text-sm text-text-sec">Ihre Offerte wird in Kuerze hier verfuegbar sein</div>
         </div>
       )}
 
@@ -901,7 +926,7 @@ function OfferModeView({
           <div className="space-y-4">
             <WorkflowStep
               step={1}
-              title="Sie pruefen unser Angebot"
+              title="Sie prüfen unser Angebot"
               description="Schauen Sie sich die Offerte in Ruhe an. Bei Fragen meldet sich Ihr Ansprechpartner gerne."
               status="active"
             />
@@ -913,8 +938,8 @@ function OfferModeView({
             />
             <WorkflowStep
               step={3}
-              title="Wir kuemmern uns um die Bewilligungen"
-              description="Baubewilligung, Anschlussgesuch und Installationsanzeige reichen wir fuer Sie ein."
+              title="Wir kümmern uns um die Bewilligungen"
+              description="Baubewilligung, Anschlussgesuch und Installationsanzeige reichen wir für Sie ein."
               status="pending"
             />
             <WorkflowStep
