@@ -101,11 +101,37 @@ export default function ProjectsPage() {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="btn-primary text-[12px] shrink-0"
               title="Neues Projekt eroeffnen"
+              className="group flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-[10px] shrink-0 transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:translate-y-[-1px]"
+              style={{
+                background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,146,60,0.06))',
+                border: '1px solid rgba(245,158,11,0.25)',
+                boxShadow: '0 0 0 0 rgba(245,158,11,0)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(245,158,11,0.18)'
+                e.currentTarget.style.borderColor = 'rgba(245,158,11,0.4)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 0 0 0 rgba(245,158,11,0)'
+                e.currentTarget.style.borderColor = 'rgba(245,158,11,0.25)'
+              }}
             >
-              <Plus size={14} strokeWidth={2} />
-              <span className="hidden sm:inline">Neues Projekt</span>
+              <span
+                className="flex items-center justify-center transition-transform duration-200 group-hover:rotate-90"
+                style={{
+                  width: 24, height: 24,
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #F59E0B, #F97316)',
+                  boxShadow: '0 2px 8px rgba(245,158,11,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  color: '#06080C',
+                }}
+              >
+                <Plus size={14} strokeWidth={2.5} />
+              </span>
+              <span className="text-[12px] font-semibold text-text hidden sm:inline tracking-tight">
+                Neues Projekt
+              </span>
             </button>
           )}
 
