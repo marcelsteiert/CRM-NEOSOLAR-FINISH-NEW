@@ -64,6 +64,7 @@ export interface PortalEmailLogEntry {
 export interface AdminPortalProjectData {
   project: { id: string; name: string; contactId: string }
   portalUser: PortalUser | null
+  loginUrl: string | null
   milestones: PortalMilestone[]
   milestoneGroups: Record<GroupKey, MilestoneGroup>
   milestoneTemplates: MilestoneTemplate[]
@@ -106,10 +107,10 @@ export function useDeactivatePortal(projectId: string) {
 export function useGeneratePortalLink(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (params: { sendEmail?: boolean } = {}) =>
-      api.post<{ data: { loginUrl: string; recipient: string; sent: boolean; expiresInMinutes: number } }>(
+    mutationFn: (params: { sendEmail?: boolean; rotate?: boolean } = {}) =>
+      api.post<{ data: { loginUrl: string; recipient: string; sent: boolean; rotated: boolean; permanent: boolean } }>(
         `/admin/portal/projects/${projectId}/send-link`,
-        { sendEmail: params.sendEmail ?? false },
+        { sendEmail: params.sendEmail ?? false, rotate: params.rotate ?? false },
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-portal', projectId] }),
   })

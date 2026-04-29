@@ -13,6 +13,7 @@ import {
   signPortalToken,
   sendPortalEmail,
   buildMagicLinkEmail,
+  verifyAccessToken,
 } from '../lib/portalService.js'
 import { milestoneTemplates, milestoneGroups } from '../lib/portalConfig.js'
 import { portalAuthMiddleware } from '../middleware/portalAuth.js'
@@ -80,8 +81,12 @@ router.post('/auth/verify', async (req: Request, res: Response, next: NextFuncti
     const parsed = verifySchema.safeParse(req.body)
     if (!parsed.success) throw new AppError('Token erforderlich', 400)
 
-    const result = await consumeMagicLink(parsed.data.token)
-    if (!result) throw new AppError('Anmeldelink ist abgelaufen oder ungueltig', 401)
+    // Erst Magic-Link versuchen (single-use), dann permanenten Access-Token
+    let result = await consumeMagicLink(parsed.data.token)
+    if (!result) {
+      result = await verifyAccessToken(parsed.data.token)
+    }
+    if (!result) throw new AppError('Anmeldelink ist ungueltig oder abgelaufen', 401)
 
     const { data: portalUser } = await supabase
       .from('portal_users')

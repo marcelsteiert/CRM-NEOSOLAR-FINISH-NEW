@@ -17,6 +17,7 @@ import {
   buildPortalActivatedEmail,
   buildMagicLinkEmail,
   buildMilestoneCompletedEmail,
+  getOrCreateAccessToken,
 } from '../../lib/portalService.js'
 import {
   milestoneTemplates,
@@ -52,6 +53,14 @@ router.get('/projects/:projectId', async (req: Request, res: Response, next: Nex
       .is('deleted_at', null)
       .maybeSingle()
 
+    // Permanenter Login-Link (falls Portal aktiv)
+    let loginUrl: string | null = null
+    if (portalUser && portalUser.is_active) {
+      const rawToken = await getOrCreateAccessToken(portalUser.id)
+      const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://neosolar-crm.com'
+      loginUrl = `${baseUrl}/portal/login?token=${rawToken}`
+    }
+
     // Milestones
     let { data: milestones } = await supabase
       .from('portal_milestones')
@@ -81,6 +90,7 @@ router.get('/projects/:projectId', async (req: Request, res: Response, next: Nex
       data: {
         project,
         portalUser: portalUser ?? null,
+        loginUrl,
         milestones: milestones ?? [],
         milestoneGroups,
         milestoneTemplates,
@@ -177,9 +187,9 @@ router.post('/projects/:projectId/activate', async (req: Request, res: Response,
       await supabase.from('portal_milestones').insert(getInitialMilestoneRows(projectId))
     }
 
-    // Magic Link + Welcome-Mail
+    // Permanent-Token + Welcome-Mail
     if (parsed.data.sendEmail) {
-      const rawToken = await createMagicLinkForPortalUser(portalUserId)
+      const rawToken = await getOrCreateAccessToken(portalUserId)
       const customerName = `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'Kunde'
       const { subject, html } = await buildPortalActivatedEmail(rawToken, customerName, project.name)
       await sendPortalEmail({
@@ -212,6 +222,7 @@ router.post('/projects/:projectId/activate', async (req: Request, res: Response,
 
 const sendLinkSchema = z.object({
   sendEmail: z.boolean().optional().default(false),
+  rotate: z.boolean().optional().default(false),
 })
 
 router.post('/projects/:projectId/send-link', async (req: Request, res: Response, next: NextFunction) => {
@@ -239,7 +250,11 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
       throw new AppError('Portal-Zugang nicht aktiv – bitte zuerst aktivieren', 400)
     }
 
-    const rawToken = await createMagicLinkForPortalUser(portalUser.id)
+    // Permanent-Token holen (oder rotieren)
+    const { rotateAccessToken } = await import('../../lib/portalService.js')
+    const rawToken = parsed.data.rotate
+      ? await rotateAccessToken(portalUser.id)
+      : await getOrCreateAccessToken(portalUser.id)
     const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://neosolar-crm.com'
     const loginUrl = `${baseUrl}/portal/login?token=${rawToken}`
 
@@ -262,9 +277,11 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
       action: 'UPDATE',
       entity: 'PORTAL_USER',
       entityId: portalUser.id,
-      description: parsed.data.sendEmail
+      description: parsed.data.rotate
+        ? `Permanenter Anmeldelink fuer ${portalUser.email} ROTIERT (alter Link ungueltig)`
+        : parsed.data.sendEmail
         ? `Anmeldelink an ${portalUser.email} gesendet`
-        : `Anmeldelink generiert fuer ${portalUser.email} (manueller Versand)`,
+        : `Anmeldelink fuer ${portalUser.email} abgerufen`,
     })
 
     res.json({
@@ -272,7 +289,8 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
         loginUrl,
         recipient: portalUser.email,
         sent,
-        expiresInMinutes: 30,
+        rotated: parsed.data.rotate,
+        permanent: true,
       },
     })
   } catch (err) {
@@ -752,9 +770,9 @@ router.post('/deals/:dealId/setup', async (req: Request, res: Response, next: Ne
       }
     }
 
-    // Magic Link + Welcome-Mail (nur wenn neu aktiviert)
+    // Permanent-Token + Welcome-Mail (nur wenn neu aktiviert)
     if (parsed.data.sendEmail && !existingPortalUser?.is_active) {
-      const rawToken = await createMagicLinkForPortalUser(portalUserId)
+      const rawToken = await getOrCreateAccessToken(portalUserId)
       const customerName = `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'Kunde'
       const { subject, html } = await buildPortalActivatedEmail(rawToken, customerName, deal.title || 'Ihr Angebot')
       await sendPortalEmail({

@@ -43,13 +43,71 @@ export function verifyPortalToken(token: string): PortalAuthUser | null {
   }
 }
 
-// ── Magic Link ──
-
-const MAGIC_LINK_TTL_MIN = 30
+// ── Permanent Access Token (immer gleicher Link, rotierbar) ──
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
+
+/**
+ * Liefert den existierenden Permanent-Token zurueck oder erstellt einen neuen.
+ * Klartext wird in der DB gespeichert damit der Admin den Link beliebig oft
+ * abrufen kann. Tradeoff: bei DB-Leak haben Angreifer den Login.
+ */
+export async function getOrCreateAccessToken(portalUserId: string): Promise<string> {
+  const { data: existing } = await supabase
+    .from('portal_users')
+    .select('access_token')
+    .eq('id', portalUserId)
+    .maybeSingle()
+
+  const currentToken = (existing as any)?.access_token
+  if (currentToken && typeof currentToken === 'string' && currentToken.length > 20) {
+    return currentToken
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('base64url')
+  await supabase
+    .from('portal_users')
+    .update({ access_token: rawToken })
+    .eq('id', portalUserId)
+
+  return rawToken
+}
+
+/**
+ * Erzeugt einen neuen Permanent-Token, alter wird dadurch ungueltig.
+ */
+export async function rotateAccessToken(portalUserId: string): Promise<string> {
+  const rawToken = crypto.randomBytes(32).toString('base64url')
+  await supabase
+    .from('portal_users')
+    .update({ access_token: rawToken })
+    .eq('id', portalUserId)
+  return rawToken
+}
+
+export async function verifyAccessToken(rawToken: string): Promise<{ portalUserId: string } | null> {
+  const { data: user } = await supabase
+    .from('portal_users')
+    .select('id, is_active')
+    .eq('access_token', rawToken)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!user || !(user as any).is_active) return null
+
+  await supabase
+    .from('portal_users')
+    .update({ last_login_at: new Date().toISOString() })
+    .eq('id', (user as any).id)
+
+  return { portalUserId: (user as any).id }
+}
+
+// ── Magic Link (Legacy – fuer Welcome-Mail bei Erstaktivierung) ──
+
+const MAGIC_LINK_TTL_MIN = 30
 
 export async function createMagicLinkForPortalUser(portalUserId: string, ipAddress?: string): Promise<string> {
   const rawToken = crypto.randomBytes(32).toString('base64url')
