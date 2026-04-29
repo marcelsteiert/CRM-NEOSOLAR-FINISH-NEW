@@ -155,11 +155,22 @@ export default function PortalDashboard() {
                   nextMilestone={nextMilestone ?? null}
                   customerName={customerName}
                 />
-                <KeyDatesCard milestones={projectMilestones} />
-                <MilestoneTimeline
-                  milestones={projectMilestones}
-                  groups={milestoneGroups}
-                />
+                {project.inOfferMode ? (
+                  <OfferModeView
+                    project={project}
+                    milestones={projectMilestones}
+                    documents={documents}
+                    onDownload={handleDownload}
+                  />
+                ) : (
+                  <>
+                    <KeyDatesCard milestones={projectMilestones} />
+                    <MilestoneTimeline
+                      milestones={projectMilestones}
+                      groups={milestoneGroups}
+                    />
+                  </>
+                )}
               </div>
             )
           })
@@ -197,7 +208,7 @@ export default function PortalDashboard() {
         )}
 
         {/* Dokumente – gruppiert nach Kategorie */}
-        {documents.length > 0 && (() => {
+        {documents.length > 0 && !projects.some((p) => p.inOfferMode) && (() => {
           const CATEGORY_COLORS: Record<string, string> = {
             Vertraege: '#F59E0B',
             Bewilligungen: '#60A5FA',
@@ -441,8 +452,8 @@ function ProjectHeroCard({
           </div>
         )}
 
-        {/* Fortschritt */}
-        <div className="mt-6">
+        {/* Fortschritt – nur wenn nicht im Angebot-Modus */}
+        {!project.inOfferMode && <div className="mt-6">
           <div className="flex items-end justify-between mb-2">
             <div>
               <div className="text-[11px] uppercase tracking-wider text-text-sec font-semibold">Fortschritt</div>
@@ -486,7 +497,7 @@ function ProjectHeroCard({
               }}
             />
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   )
@@ -730,6 +741,244 @@ function KeyDatesCard({ milestones }: { milestones: any[] }) {
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// ── OfferModeView: Spezielles Layout solange Deal noch im Angebot ──
+
+function OfferModeView({
+  project,
+  milestones,
+  documents,
+  onDownload,
+}: {
+  project: any
+  milestones: any[]
+  documents: any[]
+  onDownload: (id: string) => Promise<void>
+}) {
+  const dcMontage = milestones.find((m) => m.milestoneKey === 'DC_MONTAGE_TERMIN')
+  const offerDocs = documents.filter((d) => {
+    const cat = (d.folderPath ?? '').toLowerCase()
+    return cat.includes('vertra') || cat.includes('offert') || d.entityType === 'ANGEBOT'
+  })
+  const allOfferDocs = offerDocs.length > 0 ? offerDocs : documents
+  const cd = dcMontage?.scheduledDate ? daysUntilLabel(dcMontage.scheduledDate) : null
+
+  return (
+    <div className="space-y-5">
+      {/* Voraussichtlicher Montagetermin – PROMINENT */}
+      {dcMontage?.scheduledDate && (
+        <div
+          className="overflow-hidden p-6 sm:p-8 relative"
+          style={{
+            borderRadius: 'var(--radius-xl)',
+            background: 'linear-gradient(135deg, rgba(251,146,60,0.10), rgba(245,158,11,0.04))',
+            border: '1px solid rgba(251,146,60,0.25)',
+          }}
+        >
+          <div
+            className="absolute -top-6 -right-6 opacity-10 pointer-events-none"
+            style={{ width: 140, height: 140 }}
+          >
+            <CalendarClock size={140} strokeWidth={0.8} style={{ color: '#FB923C' }} />
+          </div>
+
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarClock size={16} strokeWidth={1.8} style={{ color: '#FB923C' }} />
+              <span className="text-[11px] uppercase tracking-[0.18em] font-semibold" style={{ color: '#FB923C' }}>
+                Voraussichtlicher Montagetermin
+              </span>
+            </div>
+
+            <div className="flex items-baseline gap-3 flex-wrap mt-3">
+              <div className="text-2xl sm:text-4xl font-bold text-text">
+                {new Date(dcMontage.scheduledDate).toLocaleDateString('de-CH', {
+                  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+                })}
+              </div>
+              {dcMontage.scheduledTime && (
+                <div className="text-lg text-text-sec">um {dcMontage.scheduledTime} Uhr</div>
+              )}
+            </div>
+
+            {cd && (
+              <div className="mt-2 text-sm font-medium" style={{ color: cd.color }}>
+                {cd.text}
+              </div>
+            )}
+
+            <div className="mt-4 text-[13px] text-text-sec leading-relaxed max-w-2xl">
+              Sobald wir Ihre Bestellung erhalten haben, beginnen wir mit der Vorbereitung Ihrer
+              PV-Anlage. Der Termin kann sich noch leicht verschieben – wir informieren Sie
+              rechtzeitig ueber den definitiven Termin.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offerte zum Download */}
+      {allOfferDocs.length > 0 ? (
+        <div
+          className="overflow-hidden"
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(180deg, rgba(245,158,11,0.06), rgba(255,255,255,0.02))',
+            border: '1px solid rgba(245,158,11,0.2)',
+          }}
+        >
+          <div className="px-5 py-4 border-b border-border flex items-center gap-2">
+            <FileText size={16} strokeWidth={1.8} className="text-amber" />
+            <span className="text-sm font-semibold text-text">Ihr persoenliches Angebot</span>
+            <span className="text-[11px] text-text-sec ml-auto">{allOfferDocs.length} Dokument{allOfferDocs.length === 1 ? '' : 'e'}</span>
+          </div>
+          <div className="px-5 py-3 text-[13px] text-text-sec border-b border-border">
+            Hier finden Sie Ihre Offerte und alle Vertragsunterlagen zum Durchlesen.
+          </div>
+          <div className="divide-y divide-border">
+            {allOfferDocs.map((doc) => (
+              <button
+                key={doc.id}
+                type="button"
+                onClick={() => onDownload(doc.id)}
+                className="w-full px-5 py-4 flex items-center gap-3 hover:bg-surface-hover transition-colors text-left group"
+              >
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    width: 44, height: 44, borderRadius: 12,
+                    background: 'rgba(245,158,11,0.12)',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                  }}
+                >
+                  <FileText size={18} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-text truncate">{doc.fileName}</div>
+                  <div className="text-[11px] text-text-sec mt-0.5">
+                    {(doc.fileSize / 1024).toFixed(0)} KB &middot; {formatDate(doc.createdAt)}
+                  </div>
+                </div>
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all group-hover:bg-amber group-hover:text-bg"
+                  style={{
+                    background: 'rgba(245,158,11,0.12)',
+                    color: '#F59E0B',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                  }}
+                >
+                  <Download size={12} strokeWidth={2} />
+                  Download
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div
+          className="px-5 py-6 text-center"
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px dashed rgba(255,255,255,0.08)',
+          }}
+        >
+          <FileText size={20} className="mx-auto mb-2 text-text-dim" />
+          <div className="text-sm text-text-sec">Ihre Offerte wird in Kuerze hier verfuegbar sein</div>
+        </div>
+      )}
+
+      {/* So geht es weiter – Workflow */}
+      <div className="glass-card overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
+        <div className="px-5 py-3 border-b border-border flex items-center gap-2">
+          <Sparkles size={16} strokeWidth={1.8} className="text-amber" />
+          <span className="text-sm font-semibold text-text">So geht es weiter</span>
+        </div>
+        <div className="p-5">
+          <div className="space-y-4">
+            <WorkflowStep
+              step={1}
+              title="Sie pruefen unser Angebot"
+              description="Schauen Sie sich die Offerte in Ruhe an. Bei Fragen meldet sich Ihr Ansprechpartner gerne."
+              status="active"
+            />
+            <WorkflowStep
+              step={2}
+              title="Vertragsunterzeichnung"
+              description="Sobald Sie unser Angebot annehmen, schicken wir Ihnen den Vertrag."
+              status="pending"
+            />
+            <WorkflowStep
+              step={3}
+              title="Wir kuemmern uns um die Bewilligungen"
+              description="Baubewilligung, Anschlussgesuch und Installationsanzeige reichen wir fuer Sie ein."
+              status="pending"
+            />
+            <WorkflowStep
+              step={4}
+              title="Material und Termin"
+              description="Wir bestellen die Komponenten und koordinieren den Montagetermin."
+              status="pending"
+            />
+            <WorkflowStep
+              step={5}
+              title="Montage und Inbetriebnahme"
+              description="Unser Team installiert Ihre PV-Anlage und nimmt sie in Betrieb."
+              status="pending"
+              isLast
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WorkflowStep({
+  step, title, description, status, isLast = false,
+}: {
+  step: number
+  title: string
+  description: string
+  status: 'active' | 'pending' | 'done'
+  isLast?: boolean
+}) {
+  const isActive = status === 'active'
+  const isDone = status === 'done'
+  return (
+    <div className="flex gap-4 relative">
+      {!isLast && (
+        <div
+          className="absolute left-[15px] top-8 bottom-[-16px]"
+          style={{ width: 2, background: 'rgba(255,255,255,0.06)' }}
+        />
+      )}
+      <div
+        className="flex-shrink-0 flex items-center justify-center text-[12px] font-bold relative z-10"
+        style={{
+          width: 32, height: 32, borderRadius: 999,
+          background: isActive
+            ? 'rgba(245,158,11,0.18)'
+            : isDone
+            ? 'rgba(52,211,153,0.18)'
+            : 'rgba(255,255,255,0.04)',
+          border: `2px solid ${isActive ? '#F59E0B' : isDone ? '#34D399' : 'rgba(255,255,255,0.1)'}`,
+          color: isActive ? '#F59E0B' : isDone ? '#34D399' : '#525E6F',
+          boxShadow: isActive ? '0 0 12px rgba(245,158,11,0.3)' : 'none',
+        }}
+      >
+        {isDone ? <CheckCircle2 size={14} strokeWidth={2.5} /> : step}
+      </div>
+      <div className="flex-1 min-w-0 pb-2">
+        <div className={`text-sm font-semibold ${isActive ? 'text-text' : 'text-text-sec'}`}>
+          {title}
+        </div>
+        <div className="text-[12px] text-text-sec mt-0.5 leading-relaxed">
+          {description}
+        </div>
       </div>
     </div>
   )
