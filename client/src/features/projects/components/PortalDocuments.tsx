@@ -27,6 +27,12 @@ interface PortalDocument {
 interface Props {
   projectId: string
   contactId: string
+  /** Override entity-type fuer den Upload (default: PROJEKT). Z.B. ANGEBOT im Deal-Kontext. */
+  entityType?: 'PROJEKT' | 'ANGEBOT' | 'LEAD' | 'TERMIN' | 'KONTAKT'
+  /** Override entity-id (default: projectId). */
+  entityId?: string
+  /** Alternative Ueberschrift */
+  title?: string
 }
 
 const CATEGORIES: { id: string; label: string; description: string; color: string }[] = [
@@ -55,8 +61,10 @@ function isImage(mime: string) {
   return mime.startsWith('image/')
 }
 
-export default function PortalDocuments({ projectId, contactId }: Props) {
+export default function PortalDocuments({ projectId, contactId, entityType = 'PROJEKT', entityId, title }: Props) {
   const { user } = useAuth()
+  const effectiveEntityType = entityType
+  const effectiveEntityId = entityId ?? projectId
   const qc = useQueryClient()
   const [docs, setDocs] = useState<PortalDocument[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -75,14 +83,14 @@ export default function PortalDocuments({ projectId, contactId }: Props) {
   const loadDocs = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await api.get<{ data: PortalDocument[] }>(`/documents?contactId=${contactId}&entityType=PROJEKT&entityId=${projectId}`)
+      const res = await api.get<{ data: PortalDocument[] }>(`/documents?contactId=${contactId}&entityType=${effectiveEntityType}&entityId=${effectiveEntityId}`)
       setDocs(res.data ?? [])
     } catch (err: any) {
       setError(err.message ?? 'Dokumente konnten nicht geladen werden')
     } finally {
       setLoading(false)
     }
-  }, [contactId, projectId])
+  }, [contactId, effectiveEntityType, effectiveEntityId])
 
   useEffect(() => {
     void loadDocs()
@@ -119,8 +127,8 @@ export default function PortalDocuments({ projectId, contactId }: Props) {
 
         await api.post('/documents/metadata', {
           contactId,
-          entityType: 'PROJEKT',
-          entityId: projectId,
+          entityType: effectiveEntityType,
+          entityId: effectiveEntityId,
           storagePath,
           fileName: file.name,
           fileSize: file.size,
@@ -138,7 +146,7 @@ export default function PortalDocuments({ projectId, contactId }: Props) {
     setUploadProgress('')
     void loadDocs()
     qc.invalidateQueries({ queryKey: ['admin-portal', projectId] })
-  }, [contactId, projectId, uploadCategory, uploadVisible, uploading, user, loadDocs, qc])
+  }, [contactId, effectiveEntityType, effectiveEntityId, uploadCategory, uploadVisible, uploading, user, loadDocs, qc, projectId])
 
   const handleToggleVisibility = async (doc: PortalDocument) => {
     try {
@@ -191,7 +199,7 @@ export default function PortalDocuments({ projectId, contactId }: Props) {
       <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Folder size={16} strokeWidth={1.8} className="text-amber" />
-          <span className="text-sm font-semibold text-text">Dokumente fuer den Kunden</span>
+          <span className="text-sm font-semibold text-text">{title ?? 'Dokumente fuer den Kunden'}</span>
           <span className="text-xs text-text-sec">
             ({visibleDocs} sichtbar / {totalDocs} gesamt)
           </span>
