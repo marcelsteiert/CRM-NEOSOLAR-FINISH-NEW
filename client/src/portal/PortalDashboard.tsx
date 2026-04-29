@@ -311,12 +311,28 @@ export default function PortalDashboard() {
                             {person.email}
                           </a>
                         )}
-                        {person.phone && (
-                          <a href={`tel:${person.phone}`} className="flex items-center gap-1.5 text-xs text-text-sec hover:text-text transition-colors">
-                            <Phone size={12} strokeWidth={1.8} />
-                            {person.phone}
-                          </a>
-                        )}
+                        {(() => {
+                          const personalPhone = person.phone
+                          const companyPhone = data.data.branding?.companyPhone
+                          const showCompanyPhone = !personalPhone && companyPhone
+                          return (
+                            <>
+                              {personalPhone && (
+                                <a href={`tel:${personalPhone}`} className="flex items-center gap-1.5 text-xs text-text-sec hover:text-text transition-colors">
+                                  <Phone size={12} strokeWidth={1.8} />
+                                  {personalPhone}
+                                </a>
+                              )}
+                              {showCompanyPhone && (
+                                <a href={`tel:${companyPhone}`} className="flex items-center gap-1.5 text-xs text-text-sec hover:text-text transition-colors">
+                                  <Phone size={12} strokeWidth={1.8} />
+                                  {companyPhone}
+                                  <span className="text-[10px] text-text-dim ml-1">(Zentrale)</span>
+                                </a>
+                              )}
+                            </>
+                          )
+                        })()}
                       </div>
                       {person.signature && (
                         <div
