@@ -33,13 +33,26 @@ function estimateTravelMinutes(address: string): number | null {
 // Validation
 // ---------------------------------------------------------------------------
 
+const optionalEmail = z.string()
+  .nullable()
+  .optional()
+  .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+    message: 'Ungueltiges E-Mail-Format',
+  })
+const optionalAddress = z.string()
+  .nullable()
+  .optional()
+  .refine((v) => !v || v.trim().length >= 5, {
+    message: 'Adresse zu kurz (mind. 5 Zeichen)',
+  })
+
 const createAppointmentSchema = z.object({
   contactId: z.string().nullable().optional(),
   contactName: z.string().nullable().optional(),
-  contactEmail: z.string().nullable().optional(),
+  contactEmail: optionalEmail,
   contactPhone: z.string().nullable().optional(),
   company: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
+  address: optionalAddress,
   leadId: z.string().nullable().optional(),
   value: z.number().min(0).nullable().optional(),
   status: z.enum(['GEPLANT', 'BESTAETIGT', 'VORBEREITUNG', 'DURCHGEFUEHRT', 'NO_SHOW', 'ABGESAGT']).nullable().optional(),

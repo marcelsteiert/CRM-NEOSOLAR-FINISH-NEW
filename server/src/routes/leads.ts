@@ -14,13 +14,29 @@ const router = Router()
 // Validation
 // ---------------------------------------------------------------------------
 
+// E-Mail-Format-Check (akzeptiert leeren String + null/undefined)
+const optionalEmail = z.string()
+  .nullable()
+  .optional()
+  .refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+    message: 'Ungueltiges E-Mail-Format',
+  })
+
+// Adresse: leer/null erlaubt, aber wenn gesetzt mind. 5 Zeichen
+const optionalAddress = z.string()
+  .nullable()
+  .optional()
+  .refine((v) => !v || v.trim().length >= 5, {
+    message: 'Adresse zu kurz (mind. 5 Zeichen)',
+  })
+
 const createLeadSchema = z.object({
   contactId: z.string().nullable().optional(),
   firstName: z.string().nullable().optional(),
   lastName: z.string().nullable().optional(),
-  email: z.string().nullable().optional(),
+  email: optionalEmail,
   phone: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
+  address: optionalAddress,
   company: z.string().nullable().optional(),
   source: z.string().min(1),
   pipelineId: z.string().nullable().optional(),
