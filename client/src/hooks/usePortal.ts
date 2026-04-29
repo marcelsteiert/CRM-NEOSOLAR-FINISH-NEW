@@ -179,8 +179,13 @@ export function useSetupPortalFromDeal(dealId: string) {
         `/admin/portal/deals/${dealId}/setup`,
         params,
       ),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['admin-portal-deal', dealId] })
+      // Auch den Project-Status refetchen (z.B. nach Reaktivierung)
+      const projectId = res?.data?.projectId
+      if (projectId) {
+        qc.invalidateQueries({ queryKey: ['admin-portal', projectId] })
+      }
     },
   })
 }
