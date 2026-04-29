@@ -21,6 +21,8 @@ interface AuthContextType {
   logout: () => void
   isAdmin: boolean
   isSubunternehmen: boolean
+  isProjektleitung: boolean
+  canCreateProjects: boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -140,6 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'GL' || user?.role === 'GESCHAEFTSLEITUNG'
   const isSubunternehmen = user?.role === 'SUBUNTERNEHMEN'
+  const isProjektleitung = user?.role === 'PROJEKTLEITUNG'
+  const canCreateProjects = isAdmin || isProjektleitung
 
   return (
     <AuthContext.Provider
@@ -152,6 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         isAdmin,
         isSubunternehmen,
+        isProjektleitung,
+        canCreateProjects,
       }}
     >
       {children}

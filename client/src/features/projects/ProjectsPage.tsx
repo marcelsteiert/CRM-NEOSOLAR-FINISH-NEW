@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   FolderKanban, LayoutDashboard, Users2, Search, AlertTriangle, ChevronRight,
   TrendingUp, Sun, Zap, CheckCircle2, Clock, Star, ArrowUpRight, Loader2, Building2,
-  GripVertical, Archive,
+  GripVertical, Archive, Plus,
 } from 'lucide-react'
 import {
   useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
@@ -12,6 +12,7 @@ import {
 } from '@/hooks/useProjects'
 import { useAuth } from '@/hooks/useAuth'
 import ProjectDetailModal from './components/ProjectDetailModal'
+import CreateProjectModal from './components/CreateProjectModal'
 
 type ViewTab = 'kanban' | 'dashboard' | 'partner' | 'archiv'
 
@@ -24,11 +25,12 @@ const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
 }
 
 export default function ProjectsPage() {
-  const { isAdmin, isSubunternehmen } = useAuth()
+  const { isAdmin, isSubunternehmen, canCreateProjects } = useAuth()
   const [view, setView] = useState<ViewTab>('kanban')
   const [search, setSearch] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   useEffect(() => {
     const openId = searchParams.get('open')
@@ -94,6 +96,19 @@ export default function ProjectsPage() {
             />
           </div>
 
+          {/* Neues Projekt Button (nur Admin + Projektleitung) */}
+          {canCreateProjects && (
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary text-[12px] shrink-0"
+              title="Neues Projekt eroeffnen"
+            >
+              <Plus size={14} strokeWidth={2} />
+              <span className="hidden sm:inline">Neues Projekt</span>
+            </button>
+          )}
+
           {/* View Tabs */}
           <div className="flex rounded-[10px] p-0.5 shrink-0" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {views.map((v) => {
@@ -139,6 +154,17 @@ export default function ProjectsPage() {
         <ProjectDetailModal
           projectId={selectedProjectId}
           onClose={() => setSelectedProjectId(null)}
+        />
+      )}
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <CreateProjectModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={(newProjectId) => {
+            setShowCreateModal(false)
+            setSelectedProjectId(newProjectId)
+          }}
         />
       )}
     </div>
