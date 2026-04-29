@@ -424,13 +424,22 @@ function ProjectHeroCard({
 
       <div className="relative">
         <div className="text-[10px] uppercase tracking-[0.18em] text-amber font-semibold mb-2">
-          Ihre PV-Anlage
+          {project.inOfferMode ? 'Ihr persoenliches Angebot' : 'Ihre PV-Anlage'}
         </div>
         <h2 className="text-xl sm:text-2xl font-semibold text-text mb-1">{project.name}</h2>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-sec">
           {project.kwp > 0 && <span>{project.kwp.toLocaleString('de-CH', { maximumFractionDigits: 2 })} kWp Leistung</span>}
-          {project.startDate && <span>Start: {formatDate(project.startDate)}</span>}
+          {project.startDate && !project.inOfferMode && <span>Start: {formatDate(project.startDate)}</span>}
         </div>
+        {project.inOfferMode && (
+          <div
+            className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold"
+            style={{ background: 'rgba(96,165,250,0.12)', color: '#60A5FA', border: '1px solid rgba(96,165,250,0.25)' }}
+          >
+            <FileText size={11} strokeWidth={2} />
+            In Pruefung – Angebot eingereicht
+          </div>
+        )}
 
         {/* Fortschritt */}
         <div className="mt-6">

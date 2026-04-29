@@ -576,6 +576,219 @@ router.delete('/milestones/:id', async (req: Request, res: Response, next: NextF
 })
 
 // ============================================================================
+// GET /portal/deals/:dealId – Status: existiert schon ein Pseudo-Projekt?
+// ============================================================================
+
+router.get('/deals/:dealId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const dealId = req.params.dealId as string
+
+    const { data: deal } = await supabase
+      .from('deals')
+      .select('id, title, contact_id')
+      .eq('id', dealId)
+      .is('deleted_at', null)
+      .single()
+
+    if (!deal) throw new AppError('Angebot nicht gefunden', 404)
+
+    const { data: project } = await supabase
+      .from('projects')
+      .select('id, name, contact_id')
+      .eq('deal_id', dealId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    res.json({ data: { dealId, contactId: deal.contact_id, projectId: project?.id ?? null } })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ============================================================================
+// POST /portal/deals/:dealId/setup – Portal aus dem Angebot heraus aktivieren
+// Erstellt automatisch das zugehoerige Projekt (Phase 'admin'),
+// aktiviert Portal, setzt voraussichtlichen Montagetermin.
+// ============================================================================
+
+const setupFromDealSchema = z.object({
+  email: z.string().email().optional(),
+  sendEmail: z.boolean().optional().default(true),
+  scheduledMontageDate: z.string().nullable().optional(),
+})
+
+router.post('/deals/:dealId/setup', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const dealId = req.params.dealId as string
+    const parsed = setupFromDealSchema.safeParse(req.body ?? {})
+    if (!parsed.success) throw new AppError('Ungueltige Daten', 400)
+
+    // Deal laden
+    const { data: deal } = await supabase
+      .from('deals')
+      .select('*, contact:contacts(*)')
+      .eq('id', dealId)
+      .is('deleted_at', null)
+      .single()
+
+    if (!deal) throw new AppError('Angebot nicht gefunden', 404)
+
+    const contact = (deal as any).contact
+    if (!contact) throw new AppError('Kontakt nicht gefunden', 404)
+
+    const targetEmail = (parsed.data.email ?? contact.email ?? '').toLowerCase().trim()
+    if (!targetEmail) throw new AppError('E-Mail-Adresse erforderlich (Kontakt hat keine E-Mail)', 400)
+
+    // Pseudo-Projekt holen oder erstellen (mit deal_id)
+    const { data: existingProject } = await supabase
+      .from('projects')
+      .select('id, name')
+      .eq('deal_id', dealId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    let projectId: string
+    if (existingProject) {
+      projectId = existingProject.id
+    } else {
+      const projectName = deal.title || `Angebot ${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim()
+      const defaultProgress = {
+        admin: Array(8).fill(0),
+        montage: Array(7).fill(0),
+        elektro: Array(8).fill(0),
+        abschluss: Array(8).fill(0),
+      }
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          contact_id: contact.id,
+          deal_id: dealId,
+          name: projectName,
+          description: `Aus Angebot: ${deal.title}`,
+          kwp: 0,
+          value: deal.deal_value ?? 0,
+          phase: 'admin',
+          priority: 'MEDIUM',
+          progress: defaultProgress,
+          start_date: new Date().toISOString().slice(0, 10),
+          kalkulation_soll: 0,
+          project_manager_id: deal.assigned_to ?? req.user?.userId ?? null,
+        })
+        .select('id, name')
+        .single()
+
+      if (projectError || !newProject) {
+        throw new AppError(`Projekt konnte nicht erstellt werden: ${projectError?.message ?? 'unbekannt'}`, 500)
+      }
+      projectId = newProject.id
+
+      // System-Activity
+      await supabase.from('activities').insert({
+        contact_id: contact.id,
+        project_id: projectId,
+        type: 'SYSTEM',
+        text: `Projekt aus Angebot "${deal.title}" eroeffnet (Kundenportal aktiviert)`,
+        created_by: req.user?.userId ?? null,
+      })
+    }
+
+    // Portal-User holen oder erstellen
+    const { data: existingPortalUser } = await supabase
+      .from('portal_users')
+      .select('id, is_active')
+      .eq('contact_id', contact.id)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    let portalUserId: string
+    if (existingPortalUser) {
+      portalUserId = existingPortalUser.id
+      if (!existingPortalUser.is_active) {
+        await supabase.from('portal_users').update({ is_active: true, email: targetEmail }).eq('id', existingPortalUser.id)
+      } else {
+        await supabase.from('portal_users').update({ email: targetEmail }).eq('id', existingPortalUser.id)
+      }
+    } else {
+      const { data: created, error: insertErr } = await supabase
+        .from('portal_users')
+        .insert({ contact_id: contact.id, email: targetEmail, is_active: true })
+        .select('id')
+        .single()
+      if (insertErr || !created) throw new AppError(`Portal-User konnte nicht erstellt werden: ${insertErr?.message ?? 'unbekannt'}`, 500)
+      portalUserId = created.id
+    }
+
+    // Milestones initialisieren falls leer
+    const { count: msCount } = await supabase
+      .from('portal_milestones')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+
+    if (!msCount || msCount === 0) {
+      await supabase.from('portal_milestones').insert(getInitialMilestoneRows(projectId))
+    }
+
+    // Voraussichtlicher Montagetermin = heute + 30 Tage (oder explizit uebergeben)
+    let montageDate = parsed.data.scheduledMontageDate
+    if (montageDate === undefined) {
+      const d = new Date()
+      d.setDate(d.getDate() + 30)
+      montageDate = d.toISOString().slice(0, 10)
+    }
+
+    if (montageDate) {
+      const { data: dcMilestone } = await supabase
+        .from('portal_milestones')
+        .select('id, scheduled_date')
+        .eq('project_id', projectId)
+        .eq('milestone_key', 'DC_MONTAGE_TERMIN')
+        .maybeSingle()
+
+      if (dcMilestone && !dcMilestone.scheduled_date) {
+        await supabase
+          .from('portal_milestones')
+          .update({ scheduled_date: montageDate })
+          .eq('id', dcMilestone.id)
+      }
+    }
+
+    // Magic Link + Welcome-Mail (nur wenn neu aktiviert)
+    if (parsed.data.sendEmail && !existingPortalUser?.is_active) {
+      const rawToken = await createMagicLinkForPortalUser(portalUserId)
+      const customerName = `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim() || 'Kunde'
+      const { subject, html } = await buildPortalActivatedEmail(rawToken, customerName, deal.title || 'Ihr Angebot')
+      await sendPortalEmail({
+        portalUserId,
+        projectId,
+        emailType: 'PORTAL_ACTIVATED',
+        recipient: targetEmail,
+        subject,
+        bodyHtml: html,
+      })
+    }
+
+    logAudit({
+      userId: getAuditUserId(req),
+      action: 'CREATE',
+      entity: 'PORTAL_USER',
+      entityId: portalUserId,
+      description: `Kundenportal aus Angebot "${deal.title}" aktiviert (${targetEmail})`,
+    })
+
+    res.json({
+      data: {
+        projectId,
+        portalUserId,
+        email: targetEmail,
+        scheduledMontageDate: montageDate,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ============================================================================
 // PUT /portal/documents/:id/visibility – Dokument-Sichtbarkeit toggeln
 // ============================================================================
 

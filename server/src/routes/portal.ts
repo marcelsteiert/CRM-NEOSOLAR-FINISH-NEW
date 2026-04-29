@@ -151,13 +151,32 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
     // Aktive Projekte des Kontakts
     const { data: projects } = await supabase
       .from('projects')
-      .select('id, name, kwp, value, phase, priority, start_date, completed_at, project_manager_id, montage_partner_id, elektro_partner_id, notes, created_at')
+      .select('id, name, kwp, value, phase, priority, start_date, completed_at, project_manager_id, montage_partner_id, elektro_partner_id, notes, created_at, deal_id')
       .eq('contact_id', portal.contactId)
       .is('deleted_at', null)
       .is('archived_at', null)
       .order('created_at', { ascending: false })
 
     const projectIds = (projects ?? []).map((p: any) => p.id)
+
+    // Pruefen welche Projekte noch im Angebot-Modus sind (Deal nicht gewonnen/verloren)
+    const dealIds = Array.from(new Set((projects ?? []).map((p: any) => p.deal_id).filter(Boolean)))
+    let openDealIds = new Set<string>()
+    if (dealIds.length > 0) {
+      const { data: dealStatus } = await supabase
+        .from('deals')
+        .select('id, status')
+        .in('id', dealIds)
+      for (const d of dealStatus ?? []) {
+        if ((d as any).status === 'OPEN') openDealIds.add((d as any).id)
+      }
+    }
+
+    // Anreichern: inOfferMode flag pro Projekt
+    const enrichedProjects = (projects ?? []).map((p: any) => ({
+      ...p,
+      inOfferMode: !!p.deal_id && openDealIds.has(p.deal_id),
+    }))
 
     // Milestones aller Projekte
     const { data: milestones } = projectIds.length
@@ -207,7 +226,7 @@ router.get('/dashboard', async (req: Request, res: Response, next: NextFunction)
     res.json({
       data: {
         contact,
-        projects: projects ?? [],
+        projects: enrichedProjects,
         milestones: milestones ?? [],
         documents: documents ?? [],
         appointments: appointments ?? [],

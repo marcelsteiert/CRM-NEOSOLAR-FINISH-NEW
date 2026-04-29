@@ -285,6 +285,25 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const d = result.data
     const contactId = await resolveContactId(d)
 
+    // Wenn dealId angegeben + bereits Projekt fuer diesen Deal: existierendes zurueckgeben
+    if (d.dealId) {
+      const { data: existingProject } = await supabase
+        .from('projects')
+        .select('*, contact:contacts(*)')
+        .eq('deal_id', d.dealId)
+        .is('deleted_at', null)
+        .maybeSingle()
+
+      if (existingProject) {
+        const { data: activities } = await supabase
+          .from('activities')
+          .select('*')
+          .eq('project_id', existingProject.id)
+          .order('created_at', { ascending: true })
+        return res.status(200).json({ data: { ...enrichProject(existingProject), activities: activities ?? [] } })
+      }
+    }
+
     const defaultProgress = {
       admin: phaseDefinitions[0].steps.map(() => 0),
       montage: phaseDefinitions[1].steps.map(() => 0),

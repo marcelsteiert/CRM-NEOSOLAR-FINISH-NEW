@@ -15,6 +15,8 @@ export interface PortalProject {
   projectManagerId: string | null
   notes: string | null
   createdAt: string
+  dealId: string | null
+  inOfferMode: boolean
 }
 
 export interface PortalMilestone {

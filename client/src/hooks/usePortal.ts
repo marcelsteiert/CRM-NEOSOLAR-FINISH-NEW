@@ -161,6 +161,29 @@ export function useDeleteMilestone(projectId: string) {
   })
 }
 
+// Deal-basiertes Portal-Setup
+export function useDealPortalStatus(dealId: string | null) {
+  return useQuery({
+    queryKey: ['admin-portal-deal', dealId],
+    queryFn: () => api.get<{ data: { dealId: string; contactId: string; projectId: string | null } }>(`/admin/portal/deals/${dealId}`),
+    enabled: !!dealId,
+  })
+}
+
+export function useSetupPortalFromDeal(dealId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (params: { email?: string; sendEmail?: boolean; scheduledMontageDate?: string | null }) =>
+      api.post<{ data: { projectId: string; portalUserId: string; email: string; scheduledMontageDate: string | null } }>(
+        `/admin/portal/deals/${dealId}/setup`,
+        params,
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-portal-deal', dealId] })
+    },
+  })
+}
+
 export function useInitMilestones(projectId: string) {
   const qc = useQueryClient()
   return useMutation({
