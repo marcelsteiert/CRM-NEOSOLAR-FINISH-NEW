@@ -51,6 +51,8 @@ export function createApp() {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:4173',
+    'https://neosolar-crm.com',
+    'https://www.neosolar-crm.com',
     process.env.CLIENT_URL,
   ].filter(Boolean) as string[]
 
@@ -58,8 +60,12 @@ export function createApp() {
     origin: (origin, callback) => {
       // Kein Origin (z.B. Server-zu-Server, Postman) erlauben
       if (!origin) return callback(null, true)
-      // Netlify Preview-Deployments + Custom Domain
-      if (allowedOrigins.includes(origin) || origin.endsWith('.netlify.app')) {
+      // Custom Domains + Netlify Preview-Deployments
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.netlify.app') ||
+        origin.endsWith('.neosolar-crm.com')
+      ) {
         return callback(null, true)
       }
       callback(new Error('CORS nicht erlaubt'))

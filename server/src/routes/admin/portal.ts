@@ -240,7 +240,7 @@ router.post('/projects/:projectId/send-link', async (req: Request, res: Response
     }
 
     const rawToken = await createMagicLinkForPortalUser(portalUser.id)
-    const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://crm-neosolar.netlify.app'
+    const baseUrl = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://neosolar-crm.com'
     const loginUrl = `${baseUrl}/portal/login?token=${rawToken}`
 
     let sent = false

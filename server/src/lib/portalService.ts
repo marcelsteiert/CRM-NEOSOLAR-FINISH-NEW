@@ -148,7 +148,7 @@ export async function sendPortalEmail(params: PortalEmailParams): Promise<void> 
 
 // ── E-Mail-Templates ──
 
-const PORTAL_BASE_URL = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://crm-neosolar.netlify.app'
+const PORTAL_BASE_URL = process.env.PORTAL_URL || process.env.CLIENT_URL || 'https://neosolar-crm.com'
 
 async function brandedEmailWrapper(content: string, ctaUrl?: string, ctaLabel?: string): Promise<string> {
   const logoUrl = `${PORTAL_BASE_URL}/neosolar-logo.jpeg`

@@ -7,7 +7,7 @@ const AUTH_BASE = 'https://login.microsoftonline.com'
 const CLIENT_ID = () => process.env.MS_CLIENT_ID ?? ''
 const CLIENT_SECRET = () => process.env.MS_CLIENT_SECRET ?? ''
 const TENANT_ID = () => process.env.MS_TENANT_ID ?? 'common'
-const REDIRECT_URI = () => process.env.MS_REDIRECT_URI ?? `${process.env.CLIENT_URL ?? 'https://crm-neosolar.netlify.app'}/api/v1/outlook/callback`
+const REDIRECT_URI = () => process.env.MS_REDIRECT_URI ?? `${process.env.CLIENT_URL ?? 'https://neosolar-crm.com'}/api/v1/outlook/callback`
 
 const SCOPES = [
   'offline_access',

@@ -51,7 +51,7 @@ router.get('/callback', async (req: Request, res: Response, next: NextFunction) 
 
     if (oauthError) {
       // Redirect zum Frontend mit Fehler
-      const clientUrl = process.env.CLIENT_URL ?? 'https://crm-neosolar.netlify.app'
+      const clientUrl = process.env.CLIENT_URL ?? 'https://neosolar-crm.com'
       return res.redirect(`${clientUrl}/communication?error=${encodeURIComponent(String(oauthError))}`)
     }
 
@@ -84,7 +84,7 @@ router.get('/callback', async (req: Request, res: Response, next: NextFunction) 
       }, { onConflict: 'user_id,email' })
 
     // Redirect zum Frontend (Erfolg)
-    const clientUrl = process.env.CLIENT_URL ?? 'https://crm-neosolar.netlify.app'
+    const clientUrl = process.env.CLIENT_URL ?? 'https://neosolar-crm.com'
     res.redirect(`${clientUrl}/communication?connected=true`)
   } catch (err) {
     next(err)
@@ -405,7 +405,7 @@ router.post('/send', async (req: Request, res: Response, next: NextFunction) => 
 
     if (d.trackingEnabled) {
       trackingId = crypto.randomUUID()
-      const pixelUrl = `${process.env.CLIENT_URL ?? 'https://crm-neosolar.netlify.app'}/api/v1/outlook/track/${trackingId}/open.gif`
+      const pixelUrl = `${process.env.CLIENT_URL ?? 'https://neosolar-crm.com'}/api/v1/outlook/track/${trackingId}/open.gif`
       bodyHtml += `<img src="${pixelUrl}" width="1" height="1" style="display:none" />`
 
       await supabase.from('outlook_email_tracking').insert({
