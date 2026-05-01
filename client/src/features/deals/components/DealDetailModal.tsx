@@ -76,13 +76,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   const [editPriority, setEditPriority] = useState<DealPriority>('MEDIUM')
   const [editExpectedClose, setEditExpectedClose] = useState('')
   const [editWinProb, setEditWinProb] = useState('')
-  const [editFollowUpDate, setEditFollowUpDate] = useState('')
   const [editNotes, setEditNotes] = useState('')
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showWonConfirm, setShowWonConfirm] = useState(false)
   const [showLostConfirm, setShowLostConfirm] = useState(false)
-  const [showFollowUpPicker, setShowFollowUpPicker] = useState(false)
   const [lostReason, setLostReason] = useState('')
   const [wonSeller, setWonSeller] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -111,7 +109,6 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
       setEditPriority(deal.priority)
       setEditExpectedClose(deal.expectedCloseDate ?? '')
       setEditWinProb(deal.winProbability != null ? String(deal.winProbability) : '')
-      setEditFollowUpDate(deal.followUpDate ?? '')
       setEditNotes(deal.notes ?? '')
       setNotesText(deal.notes ?? '')
     }
@@ -146,7 +143,6 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
       value: Number(editValue) || 0, stage: editStage, priority: editPriority,
       expectedCloseDate: editExpectedClose || undefined, notes: editNotes.trim() || undefined,
       winProbability: editWinProb ? Number(editWinProb) : undefined,
-      followUpDate: editFollowUpDate || undefined,
     })
     setIsEditing(false)
     setSuccessMsg('Änderungen gespeichert')
@@ -172,7 +168,6 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
         value: Number(editValue) || 0, stage: 'GEWONNEN' as DealStage, priority: editPriority,
         expectedCloseDate: editExpectedClose || undefined, notes: editNotes.trim() || undefined,
         winProbability: editWinProb ? Number(editWinProb) : undefined,
-        followUpDate: editFollowUpDate || undefined,
       })
       setIsEditing(false)
     } else {
@@ -467,117 +462,19 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                 })()}
               </div>
 
-              {/* Erwarteter Abschluss + Follow-Up */}
+              {/* Erwarteter Abschluss */}
               <div className="p-4" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-md)' }}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
-                    {isEditing ? (
-                      <input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Calendar size={14} className="text-text-dim" strokeWidth={1.8} />
-                        <span className="text-[12px] text-text-sec tabular-nums">
-                          {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : '\u2014'}
-                        </span>
-                      </div>
-                    )}
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5">Erwarteter Abschluss</p>
+                {isEditing ? (
+                  <input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-text-dim" strokeWidth={1.8} />
+                    <span className="text-[12px] text-text-sec tabular-nums">
+                      {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : '\u2014'}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim mb-1.5 flex items-center gap-1">
-                      <CalendarClock size={10} strokeWidth={2} /> Naechstes Follow-Up
-                    </p>
-                    {isEditing ? (
-                      <input type="date" value={editFollowUpDate} onChange={(e) => setEditFollowUpDate(e.target.value)} className="glass-input px-3 py-1.5 text-[12px] w-full" />
-                    ) : showFollowUpPicker ? (
-                      <div className="space-y-2">
-                        <input
-                          type="date"
-                          defaultValue={deal.followUpDate ?? ''}
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              updateDeal.mutate({ id: deal.id, followUpDate: e.target.value })
-                              setShowFollowUpPicker(false)
-                              setSuccessMsg('Follow-Up gesetzt')
-                              setTimeout(() => setSuccessMsg(''), 2000)
-                            }
-                          }}
-                          className="glass-input px-3 py-1.5 text-[12px] w-full"
-                          autoFocus
-                        />
-                        <div className="flex flex-wrap gap-1.5">
-                          {[
-                            { label: 'Morgen', days: 1 },
-                            { label: 'In 3 Tagen', days: 3 },
-                            { label: '1 Woche', days: 7 },
-                            { label: '2 Wochen', days: 14 },
-                          ].map(({ label, days }) => {
-                            const d = new Date(); d.setDate(d.getDate() + days)
-                            const dateStr = d.toISOString().slice(0, 10)
-                            return (
-                              <button
-                                key={days}
-                                type="button"
-                                onClick={() => {
-                                  updateDeal.mutate({ id: deal.id, followUpDate: dateStr })
-                                  setShowFollowUpPicker(false)
-                                  setSuccessMsg('Follow-Up gesetzt')
-                                  setTimeout(() => setSuccessMsg(''), 2000)
-                                }}
-                                className="px-2 py-1 rounded-md text-[10px] font-semibold text-amber hover:bg-amber/10 transition-colors"
-                                style={{ border: '1px solid rgba(245,158,11,0.2)' }}
-                              >
-                                {label}
-                              </button>
-                            )
-                          })}
-                          {deal.followUpDate && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updateDeal.mutate({ id: deal.id, followUpDate: null })
-                                setShowFollowUpPicker(false)
-                                setSuccessMsg('Follow-Up entfernt')
-                                setTimeout(() => setSuccessMsg(''), 2000)
-                              }}
-                              className="px-2 py-1 rounded-md text-[10px] font-semibold text-red hover:bg-red/10 transition-colors"
-                              style={{ border: '1px solid rgba(248,113,113,0.2)' }}
-                            >
-                              Entfernen
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setShowFollowUpPicker(false)}
-                            className="px-2 py-1 rounded-md text-[10px] font-semibold text-text-dim hover:bg-surface-hover transition-colors"
-                            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
-                          >
-                            Abbrechen
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => !isClosed && setShowFollowUpPicker(true)}
-                        className="flex items-center gap-2 group"
-                        disabled={isClosed}
-                      >
-                        <CalendarClock size={14} className="text-text-dim" strokeWidth={1.8} />
-                        <span className="text-[12px] tabular-nums" style={{
-                          color: deal.followUpDate
-                            ? new Date(deal.followUpDate) <= new Date() ? '#F87171' : '#F59E0B'
-                            : 'var(--color-text-sec)',
-                        }}>
-                          {deal.followUpDate ? new Date(deal.followUpDate).toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Nicht gesetzt'}
-                        </span>
-                        {!isClosed && (
-                          <Pencil size={11} className="text-text-dim opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
 
               {deal.closedAt && (

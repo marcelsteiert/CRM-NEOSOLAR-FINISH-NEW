@@ -181,13 +181,18 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       ? `Offerte ${appt.company}`
       : `Offerte ${appt.contactName}`
     try {
+      // Leere Strings → undefined (Validierung tolerant)
+      const cleanEmail = appt.contactEmail?.trim() || undefined
+      const cleanPhone = appt.contactPhone?.trim() || undefined
+      const cleanAddress = appt.address?.trim() || undefined
+
       await createDeal.mutateAsync({
         title,
         contactName: appt.contactName,
-        contactEmail: appt.contactEmail,
-        contactPhone: appt.contactPhone,
+        contactEmail: cleanEmail,
+        contactPhone: cleanPhone,
         company: appt.company ?? undefined,
-        address: appt.address,
+        address: cleanAddress,
         value: appt.value,
         assignedTo: appt.assignedTo ?? undefined,
         appointmentId: appt.id,
@@ -199,8 +204,10 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
       setShowCreateOffer(false)
       setSuccessMsg('Angebot erstellt! Termin abgeschlossen.')
       setTimeout(() => { setSuccessMsg(''); onClose() }, 1500)
-    } catch {
+    } catch (err: any) {
       setSuccessMsg('')
+      const msg = err?.message ?? 'Angebot konnte nicht erstellt werden'
+      alert(`Fehler beim Erstellen des Angebots:\n\n${msg}`)
     }
   }
 

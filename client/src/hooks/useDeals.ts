@@ -176,7 +176,7 @@ export function useFollowUps(assignedTo?: string) {
 export function useCreateDeal() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<Deal> & { title: string; contactName: string; contactEmail: string; contactPhone: string; address: string }) =>
+    mutationFn: (data: Partial<Deal> & { title: string; contactName: string; contactEmail?: string; contactPhone?: string; address?: string }) =>
       api.post<DealResponse>('/deals', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['deals'] })

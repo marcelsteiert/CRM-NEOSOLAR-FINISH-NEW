@@ -50,8 +50,12 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
     e.preventDefault()
     setError('')
 
-    if (!title.trim() || !contactName.trim() || !contactEmail.trim() || !contactPhone.trim() || !address.trim()) {
-      setError('Bitte alle Pflichtfelder ausfuellen.')
+    if (!title.trim() || !contactName.trim()) {
+      setError('Titel und Name des Kunden sind Pflichtfelder.')
+      return
+    }
+    if (contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+      setError('E-Mail-Format ungültig.')
       return
     }
 
@@ -59,10 +63,10 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
       await createDeal.mutateAsync({
         title: title.trim(),
         contactName: contactName.trim(),
-        contactEmail: contactEmail.trim(),
-        contactPhone: contactPhone.trim(),
+        contactEmail: contactEmail.trim() || undefined,
+        contactPhone: contactPhone.trim() || undefined,
         company: company.trim() || undefined,
-        address: address.trim(),
+        address: address.trim() || undefined,
         value: value ? Number(value) : 0,
         stage,
         priority,
@@ -76,7 +80,7 @@ export default function DealCreateDialog({ onClose, prefill }: DealCreateDialogP
     }
   }
 
-  const isValid = title.trim() && contactName.trim() && contactEmail.trim() && contactPhone.trim() && address.trim()
+  const isValid = title.trim() && contactName.trim()
 
   return (
     <div

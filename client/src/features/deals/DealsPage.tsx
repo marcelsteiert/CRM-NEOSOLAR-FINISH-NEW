@@ -482,8 +482,6 @@ export default function DealsPage() {
   const { data: statsResponse } = useDealStats(assignedTo)
   const stats = statsResponse?.data
 
-  const { data: followUpsResponse } = useFollowUps(authUser?.id)
-  const followUps = followUpsResponse?.data ?? []
 
   const { data: usersResponse } = useUsers()
   const users = usersResponse?.data ?? []
@@ -574,9 +572,6 @@ export default function DealsPage() {
             </button>
           </div>
         </div>
-
-        {/* Follow-Up Banner */}
-        <FollowUpBanner followUps={followUps} onSelectDeal={(id) => setSelectedDealId(id)} />
 
         {/* Stats */}
         {stats && (
