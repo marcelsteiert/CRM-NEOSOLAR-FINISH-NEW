@@ -12,7 +12,7 @@ prisma/*.db
 prisma/*.db-journal
 coverage/
 .turbo/
-.claude/settings.local.json
+.claude/
 package.json.tmp
 .netlify/
 .netlify-build/
