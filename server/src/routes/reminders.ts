@@ -64,7 +64,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
         description: result.data.description ?? null,
         due_at: result.data.dueAt,
         dismissed: false,
-        created_by: result.data.createdBy ?? 'System',
+        created_by: result.data.createdBy || req.user?.userId || null,
       })
       .select()
       .single()

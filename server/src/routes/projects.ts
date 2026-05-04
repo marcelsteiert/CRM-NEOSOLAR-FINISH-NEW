@@ -472,16 +472,19 @@ router.post('/:id/activities', async (req: Request, res: Response, next: NextFun
     const { data: project } = await supabase.from('projects').select('contact_id').eq('id', req.params.id).is('deleted_at', null).single()
     if (!project) throw new AppError('Projekt nicht gefunden', 404)
 
-    const schema = z.object({ type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM']).default('NOTE'), text: z.string().min(1), createdBy: z.string().default('System') })
+    const schema = z.object({ type: z.enum(['NOTE', 'CALL', 'EMAIL', 'MEETING', 'STATUS_CHANGE', 'SYSTEM']).default('NOTE'), text: z.string().min(1), createdBy: z.string().optional() })
     const result = schema.safeParse(req.body)
     if (!result.success) throw new AppError('Ungueltige Daten', 400)
+
+    // created_by muss eine echte User-ID sein (FK), sonst NULL
+    const createdBy = result.data.createdBy || req.user?.userId || null
 
     const { data: activity, error } = await supabase.from('activities').insert({
       contact_id: project.contact_id,
       project_id: req.params.id,
       type: result.data.type,
       text: result.data.text,
-      created_by: result.data.createdBy,
+      created_by: createdBy,
     }).select().single()
 
     if (error) throw new AppError(error.message, 500)
