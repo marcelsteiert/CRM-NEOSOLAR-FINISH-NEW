@@ -10,7 +10,7 @@ import {
   phaseLabels, phaseColors, formatCHF, computePhaseProgress,
   type Project, type ProjectPhase, type Partner, type ProjectStats,
 } from '@/hooks/useProjects'
-import { useProjectKanbanColumns } from '@/hooks/useAdmin'
+import { useProjectKanbanColumns, useUpdateProjectKanbanColumns, type ProjectKanbanColumn } from '@/hooks/useAdmin'
 import { useAuth } from '@/hooks/useAuth'
 import ProjectDetailModal from './components/ProjectDetailModal'
 import CreateProjectModal from './components/CreateProjectModal'
@@ -202,6 +202,8 @@ export default function ProjectsPage() {
             phaseOrder={sortedPhaseOrder}
             phaseLabels={customPhaseLabels}
             phaseColors={customPhaseColors}
+            existingColumns={kanbanColumns}
+            canEdit={isAdmin}
           />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
@@ -245,6 +247,8 @@ function KanbanView({
   phaseOrder: phaseOrderProp,
   phaseLabels: phaseLabelsProp,
   phaseColors: phaseColorsProp,
+  existingColumns = [],
+  canEdit = false,
 }: {
   projectsByPhase: Record<string, Project[]>
   phases: { id: string; name: string; color: string; steps: string[] }[]
@@ -254,7 +258,11 @@ function KanbanView({
   phaseOrder?: string[]
   phaseLabels?: Record<string, string>
   phaseColors?: Record<string, string>
+  existingColumns?: ProjectKanbanColumn[]
+  canEdit?: boolean
 }) {
+  const updateKanban = useUpdateProjectKanbanColumns()
+  const [showAddDialog, setShowAddDialog] = useState(false)
   const effectivePhaseOrder: string[] = phaseOrderProp ?? phaseOrder
   const effectivePhaseLabels: Record<string, string> = phaseLabelsProp ?? phaseLabels
   const effectivePhaseColors: Record<string, string> = phaseColorsProp ?? phaseColors
@@ -367,6 +375,221 @@ function KanbanView({
           </div>
         )
       })}
+
+      {/* + Spalte hinzufügen (nur Admin/GL) */}
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => setShowAddDialog(true)}
+          className="flex flex-col items-center justify-center min-h-[150px] rounded-xl border-2 border-dashed transition-all hover:border-amber/50 hover:bg-amber/5 group"
+          style={{
+            borderColor: 'rgba(255,255,255,0.06)',
+            background: 'rgba(255,255,255,0.01)',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-110"
+            style={{
+              background: 'linear-gradient(135deg, rgba(245,158,11,0.18), rgba(251,146,60,0.06))',
+              border: '1px solid rgba(245,158,11,0.25)',
+            }}
+          >
+            <Plus size={18} strokeWidth={2} style={{ color: '#F59E0B' }} />
+          </div>
+          <span className="text-[12px] font-semibold text-text mt-2">Spalte hinzufügen</span>
+          <span className="text-[10px] text-text-dim mt-0.5">Neue Phase fürs Kanban</span>
+        </button>
+      )}
+
+      {/* Add-Dialog */}
+      {showAddDialog && (
+        <AddPhaseDialog
+          existingColumns={existingColumns}
+          onClose={() => setShowAddDialog(false)}
+          onSubmit={async (newCol) => {
+            const updated = [...existingColumns, { ...newCol, order: existingColumns.length }]
+            await updateKanban.mutateAsync(updated)
+            setShowAddDialog(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Add-Phase Dialog ───
+
+const phaseTemplates: { phase: string; label: string; description: string; color: string }[] = [
+  { phase: 'admin',                  label: 'Administration',           description: 'Vertrag, Bewilligungen, Bestellungen', color: '#60A5FA' },
+  { phase: 'montage',                label: 'Montage',                  description: 'Geruest, Module, Dacharbeiten',        color: '#FB923C' },
+  { phase: 'elektro',                label: 'Elektriker',               description: 'Wechselrichter, Speicher, AC',         color: '#F59E0B' },
+  { phase: 'elektro_offen',          label: 'Elektriker noch nicht fertig', description: 'Wartet auf Abschluss',             color: '#FCD34D' },
+  { phase: 'pronovo',                label: 'Pronovo',                  description: 'Anmeldung & Foerderung',               color: '#A78BFA' },
+  { phase: 'abschluss',              label: 'Abschluss',                description: 'Abnahme, Doku, Rechnung',              color: '#34D399' },
+  { phase: 'komplett_erledigt',      label: 'Komplett erledigt',        description: 'Alles abgeschlossen',                  color: '#22D3EE' },
+  { phase: 'bewilligung',            label: 'Bewilligung läuft',        description: 'Wartet auf Behörden',                  color: '#E879F9' },
+  { phase: 'material',               label: 'Material bestellt',        description: 'Komponenten unterwegs',                color: '#94A3B8' },
+  { phase: 'inbetriebnahme',         label: 'Inbetriebnahme',           description: 'Wird scharfgeschaltet',                color: '#4ADE80' },
+]
+
+function AddPhaseDialog({
+  existingColumns,
+  onClose,
+  onSubmit,
+}: {
+  existingColumns: ProjectKanbanColumn[]
+  onClose: () => void
+  onSubmit: (newCol: { phase: string; label: string; description: string; color: string }) => Promise<void>
+}) {
+  const [label, setLabel] = useState('')
+  const [phase, setPhase] = useState('')
+  const [description, setDescription] = useState('')
+  const [color, setColor] = useState('#A78BFA')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const existingPhases = new Set(existingColumns.map((c) => c.phase))
+
+  const handleTemplate = (tpl: typeof phaseTemplates[number]) => {
+    setLabel(tpl.label)
+    setPhase(tpl.phase)
+    setDescription(tpl.description)
+    setColor(tpl.color)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    const cleanedPhase = phase.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+    if (!label.trim()) return setError('Anzeige-Name erforderlich')
+    if (!cleanedPhase) return setError('Phase-ID erforderlich')
+    if (existingPhases.has(cleanedPhase)) return setError(`Phase-ID "${cleanedPhase}" existiert bereits`)
+    setSubmitting(true)
+    try {
+      await onSubmit({ phase: cleanedPhase, label: label.trim(), description: description.trim(), color })
+    } catch (err: any) {
+      setError(err?.message ?? 'Fehler beim Speichern')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      className="fixed inset-0 z-[90] flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)' }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        style={{ borderRadius: 'var(--radius-lg)' }}
+      >
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center" style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
+              <Plus size={18} strokeWidth={1.8} style={{ color: '#F59E0B' }} />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-text">Neue Kanban-Spalte</h2>
+              <p className="text-[11px] text-text-sec mt-0.5">Vorlage wählen oder eigene Phase</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="text-text-dim hover:text-text">
+            <span className="text-2xl leading-none">×</span>
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          {/* Vorlagen */}
+          <div>
+            <label className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">Vorlage wählen (optional)</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              {phaseTemplates.map((tpl) => {
+                const exists = existingPhases.has(tpl.phase)
+                return (
+                  <button
+                    key={tpl.phase}
+                    type="button"
+                    disabled={exists}
+                    onClick={() => handleTemplate(tpl)}
+                    className="text-left flex items-start gap-2 p-2.5 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover"
+                    style={{
+                      background: phase === tpl.phase ? `color-mix(in srgb, ${tpl.color} 15%, transparent)` : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${phase === tpl.phase ? tpl.color : 'rgba(255,255,255,0.06)'}`,
+                    }}
+                  >
+                    <div className="flex-shrink-0 w-3 h-3 rounded-full mt-1" style={{ background: tpl.color }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12px] font-semibold text-text">{tpl.label}</div>
+                      <div className="text-[10px] text-text-sec line-clamp-1">{tpl.description}</div>
+                      {exists && <div className="text-[10px] text-green mt-0.5">✓ schon da</div>}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Felder */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border">
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">Anzeige-Name</label>
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className="glass-input mt-1 w-full text-sm"
+                placeholder="z.B. Pronovo"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">Phase-ID</label>
+              <input
+                type="text"
+                value={phase}
+                onChange={(e) => setPhase(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+                className="glass-input mt-1 w-full text-sm font-mono"
+                placeholder="pronovo"
+                required
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">Beschreibung</label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="glass-input mt-1 w-full text-sm"
+                placeholder="Kurzbeschreibung für die Spalte"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-text-sec font-semibold">Farbe</label>
+              <div className="flex items-center gap-2 mt-1">
+                <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-12 h-9 rounded-lg cursor-pointer border-0 p-0" />
+                <input type="text" value={color} onChange={(e) => setColor(e.target.value)} className="glass-input flex-1 text-sm font-mono" />
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg" style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)' }}>
+              <span className="text-[13px] text-red flex-1">{error}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-2" style={{ background: 'rgba(0,0,0,0.2)' }}>
+          <button type="button" onClick={onClose} className="btn-secondary text-xs" disabled={submitting}>
+            Abbrechen
+          </button>
+          <button type="submit" disabled={submitting || !label.trim() || !phase.trim()} className="btn-primary text-xs">
+            {submitting ? <><Loader2 size={14} className="animate-spin" /> Speichern…</> : <><Plus size={14} strokeWidth={2} /> Spalte hinzufügen</>}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
