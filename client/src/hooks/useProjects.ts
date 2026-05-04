@@ -317,8 +317,8 @@ export function formatCHF(value: number): string {
   }).format(value)
 }
 
-export function computePhaseProgress(progress: PhaseProgress, phase: ProjectPhase) {
-  const arr = progress[phase]
+export function computePhaseProgress(progress: PhaseProgress | Record<string, number[]> | null | undefined, phase: string) {
+  const arr = (progress as Record<string, number[]> | null | undefined)?.[phase] ?? []
   const done = arr.filter(Boolean).length
   return { done, total: arr.length, percent: arr.length ? Math.round((done / arr.length) * 100) : 0 }
 }
