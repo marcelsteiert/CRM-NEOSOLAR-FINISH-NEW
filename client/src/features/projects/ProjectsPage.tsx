@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import {
   useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
-  phaseLabels as defaultPhaseLabels, phaseColors as defaultPhaseColors, formatCHF, computePhaseProgress,
+  phaseLabels, phaseColors, formatCHF, computePhaseProgress,
   type Project, type ProjectPhase, type Partner, type ProjectStats,
 } from '@/hooks/useProjects'
 import { useProjectKanbanColumns } from '@/hooks/useAdmin'
@@ -57,17 +57,17 @@ export default function ProjectsPage() {
 
   // Kanban-Custom-Settings: ueberschreibt Labels/Farben/Reihenfolge
   const kanbanColumns = kanbanColsRes?.data ?? []
-  const phaseLabels: Record<ProjectPhase, string> = {
-    admin: kanbanColumns.find((c) => c.phase === 'admin')?.label ?? defaultPhaseLabels.admin,
-    montage: kanbanColumns.find((c) => c.phase === 'montage')?.label ?? defaultPhaseLabels.montage,
-    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.label ?? defaultPhaseLabels.elektro,
-    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.label ?? defaultPhaseLabels.abschluss,
+  const customPhaseLabels: Record<ProjectPhase, string> = {
+    admin: kanbanColumns.find((c) => c.phase === 'admin')?.label ?? phaseLabels.admin,
+    montage: kanbanColumns.find((c) => c.phase === 'montage')?.label ?? phaseLabels.montage,
+    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.label ?? phaseLabels.elektro,
+    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.label ?? phaseLabels.abschluss,
   }
-  const phaseColors: Record<ProjectPhase, string> = {
-    admin: kanbanColumns.find((c) => c.phase === 'admin')?.color ?? defaultPhaseColors.admin,
-    montage: kanbanColumns.find((c) => c.phase === 'montage')?.color ?? defaultPhaseColors.montage,
-    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.color ?? defaultPhaseColors.elektro,
-    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.color ?? defaultPhaseColors.abschluss,
+  const customPhaseColors: Record<ProjectPhase, string> = {
+    admin: kanbanColumns.find((c) => c.phase === 'admin')?.color ?? phaseColors.admin,
+    montage: kanbanColumns.find((c) => c.phase === 'montage')?.color ?? phaseColors.montage,
+    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.color ?? phaseColors.elektro,
+    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.color ?? phaseColors.abschluss,
   }
   // Sortierung aus Kanban-Settings
   const sortedPhaseOrder: ProjectPhase[] = kanbanColumns.length === 4
@@ -193,8 +193,8 @@ export default function ProjectsPage() {
             onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined}
             hidePrice={isSubunternehmen}
             phaseOrder={sortedPhaseOrder}
-            phaseLabels={phaseLabels}
-            phaseColors={phaseColors}
+            phaseLabels={customPhaseLabels}
+            phaseColors={customPhaseColors}
           />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
@@ -249,8 +249,8 @@ function KanbanView({
   phaseColors?: Record<ProjectPhase, string>
 }) {
   const effectivePhaseOrder = phaseOrderProp ?? phaseOrder
-  const effectivePhaseLabels = phaseLabelsProp ?? defaultPhaseLabels
-  const effectivePhaseColors = phaseColorsProp ?? defaultPhaseColors
+  const effectivePhaseLabels = phaseLabelsProp ?? phaseLabels
+  const effectivePhaseColors = phaseColorsProp ?? phaseColors
   const canDrag = !!onMoveProject
   const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
