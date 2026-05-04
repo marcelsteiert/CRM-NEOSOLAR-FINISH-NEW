@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RotateCcw, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { Save, RotateCcw, GripVertical, Plus, Trash2, Sparkles, Check } from 'lucide-react'
 import {
   useProjectKanbanColumns,
   useUpdateProjectKanbanColumns,
@@ -11,6 +11,20 @@ const presetColors = [
   '#22D3EE', '#FB923C', '#E879F9', '#94A3B8', '#4ADE80',
 ]
 
+// Vorgefertigte Phasen-Vorlagen fuer typischen PV-Projekt-Workflow
+const phaseTemplates: { phase: string; label: string; description: string; color: string }[] = [
+  { phase: 'admin',                  label: 'Administration',           description: 'Vertrag, Bewilligungen, Bestellungen', color: '#60A5FA' },
+  { phase: 'montage',                label: 'Montage',                  description: 'Geruest, Module, Dacharbeiten',        color: '#FB923C' },
+  { phase: 'elektro',                label: 'Elektriker',               description: 'Wechselrichter, Speicher, AC',         color: '#F59E0B' },
+  { phase: 'elektro_offen',          label: 'Elektriker noch nicht fertig', description: 'Wartet auf Abschluss durch Elektriker', color: '#FCD34D' },
+  { phase: 'pronovo',                label: 'Pronovo',                  description: 'Anmeldung & Foerderung',               color: '#A78BFA' },
+  { phase: 'abschluss',              label: 'Abschluss',                description: 'Abnahme, Doku, Rechnung',              color: '#34D399' },
+  { phase: 'komplett_erledigt',      label: 'Komplett erledigt',        description: 'Anlage uebergeben, alles abgeschlossen', color: '#22D3EE' },
+  { phase: 'bewilligung',            label: 'Bewilligung laeuft',       description: 'Wartet auf Behoerden / Netzbetreiber', color: '#E879F9' },
+  { phase: 'material',               label: 'Material bestellt',        description: 'Komponenten unterwegs',                color: '#94A3B8' },
+  { phase: 'inbetriebnahme',         label: 'Inbetriebnahme',           description: 'Anlage wird scharfgeschaltet',         color: '#4ADE80' },
+]
+
 export default function ProjectKanbanSection() {
   const { data: res, isLoading } = useProjectKanbanColumns()
   const updateMut = useUpdateProjectKanbanColumns()
@@ -18,6 +32,7 @@ export default function ProjectKanbanSection() {
   const [hasChanges, setHasChanges] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [savedMsg, setSavedMsg] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
 
   useEffect(() => {
     if (res?.data) {
@@ -97,6 +112,37 @@ export default function ProjectKanbanSection() {
     updateColumn(idx, { phase: cleaned })
   }
 
+  const handleAddTemplate = (tpl: typeof phaseTemplates[number]) => {
+    if (columns.some((c) => c.phase === tpl.phase)) return // schon da
+    const newColumn: ProjectKanbanColumn = {
+      phase: tpl.phase,
+      label: tpl.label,
+      description: tpl.description,
+      color: tpl.color,
+      order: columns.length,
+    }
+    setColumns((prev) => [...prev, newColumn])
+    setHasChanges(true)
+  }
+
+  const handleAddAllMissing = () => {
+    const missing = phaseTemplates.filter((tpl) => !columns.some((c) => c.phase === tpl.phase))
+    if (missing.length === 0) {
+      setShowTemplates(false)
+      return
+    }
+    const newCols = missing.map((tpl, i) => ({
+      phase: tpl.phase,
+      label: tpl.label,
+      description: tpl.description,
+      color: tpl.color,
+      order: columns.length + i,
+    }))
+    setColumns((prev) => [...prev, ...newCols])
+    setHasChanges(true)
+    setShowTemplates(false)
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -120,17 +166,101 @@ export default function ProjectKanbanSection() {
         Änderungen wirken sich auf alle Benutzer aus.
       </div>
 
-      {/* + Spalte hinzufügen */}
-      <div className="flex items-center justify-end">
+      {/* Action-Bar: Vorlagen + leere Spalte */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => setShowTemplates((v) => !v)}
+          className="btn-secondary text-xs"
+        >
+          <Sparkles size={14} strokeWidth={1.8} />
+          Vorlagen einfügen
+        </button>
         <button
           type="button"
           onClick={handleAddColumn}
           className="btn-primary text-xs"
         >
           <Plus size={14} strokeWidth={2} />
-          Spalte hinzufügen
+          Leere Spalte
         </button>
       </div>
+
+      {/* Vorlagen-Panel */}
+      {showTemplates && (
+        <div
+          className="glass-card p-4 space-y-3"
+          style={{
+            borderRadius: 'var(--radius-md)',
+            background: 'linear-gradient(180deg, rgba(167,139,250,0.08), rgba(167,139,250,0.02))',
+            border: '1px solid rgba(167,139,250,0.25)',
+          }}
+        >
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Sparkles size={14} strokeWidth={1.8} style={{ color: '#A78BFA' }} />
+              <span className="text-sm font-semibold text-text">Phasen-Vorlagen</span>
+              <span className="text-[11px] text-text-sec">Klick zum Hinzufügen</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAddAllMissing}
+                className="text-[11px] font-semibold text-amber hover:underline"
+              >
+                Alle fehlenden hinzufügen
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTemplates(false)}
+                className="text-[11px] text-text-dim hover:text-text"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {phaseTemplates.map((tpl) => {
+              const exists = columns.some((c) => c.phase === tpl.phase)
+              return (
+                <button
+                  key={tpl.phase}
+                  type="button"
+                  disabled={exists}
+                  onClick={() => handleAddTemplate(tpl)}
+                  className="text-left flex items-start gap-3 p-3 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-hover"
+                  style={{
+                    background: exists ? 'rgba(52,211,153,0.06)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${exists ? 'rgba(52,211,153,0.15)' : 'rgba(255,255,255,0.06)'}`,
+                  }}
+                >
+                  <div
+                    className="flex-shrink-0 mt-0.5"
+                    style={{
+                      width: 22, height: 22, borderRadius: 6,
+                      background: `color-mix(in srgb, ${tpl.color} 18%, transparent)`,
+                      border: `1px solid ${tpl.color}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {exists ? (
+                      <Check size={11} strokeWidth={2.5} style={{ color: '#34D399' }} />
+                    ) : (
+                      <Plus size={11} strokeWidth={2.5} style={{ color: tpl.color }} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-semibold text-text">{tpl.label}</div>
+                    <div className="text-[10px] text-text-sec mt-0.5 line-clamp-2">{tpl.description}</div>
+                    {exists && <div className="text-[10px] text-green mt-1">✓ Schon hinzugefügt</div>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Columns */}
       <div className="space-y-2">
