@@ -125,6 +125,14 @@ export function createApp() {
   // Oeffentliche Read-Only Routen (alle authentifizierten User)
   app.use('/api/v1/lead-sources', authMiddleware, adminLeadSourcesRouter)
   app.use('/api/v1/integrations', authMiddleware, adminIntegrationsRouter)
+  // Projekt-Kanban Spalten muessen von allen Usern lesbar sein
+  // (Projektleitung + Vertrieb sehen sonst nur die 4 Standard-Phasen)
+  app.use('/api/v1/project-kanban', authMiddleware, (req, res, next) => {
+    if (req.method !== 'GET') {
+      return res.status(403).json({ error: { message: 'Schreibzugriff nur fuer Admins' } })
+    }
+    next()
+  }, adminProjectKanbanRouter)
 
   // Admin routes (geschuetzt + Rollencheck: nur ADMIN/GL)
   const adminGuard = [authMiddleware, requireRole('ADMIN', 'GL')]

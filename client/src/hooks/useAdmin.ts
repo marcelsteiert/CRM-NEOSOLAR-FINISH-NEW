@@ -452,7 +452,8 @@ export interface ProjectKanbanColumn {
 export function useProjectKanbanColumns() {
   return useQuery({
     queryKey: ['projectKanbanColumns'],
-    queryFn: () => api.get<{ data: ProjectKanbanColumn[] }>('/admin/project-kanban'),
+    // GET ueber oeffentlichen Endpoint (auch fuer Vertrieb / Projektleitung lesbar)
+    queryFn: () => api.get<{ data: ProjectKanbanColumn[] }>('/project-kanban'),
   })
 }
 
