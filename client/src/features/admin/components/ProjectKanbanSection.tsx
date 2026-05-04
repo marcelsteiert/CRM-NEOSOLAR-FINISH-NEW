@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, RotateCcw, GripVertical } from 'lucide-react'
+import { Save, RotateCcw, GripVertical, Plus, Trash2 } from 'lucide-react'
 import {
   useProjectKanbanColumns,
   useUpdateProjectKanbanColumns,
@@ -64,6 +64,39 @@ export default function ProjectKanbanSection() {
   }
   const handleDragEnd = () => setDragIdx(null)
 
+  const handleAddColumn = () => {
+    // Eindeutige neue Phase-ID generieren
+    let newKey = 'phase_neu'
+    let counter = 2
+    while (columns.some((c) => c.phase === newKey)) {
+      newKey = `phase_neu_${counter}`
+      counter++
+    }
+    const newColumn: ProjectKanbanColumn = {
+      phase: newKey,
+      label: 'Neue Spalte',
+      description: '',
+      color: presetColors[columns.length % presetColors.length],
+      order: columns.length,
+    }
+    setColumns((prev) => [...prev, newColumn])
+    setHasChanges(true)
+  }
+
+  const handleDeleteColumn = (idx: number) => {
+    const col = columns[idx]
+    if (!col) return
+    if (!confirm(`Spalte "${col.label}" wirklich entfernen?\n\nProjekte mit Phase '${col.phase}' bleiben in der DB, sind aber im Kanban nicht mehr sichtbar.`)) return
+    setColumns((prev) => prev.filter((_, i) => i !== idx))
+    setHasChanges(true)
+  }
+
+  const handlePhaseKeyChange = (idx: number, value: string) => {
+    // Phase-Key bereinigen: lowercase, nur a-z, 0-9, _
+    const cleaned = value.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+    updateColumn(idx, { phase: cleaned })
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -81,9 +114,22 @@ export default function ProjectKanbanSection() {
         className="p-4 rounded-xl text-[12px] text-text-sec"
         style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
       >
-        Hier kannst du die Spalten des Projekt-Kanban-Boards <strong className="text-text">benennen, einfärben und sortieren</strong>.
-        Die Phasen-IDs (admin, montage, elektro, abschluss) sind technisch fix — Anzeige-Texte und Farben sind frei wählbar.
+        Hier kannst du die Spalten des Projekt-Kanban-Boards <strong className="text-text">erstellen, benennen, einfärben und sortieren</strong>.
+        Phase-ID = der technische Schlüssel (z.B. <code>montage</code>) — bei neuen Spalten frei wählbar.
+        Anzeige-Name + Farbe + Reihenfolge sind frei.
         Änderungen wirken sich auf alle Benutzer aus.
+      </div>
+
+      {/* + Spalte hinzufügen */}
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={handleAddColumn}
+          className="btn-primary text-xs"
+        >
+          <Plus size={14} strokeWidth={2} />
+          Spalte hinzufügen
+        </button>
       </div>
 
       {/* Columns */}
@@ -107,19 +153,30 @@ export default function ProjectKanbanSection() {
               <GripVertical size={16} strokeWidth={1.8} className="text-text-dim mt-2 flex-shrink-0" />
 
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3">
-                {/* Phase-ID (readonly) */}
+                {/* Phase-ID (editierbar bei neuen, readonly bei Standard 4) */}
                 <div className="sm:col-span-2">
                   <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">Phase-ID</label>
-                  <div
-                    className="px-3 py-2 text-[12px] rounded-lg font-mono"
-                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', color: '#8B95A5' }}
-                  >
-                    {col.phase}
-                  </div>
+                  {(['admin', 'montage', 'elektro', 'abschluss'].includes(col.phase) ? (
+                    <div
+                      className="px-3 py-2 text-[12px] rounded-lg font-mono"
+                      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', color: '#8B95A5' }}
+                      title="Standard-Phase – ID kann nicht geändert werden"
+                    >
+                      {col.phase} 🔒
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      value={col.phase}
+                      onChange={(e) => handlePhaseKeyChange(idx, e.target.value)}
+                      placeholder="z.B. abnahme"
+                      className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50 font-mono"
+                    />
+                  ))}
                 </div>
 
                 {/* Label */}
-                <div className="sm:col-span-4">
+                <div className="sm:col-span-3">
                   <label className="block text-[10px] font-semibold text-text-dim mb-1 uppercase tracking-wider">Anzeige-Name</label>
                   <input
                     type="text"
@@ -160,6 +217,19 @@ export default function ProjectKanbanSection() {
                       className="flex-1 px-2 py-2 text-[11px] font-mono rounded-lg bg-surface-hover border border-border text-text"
                     />
                   </div>
+                </div>
+
+                {/* Delete-Button */}
+                <div className="sm:col-span-1 flex items-end">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteColumn(idx)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-colors"
+                    title="Spalte entfernen"
+                    aria-label="Spalte entfernen"
+                  >
+                    <Trash2 size={14} strokeWidth={1.8} />
+                  </button>
                 </div>
               </div>
             </div>

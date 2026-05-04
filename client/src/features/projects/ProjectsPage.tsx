@@ -25,6 +25,9 @@ const phaseIcons: Record<ProjectPhase, typeof FolderKanban> = {
   abschluss: CheckCircle2,
 }
 
+// Fallback-Icon fuer Custom-Phasen
+const defaultPhaseIcon = FolderKanban
+
 export default function ProjectsPage() {
   const { isAdmin, isSubunternehmen, canCreateProjects } = useAuth()
   const [view, setView] = useState<ViewTab>('kanban')
@@ -55,32 +58,36 @@ export default function ProjectsPage() {
   const partners = partnersData?.data ?? []
   const phases = phasesData?.data ?? []
 
-  // Kanban-Custom-Settings: ueberschreibt Labels/Farben/Reihenfolge
+  // Kanban-Custom-Settings: ueberschreibt Labels/Farben/Reihenfolge + Custom-Phasen
   const kanbanColumns = kanbanColsRes?.data ?? []
-  const customPhaseLabels: Record<ProjectPhase, string> = {
-    admin: kanbanColumns.find((c) => c.phase === 'admin')?.label ?? phaseLabels.admin,
-    montage: kanbanColumns.find((c) => c.phase === 'montage')?.label ?? phaseLabels.montage,
-    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.label ?? phaseLabels.elektro,
-    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.label ?? phaseLabels.abschluss,
-  }
-  const customPhaseColors: Record<ProjectPhase, string> = {
-    admin: kanbanColumns.find((c) => c.phase === 'admin')?.color ?? phaseColors.admin,
-    montage: kanbanColumns.find((c) => c.phase === 'montage')?.color ?? phaseColors.montage,
-    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.color ?? phaseColors.elektro,
-    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.color ?? phaseColors.abschluss,
-  }
-  // Sortierung aus Kanban-Settings
-  const sortedPhaseOrder: ProjectPhase[] = kanbanColumns.length === 4
-    ? ([...kanbanColumns].sort((a, b) => a.order - b.order).map((c) => c.phase) as ProjectPhase[])
+  // Aus Kanban-Settings (kann auch CUSTOM phases enthalten) ODER Fallback auf 4 Defaults
+  const sortedPhaseOrder: string[] = kanbanColumns.length > 0
+    ? [...kanbanColumns].sort((a, b) => a.order - b.order).map((c) => c.phase)
     : phaseOrder
+  const customPhaseLabels: Record<string, string> = {}
+  const customPhaseColors: Record<string, string> = {}
+  for (const c of kanbanColumns) {
+    customPhaseLabels[c.phase] = c.label
+    customPhaseColors[c.phase] = c.color
+  }
+  // Defaults fuer die 4 Standard-Phasen (Fallback)
+  for (const p of phaseOrder) {
+    if (!customPhaseLabels[p]) customPhaseLabels[p] = phaseLabels[p]
+    if (!customPhaseColors[p]) customPhaseColors[p] = phaseColors[p]
+  }
 
   const projectsByPhase = useMemo(() => {
-    const map: Record<ProjectPhase, Project[]> = { admin: [], montage: [], elektro: [], abschluss: [] }
+    const map: Record<string, Project[]> = { admin: [], montage: [], elektro: [], abschluss: [] }
+    // Auch Custom-Phasen aus Kanban-Settings initialisieren
+    for (const c of kanbanColumns) {
+      if (!map[c.phase]) map[c.phase] = []
+    }
     for (const p of projects) {
-      if (map[p.phase]) map[p.phase].push(p)
+      if (!map[p.phase]) map[p.phase] = []
+      map[p.phase].push(p)
     }
     return map
-  }, [projects])
+  }, [projects, kanbanColumns])
 
   const riskProjects = useMemo(() => projects.filter((p) => p.risk), [projects])
 
@@ -239,18 +246,18 @@ function KanbanView({
   phaseLabels: phaseLabelsProp,
   phaseColors: phaseColorsProp,
 }: {
-  projectsByPhase: Record<ProjectPhase, Project[]>
+  projectsByPhase: Record<string, Project[]>
   phases: { id: string; name: string; color: string; steps: string[] }[]
   onSelect: (id: string) => void
-  onMoveProject?: (projectId: string, targetPhase: ProjectPhase) => void
+  onMoveProject?: (projectId: string, targetPhase: string) => void
   hidePrice?: boolean
-  phaseOrder?: ProjectPhase[]
-  phaseLabels?: Record<ProjectPhase, string>
-  phaseColors?: Record<ProjectPhase, string>
+  phaseOrder?: string[]
+  phaseLabels?: Record<string, string>
+  phaseColors?: Record<string, string>
 }) {
-  const effectivePhaseOrder = phaseOrderProp ?? phaseOrder
-  const effectivePhaseLabels = phaseLabelsProp ?? phaseLabels
-  const effectivePhaseColors = phaseColorsProp ?? phaseColors
+  const effectivePhaseOrder: string[] = phaseOrderProp ?? phaseOrder
+  const effectivePhaseLabels: Record<string, string> = phaseLabelsProp ?? phaseLabels
+  const effectivePhaseColors: Record<string, string> = phaseColorsProp ?? phaseColors
   const canDrag = !!onMoveProject
   const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -297,9 +304,9 @@ function KanbanView({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 h-full overflow-hidden overflow-x-auto">
       {effectivePhaseOrder.map((phaseId) => {
         const phaseDef = phases.find((p) => p.id === phaseId)
-        const color = effectivePhaseColors[phaseId]
-        const items = projectsByPhase[phaseId]
-        const Icon = phaseIcons[phaseId]
+        const color = effectivePhaseColors[phaseId] ?? '#94A3B8'
+        const items = projectsByPhase[phaseId] ?? []
+        const Icon = phaseIcons[phaseId as ProjectPhase] ?? defaultPhaseIcon
         const totalValue = items.reduce((s, p) => s + p.value, 0)
         const isOver = dragOverPhase === phaseId && !items.some((p) => p.id === draggingId)
 

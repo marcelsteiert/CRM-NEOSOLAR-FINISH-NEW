@@ -40,12 +40,22 @@ router.put('/', async (req: Request, res: Response, next: NextFunction) => {
     if (!Array.isArray(columns)) {
       return res.status(400).json({ error: 'columns muss ein Array sein' })
     }
-    // Validiere: nur die 4 erlaubten Phase-Keys
-    const allowedPhases = new Set(['admin', 'montage', 'elektro', 'abschluss'])
+    // Validierung: phase darf nicht leer sein, label nicht leer
     for (const c of columns) {
-      if (!c.phase || !allowedPhases.has(c.phase)) {
-        return res.status(400).json({ error: `Unbekannte Phase: ${c.phase}` })
+      if (!c.phase || typeof c.phase !== 'string' || !c.phase.trim()) {
+        return res.status(400).json({ error: `Phase-Key darf nicht leer sein` })
       }
+      if (!c.label || !c.label.trim()) {
+        return res.status(400).json({ error: `Label darf nicht leer sein` })
+      }
+    }
+    // Phase-Keys eindeutig
+    const seen = new Set<string>()
+    for (const c of columns) {
+      if (seen.has(c.phase)) {
+        return res.status(400).json({ error: `Phase-Key '${c.phase}' kommt mehrfach vor` })
+      }
+      seen.add(c.phase)
     }
 
     await supabase

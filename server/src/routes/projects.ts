@@ -90,7 +90,7 @@ const createProjectSchema = z.object({
 })
 
 const updateProjectSchema = createProjectSchema.partial().extend({
-  phase: z.enum(['admin', 'montage', 'elektro', 'abschluss']).optional(),
+  phase: z.string().min(1).optional(),
   risk: z.boolean().optional(),
   riskNote: z.string().nullable().optional(),
   progress: z.record(z.array(z.number())).optional(),
@@ -437,7 +437,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
 router.put('/:id/toggle-step', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const schema = z.object({ phase: z.enum(['admin', 'montage', 'elektro', 'abschluss']), stepIndex: z.number().min(0) })
+    const schema = z.object({ phase: z.string().min(1), stepIndex: z.number().min(0) })
     const result = schema.safeParse(req.body)
     if (!result.success) throw new AppError('Ungueltige Daten', 400)
 
