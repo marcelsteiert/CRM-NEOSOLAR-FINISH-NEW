@@ -30,6 +30,7 @@ import adminDbExportRouter from './routes/admin/dbExport.js'
 import adminAppointmentKanbanRouter from './routes/admin/appointmentKanban.js'
 import adminDealKanbanRouter from './routes/admin/dealKanban.js'
 import adminNoShowKanbanRouter from './routes/admin/noShowKanban.js'
+import adminProjectKanbanRouter from './routes/admin/projectKanban.js'
 import adminDuplicatesRouter from './routes/admin/duplicates.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
 import callLogsRouter from './routes/callLogs.js'
@@ -140,6 +141,7 @@ export function createApp() {
   app.use('/api/v1/admin/appointment-kanban', ...adminGuard, adminAppointmentKanbanRouter)
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
   app.use('/api/v1/admin/no-show-kanban', ...adminGuard, adminNoShowKanbanRouter)
+  app.use('/api/v1/admin/project-kanban', ...adminGuard, adminProjectKanbanRouter)
   app.use('/api/v1/admin/duplicates', ...adminGuard, adminDuplicatesRouter)
   // Portal-Routes: alle eingeloggten User (Verkaeufer + Projektleitung + Admin)
   // Der Frontend-Filter zeigt eh nur eigene Deals; Datenzugriff ist auf

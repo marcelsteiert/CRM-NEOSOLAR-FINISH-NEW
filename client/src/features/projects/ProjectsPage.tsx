@@ -7,9 +7,10 @@ import {
 } from 'lucide-react'
 import {
   useProjects, useProjectStats, usePartners, usePhaseDefinitions, useUpdateProject,
-  phaseLabels, phaseColors, formatCHF, computePhaseProgress,
+  phaseLabels as defaultPhaseLabels, phaseColors as defaultPhaseColors, formatCHF, computePhaseProgress,
   type Project, type ProjectPhase, type Partner, type ProjectStats,
 } from '@/hooks/useProjects'
+import { useProjectKanbanColumns } from '@/hooks/useAdmin'
 import { useAuth } from '@/hooks/useAuth'
 import ProjectDetailModal from './components/ProjectDetailModal'
 import CreateProjectModal from './components/CreateProjectModal'
@@ -45,6 +46,7 @@ export default function ProjectsPage() {
   const { data: statsData } = useProjectStats()
   const { data: partnersData } = usePartners()
   const { data: phasesData } = usePhaseDefinitions()
+  const { data: kanbanColsRes } = useProjectKanbanColumns()
   const updateProject = useUpdateProject()
   const canEdit = isAdmin
 
@@ -52,6 +54,25 @@ export default function ProjectsPage() {
   const stats = statsData?.data
   const partners = partnersData?.data ?? []
   const phases = phasesData?.data ?? []
+
+  // Kanban-Custom-Settings: ueberschreibt Labels/Farben/Reihenfolge
+  const kanbanColumns = kanbanColsRes?.data ?? []
+  const phaseLabels: Record<ProjectPhase, string> = {
+    admin: kanbanColumns.find((c) => c.phase === 'admin')?.label ?? defaultPhaseLabels.admin,
+    montage: kanbanColumns.find((c) => c.phase === 'montage')?.label ?? defaultPhaseLabels.montage,
+    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.label ?? defaultPhaseLabels.elektro,
+    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.label ?? defaultPhaseLabels.abschluss,
+  }
+  const phaseColors: Record<ProjectPhase, string> = {
+    admin: kanbanColumns.find((c) => c.phase === 'admin')?.color ?? defaultPhaseColors.admin,
+    montage: kanbanColumns.find((c) => c.phase === 'montage')?.color ?? defaultPhaseColors.montage,
+    elektro: kanbanColumns.find((c) => c.phase === 'elektro')?.color ?? defaultPhaseColors.elektro,
+    abschluss: kanbanColumns.find((c) => c.phase === 'abschluss')?.color ?? defaultPhaseColors.abschluss,
+  }
+  // Sortierung aus Kanban-Settings
+  const sortedPhaseOrder: ProjectPhase[] = kanbanColumns.length === 4
+    ? ([...kanbanColumns].sort((a, b) => a.order - b.order).map((c) => c.phase) as ProjectPhase[])
+    : phaseOrder
 
   const projectsByPhase = useMemo(() => {
     const map: Record<ProjectPhase, Project[]> = { admin: [], montage: [], elektro: [], abschluss: [] }
@@ -165,7 +186,16 @@ export default function ProjectsPage() {
             <Loader2 size={24} className="animate-spin text-text-dim" />
           </div>
         ) : view === 'kanban' ? (
-          <KanbanView projectsByPhase={projectsByPhase} phases={phases} onSelect={setSelectedProjectId} onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined} hidePrice={isSubunternehmen} />
+          <KanbanView
+            projectsByPhase={projectsByPhase}
+            phases={phases}
+            onSelect={setSelectedProjectId}
+            onMoveProject={canEdit ? (projectId, targetPhase) => updateProject.mutate({ id: projectId, phase: targetPhase }) : undefined}
+            hidePrice={isSubunternehmen}
+            phaseOrder={sortedPhaseOrder}
+            phaseLabels={phaseLabels}
+            phaseColors={phaseColors}
+          />
         ) : view === 'dashboard' ? (
           <DashboardView stats={stats} riskProjects={riskProjects} projects={projects} onSelect={setSelectedProjectId} />
         ) : view === 'archiv' ? (
@@ -205,13 +235,22 @@ function KanbanView({
   onSelect,
   onMoveProject,
   hidePrice = false,
+  phaseOrder: phaseOrderProp,
+  phaseLabels: phaseLabelsProp,
+  phaseColors: phaseColorsProp,
 }: {
   projectsByPhase: Record<ProjectPhase, Project[]>
   phases: { id: string; name: string; color: string; steps: string[] }[]
   onSelect: (id: string) => void
   onMoveProject?: (projectId: string, targetPhase: ProjectPhase) => void
   hidePrice?: boolean
+  phaseOrder?: ProjectPhase[]
+  phaseLabels?: Record<ProjectPhase, string>
+  phaseColors?: Record<ProjectPhase, string>
 }) {
+  const effectivePhaseOrder = phaseOrderProp ?? phaseOrder
+  const effectivePhaseLabels = phaseLabelsProp ?? defaultPhaseLabels
+  const effectivePhaseColors = phaseColorsProp ?? defaultPhaseColors
   const canDrag = !!onMoveProject
   const [dragOverPhase, setDragOverPhase] = useState<ProjectPhase | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -245,20 +284,20 @@ function KanbanView({
     const projectId = e.dataTransfer.getData('text/plain')
     if (projectId) {
       // Find the project's current phase
-      const currentPhase = phaseOrder.find((ph) => projectsByPhase[ph].some((p) => p.id === projectId))
+      const currentPhase = effectivePhaseOrder.find((ph) => projectsByPhase[ph].some((p) => p.id === projectId))
       if (currentPhase !== targetPhase && onMoveProject) {
         onMoveProject(projectId, targetPhase)
       }
     }
     setDragOverPhase(null)
     setDraggingId(null)
-  }, [onMoveProject, projectsByPhase])
+  }, [onMoveProject, projectsByPhase, effectivePhaseOrder])
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 h-full overflow-hidden overflow-x-auto">
-      {phaseOrder.map((phaseId) => {
+      {effectivePhaseOrder.map((phaseId) => {
         const phaseDef = phases.find((p) => p.id === phaseId)
-        const color = phaseColors[phaseId]
+        const color = effectivePhaseColors[phaseId]
         const items = projectsByPhase[phaseId]
         const Icon = phaseIcons[phaseId]
         const totalValue = items.reduce((s, p) => s + p.value, 0)
@@ -280,7 +319,7 @@ function KanbanView({
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-2 h-2 rounded-full" style={{ background: color }} />
                 <Icon size={14} style={{ color }} />
-                <span className="text-[13px] font-bold">{phaseDef?.name ?? phaseLabels[phaseId]}</span>
+                <span className="text-[13px] font-bold">{phaseDef?.name ?? effectivePhaseLabels[phaseId]}</span>
                 <span className="ml-auto text-[11px] text-text-dim font-mono">{items.length}</span>
               </div>
               {!hidePrice && <p className="text-[11px] text-text-dim">{formatCHF(totalValue)}</p>}

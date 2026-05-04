@@ -20,6 +20,7 @@ import SharedPasswordsSection from './components/SharedPasswordsSection'
 import AppointmentKanbanSection from './components/AppointmentKanbanSection'
 import DealKanbanSection from './components/DealKanbanSection'
 import NoShowKanbanSection from './components/NoShowKanbanSection'
+import ProjectKanbanSection from './components/ProjectKanbanSection'
 
 const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   users: { title: 'Benutzer & Rollen', desc: 'Benutzer verwalten, Rollen und Modul-Berechtigungen zuweisen' },
@@ -29,6 +30,7 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   tags: { title: 'Tag-Verwaltung', desc: 'Tags erstellen, bearbeiten und Farben zuweisen' },
   automations: { title: 'Automations-Regeln', desc: 'Follow-Up Regeln, Checklisten und Wiedervorlage-Logik' },
   projectPhases: { title: 'Projekt-Phasen', desc: 'Checklisten-Schritte pro Projektphase konfigurieren' },
+  projectKanban: { title: 'Projekt-Kanban', desc: 'Kanban-Spalten der Projekt-Phasen benennen, einfärben und sortieren' },
   appointmentKanban: { title: 'Termin-Kanban', desc: 'Kanban-Spalten benennen, einfärben und sortieren' },
   dealKanban: { title: 'Angebote-Kanban', desc: 'Angebote-Kanban-Spalten benennen, einfärben und sortieren' },
   noShowKanban: { title: 'No-Show-Kanban', desc: 'Rückruf-Phasen für Callcenter konfigurieren' },
@@ -51,6 +53,7 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   tags: TagManagementSection,
   automations: AutomationRulesSection,
   projectPhases: ProjectPhasesSection,
+  projectKanban: ProjectKanbanSection,
   appointmentKanban: AppointmentKanbanSection,
   dealKanban: DealKanbanSection,
   noShowKanban: NoShowKanbanSection,

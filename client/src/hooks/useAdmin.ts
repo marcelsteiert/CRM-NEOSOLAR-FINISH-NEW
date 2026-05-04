@@ -439,6 +439,32 @@ export function useUpdateNoShowKanbanColumns() {
   })
 }
 
+// ── Project Kanban Columns ──
+
+export interface ProjectKanbanColumn {
+  phase: string
+  label: string
+  color: string
+  description: string
+  order: number
+}
+
+export function useProjectKanbanColumns() {
+  return useQuery({
+    queryKey: ['projectKanbanColumns'],
+    queryFn: () => api.get<{ data: ProjectKanbanColumn[] }>('/admin/project-kanban'),
+  })
+}
+
+export function useUpdateProjectKanbanColumns() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (columns: ProjectKanbanColumn[]) =>
+      api.put<{ data: ProjectKanbanColumn[] }>('/admin/project-kanban', { columns }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projectKanbanColumns'] }),
+  })
+}
+
 // ── Lead Sources ──
 
 export interface LeadSourceDef {

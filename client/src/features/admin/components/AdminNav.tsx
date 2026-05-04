@@ -28,6 +28,7 @@ export type AdminSection =
   | 'tags'
   | 'automations'
   | 'projectPhases'
+  | 'projectKanban'
   | 'appointmentKanban'
   | 'dealKanban'
   | 'noShowKanban'
@@ -69,6 +70,7 @@ const navGroups: AdminNavGroup[] = [
       { id: 'tags', icon: Tag, label: 'Tag-Verwaltung', color: '#34D399' },
       { id: 'automations', icon: Zap, label: 'Automations-Regeln', color: '#F59E0B' },
       { id: 'projectPhases', icon: ClipboardList, label: 'Projekt-Phasen', color: '#34D399' },
+      { id: 'projectKanban', icon: CalendarCheck, label: 'Projekt-Kanban', color: '#FB923C' },
       { id: 'appointmentKanban', icon: CalendarCheck, label: 'Termin-Kanban', color: '#34D399' },
       { id: 'dealKanban', icon: FileText, label: 'Angebote-Kanban', color: '#A78BFA' },
       { id: 'noShowKanban', icon: PhoneOff, label: 'No-Show-Kanban', color: '#F87171' },
