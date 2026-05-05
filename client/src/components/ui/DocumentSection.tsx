@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import {
   FileText, Image, File, Upload, Trash2, Download,
   Folder, FolderOpen,
-  FileSignature, Calendar, Building2, Zap, Coins, BookOpen, FolderQuestion,
+  FileSignature, Calendar, Building2, Zap, Coins, BookOpen, HelpCircle,
 } from 'lucide-react'
 import {
   useContactDocuments,
@@ -32,7 +32,7 @@ const FOLDERS: { id: string; label: string; color: string; icon: typeof FileText
   { id: 'Förderungen',           label: 'Förderungen',           color: '#34D399', icon: Coins },
   { id: 'Anlagendokumentation',  label: 'Anlagendokumentation',  color: '#22D3EE', icon: BookOpen },
 ]
-const UNASSIGNED = { id: '__unassigned__', label: 'Sonstiges', color: '#94A3B8', icon: FolderQuestion }
+const UNASSIGNED = { id: '__unassigned__', label: 'Sonstiges', color: '#94A3B8', icon: HelpCircle }
 
 const iconMap: Record<string, typeof FileText> = { image: Image, pdf: FileText, doc: FileText, file: File }
 const iconColorMap: Record<string, string> = { image: '#60A5FA', pdf: '#F87171', doc: '#60A5FA', file: '#94A3B8' }

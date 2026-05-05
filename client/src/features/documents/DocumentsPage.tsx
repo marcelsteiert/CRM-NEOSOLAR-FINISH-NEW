@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   FileBox, Search, File, Image, FileText, Trash2, Download, FolderOpen, Filter, Eye,
-  FileSignature, Calendar, Building2, Zap, Coins, BookOpen, FolderQuestion,
+  FileSignature, Calendar, Building2, Zap, Coins, BookOpen, HelpCircle,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -17,7 +17,7 @@ const FOLDERS: { id: string; label: string; color: string; icon: typeof FileText
   { id: 'Förderungen',           label: 'Förderungen',           color: '#34D399', icon: Coins },
   { id: 'Anlagendokumentation',  label: 'Anlagendokumentation',  color: '#22D3EE', icon: BookOpen },
 ]
-const UNASSIGNED = { id: '__unassigned__', label: 'Sonstiges', color: '#94A3B8', icon: FolderQuestion }
+const UNASSIGNED = { id: '__unassigned__', label: 'Sonstiges', color: '#94A3B8', icon: HelpCircle }
 
 function FileIcon({ mimeType }: { mimeType: string }) {
   if (mimeType.startsWith('image/')) return <Image size={16} strokeWidth={1.8} className="text-blue-400" />
