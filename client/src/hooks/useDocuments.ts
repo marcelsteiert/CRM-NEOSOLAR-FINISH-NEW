@@ -3,7 +3,10 @@ import { api } from '@/lib/api'
 
 // ── Types ──
 
-export type EntityType = 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT' | 'PERSONAL'
+export type EntityType = 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT' | 'PERSONAL' | 'INTERNAL'
+
+/** Singleton-ID fuer die Firmenablage (alle internen Docs haben diese entity_id) */
+export const INTERNAL_VAULT_ID = 'company-vault'
 
 export interface Document {
   id: string
@@ -115,5 +118,14 @@ export function usePersonnelDocuments(personnelId: string | null | undefined) {
     queryFn: () =>
       api.get<DocumentListResponse>(`/documents?entityType=PERSONAL&entityId=${personnelId}`),
     enabled: !!personnelId,
+  })
+}
+
+/** Hook fuer Firmen-interne Dokumente (entity_type=INTERNAL) */
+export function useInternalDocuments() {
+  return useQuery({
+    queryKey: ['documents', 'internal'],
+    queryFn: () =>
+      api.get<DocumentListResponse>(`/documents?entityType=INTERNAL&entityId=${INTERNAL_VAULT_ID}`),
   })
 }

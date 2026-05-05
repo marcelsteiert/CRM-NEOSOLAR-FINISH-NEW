@@ -3,9 +3,30 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { isAdminRole } from '../middleware/auth.js'
 import { logAudit, getAuditUserId } from '../lib/auditService.js'
 
 const router = Router()
+
+// ---------------------------------------------------------------------------
+// Sicherheits-Helper: pruefen ob User auf bestimmten entity_type zugreifen darf
+//   - INTERNAL  → nur ADMIN/GL
+//   - PERSONAL  → ADMIN/GL oder allowedModules.personal
+// ---------------------------------------------------------------------------
+function canAccessEntityType(req: Request, entityType: string | undefined | null): true | string {
+  if (!entityType) return true
+  const u = req.user
+  if (!u) return 'Nicht autorisiert'
+  if (entityType === 'INTERNAL') {
+    return isAdminRole(u.role) ? true : 'Firmenablage nur fuer Admin/GL'
+  }
+  if (entityType === 'PERSONAL') {
+    if (isAdminRole(u.role)) return true
+    if (u.allowedModules?.includes('personal')) return true
+    return 'Personal-Modul nicht freigeschaltet'
+  }
+  return true
+}
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -13,7 +34,7 @@ const router = Router()
 
 const uploadDocSchema = z.object({
   contactId: z.string().nullable().optional(),
-  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT', 'PERSONAL']),
+  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT', 'PERSONAL', 'INTERNAL']),
   entityId: z.string().optional(),
   folderPath: z.string().optional(),
   fileName: z.string().min(1, 'Dateiname ist erforderlich'),
@@ -34,6 +55,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { contactId, entityType, entityId } = req.query
 
+    // Schutz: INTERNAL/PERSONAL nur fuer berechtigte User
+    const access = canAccessEntityType(req, typeof entityType === 'string' ? entityType : null)
+    if (access !== true) throw new AppError(access, 403)
+
     let query = supabase.from('documents').select('*')
 
     if (contactId && typeof contactId === 'string') {
@@ -41,6 +66,11 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     if (entityType && typeof entityType === 'string') {
       query = query.eq('entity_type', entityType)
+    } else if (!isAdminRole(req.user?.role ?? '')) {
+      // Sammel-Abfragen ohne entity_type: INTERNAL/PERSONAL ausschliessen fuer Nicht-Admins
+      const allowed = ['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']
+      if (req.user?.allowedModules?.includes('personal')) allowed.push('PERSONAL')
+      query = query.in('entity_type', allowed)
     }
     if (entityId && typeof entityId === 'string') {
       query = query.eq('entity_id', entityId)
@@ -84,6 +114,10 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const d = result.data
+
+    // Schutz: INTERNAL/PERSONAL nur fuer berechtigte User
+    const access = canAccessEntityType(req, d.entityType)
+    if (access !== true) throw new AppError(access, 403)
 
     // Base64 → Buffer
     const fileBuffer = Buffer.from(d.fileBase64, 'base64')
@@ -158,7 +192,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
 const metadataSchema = z.object({
   contactId: z.string().nullable().optional(),
-  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT', 'PERSONAL']),
+  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT', 'PERSONAL', 'INTERNAL']),
   entityId: z.string().optional(),
   storagePath: z.string().nullable().optional(),
   externalUrl: z.string().url().nullable().optional(),
@@ -182,6 +216,10 @@ router.post('/metadata', async (req: Request, res: Response, next: NextFunction)
     }
 
     const d = result.data
+
+    // Schutz: INTERNAL/PERSONAL nur fuer berechtigte User
+    const access = canAccessEntityType(req, d.entityType)
+    if (access !== true) throw new AppError(access, 403)
 
     const { data: doc, error: dbError } = await supabase
       .from('documents')
@@ -230,6 +268,10 @@ router.get('/:id/download', async (req: Request, res: Response, next: NextFuncti
 
     if (error || !doc) throw new AppError('Dokument nicht gefunden', 404)
 
+    // Schutz: INTERNAL/PERSONAL nur fuer berechtigte User
+    const access = canAccessEntityType(req, doc.entity_type)
+    if (access !== true) throw new AppError(access, 403)
+
     const supabaseUrl = process.env.SUPABASE_URL ?? ''
     const downloadUrl = doc.storage_path
       ? `${supabaseUrl}/storage/v1/object/public/documents/${doc.storage_path}`
@@ -254,6 +296,10 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
       .single()
 
     if (error || !doc) throw new AppError('Dokument nicht gefunden', 404)
+
+    // Schutz: INTERNAL/PERSONAL nur fuer berechtigte User
+    const access = canAccessEntityType(req, doc.entity_type)
+    if (access !== true) throw new AppError(access, 403)
 
     // Aus Storage loeschen
     await supabase.storage.from('documents').remove([doc.storage_path])

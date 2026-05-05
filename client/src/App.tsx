@@ -28,6 +28,7 @@ const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'))
 const FeaturesPage = lazy(() => import('@/features/features/FeaturesPage'))
 const PasswordsPage = lazy(() => import('@/features/passwords/PasswordsPage'))
 const PersonnelPage = lazy(() => import('@/features/personnel/PersonnelPage'))
+const CompanyVaultPage = lazy(() => import('@/features/company/CompanyVaultPage'))
 const CallcenterPage = lazy(() => import('@/features/callcenter/CallcenterPage'))
 const PortalApp = lazy(() => import('@/portal/PortalApp'))
 
@@ -147,6 +148,7 @@ export default function App() {
             <Route path="documents" element={<ModuleRoute moduleId="documents"><DocumentsPage /></ModuleRoute>} />
             <Route path="passwords" element={<ModuleRoute moduleId="passwords"><PasswordsPage /></ModuleRoute>} />
             <Route path="personnel" element={<ModuleRoute moduleId="personal"><PersonnelPage /></ModuleRoute>} />
+            <Route path="company" element={<AdminRoute><CompanyVaultPage /></AdminRoute>} />
             <Route path="features" element={<FeaturesPage />} />
             {/* Catch-all: redirect to dashboard */}
             <Route path="*" element={<Navigate to="/" replace />} />

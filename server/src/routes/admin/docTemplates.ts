@@ -70,6 +70,20 @@ const defaultTemplates: FolderTemplate[] = [
       { name: 'Sonstiges', allowedRoles: [] },
     ],
   },
+  {
+    id: 'tpl-006', entityType: 'INTERNAL',
+    folders: [
+      { name: 'Statuten / Gründung', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Versicherungen', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Lieferantenverträge', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Bewilligungen / Lizenzen', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Buchhaltung / Steuern', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'IT / Software-Lizenzen', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Marketing / Branding', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Vorlagen / Templates', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Sonstiges', allowedRoles: ['ADMIN', 'GL'] },
+    ],
+  },
 ]
 
 // ── Helper: Templates aus Settings laden ──
