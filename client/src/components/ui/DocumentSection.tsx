@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react'
 import {
-  FileText, Image, File, Upload, Trash2, Download, Eye,
+  FileText, Image, File, Upload, Trash2, Download,
   Folder, FolderOpen,
+  FileSignature, Calendar, Building2, Zap, Coins, BookOpen, FolderQuestion,
 } from 'lucide-react'
 import {
   useContactDocuments,
@@ -22,12 +23,16 @@ interface DocumentSectionProps {
   entityId: string
 }
 
-const PHASES: { id: EntityType; label: string; color: string }[] = [
-  { id: 'LEAD', label: 'Lead', color: '#94A3B8' },
-  { id: 'TERMIN', label: 'Termin', color: '#60A5FA' },
-  { id: 'ANGEBOT', label: 'Angebot', color: '#F59E0B' },
-  { id: 'PROJEKT', label: 'Projekt', color: '#34D399' },
+// ── Feste Ordner-Struktur (NeoSolar Standard) ──
+const FOLDERS: { id: string; label: string; color: string; icon: typeof FileText }[] = [
+  { id: 'Verträge',              label: 'Verträge',              color: '#F59E0B', icon: FileSignature },
+  { id: 'Termin',                label: 'Termin',                color: '#60A5FA', icon: Calendar },
+  { id: 'Gemeinde',              label: 'Gemeinde',              color: '#A78BFA', icon: Building2 },
+  { id: 'Elektro',               label: 'Elektro',               color: '#FBBF24', icon: Zap },
+  { id: 'Förderungen',           label: 'Förderungen',           color: '#34D399', icon: Coins },
+  { id: 'Anlagendokumentation',  label: 'Anlagendokumentation',  color: '#22D3EE', icon: BookOpen },
 ]
+const UNASSIGNED = { id: '__unassigned__', label: 'Sonstiges', color: '#94A3B8', icon: FolderQuestion }
 
 const iconMap: Record<string, typeof FileText> = { image: Image, pdf: FileText, doc: FileText, file: File }
 const iconColorMap: Record<string, string> = { image: '#60A5FA', pdf: '#F87171', doc: '#60A5FA', file: '#94A3B8' }
@@ -38,26 +43,24 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
   const { data: docsRes } = useContactDocuments(contactId)
   const deleteDoc = useDeleteDocument()
   const [viewerFile, setViewerFile] = useState<ViewerFile | null>(null)
-  const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({ [entityType]: true })
-  const [dragOverPhase, setDragOverPhase] = useState<string | null>(null)
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ [FOLDERS[0].id]: true })
+  const [dragOverFolder, setDragOverFolder] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [uploadPhase, setUploadPhase] = useState<EntityType>(entityType)
+  const uploadFolderRef = useRef<string>(FOLDERS[0].id)
 
   const allDocs = docsRes?.data ?? []
 
-  // Sortierte Phasen (aktuelle zuerst)
-  const sortedPhases = [entityType, ...PHASES.map(p => p.id).filter(p => p !== entityType)]
+  const toggleFolder = (folderId: string) =>
+    setExpandedFolders(prev => ({ ...prev, [folderId]: !prev[folderId] }))
 
-  const togglePhase = (phase: string) => setExpandedPhases(prev => ({ ...prev, [phase]: !prev[phase] }))
-
-  // ── Upload direkt zu Supabase Storage (kein Umweg ueber Netlify Function) ──
+  // ── Upload direkt zu Supabase Storage ──
   const SUPABASE_URL = 'https://tzoquorcgygmrougevgm.supabase.co'
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR6b3F1b3JjZ3lnbXJvdWdldmdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3OTEzODQsImV4cCI6MjA4ODM2NzM4NH0.79OVK4Zy0q08WvxOPpHZWrklcRWSmHYl2K3VPe1xZmU'
 
-  const uploadFiles = useCallback(async (files: FileList | File[], targetPhase: EntityType) => {
+  const uploadFiles = useCallback(async (files: FileList | File[], folderPath: string) => {
     if (files.length === 0 || uploading) return
     setUploading(true)
 
@@ -65,10 +68,10 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
       const file = files[i]
       setUploadProgress(`${i + 1}/${files.length}: ${file.name}`)
       try {
-        // 1) Direkt zu Supabase Storage hochladen (kein Base64, kein Function-Timeout)
         const timestamp = Date.now()
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-        const storagePath = `${contactId}/${targetPhase.toLowerCase()}/${timestamp}_${safeName}`
+        const safeFolder = folderPath.replace(/[^a-zA-Z0-9._-]/g, '_')
+        const storagePath = `${contactId}/${safeFolder.toLowerCase()}/${timestamp}_${safeName}`
 
         const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${storagePath}`, {
           method: 'POST',
@@ -85,15 +88,15 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           throw new Error(`Storage: ${uploadRes.status} ${errText}`)
         }
 
-        // 2) Metadaten in DB speichern (kleine JSON-Anfrage, kein Timeout)
         await api.post('/documents/metadata', {
           contactId,
           fileName: file.name,
           fileSize: file.size,
           mimeType: file.type || 'application/octet-stream',
-          entityType: targetPhase,
+          entityType,
           entityId,
           storagePath,
+          folderPath,
           uploadedBy: user?.id,
         })
       } catch (err: any) {
@@ -106,33 +109,34 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     setUploading(false)
     setUploadProgress('')
     qc.invalidateQueries({ queryKey: ['documents'] })
-  }, [contactId, entityId, user?.id, uploading, qc])
+  }, [contactId, entityId, entityType, user?.id, uploading, qc])
 
   // ── Drag & Drop Handlers ──
-  const handleDragOver = (e: React.DragEvent, phase: EntityType) => {
+  const handleDragOver = (e: React.DragEvent, folderId: string) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragOverPhase(phase)
+    setDragOverFolder(folderId)
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
-    setDragOverPhase(null)
+    setDragOverFolder(null)
   }
 
-  const handleDrop = (e: React.DragEvent, phase: EntityType) => {
+  const handleDrop = (e: React.DragEvent, folderId: string) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragOverPhase(null)
+    setDragOverFolder(null)
+    if (folderId === UNASSIGNED.id) return // In "Sonstiges" kann nicht hochgeladen werden
     if (e.dataTransfer.files?.length > 0) {
-      uploadFiles(e.dataTransfer.files, phase)
+      uploadFiles(e.dataTransfer.files, folderId)
     }
   }
 
   // ── File Input Handler ──
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      uploadFiles(e.target.files, uploadPhase)
+      uploadFiles(e.target.files, uploadFolderRef.current)
     }
     e.target.value = ''
   }
@@ -178,19 +182,22 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
     )
   }
 
+  // Dokumente ohne folderPath (Legacy) → "Sonstiges"
+  const unassignedDocs = allDocs.filter(d => !d.folderPath || !FOLDERS.some(f => f.id === d.folderPath))
+
   return (
     <div className="space-y-3">
-      {/* Upload Area – Drag & Drop */}
+      {/* Globale Drop-Zone */}
       <div
         className="flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed transition-all cursor-pointer"
         style={{
-          borderColor: dragOverPhase === '__global__' ? '#F59E0B' : 'rgba(255,255,255,0.08)',
-          background: dragOverPhase === '__global__' ? 'color-mix(in srgb, #F59E0B 6%, transparent)' : 'rgba(255,255,255,0.02)',
+          borderColor: dragOverFolder === '__global__' ? '#F59E0B' : 'rgba(255,255,255,0.08)',
+          background: dragOverFolder === '__global__' ? 'color-mix(in srgb, #F59E0B 6%, transparent)' : 'rgba(255,255,255,0.02)',
         }}
-        onDragOver={(e) => { e.preventDefault(); setDragOverPhase('__global__') }}
+        onDragOver={(e) => { e.preventDefault(); setDragOverFolder('__global__') }}
         onDragLeave={handleDragLeave}
-        onDrop={(e) => { e.preventDefault(); setDragOverPhase(null); if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files, entityType) }}
-        onClick={() => { setUploadPhase(entityType); fileRef.current?.click() }}
+        onDrop={(e) => { e.preventDefault(); setDragOverFolder(null); if (e.dataTransfer.files?.length) uploadFiles(e.dataTransfer.files, FOLDERS[0].id) }}
+        onClick={() => { uploadFolderRef.current = FOLDERS[0].id; fileRef.current?.click() }}
       >
         <Upload size={18} className="text-text-dim shrink-0" strokeWidth={1.8} />
         <div className="flex-1 min-w-0">
@@ -199,7 +206,7 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
           ) : (
             <>
               <p className="text-[12px] font-medium text-text-sec">Datei hochladen</p>
-              <p className="text-[10px] text-text-dim">Drag & Drop oder klicken · PDF, Bilder, Dokumente</p>
+              <p className="text-[10px] text-text-dim">Drag & Drop in einen Ordner unten oder klicken (→ Verträge)</p>
             </>
           )}
         </div>
@@ -207,60 +214,55 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
 
       <input ref={fileRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
 
-      {/* Ablage nach Phase */}
       <div className="text-[10px] font-bold uppercase tracking-[0.08em] text-text-dim px-1">
         Ablage ({allDocs.length})
       </div>
 
-      {sortedPhases.map((phaseId) => {
-        const phase = PHASES.find(p => p.id === phaseId)!
-        const phaseDocs = allDocs.filter(d => d.entityType === phaseId)
-        const isExpanded = expandedPhases[phaseId]
-        const isDragOver = dragOverPhase === phaseId
-        const isCurrentPhase = phaseId === entityType
+      {/* Feste Ordner */}
+      {FOLDERS.map((folder) => {
+        const folderDocs = allDocs.filter(d => d.folderPath === folder.id)
+        const isExpanded = expandedFolders[folder.id]
+        const isDragOver = dragOverFolder === folder.id
+        const FolderIcon = folder.icon
 
         return (
           <div
-            key={phaseId}
+            key={folder.id}
             className="rounded-xl overflow-hidden transition-all"
             style={{
-              background: isDragOver ? `color-mix(in srgb, ${phase.color} 6%, transparent)` : 'rgba(255,255,255,0.025)',
+              background: isDragOver ? `color-mix(in srgb, ${folder.color} 6%, transparent)` : 'rgba(255,255,255,0.025)',
               border: isDragOver
-                ? `2px dashed color-mix(in srgb, ${phase.color} 40%, transparent)`
-                : isCurrentPhase
-                  ? `1px solid color-mix(in srgb, ${phase.color} 20%, transparent)`
-                  : '1px solid rgba(255,255,255,0.04)',
+                ? `2px dashed color-mix(in srgb, ${folder.color} 40%, transparent)`
+                : '1px solid rgba(255,255,255,0.04)',
             }}
-            onDragOver={(e) => handleDragOver(e, phaseId)}
+            onDragOver={(e) => handleDragOver(e, folder.id)}
             onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, phaseId)}
+            onDrop={(e) => handleDrop(e, folder.id)}
           >
-            {/* Phase Header */}
             <button
               type="button"
-              onClick={() => togglePhase(phaseId)}
+              onClick={() => toggleFolder(folder.id)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-hover/30 transition-colors"
             >
-              {isExpanded ? <FolderOpen size={14} style={{ color: phase.color }} strokeWidth={1.8} /> : <Folder size={14} style={{ color: phase.color }} strokeWidth={1.8} />}
-              <span className="text-[11px] font-bold" style={{ color: phase.color }}>{phase.label}</span>
-              {isCurrentPhase && <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: `color-mix(in srgb, ${phase.color} 12%, transparent)`, color: phase.color }}>Aktuell</span>}
-              <span className="ml-auto text-[10px] text-text-dim tabular-nums">{phaseDocs.length}</span>
+              {isExpanded
+                ? <FolderOpen size={14} style={{ color: folder.color }} strokeWidth={1.8} />
+                : <FolderIcon size={14} style={{ color: folder.color }} strokeWidth={1.8} />}
+              <span className="text-[11px] font-bold" style={{ color: folder.color }}>{folder.label}</span>
+              <span className="ml-auto text-[10px] text-text-dim tabular-nums">{folderDocs.length}</span>
             </button>
 
-            {/* Docs */}
             {isExpanded && (
               <div className="px-2 pb-2 space-y-0.5">
-                {phaseDocs.length === 0 ? (
+                {folderDocs.length === 0 ? (
                   <p className="text-[10px] text-text-dim text-center py-3">
                     {isDragOver ? 'Hier ablegen' : 'Keine Dokumente'}
                   </p>
                 ) : (
-                  phaseDocs.map(renderDoc)
+                  folderDocs.map(renderDoc)
                 )}
-                {/* Upload Button pro Phase */}
                 <button
                   type="button"
-                  onClick={() => { setUploadPhase(phaseId); fileRef.current?.click() }}
+                  onClick={() => { uploadFolderRef.current = folder.id; fileRef.current?.click() }}
                   className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-medium text-text-dim hover:text-amber hover:bg-amber-soft/30 transition-all"
                 >
                   <Upload size={10} strokeWidth={2} />
@@ -272,7 +274,34 @@ export default function DocumentSection({ contactId, entityType, entityId }: Doc
         )
       })}
 
-      {/* File Viewer */}
+      {/* "Sonstiges" – nur anzeigen wenn alte/nicht zugeordnete Dokumente vorhanden */}
+      {unassignedDocs.length > 0 && (
+        <div
+          className="rounded-xl overflow-hidden transition-all"
+          style={{
+            background: 'rgba(255,255,255,0.025)',
+            border: '1px dashed rgba(255,255,255,0.08)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => toggleFolder(UNASSIGNED.id)}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-hover/30 transition-colors"
+          >
+            {expandedFolders[UNASSIGNED.id]
+              ? <FolderOpen size={14} style={{ color: UNASSIGNED.color }} strokeWidth={1.8} />
+              : <UNASSIGNED.icon size={14} style={{ color: UNASSIGNED.color }} strokeWidth={1.8} />}
+            <span className="text-[11px] font-bold" style={{ color: UNASSIGNED.color }}>{UNASSIGNED.label}</span>
+            <span className="ml-auto text-[10px] text-text-dim tabular-nums">{unassignedDocs.length}</span>
+          </button>
+          {expandedFolders[UNASSIGNED.id] && (
+            <div className="px-2 pb-2 space-y-0.5">
+              {unassignedDocs.map(renderDoc)}
+            </div>
+          )}
+        </div>
+      )}
+
       {viewerFile && <FileViewer file={viewerFile} onClose={() => setViewerFile(null)} />}
     </div>
   )

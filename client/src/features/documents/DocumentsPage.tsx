@@ -1,18 +1,23 @@
 import { useState, useMemo } from 'react'
-import { FileBox, Search, File, Image, FileText, Trash2, Download, FolderOpen, Filter, Eye } from 'lucide-react'
+import {
+  FileBox, Search, File, Image, FileText, Trash2, Download, FolderOpen, Filter, Eye,
+  FileSignature, Calendar, Building2, Zap, Coins, BookOpen, FolderQuestion,
+} from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import { formatFileSize, type EntityType, entityTypeLabels, type Document } from '@/hooks/useDocuments'
+import { formatFileSize, type Document } from '@/hooks/useDocuments'
 import FileViewer, { type ViewerFile } from '@/components/ui/FileViewer'
 
-const ENTITY_TYPES: EntityType[] = ['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT']
-
-const entityColors: Record<EntityType, string> = {
-  LEAD: '#F59E0B',
-  TERMIN: '#22D3EE',
-  ANGEBOT: '#34D399',
-  PROJEKT: '#A78BFA',
-}
+// ── Feste Ordner-Struktur (NeoSolar Standard, identisch zu DocumentSection) ──
+const FOLDERS: { id: string; label: string; color: string; icon: typeof FileText }[] = [
+  { id: 'Verträge',              label: 'Verträge',              color: '#F59E0B', icon: FileSignature },
+  { id: 'Termin',                label: 'Termin',                color: '#60A5FA', icon: Calendar },
+  { id: 'Gemeinde',              label: 'Gemeinde',              color: '#A78BFA', icon: Building2 },
+  { id: 'Elektro',               label: 'Elektro',               color: '#FBBF24', icon: Zap },
+  { id: 'Förderungen',           label: 'Förderungen',           color: '#34D399', icon: Coins },
+  { id: 'Anlagendokumentation',  label: 'Anlagendokumentation',  color: '#22D3EE', icon: BookOpen },
+]
+const UNASSIGNED = { id: '__unassigned__', label: 'Sonstiges', color: '#94A3B8', icon: FolderQuestion }
 
 function FileIcon({ mimeType }: { mimeType: string }) {
   if (mimeType.startsWith('image/')) return <Image size={16} strokeWidth={1.8} className="text-blue-400" />
@@ -22,17 +27,13 @@ function FileIcon({ mimeType }: { mimeType: string }) {
 
 export default function DocumentsPage() {
   const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState<EntityType | ''>('')
+  const [filterFolder, setFilterFolder] = useState<string>('')
   const [viewerFile, setViewerFile] = useState<ViewerFile | null>(null)
   const qc = useQueryClient()
 
-  // Alle Dokumente laden (ohne contactId-Filter = systemweit)
   const { data, isLoading } = useQuery({
-    queryKey: ['documents', 'all', filterType],
-    queryFn: () => {
-      const params = filterType ? `?entityType=${filterType}` : ''
-      return api.get<{ data: Document[]; total: number }>(`/documents${params}`)
-    },
+    queryKey: ['documents', 'all'],
+    queryFn: () => api.get<{ data: Document[]; total: number }>(`/documents`),
   })
 
   const deleteMut = useMutation({
@@ -41,7 +42,14 @@ export default function DocumentsPage() {
   })
 
   const docs = useMemo(() => {
-    const all = data?.data ?? []
+    let all = data?.data ?? []
+    if (filterFolder) {
+      if (filterFolder === UNASSIGNED.id) {
+        all = all.filter(d => !d.folderPath || !FOLDERS.some(f => f.id === d.folderPath))
+      } else {
+        all = all.filter(d => d.folderPath === filterFolder)
+      }
+    }
     if (!search) return all
     const q = search.toLowerCase()
     return all.filter(d =>
@@ -49,18 +57,28 @@ export default function DocumentsPage() {
       (d.folderPath ?? '').toLowerCase().includes(q) ||
       (d.notes ?? '').toLowerCase().includes(q)
     )
-  }, [data, search])
+  }, [data, search, filterFolder])
 
-  // Gruppierung nach entityType
+  // Gruppierung nach Ordner (folder_path)
   const grouped = useMemo(() => {
     const map: Record<string, Document[]> = {}
     docs.forEach(d => {
-      const key = d.entityType || 'SONSTIGE'
+      const key = d.folderPath && FOLDERS.some(f => f.id === d.folderPath)
+        ? d.folderPath
+        : UNASSIGNED.id
       if (!map[key]) map[key] = []
       map[key].push(d)
     })
     return map
   }, [docs])
+
+  // Reihenfolge der Anzeige: feste Ordner in definierter Reihenfolge, "Sonstiges" zuletzt
+  const orderedKeys = useMemo(() => {
+    const keys: string[] = []
+    FOLDERS.forEach(f => { if (grouped[f.id]?.length) keys.push(f.id) })
+    if (grouped[UNASSIGNED.id]?.length) keys.push(UNASSIGNED.id)
+    return keys
+  }, [grouped])
 
   return (
     <div className="space-y-6">
@@ -77,7 +95,7 @@ export default function DocumentsPage() {
             )}
           </h1>
           <p className="text-[11px] text-white/40 mt-0.5 hidden sm:block">
-            Alle Dokumente aus Leads, Terminen, Angeboten und Projekten
+            Alle Dokumente kategorisiert nach Verträge, Termin, Gemeinde, Elektro, Förderungen und Anlagendokumentation
           </p>
         </div>
       </div>
@@ -97,13 +115,14 @@ export default function DocumentsPage() {
           <Filter size={14} className="text-white/30" />
           <select
             className="glass-input text-xs"
-            value={filterType}
-            onChange={e => setFilterType(e.target.value as EntityType | '')}
+            value={filterFolder}
+            onChange={e => setFilterFolder(e.target.value)}
           >
-            <option value="">Alle Phasen</option>
-            {ENTITY_TYPES.map(t => (
-              <option key={t} value={t}>{entityTypeLabels[t]}</option>
+            <option value="">Alle Ordner</option>
+            {FOLDERS.map(f => (
+              <option key={f.id} value={f.id}>{f.label}</option>
             ))}
+            <option value={UNASSIGNED.id}>{UNASSIGNED.label}</option>
           </select>
         </div>
       </div>
@@ -118,30 +137,33 @@ export default function DocumentsPage() {
         <div className="glass-card p-12 text-center">
           <FolderOpen size={32} className="mx-auto text-white/10 mb-3" />
           <p className="text-sm text-white/30">Keine Dokumente gefunden</p>
-          <p className="text-[11px] text-white/20 mt-1">Dokumente werden aus Lead-, Termin-, Angebot- und Projekt-Modals hochgeladen</p>
+          <p className="text-[11px] text-white/20 mt-1">Dokumente werden in den Detail-Modals (Lead, Termin, Angebot, Projekt) hochgeladen</p>
         </div>
       )}
 
       {/* Gruppierte Dokumente */}
-      {Object.entries(grouped).map(([type, typeDocs]) => {
-        const label = entityTypeLabels[type as EntityType] ?? type
-        const color = entityColors[type as EntityType] ?? '#9CA3AF'
+      {orderedKeys.map(key => {
+        const folder = FOLDERS.find(f => f.id === key) ?? UNASSIGNED
+        const FolderIcon = folder.icon
+        const folderDocs = grouped[key] ?? []
 
         return (
-          <div key={type} className="glass-card overflow-hidden">
+          <div key={key} className="glass-card overflow-hidden">
             <div className="flex items-center gap-3 p-4 border-b border-white/[0.04]">
               <div
-                className="w-2 h-8 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              <h3 className="text-sm font-medium text-white">{label}</h3>
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: `color-mix(in srgb, ${folder.color} 12%, transparent)` }}
+              >
+                <FolderIcon size={16} strokeWidth={1.8} style={{ color: folder.color }} />
+              </div>
+              <h3 className="text-sm font-medium text-white">{folder.label}</h3>
               <span className="text-[10px] text-white/30 bg-white/[0.04] px-2 py-0.5 rounded">
-                {typeDocs.length}
+                {folderDocs.length}
               </span>
             </div>
 
             <div className="divide-y divide-white/[0.03]">
-              {typeDocs.map(doc => (
+              {folderDocs.map(doc => (
                 <div
                   key={doc.id}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors group cursor-pointer"
@@ -154,9 +176,6 @@ export default function DocumentsPage() {
                     <p className="text-xs font-medium text-white/80 truncate">{doc.fileName}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-white/25">{formatFileSize(doc.fileSize)}</span>
-                      {doc.folderPath && (
-                        <span className="text-[10px] text-white/25">· {doc.folderPath}</span>
-                      )}
                       <span className="text-[10px] text-white/25">
                         · {new Date(doc.createdAt).toLocaleDateString('de-CH')}
                       </span>
