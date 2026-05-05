@@ -25,6 +25,7 @@ import {
   PhoneOff,
   Receipt,
   Headphones,
+  UserCog,
   X,
   LogOut,
 } from 'lucide-react'
@@ -110,6 +111,7 @@ const allNavGroups: NavGroup[] = [
       { to: '/notifications', icon: Bell, label: 'Meldungen', hasNotification: true, featureId: 'notifications' },
       { to: '/callcenter', icon: Headphones, label: 'Callcenter', featureId: 'callcenter' as any, moduleId: 'callcenter' },
       { to: '/admin', icon: Shield, label: 'Admin', featureId: 'admin', adminOnly: true, moduleId: 'admin' },
+      { to: '/personnel', icon: UserCog, label: 'Personal', moduleId: 'personal' },
       { to: '/export', icon: Download, label: 'Export', featureId: 'export', moduleId: 'export' },
       { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents', moduleId: 'documents' },
       { to: '/passwords', icon: KeyRound, label: 'Passwörter', moduleId: 'passwords' },

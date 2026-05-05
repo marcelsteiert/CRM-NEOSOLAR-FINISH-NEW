@@ -57,6 +57,19 @@ const defaultTemplates: FolderTemplate[] = [
       { name: 'Abnahme', subfolders: ['Abnahmeprotokoll', 'Inbetriebnahme', 'Kundenübergabe'], allowedRoles: [] },
     ],
   },
+  {
+    id: 'tpl-005', entityType: 'PERSONAL',
+    folders: [
+      { name: 'Arbeitsvertrag', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Lohnabrechnungen', allowedRoles: ['ADMIN', 'GL', 'BUCHHALTUNG'] },
+      { name: 'Zeugnisse', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Diplome', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'AHV / Versicherung', allowedRoles: ['ADMIN', 'GL', 'BUCHHALTUNG'] },
+      { name: 'Krankheit / Unfall', allowedRoles: ['ADMIN', 'GL'] },
+      { name: 'Spesen', allowedRoles: ['ADMIN', 'GL', 'BUCHHALTUNG'] },
+      { name: 'Sonstiges', allowedRoles: [] },
+    ],
+  },
 ]
 
 // ── Helper: Templates aus Settings laden ──

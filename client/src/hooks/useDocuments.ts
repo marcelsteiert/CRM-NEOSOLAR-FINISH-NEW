@@ -3,11 +3,11 @@ import { api } from '@/lib/api'
 
 // ── Types ──
 
-export type EntityType = 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT'
+export type EntityType = 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT' | 'PERSONAL'
 
 export interface Document {
   id: string
-  contactId: string
+  contactId: string | null
   fileName: string
   fileSize: number
   mimeType: string
@@ -105,4 +105,15 @@ export const entityTypeLabels: Record<EntityType, string> = {
   TERMIN: 'Termin',
   ANGEBOT: 'Angebot',
   PROJEKT: 'Projekt',
+  PERSONAL: 'Personal',
+}
+
+/** Hook fuer Dokumente eines Mitarbeiters (entity_type=PERSONAL, entity_id=personnel.id) */
+export function usePersonnelDocuments(personnelId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['documents', 'personnel', personnelId],
+    queryFn: () =>
+      api.get<DocumentListResponse>(`/documents?entityType=PERSONAL&entityId=${personnelId}`),
+    enabled: !!personnelId,
+  })
 }

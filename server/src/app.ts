@@ -17,6 +17,7 @@ import tasksRouter from './routes/tasks.js'
 import dashboardRouter from './routes/dashboard.js'
 import documentsRouter from './routes/documents.js'
 import projectsRouter from './routes/projects.js'
+import personnelRouter from './routes/personnel.js'
 import adminProductsRouter from './routes/admin/products.js'
 import adminIntegrationsRouter from './routes/admin/integrations.js'
 import adminWebhooksRouter from './routes/admin/webhooks.js'
@@ -105,6 +106,7 @@ export function createApp() {
   app.use('/api/v1/dashboard', authMiddleware, dashboardRouter)
   app.use('/api/v1/documents', authMiddleware, documentsRouter)
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
+  app.use('/api/v1/personnel', authMiddleware, personnelRouter)
   app.use('/api/v1/search', authMiddleware, searchRouter)
   app.use('/api/v1/passwords', authMiddleware, passwordsRouter)
   app.use('/api/v1/call-logs', authMiddleware, callLogsRouter)

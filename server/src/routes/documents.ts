@@ -12,16 +12,18 @@ const router = Router()
 // ---------------------------------------------------------------------------
 
 const uploadDocSchema = z.object({
-  contactId: z.string().min(1, 'Kontakt-ID ist erforderlich'),
-  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']),
+  contactId: z.string().nullable().optional(),
+  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT', 'PERSONAL']),
   entityId: z.string().optional(),
-  folderPath: z.string().optional(), // z.B. "Fotos/Dach" oder "Offerte/Final"
+  folderPath: z.string().optional(),
   fileName: z.string().min(1, 'Dateiname ist erforderlich'),
   fileSize: z.number().min(1),
   mimeType: z.string().min(1),
   uploadedBy: z.string().optional(),
   notes: z.string().optional(),
   fileBase64: z.string().min(1, 'Dateiinhalt ist erforderlich'),
+}).refine((d) => !!d.contactId || !!d.entityId, {
+  message: 'Entweder contactId oder entityId ist erforderlich',
 })
 
 // ---------------------------------------------------------------------------
@@ -109,7 +111,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     const { data: doc, error: dbError } = await supabase
       .from('documents')
       .insert({
-        contact_id: d.contactId,
+        contact_id: d.contactId ?? null,
         entity_type: d.entityType,
         entity_id: d.entityId ?? null,
         folder_path: d.folderPath ?? null,
@@ -125,9 +127,9 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (dbError) throw new AppError(`DB-Insert fehlgeschlagen: ${dbError.message} (code: ${dbError.code})`, 500)
 
-    // Activity erstellen
+    // Activity erstellen (nur wenn Kontakt-bezogen)
     const activityUserId = d.uploadedBy || req.user?.userId
-    if (activityUserId) {
+    if (activityUserId && d.contactId) {
       await supabase.from('activities').insert({
         contact_id: d.contactId,
         type: 'DOCUMENT_UPLOAD',
@@ -155,8 +157,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 // ---------------------------------------------------------------------------
 
 const metadataSchema = z.object({
-  contactId: z.string().min(1),
-  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT']),
+  contactId: z.string().nullable().optional(),
+  entityType: z.enum(['LEAD', 'TERMIN', 'ANGEBOT', 'PROJEKT', 'KONTAKT', 'PERSONAL']),
   entityId: z.string().optional(),
   storagePath: z.string().nullable().optional(),
   externalUrl: z.string().url().nullable().optional(),
@@ -184,7 +186,7 @@ router.post('/metadata', async (req: Request, res: Response, next: NextFunction)
     const { data: doc, error: dbError } = await supabase
       .from('documents')
       .insert({
-        contact_id: d.contactId,
+        contact_id: d.contactId ?? null,
         entity_type: d.entityType,
         entity_id: d.entityId ?? null,
         file_name: d.fileName,

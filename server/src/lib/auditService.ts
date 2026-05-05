@@ -2,13 +2,13 @@ import { supabase } from './supabase.js'
 
 // ── Audit-Log Service – Fire-and-forget Logging ──
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'EXPORT' | 'SETTING_CHANGE'
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'EXPORT' | 'SETTING_CHANGE' | 'ARCHIVE' | 'RESTORE'
 
 export type AuditEntity =
   | 'LEAD' | 'DEAL' | 'APPOINTMENT' | 'PROJECT' | 'TASK'
   | 'CONTACT' | 'USER' | 'DOCUMENT' | 'PASSWORD'
   | 'PIPELINE' | 'TAG' | 'CALENDAR' | 'SETTING' | 'AUTH'
-  | 'PORTAL_USER' | 'PORTAL_MILESTONE'
+  | 'PORTAL_USER' | 'PORTAL_MILESTONE' | 'PERSONNEL'
 
 interface AuditOptions {
   userId: string
