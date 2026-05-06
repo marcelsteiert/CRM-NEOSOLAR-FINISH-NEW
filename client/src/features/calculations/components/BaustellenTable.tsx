@@ -9,7 +9,10 @@ import StatusPill, { DateCell, TextCell } from './StatusPill'
 const formatAddr = (p: TrackedProject) => {
   const c = p.contact
   if (!c) return p.name
-  const name = `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || c.company || p.name
+  // Wenn der Kontaktname unbekannt/leer ist, fallback auf Projekt-Name
+  const rawName = `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()
+  const isUnknown = !rawName || /^unbekannt\b/i.test(rawName)
+  const name = isUnknown ? (c.company || p.name) : rawName
   return c.address ? `${name}, ${c.address}` : name
 }
 

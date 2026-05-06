@@ -10,8 +10,9 @@ import { NumberCell, TextCell, DateCell } from './StatusPill'
 const formatAddr = (p: TrackedProject) => {
   const c = p.contact
   if (!c) return p.name
-  const name = `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || c.company || p.name
-  return name
+  const rawName = `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim()
+  const isUnknown = !rawName || /^unbekannt\b/i.test(rawName)
+  return isUnknown ? (c.company || p.name) : rawName
 }
 
 const CHF = (n: number) =>
