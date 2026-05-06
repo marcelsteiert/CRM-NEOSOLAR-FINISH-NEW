@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react'
 
 /* ── Lazy-loaded Pages (Code-Splitting) ── */
 
-const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
+const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPageV3'))
 const LeadsPage = lazy(() => import('@/features/leads/LeadsPage'))
 const KaltakquisePage = lazy(() => import('@/features/leads/KaltakquisePage'))
 const AppointmentsPage = lazy(() => import('@/features/appointments/AppointmentsPage'))
