@@ -103,10 +103,10 @@ export default function BaustellenTable({ onOpenProject }: Props) {
 
       {!isLoading && projects.length > 0 && (
         <div className="glass-card overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
-          <div className="overflow-x-auto">
+          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
             <table className="w-full text-[11px]">
-              <thead className="sticky top-[52px] md:top-[60px] z-20">
-                <tr className="border-b border-border bg-bg-sub backdrop-blur-md">
+              <thead className="sticky top-0 z-20">
+                <tr className="border-b border-border bg-bg-sub">
                   <Th sticky>Kunde / Adresse</Th>
                   <Th>Baubewilligung</Th>
                   <Th>TAG eingereicht</Th>
