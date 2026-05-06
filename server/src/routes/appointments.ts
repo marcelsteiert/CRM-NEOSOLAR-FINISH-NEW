@@ -181,7 +181,14 @@ router.get('/stats', async (req: Request, res: Response, next: NextFunction) => 
     const statuses: Record<string, number> = { GEPLANT: 0, BESTAETIGT: 0, VORBEREITUNG: 0, DURCHGEFUEHRT: 0, ABGESAGT: 0 }
     for (const a of items) statuses[a.status]++
 
-    const upcoming = items.filter((a: any) => a.status !== 'DURCHGEFUEHRT' && a.status !== 'ABGESAGT')
+    // Anstehend = was im Termine-Hub angezeigt wird:
+    // ohne DURCHGEFUEHRT, ABGESAGT, NO_SHOW (eigener Hub) und RICHTOFFERTE (eigener Hub)
+    const upcoming = items.filter((a: any) =>
+      a.status !== 'DURCHGEFUEHRT' &&
+      a.status !== 'ABGESAGT' &&
+      a.status !== 'NO_SHOW' &&
+      a.appointment_type !== 'RICHTOFFERTE'
+    )
     const totalValue = upcoming.reduce((s: number, a: any) => s + Number(a.value), 0)
 
     const openWithChecklist = upcoming.filter((a: any) => Array.isArray(a.checklist) && a.checklist.length > 0)
