@@ -105,8 +105,8 @@ export default function BaustellenTable({ onOpenProject }: Props) {
         <div className="glass-card overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]">
-              <thead>
-                <tr className="border-b border-border bg-bg-sub/30">
+              <thead className="sticky top-[52px] md:top-[60px] z-20">
+                <tr className="border-b border-border bg-bg-sub backdrop-blur-md">
                   <Th sticky>Kunde / Adresse</Th>
                   <Th>Baubewilligung</Th>
                   <Th>TAG eingereicht</Th>
@@ -242,7 +242,7 @@ function Th({ children, sticky }: { children: React.ReactNode; sticky?: boolean 
   return (
     <th
       className={`px-2 py-2 text-[9px] font-bold uppercase tracking-[0.06em] text-text-dim text-left whitespace-nowrap ${
-        sticky ? 'sticky left-0 bg-bg-sub/95 backdrop-blur-md z-10' : ''
+        sticky ? 'sticky left-0 bg-bg-sub z-30' : ''
       }`}
     >
       {children}
