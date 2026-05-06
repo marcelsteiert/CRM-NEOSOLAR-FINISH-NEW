@@ -94,7 +94,7 @@ const allNavGroups: NavGroup[] = [
     label: 'Planung',
     items: [
       { to: '/calendar', icon: CalendarDays, label: 'Kalender', featureId: 'calendar', moduleId: 'calendar' },
-      { to: '/calculations', icon: Calculator, label: 'Kalkulation', featureId: 'calculations', moduleId: 'calculations' },
+      { to: '/calculations', icon: Calculator, label: 'Kalkulation', adminOnly: true },
       { to: '/projects', icon: FolderKanban, label: 'Projekte', featureId: 'projects', moduleId: 'projects' },
     ],
   },

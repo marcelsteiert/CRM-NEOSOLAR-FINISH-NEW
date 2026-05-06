@@ -4,7 +4,9 @@ import {
   FolderKanban, Check, Loader2, Pencil, Save, XCircle, Trash2, Archive, ArchiveRestore,
   ExternalLink, TrendingUp, MessageSquare, PhoneCall,
   Users as UsersIcon, Send, GitBranch, Calendar, FileCheck, Clock,
+  Calculator,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import {
   useProject, usePhaseDefinitions, useToggleStep, useUpdateProject, useAddProjectActivity,
   useDeleteProject, useArchiveProject,
@@ -359,6 +361,16 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                 <button onClick={startEditing} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
                   <Pencil size={14} strokeWidth={1.8} />
                 </button>
+                {/* Baustellen-Tracker (nur Admin) */}
+                {isAdmin && (
+                  <Link
+                    to={`/calculations?tab=baustellen`}
+                    className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-surface-hover transition-all"
+                    title="Baustellen-Tracker & Kalkulation öffnen"
+                  >
+                    <Calculator size={14} strokeWidth={1.8} />
+                  </Link>
+                )}
                 {/* Löschen (nur Admin) */}
                 {isAdmin && (
                   confirmDelete ? (
