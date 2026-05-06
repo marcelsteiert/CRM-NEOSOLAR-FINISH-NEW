@@ -3,16 +3,41 @@ import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../../lib/supabase.js'
 import { AppError } from '../../middleware/errorHandler.js'
+import { isAdminRole } from '../../middleware/auth.js'
 import { logAudit, getAuditUserId } from '../../lib/auditService.js'
 
 const router = Router()
 
 // ---------------------------------------------------------------------------
-// GET /api/v1/admin/project-tracking
-// Liste aller Projekte (nicht archiviert/geloescht) mit Construction + Calculation
-// + Kontakt-Daten (Name, Adresse, Telefon, E-Mail) fuer die Excel-Anzeige
+// Berechtigungs-Helper:
+//  - 'baustellen' = Workflow-Tracking (sichtbar fuer ADMIN/GL + Modul-Berechtigung)
+//  - 'kalkulation' = Finanzen / Tranchen / Marge (NUR Modul-Berechtigung)
 // ---------------------------------------------------------------------------
-router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+function canSeeBaustellen(req: Request): boolean {
+  const u = req.user
+  if (!u) return false
+  if (isAdminRole(u.role)) return true
+  return !!u.allowedModules?.includes('baustellen')
+}
+function canSeeKalkulation(req: Request): boolean {
+  const u = req.user
+  if (!u) return false
+  if (isAdminRole(u.role)) return true
+  return !!u.allowedModules?.includes('kalkulation')
+}
+
+function requireBaustellenOrKalkulation(req: Request, _res: Response, next: NextFunction): void {
+  if (canSeeBaustellen(req) || canSeeKalkulation(req)) return next()
+  return next(new AppError('Zugriff verweigert', 403))
+}
+router.use(requireBaustellenOrKalkulation)
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/admin/project-tracking
+// Liste aller Projekte mit Construction + Calculation + Kontakt-Daten.
+// Bei reiner Baustellen-Berechtigung werden Kalkulationsdaten weggefiltert.
+// ---------------------------------------------------------------------------
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { data: projects, error } = await supabase
       .from('projects')
@@ -37,13 +62,15 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
     const constrMap = new Map((constr ?? []).map((r: any) => [r.project_id, r]))
     const calcMap = new Map((calc ?? []).map((r: any) => [r.project_id, r]))
 
+    const showKalk = canSeeKalkulation(req)
     const enriched = (projects ?? []).map((p: any) => ({
       ...p,
       construction: constrMap.get(p.id) ?? null,
-      calculation: calcMap.get(p.id) ?? null,
+      // Kalkulationsdaten nur fuer User mit kalkulation-Berechtigung
+      calculation: showKalk ? (calcMap.get(p.id) ?? null) : null,
     }))
 
-    res.json({ data: enriched })
+    res.json({ data: enriched, permissions: { baustellen: canSeeBaustellen(req), kalkulation: showKalk } })
   } catch (err) {
     next(err)
   }
@@ -78,6 +105,7 @@ const constructionSchema = z.object({
 
 router.put('/:projectId/construction', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!canSeeBaustellen(req)) throw new AppError('Baustellen-Modul nicht freigeschaltet', 403)
     const result = constructionSchema.safeParse(req.body)
     if (!result.success) {
       throw new AppError(`Validierungsfehler: ${result.error.issues.map((i) => i.path.join('.')).join('; ')}`, 422)
@@ -129,6 +157,7 @@ const calculationSchema = z.object({
 
 router.put('/:projectId/calculation', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (!canSeeKalkulation(req)) throw new AppError('Kalkulation-Modul nicht freigeschaltet', 403)
     const result = calculationSchema.safeParse(req.body)
     if (!result.success) {
       throw new AppError(`Validierungsfehler: ${result.error.issues.map((i) => i.path.join('.')).join('; ')}`, 422)

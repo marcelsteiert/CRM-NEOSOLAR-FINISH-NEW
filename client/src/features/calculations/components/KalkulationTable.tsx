@@ -43,12 +43,16 @@ export default function KalkulationTable({ onOpenProject }: Props) {
       const q = search.toLowerCase()
       items = items.filter((p) => formatAddr(p).toLowerCase().includes(q))
     }
-    const ts = (p: typeof items[number]) => Math.max(
-      new Date(p.construction?.updatedAt ?? 0).getTime(),
-      new Date(p.calculation?.updatedAt ?? 0).getTime(),
-      new Date(p.createdAt ?? 0).getTime(),
-    )
-    return [...items].sort((a, b) => ts(b) - ts(a))
+    return [...items].sort((a, b) => {
+      const oa = a.construction?.displayOrder ?? null
+      const ob = b.construction?.displayOrder ?? null
+      if (oa == null && ob == null) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      if (oa == null) return -1
+      if (ob == null) return 1
+      return oa - ob
+    })
   }, [data, search])
 
   // Footer-Summen

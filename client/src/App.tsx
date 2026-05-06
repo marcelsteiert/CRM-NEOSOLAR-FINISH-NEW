@@ -134,7 +134,10 @@ export default function App() {
             <Route path="richtofferten" element={<ModuleRoute moduleId="richtofferten"><RichtoffertenPage /></ModuleRoute>} />
             <Route path="no-show" element={<ModuleRoute moduleId="noshow"><NoShowPage /></ModuleRoute>} />
             <Route path="deals" element={<ModuleRoute moduleId="deals"><DealsPage /></ModuleRoute>} />
-            <Route path="calculations" element={<AdminRoute><CalculationsPage /></AdminRoute>} />
+            <Route path="baustellen" element={<CalculationsPage defaultTab="baustellen" />} />
+            <Route path="kalkulation" element={<CalculationsPage defaultTab="kalkulation" />} />
+            {/* Legacy-Pfad (alte Links / Bookmarks) */}
+            <Route path="calculations" element={<CalculationsPage />} />
             <Route path="projects" element={<ModuleRoute moduleId="projects"><ProjectsPage /></ModuleRoute>} />
             <Route path="provision" element={<ModuleRoute moduleId="provision"><ProvisionPage /></ModuleRoute>} />
             <Route path="communication" element={<ModuleRoute moduleId="communication"><CommunicationPage /></ModuleRoute>} />

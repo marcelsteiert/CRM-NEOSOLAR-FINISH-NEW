@@ -62,7 +62,7 @@ interface Props {
 }
 
 export default function ProjectDetailModal({ projectId, onClose }: Props) {
-  const { isAdmin, isSubunternehmen } = useAuth()
+  const { user, isAdmin, isSubunternehmen } = useAuth()
   const hidePrice = isSubunternehmen
   const { data: projectData, isLoading } = useProject(projectId)
   const { data: phasesData } = usePhaseDefinitions()
@@ -361,12 +361,12 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                 <button onClick={startEditing} className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all">
                   <Pencil size={14} strokeWidth={1.8} />
                 </button>
-                {/* Baustellen-Tracker (nur Admin) */}
-                {isAdmin && (
+                {/* Baustellen-Tracker (Admin oder baustellen-Berechtigung) */}
+                {(isAdmin || user?.allowedModules?.includes('baustellen')) && (
                   <Link
-                    to={`/calculations?tab=baustellen`}
+                    to={`/baustellen`}
                     className="w-8 h-8 rounded-[10px] flex items-center justify-center text-text-dim hover:text-amber hover:bg-surface-hover transition-all"
-                    title="Baustellen-Tracker & Kalkulation öffnen"
+                    title="Baustellen-Tracker öffnen"
                   >
                     <Calculator size={14} strokeWidth={1.8} />
                   </Link>

@@ -35,13 +35,19 @@ export default function BaustellenTable({ onOpenProject }: Props) {
     }
     if (filterMissing) items = items.filter((p) => !!p.construction?.fehltEtwas)
     if (filterBlocked) items = items.filter((p) => p.construction && !p.construction.acInstalliert)
-    // Sortierung: zuletzt bearbeitete oder zuletzt erstellte zuerst
-    const ts = (p: typeof items[number]) => Math.max(
-      new Date(p.construction?.updatedAt ?? 0).getTime(),
-      new Date(p.calculation?.updatedAt ?? 0).getTime(),
-      new Date(p.createdAt ?? 0).getTime(),
-    )
-    return [...items].sort((a, b) => ts(b) - ts(a))
+    // Sortier-Regel:
+    //   1. Projekte ohne displayOrder (NEU) → ganz oben, neueste zuerst (createdAt DESC)
+    //   2. Projekte mit displayOrder → in dieser Reihenfolge (Excel-Position ASC)
+    return [...items].sort((a, b) => {
+      const oa = a.construction?.displayOrder ?? null
+      const ob = b.construction?.displayOrder ?? null
+      if (oa == null && ob == null) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+      if (oa == null) return -1   // a ist NEU → oben
+      if (ob == null) return 1    // b ist NEU → oben
+      return oa - ob              // beide haben Order → Excel-Reihenfolge
+    })
   }, [data, search, filterMissing, filterBlocked])
 
   const patch = (projectId: string, p: Partial<Construction>) =>

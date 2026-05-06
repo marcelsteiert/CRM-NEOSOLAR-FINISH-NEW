@@ -8,6 +8,7 @@ export type ProvisionStatus = 'OFFEN' | 'AUSBEZAHLT' | 'ZURUECKGEFORDERT'
 
 export interface Construction {
   projectId: string
+  displayOrder: number | null
   baubewilligung: boolean
   baubewilligungAm: string | null
   baubewilligungNote: string | null
@@ -79,6 +80,12 @@ export interface TrackedProject {
 
 interface ListResponse {
   data: TrackedProject[]
+  permissions?: { baustellen: boolean; kalkulation: boolean }
+}
+
+export function useTrackingPermissions() {
+  const { data } = useTrackedProjects()
+  return data?.permissions ?? { baustellen: false, kalkulation: false }
 }
 
 // ── Hooks ──
