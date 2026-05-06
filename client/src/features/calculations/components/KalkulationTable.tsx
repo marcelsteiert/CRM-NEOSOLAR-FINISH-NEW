@@ -43,7 +43,12 @@ export default function KalkulationTable({ onOpenProject }: Props) {
       const q = search.toLowerCase()
       items = items.filter((p) => formatAddr(p).toLowerCase().includes(q))
     }
-    return items
+    const ts = (p: typeof items[number]) => Math.max(
+      new Date(p.construction?.updatedAt ?? 0).getTime(),
+      new Date(p.calculation?.updatedAt ?? 0).getTime(),
+      new Date(p.createdAt ?? 0).getTime(),
+    )
+    return [...items].sort((a, b) => ts(b) - ts(a))
   }, [data, search])
 
   // Footer-Summen

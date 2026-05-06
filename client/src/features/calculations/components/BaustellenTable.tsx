@@ -35,7 +35,13 @@ export default function BaustellenTable({ onOpenProject }: Props) {
     }
     if (filterMissing) items = items.filter((p) => !!p.construction?.fehltEtwas)
     if (filterBlocked) items = items.filter((p) => p.construction && !p.construction.acInstalliert)
-    return items
+    // Sortierung: zuletzt bearbeitete oder zuletzt erstellte zuerst
+    const ts = (p: typeof items[number]) => Math.max(
+      new Date(p.construction?.updatedAt ?? 0).getTime(),
+      new Date(p.calculation?.updatedAt ?? 0).getTime(),
+      new Date(p.createdAt ?? 0).getTime(),
+    )
+    return [...items].sort((a, b) => ts(b) - ts(a))
   }, [data, search, filterMissing, filterBlocked])
 
   const patch = (projectId: string, p: Partial<Construction>) =>
