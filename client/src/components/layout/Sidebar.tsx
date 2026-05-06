@@ -190,33 +190,43 @@ export default function Sidebar() {
 
       <aside
         className={[
-          'fixed left-0 top-0 bottom-0 flex flex-col items-start py-5 z-50 border-r border-border bg-bg/95 backdrop-blur-2xl',
+          'fixed left-0 top-0 bottom-0 flex flex-col items-start py-5 z-50 backdrop-blur-2xl',
           'transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
-          // Mobile: slide in/out, always expanded width
           mobileOpen ? 'translate-x-0' : '-translate-x-full',
           'md:translate-x-0',
         ].join(' ')}
         style={{
-          width: isMobile ? 'min(260px, 75vw)' : expanded ? '220px' : '72px',
+          width: isMobile ? 'min(260px, 75vw)' : expanded ? '224px' : '76px',
           transition: 'width 200ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+          background: 'linear-gradient(180deg, #0A0E1F 0%, #060816 100%)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: '4px 0 24px rgba(0, 0, 0, 0.2)',
         }}
         onMouseEnter={() => !pinned && setHovered(true)}
         onMouseLeave={() => !pinned && setHovered(false)}
       >
-        {/* Logo + Pin Toggle */}
+        {/* Logo + Workspace */}
         <div className="flex items-center w-full px-[15px] mb-5 shrink-0">
-          <div className="w-[42px] h-[42px] rounded-[12px] flex items-center justify-center shrink-0 overflow-hidden" style={{ background: '#f0f0f0' }}>
-            <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="w-[38px] object-contain" />
+          <div
+            className="w-[42px] h-[42px] rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden relative"
+            style={{
+              background: 'linear-gradient(135deg, #FCD34D, #D4AF37)',
+              boxShadow: '0 4px 12px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <img src="/neosolar-logo.jpeg" alt="NeoSolar" className="w-[38px] object-contain rounded-xl" />
           </div>
           {(expanded || mobileOpen) && (
             <div className="flex items-center ml-3 flex-1 min-w-0 overflow-hidden">
-              <span className="text-[13px] font-bold text-amber whitespace-nowrap">NeoSolar</span>
-              <span className="text-[13px] font-medium text-text-dim ml-1 whitespace-nowrap">CRM</span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[13px] font-bold whitespace-nowrap premium-gradient-text-gold">NeoSolar</span>
+                <span className="text-[9px] font-semibold text-white/40 uppercase tracking-[0.12em] whitespace-nowrap">CRM Workspace</span>
+              </div>
               {/* Desktop: Pin toggle */}
               <button
                 type="button"
                 onClick={() => setPinned(!pinned)}
-                className="ml-auto shrink-0 w-7 h-7 rounded-[8px] items-center justify-center text-text-dim hover:text-text hover:bg-surface-hover transition-all hidden md:flex"
+                className="ml-auto shrink-0 w-7 h-7 rounded-[8px] items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/5 transition-all hidden md:flex"
                 aria-label={pinned ? 'Sidebar einklappen' : 'Sidebar fixieren'}
               >
                 {pinned ? <PanelLeftClose size={16} strokeWidth={1.8} /> : <PanelLeft size={16} strokeWidth={1.8} />}
@@ -265,12 +275,12 @@ export default function Sidebar() {
                   aria-label={item.label}
                   className={({ isActive }) =>
                     [
-                      'relative flex items-center group mx-[14px] rounded-[12px]',
-                      'transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]',
-                      (expanded || mobileOpen) ? 'h-[40px] px-[10px] gap-3' : 'h-[44px] w-[44px] justify-center',
+                      'relative flex items-center group mx-[12px] rounded-[14px]',
+                      'transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+                      (expanded || mobileOpen) ? 'h-[40px] px-[12px] gap-3' : 'h-[44px] w-[44px] justify-center',
                       isActive
-                        ? 'bg-amber-soft text-amber scale-[1.02]'
-                        : 'text-text-dim hover:bg-surface-hover hover:text-text',
+                        ? 'premium-nav-active'
+                        : 'text-white/55 hover:bg-white/[0.04] hover:text-white',
                     ].join(' ')
                   }
                 >
@@ -278,14 +288,14 @@ export default function Sidebar() {
                     <>
                       {isActive && (
                         <div
-                          className="absolute left-[-14px] w-[3px] h-[20px] rounded-r-full"
+                          className="absolute left-[-12px] w-[3px] h-[22px] rounded-r-full"
                           style={{
-                            background: 'linear-gradient(180deg, #F59E0B, #F97316)',
-                            boxShadow: '0 0 10px rgba(245, 158, 11, 0.35)',
+                            background: 'linear-gradient(180deg, #FCD34D, #D4AF37)',
+                            boxShadow: '0 0 16px rgba(212, 175, 55, 0.6)',
                           }}
                         />
                       )}
-                      <item.icon size={20} strokeWidth={1.8} />
+                      <item.icon size={18} strokeWidth={1.8} />
                       {item.hasNotification && (
                         <div
                           className="absolute rounded-full bg-red"
@@ -323,38 +333,47 @@ export default function Sidebar() {
 
         {/* User + Logout */}
         {user && (
-          <div className="w-full px-[15px] pt-2 pb-1 shrink-0 border-t border-border mt-1">
+          <div className="w-full px-[12px] pt-3 pb-1 shrink-0 mt-1" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
             {(expanded || mobileOpen) ? (
-              <div className="flex items-center gap-2.5 px-[10px] py-2">
+              <div
+                className="flex items-center gap-2.5 px-[10px] py-2.5 rounded-[14px]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                }}
+              >
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-bg"
-                  style={{ background: user.avatar || '#F59E0B' }}
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-bg"
+                  style={{
+                    background: user.avatar || 'linear-gradient(135deg, #FCD34D, #D4AF37)',
+                    boxShadow: '0 4px 12px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  }}
                 >
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-text truncate">{user.firstName} {user.lastName}</p>
-                  <p className="text-[10px] text-text-dim truncate">{user.role}</p>
+                  <p className="text-[12px] font-semibold text-white truncate">{user.firstName} {user.lastName}</p>
+                  <p className="text-[9.5px] text-white/45 uppercase tracking-[0.06em] truncate">{user.role}</p>
                 </div>
                 <button
                   type="button"
                   onClick={logout}
-                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-all shrink-0"
+                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-white/40 hover:text-rose-400 hover:bg-rose-500/10 transition-all shrink-0"
                   aria-label="Abmelden"
                   title="Abmelden"
                 >
-                  <LogOut size={14} strokeWidth={1.8} />
+                  <LogOut size={13} strokeWidth={1.8} />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={logout}
-                className="w-[44px] h-[44px] rounded-[12px] flex items-center justify-center text-text-dim hover:text-red hover:bg-surface-hover transition-all mx-auto"
+                className="w-[44px] h-[44px] rounded-[14px] flex items-center justify-center text-white/40 hover:text-rose-400 hover:bg-rose-500/10 transition-all mx-auto"
                 aria-label="Abmelden"
                 title="Abmelden"
               >
-                <LogOut size={20} strokeWidth={1.8} />
+                <LogOut size={18} strokeWidth={1.8} />
               </button>
             )}
           </div>

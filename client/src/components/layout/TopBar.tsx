@@ -524,11 +524,13 @@ export default function TopBar() {
   return (
     <>
       <header
-        className="h-[52px] md:h-[60px] border-b border-border flex items-center justify-between px-4 md:px-7 sticky top-0 z-40"
+        className="h-[52px] md:h-[64px] flex items-center justify-between px-4 md:px-7 sticky top-0 z-40"
         style={{
-          background: 'rgba(6, 8, 12, 0.75)',
-          backdropFilter: 'blur(24px) saturate(1.2)',
-          WebkitBackdropFilter: 'blur(24px) saturate(1.2)',
+          background: 'rgba(6, 8, 22, 0.78)',
+          backdropFilter: 'blur(28px) saturate(1.3)',
+          WebkitBackdropFilter: 'blur(28px) saturate(1.3)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: '0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 32px -8px rgba(0, 0, 0, 0.3)',
         }}
       >
         {/* Left: Hamburger (mobile) + Page title */}
@@ -541,22 +543,52 @@ export default function TopBar() {
           >
             <Menu size={20} strokeWidth={1.8} />
           </button>
-          <h1 className="text-lg md:text-xl font-extrabold tracking-[-0.02em] truncate">{title}</h1>
-          <span className="px-2 md:px-2.5 py-0.5 rounded-full bg-amber-soft text-amber text-[10px] font-bold tracking-[0.06em] uppercase shrink-0 hidden sm:inline-flex">
+          <h1 className="text-lg md:text-xl font-bold tracking-[-0.025em] truncate premium-gradient-text">{title}</h1>
+          <span
+            className="px-2.5 py-1 rounded-full text-[9.5px] font-bold tracking-[0.1em] uppercase shrink-0 hidden sm:inline-flex items-center gap-1.5"
+            style={{
+              background: 'linear-gradient(135deg, rgba(212,175,55,0.18), rgba(212,175,55,0.06))',
+              color: '#FCD34D',
+              border: '1px solid rgba(212, 175, 55, 0.2)',
+              boxShadow: '0 0 12px rgba(212, 175, 55, 0.1)',
+            }}
+          >
+            <span className="w-1 h-1 rounded-full bg-amber-300 premium-pulse" />
             CRM
           </span>
         </div>
 
-        {/* Center: Search */}
+        {/* Center: Premium Search */}
         {canSearch && (
-          <div className="flex-1 max-w-md mx-4 md:mx-8 hidden sm:block">
+          <div className="flex-1 max-w-lg mx-4 md:mx-8 hidden sm:block">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="glass-input w-full pl-10 pr-4 py-2 text-sm text-left text-text-dim relative cursor-pointer hover:border-amber/30 transition-colors"
+              className="w-full pl-11 pr-4 py-2.5 text-[13px] text-left relative cursor-pointer transition-all rounded-2xl group"
+              style={{
+                background: 'rgba(255, 255, 255, 0.035)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                color: 'rgba(255, 255, 255, 0.45)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'
+                e.currentTarget.style.borderColor = 'rgba(212, 175, 55, 0.25)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.035)'
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)'
+              }}
             >
-              <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-dim" />
-              Suchen... <kbd className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono border border-border">⌘K</kbd>
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'rgba(255,255,255,0.4)' }} />
+              <span>Suche Kunden, Leads, Termine...</span>
+              <kbd
+                className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md text-[10px] font-semibold"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                }}
+              >⌘K</kbd>
             </button>
           </div>
         )}
