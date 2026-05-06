@@ -24,3 +24,33 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# === Performance-Headers ===
+# Hashed Assets (Vite) sind unveraenderlich → 1 Jahr cachen
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Fonts ebenfalls aggressiv cachen
+[[headers]]
+  for = "/*.woff2"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Bilder lange cachen (User-Logo etc.)
+[[headers]]
+  for = "/*.jpeg"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# index.html niemals cachen (sonst sieht User alte Bundle-Hashes)
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"

@@ -28,11 +28,12 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,           // 60s – Daten bleiben 1 Minute frisch
-      gcTime: 5 * 60_000,          // 5 Min Cache behalten nach unmount
+      staleTime: 2 * 60_000,        // 2 Min – Daten bleiben frisch
+      gcTime: 15 * 60_000,          // 15 Min Cache behalten nach unmount
       retry: 1,
       refetchOnWindowFocus: false,  // Kein Refetch bei Tab-Wechsel
       refetchOnReconnect: true,     // Nur bei Netzwerk-Reconnect
+      refetchOnMount: false,        // Tab-Wechsel = sofort cached anzeigen
     },
   },
 })
