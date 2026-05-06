@@ -10,8 +10,7 @@ const formatAddr = (p: TrackedProject) => {
   const c = p.contact
   if (!c) return p.name
   const name = `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || c.company || p.name
-  const addr = [c.address, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')
-  return addr ? `${name}, ${addr}` : name
+  return c.address ? `${name}, ${c.address}` : name
 }
 
 interface Props {

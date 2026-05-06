@@ -19,7 +19,7 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
       .select(`
         id, name, created_at, archived_at, completed_at,
         contact_id,
-        contact:contacts(first_name, last_name, company, phone, email, address, city, zip)
+        contact:contacts(first_name, last_name, company, phone, email, address)
       `)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })

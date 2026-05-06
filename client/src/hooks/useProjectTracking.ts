@@ -72,8 +72,6 @@ export interface TrackedProject {
     phone: string | null
     email: string | null
     address: string | null
-    city: string | null
-    zip: string | null
   } | null
   construction: Construction | null
   calculation: Calculation | null
