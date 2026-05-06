@@ -53,6 +53,9 @@ export interface Calculation {
   provisionSatzProzent: number | null
   provisionStatus: ProvisionStatus
   provisionAm: string | null
+  provisionVerkaeuferProzent: number | null
+  provisionGlProzent: number | null
+  provisionInnendienstProzent: number | null
   paymentStatus: PaymentStatus
   bemerkung: string | null
   createdAt: string
@@ -140,6 +143,9 @@ const calculationFieldMap: Record<string, string> = {
   provisionSatzProzent: 'provision_satz_prozent',
   provisionStatus: 'provision_status',
   provisionAm: 'provision_am',
+  provisionVerkaeuferProzent: 'provision_verkaeufer_prozent',
+  provisionGlProzent: 'provision_gl_prozent',
+  provisionInnendienstProzent: 'provision_innendienst_prozent',
   paymentStatus: 'payment_status',
   bemerkung: 'bemerkung',
 }
@@ -178,9 +184,26 @@ export function totalKosten(c: Calculation | null): number {
   return (c.materialKranich ?? 0) + (c.elektriker ?? 0) + (c.montageSergej ?? 0) + weitere
 }
 
+/** Provisionsbetraege (vom VK) — Default 5% Verkaeufer, 3% GL, 2% Innendienst */
+export function provisionVerkaeufer(c: Calculation | null): number {
+  if (!c?.vkBetrag) return 0
+  return c.vkBetrag * ((c.provisionVerkaeuferProzent ?? 5) / 100)
+}
+export function provisionGl(c: Calculation | null): number {
+  if (!c?.vkBetrag) return 0
+  return c.vkBetrag * ((c.provisionGlProzent ?? 3) / 100)
+}
+export function provisionInnendienst(c: Calculation | null): number {
+  if (!c?.vkBetrag) return 0
+  return c.vkBetrag * ((c.provisionInnendienstProzent ?? 2) / 100)
+}
+export function provisionTotal(c: Calculation | null): number {
+  return provisionVerkaeufer(c) + provisionGl(c) + provisionInnendienst(c)
+}
+
 export function margeChf(c: Calculation | null): number {
   if (!c) return 0
-  return (c.vkBetrag ?? 0) - totalKosten(c)
+  return (c.vkBetrag ?? 0) - totalKosten(c) - provisionTotal(c)
 }
 
 export function margePct(c: Calculation | null): number {

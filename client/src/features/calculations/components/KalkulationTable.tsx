@@ -3,6 +3,7 @@ import { Search, ExternalLink, Check, FileText, X as XIcon } from 'lucide-react'
 import {
   useTrackedProjects, useUpdateCalculation,
   totalKosten, margeChf, margePct, trancheBetrag,
+  provisionVerkaeufer, provisionGl, provisionInnendienst,
   type TrackedProject, type Calculation, type PaymentStatus,
 } from '@/hooks/useProjectTracking'
 import { NumberCell, TextCell, DateCell } from './StatusPill'
@@ -59,6 +60,7 @@ export default function KalkulationTable({ onOpenProject }: Props) {
   const totals = useMemo(() => {
     const t = {
       material: 0, elektriker: 0, montage: 0, kosten: 0, vk: 0, marge: 0,
+      provVerk: 0, provGl: 0, provInn: 0,
       a1Kassiert: 0, a1Fakturiert: 0, a1Offen: 0,
       a2Kassiert: 0, a2Fakturiert: 0, a2Offen: 0,
       a3Kassiert: 0, a3Fakturiert: 0, a3Offen: 0,
@@ -72,6 +74,9 @@ export default function KalkulationTable({ onOpenProject }: Props) {
       t.montage += c.montageSergej ?? 0
       t.kosten += totalKosten(c)
       t.vk += c.vkBetrag ?? 0
+      t.provVerk += provisionVerkaeufer(c)
+      t.provGl += provisionGl(c)
+      t.provInn += provisionInnendienst(c)
       t.marge += margeChf(c)
       const a1 = trancheBetrag(c, 'a1')
       const a2 = trancheBetrag(c, 'a2')
@@ -126,6 +131,9 @@ export default function KalkulationTable({ onOpenProject }: Props) {
                   <Th right>Montage Sergej</Th>
                   <Th right>Total Kosten</Th>
                   <Th right>VK</Th>
+                  <Th right color="#F472B6">Verkäufer 5%</Th>
+                  <Th right color="#A78BFA">GL 3%</Th>
+                  <Th right color="#22D3EE">Innendienst 2%</Th>
                   <Th right>Marge CHF</Th>
                   <Th right>Marge %</Th>
                   <Th right>A1 (50%)</Th>
@@ -173,6 +181,30 @@ export default function KalkulationTable({ onOpenProject }: Props) {
                       <Td right><span className="text-[11px] tabular-nums text-text font-semibold">{CHF(tk)}</span></Td>
                       <Td right>
                         <NumberCell value={c?.vkBetrag ?? null} onSave={(v) => patch(p.id, { vkBetrag: v })} />
+                      </Td>
+                      <Td right>
+                        <ProvCell
+                          chf={provisionVerkaeufer(c)}
+                          pct={c?.provisionVerkaeuferProzent ?? 5}
+                          onPctChange={(v) => patch(p.id, { provisionVerkaeuferProzent: v })}
+                          color="#F472B6"
+                        />
+                      </Td>
+                      <Td right>
+                        <ProvCell
+                          chf={provisionGl(c)}
+                          pct={c?.provisionGlProzent ?? 3}
+                          onPctChange={(v) => patch(p.id, { provisionGlProzent: v })}
+                          color="#A78BFA"
+                        />
+                      </Td>
+                      <Td right>
+                        <ProvCell
+                          chf={provisionInnendienst(c)}
+                          pct={c?.provisionInnendienstProzent ?? 2}
+                          onPctChange={(v) => patch(p.id, { provisionInnendienstProzent: v })}
+                          color="#22D3EE"
+                        />
                       </Td>
                       <Td right>
                         <span className="text-[11px] tabular-nums font-semibold" style={{ color: margeColor(mp) }}>{CHF(mc)}</span>
@@ -231,6 +263,9 @@ export default function KalkulationTable({ onOpenProject }: Props) {
                   <Td right><FootCHF n={totals.montage} /></Td>
                   <Td right><FootCHF n={totals.kosten} bold /></Td>
                   <Td right><FootCHF n={totals.vk} bold /></Td>
+                  <Td right><FootCHF n={totals.provVerk} color="#F472B6" /></Td>
+                  <Td right><FootCHF n={totals.provGl} color="#A78BFA" /></Td>
+                  <Td right><FootCHF n={totals.provInn} color="#22D3EE" /></Td>
                   <Td right><FootCHF n={totals.marge} bold color={margeColor(totals.vk ? totals.marge / totals.vk * 100 : 0)} /></Td>
                   <Td right>
                     <span className="text-[11px] font-bold tabular-nums" style={{ color: margeColor(totals.vk ? totals.marge / totals.vk * 100 : 0) }}>
@@ -281,6 +316,48 @@ export default function KalkulationTable({ onOpenProject }: Props) {
         </div>
       )}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Provisions-Zelle: zeigt CHF-Betrag, Tooltip mit Prozent (klickbar)
+// ─────────────────────────────────────────────────────────────────────────────
+function ProvCell({ chf, pct, onPctChange, color }: { chf: number; pct: number; onPctChange: (v: number) => void; color: string }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(pct))
+
+  if (editing) {
+    return (
+      <div className="flex flex-col items-end gap-0.5">
+        <input
+          type="number"
+          step="0.5"
+          min="0"
+          max="100"
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => { setEditing(false); const n = Number(draft); if (!isNaN(n) && n !== pct) onPctChange(n) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.currentTarget.blur() }
+            if (e.key === 'Escape') { setDraft(String(pct)); setEditing(false) }
+          }}
+          className="bg-transparent border border-amber/50 rounded px-1 py-0.5 text-[11px] text-text outline-none w-[50px] text-right"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="flex flex-col items-end gap-0 hover:opacity-80 transition-opacity w-full"
+      title="Klick zum Prozentsatz ändern"
+    >
+      <span className="text-[11px] tabular-nums font-semibold" style={{ color }}>{CHF(chf)}</span>
+      <span className="text-[8px] tabular-nums uppercase tracking-wider opacity-60" style={{ color }}>{pct}%</span>
+    </button>
   )
 }
 

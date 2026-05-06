@@ -151,6 +151,9 @@ const calculationSchema = z.object({
   provision_satz_prozent: z.number().nullable().optional(),
   provision_status: z.enum(['OFFEN', 'AUSBEZAHLT', 'ZURUECKGEFORDERT']).nullable().optional(),
   provision_am: z.string().nullable().optional(),
+  provision_verkaeufer_prozent: z.number().nullable().optional(),
+  provision_gl_prozent: z.number().nullable().optional(),
+  provision_innendienst_prozent: z.number().nullable().optional(),
   payment_status: z.enum(['OFFEN', 'IN_ARBEIT', 'KASSIERT', 'FAKTURIERT', 'VERLUST']).nullable().optional(),
   bemerkung: z.string().nullable().optional(),
 }).passthrough()
