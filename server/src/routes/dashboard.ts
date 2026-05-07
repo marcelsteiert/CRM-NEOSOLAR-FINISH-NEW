@@ -154,6 +154,11 @@ router.get('/monthly', async (req: Request, res: Response, next: NextFunction) =
       })
 
       const wonValue = wonInMonth.reduce((s: number, deal: any) => s + (deal.value ?? 0), 0)
+      // Provision pro Deal mit Override-Rate (default 5%), summiert
+      const wonProvision = wonInMonth.reduce((s: number, deal: any) => {
+        const rate = deal.provision_rate != null ? Number(deal.provision_rate) : 5
+        return s + (Number(deal.value ?? 0) * rate / 100)
+      }, 0)
 
       const appointmentsInMonth = allAppts.filter((a: any) => {
         if (!a.appointment_date) return false
@@ -171,7 +176,7 @@ router.get('/monthly', async (req: Request, res: Response, next: NextFunction) =
         lostDeals: lostInMonth.length,
         totalAppointments: appointmentsInMonth.length,
         completedAppointments: completedInMonth.length,
-        provision: Math.round(wonValue * 0.05 * 100) / 100,
+        provision: Math.round(wonProvision * 100) / 100,
       })
     }
 
@@ -213,28 +218,33 @@ router.get('/provision', async (req: Request, res: Response, next: NextFunction)
     for (const deal of wonDeals) {
       const userId = (deal as any).assigned_to || 'unassigned'
       if (!byUser[userId]) byUser[userId] = { deals: [], totalValue: 0, provision: 0 }
+      const value = Number((deal as any).value ?? 0)
+      // Provision-Override pro Deal (default 5%)
+      const rate = (deal as any).provision_rate != null ? Number((deal as any).provision_rate) : 5
+      const dealProvision = Math.round(value * (rate / 100) * 100) / 100
       byUser[userId].deals.push({
         id: (deal as any).id,
         title: (deal as any).title,
-        value: (deal as any).value ?? 0,
+        value,
         closedAt: (deal as any).closed_at,
+        provisionRate: rate,
+        provision: dealProvision,
       })
-      byUser[userId].totalValue += (deal as any).value ?? 0
-    }
-
-    for (const userId of Object.keys(byUser)) {
-      byUser[userId].provision = Math.round(byUser[userId].totalValue * 0.05 * 100) / 100
+      byUser[userId].totalValue += value
+      byUser[userId].provision += dealProvision
     }
 
     const provisions = Object.entries(byUser).map(([userId, data]) => {
       const user = allUsers.find((u: any) => u.id === userId)
+      // Effektive Provisionsrate (gewichteter Durchschnitt falls deals unterschiedliche Saetze haben)
+      const effectiveRate = data.totalValue > 0 ? data.provision / data.totalValue : 0.05
       return {
         userId,
         userName: user ? `${user.first_name} ${user.last_name}` : 'Unbekannt',
         userRole: user ? user.role : '',
         deals: data.deals,
         totalValue: data.totalValue,
-        provisionRate: 0.05,
+        provisionRate: effectiveRate,
         provision: data.provision,
       }
     })
