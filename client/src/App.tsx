@@ -17,15 +17,12 @@ const DealsPage = lazy(() => import('@/features/deals/DealsPage'))
 const CalculationsPage = lazy(() => import('@/features/calculations/CalculationsPage'))
 const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'))
 const ProvisionPage = lazy(() => import('@/features/provision/ProvisionPage'))
-const CommunicationPage = lazy(() => import('@/features/communication/CommunicationPage'))
-const AiSummaryPage = lazy(() => import('@/features/ai/AiSummaryPage'))
 const TasksPage = lazy(() => import('@/features/tasks/TasksPage'))
 const NotificationsPage = lazy(() => import('@/features/notifications/NotificationsPage'))
 const AdminPage = lazy(() => import('@/features/admin/AdminPage'))
 const ExportPage = lazy(() => import('@/features/export/ExportPage'))
 const DocumentsPage = lazy(() => import('@/features/documents/DocumentsPage'))
 const CalendarPage = lazy(() => import('@/features/calendar/CalendarPage'))
-const FeaturesPage = lazy(() => import('@/features/features/FeaturesPage'))
 const PasswordsPage = lazy(() => import('@/features/passwords/PasswordsPage'))
 const PersonnelPage = lazy(() => import('@/features/personnel/PersonnelPage'))
 const CompanyVaultPage = lazy(() => import('@/features/company/CompanyVaultPage'))
@@ -140,8 +137,6 @@ export default function App() {
             <Route path="calculations" element={<CalculationsPage />} />
             <Route path="projects" element={<ModuleRoute moduleId="projects"><ProjectsPage /></ModuleRoute>} />
             <Route path="provision" element={<ModuleRoute moduleId="provision"><ProvisionPage /></ModuleRoute>} />
-            <Route path="communication" element={<ModuleRoute moduleId="communication"><CommunicationPage /></ModuleRoute>} />
-            <Route path="ai" element={<AiSummaryPage />} />
             <Route path="tasks" element={<ModuleRoute moduleId="tasks"><TasksPage /></ModuleRoute>} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
@@ -152,7 +147,6 @@ export default function App() {
             <Route path="passwords" element={<ModuleRoute moduleId="passwords"><PasswordsPage /></ModuleRoute>} />
             <Route path="personnel" element={<ModuleRoute moduleId="personal"><PersonnelPage /></ModuleRoute>} />
             <Route path="company" element={<AdminRoute><CompanyVaultPage /></AdminRoute>} />
-            <Route path="features" element={<FeaturesPage />} />
             {/* Catch-all: redirect to dashboard */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

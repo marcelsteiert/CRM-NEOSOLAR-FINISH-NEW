@@ -102,8 +102,6 @@ const allNavGroups: NavGroup[] = [
   {
     label: 'Betrieb',
     items: [
-      { to: '/communication', icon: Mail, label: 'Kommunikation', featureId: 'communication', moduleId: 'communication' },
-      { to: '/ai', icon: Sparkles, label: 'KI-Summary', featureId: 'ai' },
       { to: '/tasks', icon: ClipboardList, label: 'Aufgaben', featureId: 'tasks', moduleId: 'tasks' },
     ],
   },
@@ -118,7 +116,6 @@ const allNavGroups: NavGroup[] = [
       { to: '/export', icon: Download, label: 'Export', featureId: 'export', moduleId: 'export' },
       { to: '/documents', icon: FileBox, label: 'Dokumente', featureId: 'documents', moduleId: 'documents' },
       { to: '/passwords', icon: KeyRound, label: 'Passwörter', moduleId: 'passwords' },
-      { to: '/features', icon: Puzzle, label: 'Features' },
     ],
   },
 ]
