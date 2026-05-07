@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Save, UserPlus } from 'lucide-react'
 import {
   useCreatePersonnel, useUpdatePersonnel,
@@ -142,7 +143,7 @@ export default function PersonnelFormModal({ open, member, onClose, onSaved }: P
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }}>
       <div
         className="w-full max-w-[820px] mx-2 sm:mx-4 max-h-[90vh] flex flex-col"
@@ -248,7 +249,8 @@ export default function PersonnelFormModal({ open, member, onClose, onSaved }: P
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

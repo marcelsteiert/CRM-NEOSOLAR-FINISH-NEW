@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Pencil, Archive, ArchiveRestore, Trash2, Mail, Phone, Smartphone, MapPin, Calendar, Briefcase, CreditCard, AlertCircle, FileText } from 'lucide-react'
 import {
   type Personnel, useArchivePersonnel, useRestorePersonnel, useDeletePersonnel,
@@ -45,7 +46,7 @@ export default function PersonnelDetailModal({ member, onClose }: Props) {
     { id: 'notes', label: 'Notizen' },
   ]
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }}>
         <div
@@ -193,7 +194,8 @@ export default function PersonnelDetailModal({ member, onClose }: Props) {
           onClose={() => setEditing(false)}
         />
       )}
-    </>
+    </>,
+    document.body
   )
 }
 

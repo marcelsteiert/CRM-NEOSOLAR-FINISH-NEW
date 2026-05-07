@@ -581,6 +581,7 @@ nav span[class*="uppercase"][class*="tracking-"] {
   background: radial-gradient(ellipse at center, rgba(6, 10, 30, 0.65) 0%, rgba(0, 0, 0, 0.85) 100%) !important;
 }
 
+
 /* ── Inputs: subtle focus glow ── */
 .glass-input:focus,
 input.glass-input:focus,

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar,
   Trash2, ChevronDown, Trophy, XCircle, Clock, AlertTriangle,
@@ -240,10 +241,11 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
   }
 
   if (isLoading || !deal) {
-    return (
+    return createPortal(
       <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
         <div className="w-12 h-12 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" />
-      </div>
+      </div>,
+      document.body
     )
   }
 
@@ -261,7 +263,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
     { key: 'portal', label: 'Kundenportal' },
   ]
 
-  return (
+  return createPortal(
     <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div
         ref={dialogRef}
@@ -737,6 +739,7 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

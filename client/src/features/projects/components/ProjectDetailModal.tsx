@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X, AlertTriangle, MapPin, Phone, Mail, Building2, Sun, Zap, CheckCircle2,
   FolderKanban, Check, Loader2, Pencil, Save, XCircle, Trash2, Archive, ArchiveRestore,
@@ -251,12 +252,13 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
   }
 
   if (isLoading || !project) {
-    return (
+    return createPortal(
       <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)' }}>
         <div className="glass-card p-8">
           <Loader2 size={24} className="animate-spin text-text-dim" />
         </div>
-      </div>
+      </div>,
+      document.body
     )
   }
 
@@ -290,7 +292,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
     { key: 'portal', label: 'Kundenportal' },
   ]
 
-  return (
+  return createPortal(
     <div ref={backdropRef} onClick={handleBackdropClick} className="fixed inset-0 z-[90] flex items-center justify-center" style={{ background: 'rgba(6,8,12,0.7)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div
         role="dialog"
@@ -913,6 +915,7 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

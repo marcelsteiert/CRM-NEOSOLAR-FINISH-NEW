@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   X,
@@ -522,7 +523,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     )
   }
 
-  return (
+  return createPortal(
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
@@ -1913,6 +1914,7 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
