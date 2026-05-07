@@ -637,6 +637,39 @@ select.glass-input:focus {
   border-color: rgba(212, 175, 55, 0.25);
 }
 
+/* ── Final Polish (Phase 5d) ── */
+
+/* Status-Pills: blur backdrop + subtle */
+span[class*="rounded-full"][class*="text-[10px]"][class*="uppercase"],
+span[class*="rounded-full"][class*="text-[11px]"][class*="uppercase"] {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+/* Sparkline shadow */
+.glass-card svg, .premium-card svg {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+}
+
+/* Modal scrollbar */
+[role="dialog"] > div[class*="overflow-y-auto"] {
+  scrollbar-gutter: stable;
+}
+
+/* Select option premium dark */
+.glass-input option, select.glass-input option {
+  background: #0F172A;
+  color: #F0F2F5;
+  padding: 8px;
+}
+
+/* Page-Transition (sanft entrance) */
+main > div {
+  animation: premium-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ── Print Styles ── */
 
 @media print {
