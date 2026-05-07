@@ -739,6 +739,84 @@ html {
   color: #FCD34D;
 }
 
+/* ── Tables: Premium hover + selection ── */
+table tr {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+tbody tr:hover {
+  background: linear-gradient(90deg,
+    rgba(212, 175, 55, 0.04) 0%,
+    rgba(255, 255, 255, 0.025) 30%,
+    rgba(255, 255, 255, 0.025) 70%,
+    rgba(59, 130, 246, 0.04) 100%) !important;
+}
+
+/* ── Modals: Premium feel ── */
+[role="dialog"] {
+  background: linear-gradient(180deg, #0F172A 0%, #0A0E1F 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 32px 80px -20px rgba(0, 0, 0, 0.7),
+    0 12px 32px -8px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 24px !important;
+}
+
+/* ── Tab-Bars in Modals ── */
+[role="dialog"] [class*="rounded-full"][class*="inline-flex"][class*="items-center"][class*="gap-1"][class*="p-1"] {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(10px);
+}
+
+/* ── Empty State Cards ── */
+.glass-card[class*="text-center"] svg + p {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* ── Buttons: subtle premium hover ── */
+button.btn-primary,
+.btn-primary {
+  letter-spacing: 0.01em;
+  font-size: 12.5px;
+  padding: 8px 16px;
+}
+
+.btn-secondary {
+  letter-spacing: 0.005em;
+  font-size: 12.5px;
+  padding: 8px 14px;
+  font-weight: 600;
+}
+
+/* ── Glass-Card subtle premium upgrade ── */
+.glass-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.038) 0%, rgba(255, 255, 255, 0.022) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 24px -8px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* ── Section labels (Sidebar group labels) ── */
+nav span[class*="uppercase"][class*="tracking-"] {
+  color: rgba(255, 255, 255, 0.30) !important;
+}
+
+/* ── Premium Empty State ── */
+.premium-empty {
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+  border-radius: 24px;
+  padding: 48px 32px;
+  text-align: center;
+}
+
 /* Status badges premium */
 .premium-badge {
   display: inline-flex;
