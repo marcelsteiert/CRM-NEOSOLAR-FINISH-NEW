@@ -105,7 +105,7 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
         <div>
-          <h1 className="text-lg sm:text-[22px] font-bold tracking-[-0.03em]">Projekte</h1>
+          <h1 className="text-[22px] sm:text-[28px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">Projekte</h1>
           <p className="text-[12px] sm:text-[13px] text-text-sec mt-0.5">
             {projects.length} aktive Projekte{!isSubunternehmen && stats ? ` · ${formatCHF(stats.totalValue)} Auftragsvolumen` : ''}
           </p>

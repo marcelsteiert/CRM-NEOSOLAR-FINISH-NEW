@@ -514,7 +514,7 @@ export default function DealsPage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">
+                <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">
                   {canViewAll && viewAll ? 'Angebote – Alle' : 'Meine Angebote'}
                 </h1>
                 {currentUser && !viewAll && (

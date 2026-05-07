@@ -502,31 +502,33 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
       <div className="space-y-5">
         {/* ── Top Bar ── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3.5 relative">
+            <div className="premium-glow-orb" style={{ top: '-30px', left: '-20px', width: '180px', height: '180px', background: '#3B82F6', opacity: 0.15 }} />
             <div
-              className="w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0"
+              className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 relative z-[1]"
               style={{
-                background:
-                  'linear-gradient(135deg, color-mix(in srgb, #60A5FA 12%, transparent), color-mix(in srgb, #60A5FA 4%, transparent))',
-                border: '1px solid color-mix(in srgb, #60A5FA 10%, transparent)',
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(59,130,246,0.06))',
+                border: '1px solid rgba(59, 130, 246, 0.30)',
+                boxShadow: '0 4px 20px -4px rgba(59, 130, 246, 0.30), inset 0 1px 0 rgba(255,255,255,0.08)',
               }}
             >
-              {pageIcon ? <pageIcon size={20} className="text-blue" strokeWidth={1.8} /> : <Users size={20} className="text-blue" strokeWidth={1.8} />}
+              {pageIcon ? <pageIcon size={20} className="text-blue-300" strokeWidth={1.8} /> : <Users size={20} className="text-blue-300" strokeWidth={1.8} />}
             </div>
-            <div>
+            <div className="relative z-[1]">
               <div className="flex items-center gap-2.5">
-                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">{pageTitle ?? 'Lead Hub'}</h1>
+                <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">{pageTitle ?? 'Lead Hub'}</h1>
                 <span
-                  className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
+                  className="inline-flex items-center justify-center h-[24px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
                   style={{
-                    background: 'color-mix(in srgb, #60A5FA 12%, transparent)',
-                    color: '#60A5FA',
+                    background: 'linear-gradient(135deg, rgba(59,130,246,0.18), rgba(59,130,246,0.06))',
+                    color: '#93C5FD',
+                    border: '1px solid rgba(59,130,246,0.25)',
                   }}
                 >
                   {isLoading ? '\u2014' : leadsResponse?.total ?? filteredLeads.length}
                 </span>
               </div>
-              <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">
+              <p className="text-[12px] text-white/40 mt-1 hidden sm:block">
                 {pageDescription ?? 'Leads verwalten und qualifizieren'}
               </p>
             </div>
