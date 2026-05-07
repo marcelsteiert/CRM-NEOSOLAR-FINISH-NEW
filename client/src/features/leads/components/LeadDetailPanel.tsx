@@ -252,37 +252,6 @@ export default function LeadDetailPanel({ lead }: LeadDetailPanelProps) {
               </div>
             </div>
 
-            {/* KI-Summary Card */}
-            <div
-              className="p-4 relative overflow-hidden"
-              style={{
-                background:
-                  'linear-gradient(135deg, color-mix(in srgb, #F59E0B 6%, transparent), color-mix(in srgb, #A78BFA 4%, transparent))',
-                border: '1px solid color-mix(in srgb, #F59E0B 10%, transparent)',
-                borderRadius: 'var(--radius-md)',
-              }}
-            >
-              {/* Subtle glow */}
-              <div
-                className="absolute top-0 right-0 w-24 h-24 pointer-events-none"
-                style={{
-                  background:
-                    'radial-gradient(circle, color-mix(in srgb, #F59E0B 8%, transparent), transparent 70%)',
-                }}
-              />
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-2.5">
-                  <Sparkles size={14} className="text-amber" strokeWidth={1.8} />
-                  <h4 className="text-[11px] font-bold text-amber uppercase tracking-[0.06em]">
-                    KI-Zusammenfassung
-                  </h4>
-                </div>
-                <p className="text-[12px] text-text-sec leading-relaxed">
-                  {lead.notes ||
-                    'Keine Notizen vorhanden. Die KI-Zusammenfassung wird automatisch generiert, sobald genügend Interaktionsdaten vorliegen.'}
-                </p>
-              </div>
-            </div>
           </>
         )}
 

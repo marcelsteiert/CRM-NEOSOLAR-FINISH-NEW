@@ -19,10 +19,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUsers } from '@/hooks/useLeads'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
-import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
 import TaskSection from '@/components/ui/TaskSection'
 import ContactTimeline from '@/components/ui/ContactTimeline'
-import { useGenerateContactSummary } from '@/hooks/useAi'
 import PortalSection from './PortalSection'
 
 const phaseOrder: ProjectPhase[] = ['admin', 'montage', 'elektro', 'abschluss']
@@ -72,7 +70,6 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
   const addActivity = useAddProjectActivity()
   const deleteProject = useDeleteProject()
   const archiveProject = useArchiveProject()
-  const generateContactSummary = useGenerateContactSummary()
   const { data: usersResponse } = useUsers()
   const users = usersResponse?.data ?? []
 
@@ -779,15 +776,6 @@ export default function ProjectDetailModal({ projectId, onClose }: Props) {
                   </div>
                 )}
 
-                {/* KI-Zusammenfassung (kontaktbasiert) */}
-                {project.contactId && (
-                  <AiSummaryCard
-                    summary={(generateContactSummary.data as Record<string, Record<string, string>> | undefined)?.data?.summary}
-                    isGenerating={generateContactSummary.isPending}
-                    onGenerate={() => generateContactSummary.mutate(project.contactId)}
-                    error={generateContactSummary.error?.message || (generateContactSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
-                  />
-                )}
               </div>
             </div>
           )}

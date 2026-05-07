@@ -50,10 +50,8 @@ import { useCreateAppointment } from '@/hooks/useAppointments'
 import { api } from '@/lib/api'
 import DocumentSection from '@/components/ui/DocumentSection'
 import EmailSection from '@/components/ui/EmailSection'
-import AiSummaryCard from '@/features/ai/components/AiSummaryCard'
 import TaskSection from '@/components/ui/TaskSection'
 import ContactTimeline from '@/components/ui/ContactTimeline'
-import { useGenerateLeadSummary } from '@/hooks/useAi'
 
 /* ── Props ── */
 
@@ -139,7 +137,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
   const { data: leadResponse, isLoading } = useLead(leadId)
   const lead = leadResponse?.data ?? null
 
-  const generateLeadSummary = useGenerateLeadSummary()
   const { labels: sourceLabels, sources: sourceDefs } = useLeadSourceMaps()
   const updateLead = useUpdateLead()
   const deleteLead = useDeleteLead()
@@ -1066,15 +1063,6 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
                         )}
                 </div>
               </div>
-
-              {/* KI-Zusammenfassung */}
-              <AiSummaryCard
-                summary={lead.aiSummary}
-                isGenerating={generateLeadSummary.isPending}
-                onGenerate={() => generateLeadSummary.mutate(lead.id)}
-                error={generateLeadSummary.error?.message || (generateLeadSummary.data as Record<string, Record<string, string>> | undefined)?.data?.error}
-                compact
-              />
 
               {/* Erstellt / Bearbeitet / Konvertiert */}
               <div className="flex flex-col gap-1.5 text-[11px] text-text-dim px-1">

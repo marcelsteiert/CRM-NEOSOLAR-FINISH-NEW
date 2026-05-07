@@ -61,7 +61,7 @@ export default function KpiWidget({
         )}
       </div>
 
-      <div className="text-[24px] sm:text-[30px] lg:text-[34px] tabular-nums leading-tight mb-1 break-words">
+      <div className="kpi-value text-[24px] sm:text-[30px] lg:text-[34px] tabular-nums leading-tight mb-1 break-words">
         <span className={gradientClass}>{formatValue(value)}</span>
       </div>
 

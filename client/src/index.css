@@ -673,36 +673,70 @@ main > div {
 /* ── Print Styles ── */
 
 @media print {
-  body {
+  @page { margin: 12mm 14mm; size: A4 portrait; }
+
+  html, body {
     background: white !important;
-    color: black !important;
+    color: #0F172A !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    font-size: 10pt;
   }
+
+  /* Layout-Container voll ausnutzen */
+  body, #root, main, .app-shell, [class*="AppLayout"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  nav, aside, header,
+  [class*="Sidebar"], [class*="TopBar"],
+  .print\\:hidden { display: none !important; }
+
+  /* Karten: heller, klare Borders, keine Effekte */
   .glass-card,
-  .premium-card {
+  .premium-card,
+  [class*="premium-card-"] {
     background: white !important;
     backdrop-filter: none !important;
-    border: 1px solid #e5e7eb !important;
+    border: 1px solid #d1d5db !important;
     box-shadow: none !important;
     animation: none !important;
+    page-break-inside: avoid;
   }
-  .premium-glow-orb { display: none !important; }
+
+  /* Glow-Orbs und dekorative Hintergruende komplett aus */
+  .premium-glow-orb,
+  [class*="glow-orb"] { display: none !important; }
+
+  /* Gradient-Texts auf normales Schwarz */
   .premium-gradient-text,
   .premium-gradient-text-gold,
   .premium-gradient-text-emerald,
   .premium-gradient-text-electric {
     background: none !important;
-    -webkit-text-fill-color: initial !important;
+    -webkit-text-fill-color: #0F172A !important;
     color: #0F172A !important;
   }
-  .print\\:hidden,
-  nav, aside, header { display: none !important; }
-  /* KPI grid auf Druck stapeln, damit Werte voll sichtbar sind */
-  .grid.md\\:grid-cols-3 {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+
+  /* Alle weiss/transparente Texte auf Schwarz/Grau */
+  [class*="text-white"] { color: #0F172A !important; }
+  [class*="text-white/4"], [class*="text-white/3"], [class*="text-white/2"] { color: #6B7280 !important; }
+  [class*="text-amber"], [class*="text-emerald"], [class*="text-blue"] { color: #0F172A !important; }
+
+  /* KPI-Grid auf Druck: 3 nebeneinander aber kompakt */
+  .grid.grid-cols-1.md\\:grid-cols-3 {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: 8px !important;
   }
-  /* Ambient & dekorative Schatten ausschalten */
-  [class*="premium-card-"] { box-shadow: none !important; }
+
+  /* KPI-Karten kompakt, Sparkline weg */
+  .grid.md\\:grid-cols-3 .premium-card {
+    padding: 10px !important;
+  }
+  .kpi-value { font-size: 14pt !important; line-height: 1.1 !important; }
+  .grid.md\\:grid-cols-3 svg[viewBox] { display: none !important; }
+  .grid.md\\:grid-cols-3 .premium-card > div:last-child:has(svg) { display: none !important; }
 }
