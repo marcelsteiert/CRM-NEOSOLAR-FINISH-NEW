@@ -79,308 +79,6 @@
   --font-sans: 'Outfit', sans-serif;
 }
 
-/* ── Light Theme Override ── */
-
-html.light {
-  --color-bg: #F5F7FA;
-  --color-bg-sub: #EBEEF3;
-  --color-surface: rgba(0, 0, 0, 0.02);
-  --color-surface-hover: rgba(0, 0, 0, 0.05);
-  --color-glass: rgba(255, 255, 255, 0.7);
-  --color-glass-border: rgba(0, 0, 0, 0.08);
-  --color-glass-hover: rgba(255, 255, 255, 0.85);
-  --color-card: rgba(255, 255, 255, 0.6);
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-border-focus: rgba(0, 0, 0, 0.18);
-  --color-text: #1A1D23;
-  --color-text-sec: #5A6376;
-  --color-text-dim: #8B95A5;
-  --color-amber: #D97706;
-  --color-amber-soft: rgba(217, 119, 6, 0.10);
-  --color-amber-glow: rgba(217, 119, 6, 0.20);
-  --color-green: #059669;
-  --color-green-soft: rgba(5, 150, 105, 0.10);
-  --color-red: #DC2626;
-  --color-red-soft: rgba(220, 38, 38, 0.10);
-  --color-blue: #2563EB;
-  --color-blue-soft: rgba(37, 99, 235, 0.10);
-  --color-violet: #7C3AED;
-  --color-violet-soft: rgba(124, 58, 237, 0.10);
-  --color-cyan: #0891B2;
-  --color-cyan-soft: rgba(8, 145, 178, 0.10);
-}
-
-html.light .glass-card {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-html.light .glass-input {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  color: var(--color-text);
-}
-
-html.light .glass-input:focus {
-  border-color: #D97706;
-  background: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
-}
-
-html.light .btn-primary {
-  color: #FFFFFF;
-}
-
-html.light .btn-secondary {
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  color: var(--color-text-sec);
-}
-
-html.light .btn-secondary:hover {
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.12);
-  color: var(--color-text);
-}
-
-/* ── Light Mode: Alle Schrift global schwarz/grau ── */
-
-/* Standard-Text */
-html.light body,
-html.light h1, html.light h2, html.light h3, html.light h4, html.light h5, html.light h6,
-html.light p, html.light span, html.light div, html.light label, html.light a,
-html.light li, html.light td, html.light th {
-  color: #1A1D23;
-}
-
-/* Tailwind text-Klassen */
-html.light .text-text {
-  color: #1A1D23 !important;
-}
-
-html.light .text-text-sec {
-  color: #5A6376 !important;
-}
-
-html.light .text-text-dim {
-  color: #8B95A5 !important;
-}
-
-/* Inputs, Textareas, Selects */
-html.light input,
-html.light textarea,
-html.light select {
-  color: #1A1D23 !important;
-  -webkit-text-fill-color: #1A1D23 !important;
-  caret-color: #1A1D23 !important;
-}
-
-html.light input::placeholder,
-html.light textarea::placeholder {
-  color: #8B95A5 !important;
-  -webkit-text-fill-color: #8B95A5 !important;
-}
-
-html.light select option {
-  background: #FFFFFF !important;
-  color: #1A1D23 !important;
-}
-
-/* Inputs/Textareas/Selects innerhalb glass-input bekommen weissen Hintergrund */
-html.light .glass-input {
-  background: rgba(255, 255, 255, 0.85) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  color: #1A1D23 !important;
-}
-
-html.light .glass-input:focus {
-  background: #FFFFFF !important;
-  border-color: rgba(217, 119, 6, 0.4) !important;
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1) !important;
-  color: #1A1D23 !important;
-}
-
-/* Standalone textareas (ohne glass-input Klasse) */
-html.light textarea:not(.glass-input),
-html.light input:not(.glass-input):not([type="checkbox"]):not([type="radio"]) {
-  background: rgba(255, 255, 255, 0.85) !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Modals/Dialoge im Light Mode mit weissem Hintergrund */
-html.light [class*="fixed"][class*="z-[9"] [style*="rgba(255,255,255,0.035)"],
-html.light [class*="fixed"][class*="z-[10"] [style*="rgba(255,255,255,0.035)"] {
-  background: #FFFFFF !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  color: #1A1D23 !important;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15) !important;
-}
-
-html.light [class*="fixed"][class*="z-[9"] [style*="rgba(11, 15, 21"],
-html.light [class*="fixed"][class*="z-[10"] [style*="rgba(11, 15, 21"] {
-  background: #FFFFFF !important;
-  color: #1A1D23 !important;
-}
-
-/* btn-secondary im Light Mode */
-html.light .btn-secondary {
-  color: #5A6376 !important;
-}
-
-html.light .btn-secondary:hover {
-  color: #1A1D23 !important;
-}
-
-/* tabs background im Light Mode */
-html.light [style*="rgba(255,255,255,0.035)"]:not([class*="fixed"]) {
-  background: rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Borders im Light Mode */
-html.light .border-border {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-html.light [style*="rgba(255,255,255,0.06)"] {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Hover-States */
-html.light .hover\:bg-surface-hover:hover {
-  background: rgba(0, 0, 0, 0.04) !important;
-}
-
-html.light ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-html.light ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-html.light select option {
-  background: #FFFFFF;
-  color: #1A1D23;
-}
-
-html.light .ambient-bg::before {
-  background: radial-gradient(circle, rgba(217, 119, 6, 0.04) 0%, transparent 70%);
-}
-
-html.light .ambient-bg::after {
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.03) 0%, transparent 70%);
-}
-
-/* ── Light Mode: Global Inline-Style Fixes ── */
-
-/* Select/Option Elements – hardcoded #0B0F15 backgrounds fix */
-html.light select option {
-  background: #FFFFFF !important;
-  color: #1A1D23 !important;
-}
-
-/* All elements with rgba(255,255,255,...) borders → fix to dark borders */
-html.light [style*="rgba(255,255,255"] {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Fix hardcoded #06080C text (btn-primary etc.) */
-html.light [style*="color: rgb(6, 8, 12)"],
-html.light [style*="color:#06080C"] {
-  color: #FFFFFF !important;
-}
-
-/* Glass-style inline backgrounds → make them light */
-html.light [style*="background: rgba(255, 255, 255, 0.03"],
-html.light [style*="background: rgba(255,255,255,0.03"],
-html.light [style*="background: rgba(255, 255, 255, 0.04"],
-html.light [style*="background:rgba(255,255,255,0.04"],
-html.light [style*="background: rgba(255, 255, 255, 0.035"],
-html.light [style*="background:rgba(255,255,255,0.035"] {
-  background: rgba(255, 255, 255, 0.75) !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Surface hover backgrounds */
-html.light [style*="background: rgba(255, 255, 255, 0.06"],
-html.light [style*="background:rgba(255,255,255,0.06"],
-html.light [style*="background: rgba(255, 255, 255, 0.07"],
-html.light [style*="background: rgba(255, 255, 255, 0.08"] {
-  background: rgba(0, 0, 0, 0.04) !important;
-}
-
-/* Dark sub-backgrounds (#0B0F15) → light */
-html.light [style*="background: #0B0F15"],
-html.light [style*="background:#0B0F15"],
-html.light [style*="background: rgb(11, 15, 21)"] {
-  background: #FFFFFF !important;
-  color: #1A1D23 !important;
-}
-
-/* #06080C backgrounds → light */
-html.light [style*="background: #06080C"],
-html.light [style*="background:#06080C"],
-html.light [style*="background: rgb(6, 8, 12)"] {
-  background: var(--color-bg) !important;
-}
-
-/* Border with rgba(255,255,255) inline */
-html.light [style*="border: 1px solid rgba(255, 255, 255"],
-html.light [style*="border: 1px solid rgba(255,255,255"],
-html.light [style*="border-color: rgba(255, 255, 255"],
-html.light [style*="border-color:rgba(255,255,255"] {
-  border-color: rgba(0, 0, 0, 0.08) !important;
-}
-
-/* Fix backdrop-filter containers in light mode */
-html.light [style*="backdropFilter"],
-html.light [style*="backdrop-filter"] {
-  backdrop-filter: blur(16px) saturate(1.05) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(1.05) !important;
-}
-
-/* Box shadows with rgba(255,255,255) → darker version */
-html.light [style*="boxShadow"][style*="rgba(255, 255, 255"] {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-}
-
-/* Dim text (#525E6F, #F0F2F5) in inline styles */
-html.light [style*="color: #F0F2F5"],
-html.light [style*="color:#F0F2F5"] {
-  color: #1A1D23 !important;
-}
-
-/* Fix TopBar and Sidebar backgrounds */
-html.light [style*="saturate(1.2)"] {
-  background: rgba(255, 255, 255, 0.85) !important;
-}
-
-/* Kanban columns in light mode */
-html.light [style*="background: rgba(255, 255, 255, 0.02"],
-html.light [style*="background:rgba(255,255,255,0.02"] {
-  background: rgba(0, 0, 0, 0.02) !important;
-}
-
-/* Color-mix backgrounds (status badges etc.) stay as-is, they work in both modes */
-
-/* Table row hover */
-html.light tr:hover td {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-/* Fix modals */
-html.light [style*="background: rgba(0, 0, 0, 0.6"] {
-  background: rgba(0, 0, 0, 0.4) !important;
-}
-
-/* Gradient overlays for amber/orange stay visible */
-html.light [style*="linear-gradient(135deg, #F59E0B"] {
-  color: #FFFFFF !important;
-}
-
 /* ── Base ── */
 
 body {
@@ -815,6 +513,92 @@ nav span[class*="uppercase"][class*="tracking-"] {
   border-radius: 24px;
   padding: 48px 32px;
   text-align: center;
+}
+
+/* Empty-State-Card: glass-card mit text-center + Icon → premium */
+.glass-card.p-12.text-center,
+.glass-card[class*="p-12"][class*="text-center"] {
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.04) 0%, rgba(255,255,255,0.015) 70%) !important;
+  border: 1px dashed rgba(255, 255, 255, 0.06) !important;
+}
+
+.glass-card.p-12.text-center > svg:first-child,
+.glass-card[class*="p-12"][class*="text-center"] > svg:first-child {
+  color: rgba(255, 255, 255, 0.18) !important;
+  filter: drop-shadow(0 0 24px rgba(212, 175, 55, 0.12));
+}
+
+/* ── Active Tab in Modals (Lead/Deal/Project/Personnel Tabs) ── */
+[role="dialog"] button[class*="bg-amber"][class*="text-bg"],
+[role="dialog"] button.bg-amber {
+  background: linear-gradient(135deg, #FCD34D 0%, #D4AF37 100%) !important;
+  color: #060816 !important;
+  box-shadow:
+    0 0 20px rgba(212, 175, 55, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  font-weight: 700;
+}
+
+/* Inactive tabs in modals */
+[role="dialog"] button[class*="rounded-full"][class*="text-text-dim"]:not([class*="bg-amber"]) {
+  color: rgba(255, 255, 255, 0.45) !important;
+  transition: color 0.2s ease;
+}
+
+[role="dialog"] button[class*="rounded-full"][class*="text-text-dim"]:hover:not([class*="bg-amber"]) {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* ── Loading Spinner premium glow ── */
+.animate-spin {
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.4));
+}
+
+/* ── Section labels (uppercase tracking) im Glass-Card Body ── */
+.glass-card h3.text-\[10px\][class*="uppercase"],
+.glass-card .text-\[10px\][class*="uppercase"][class*="tracking-"] {
+  color: rgba(255, 255, 255, 0.40);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+/* ── Mobile: Bento Grid spacing tweaks ── */
+@media (max-width: 640px) {
+  .premium-bento { gap: 12px; }
+  .premium-card { border-radius: 20px; }
+}
+
+/* ── Subtle entrance animations on first paint ── */
+.glass-card,
+.premium-card {
+  animation: premium-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Modal backdrop premium glow ── */
+.fixed.inset-0.z-\[90\][style*="rgba(6,8,12,0.7)"],
+.fixed.inset-0.z-\[100\][style*="rgba(6,8,12,0.7)"],
+[style*="rgba(6,8,12,0.7)"][class*="backdrop-blur"] {
+  background: radial-gradient(ellipse at center, rgba(6, 10, 30, 0.65) 0%, rgba(0, 0, 0, 0.85) 100%) !important;
+}
+
+/* ── Inputs: subtle focus glow ── */
+.glass-input:focus,
+input.glass-input:focus,
+textarea.glass-input:focus,
+select.glass-input:focus {
+  border-color: rgba(212, 175, 55, 0.40) !important;
+  box-shadow:
+    0 0 0 3px rgba(212, 175, 55, 0.08),
+    0 0 20px rgba(212, 175, 55, 0.10) !important;
+}
+
+/* ── Detail-Modal Header: gradient title ── */
+[role="dialog"] h2 {
+  background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.025em;
 }
 
 /* Status badges premium */
