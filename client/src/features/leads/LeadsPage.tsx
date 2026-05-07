@@ -444,8 +444,17 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
           : bVal.toLowerCase().localeCompare(aVal.toLowerCase(), 'de-CH')
       })
     }
+    // Heisse Leads: Eintraege mit Vor- UND Nachname zuoberst (stabil, behaelt Reihenfolge innerhalb Gruppe)
+    if (fixedTag === 'ka-heiss') {
+      result = [...result].sort((a, b) => {
+        const aHasName = !!(a.firstName?.trim() && a.lastName?.trim())
+        const bHasName = !!(b.firstName?.trim() && b.lastName?.trim())
+        if (aHasName === bHasName) return 0
+        return aHasName ? -1 : 1
+      })
+    }
     return result
-  }, [allLeads, tagFilter, searchQuery, sortBy, sortOrder, columnFilters])
+  }, [allLeads, tagFilter, searchQuery, sortBy, sortOrder, columnFilters, fixedTag])
 
   /* ── Handlers ── */
 

@@ -125,17 +125,22 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
         return
       }
 
-      // Leads mit Kontaktdaten + Tags laden
+      // Leads mit Kontaktdaten + Tags laden (Reihenfolge aus RPC beibehalten: Named zuoberst)
       const { data: tagData, error: tagErr } = await supabase
         .from('leads')
         .select('*, contact:contacts(*), lead_tags(tag_id)')
         .in('id', leadIds)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false })
 
       if (tagErr) { res.json({ data: [], total: 0, page, pageSize }); return }
 
-      const enriched = (tagData ?? []).map((lead: any) => ({
+      // Reihenfolge der RPC (Named-zuerst, dann created_at DESC) beibehalten
+      const orderMap = new Map<string, number>(leadIds.map((id: string, idx: number) => [id, idx]))
+      const sortedTagData = [...(tagData ?? [])].sort((a: any, b: any) =>
+        (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0)
+      )
+
+      const enriched = sortedTagData.map((lead: any) => ({
         ...lead,
         firstName: lead.contact?.first_name ?? null,
         lastName: lead.contact?.last_name ?? null,
