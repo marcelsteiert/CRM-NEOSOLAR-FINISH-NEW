@@ -1487,6 +1487,21 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
 
         {/* ── Footer Actions ── */}
         <div className="flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-3 sm:py-4 border-t border-border shrink-0 overflow-x-auto">
+          {/* Anrufen → tel:-Link + loggt Call als ANRUF */}
+          {lead?.phone && (
+            <a
+              href={`tel:${lead.phone}`}
+              onClick={async () => {
+                if (!lead) return
+                try { await api.post('/call-logs', { leadId: lead.id, result: 'ANRUF' }) } catch {}
+              }}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-[12px] font-semibold rounded-full shrink-0 transition-all hover:opacity-90"
+              style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)', color: '#34D399', border: '1px solid color-mix(in srgb, #34D399 25%, transparent)' }}
+            >
+              <Phone size={13} strokeWidth={1.8} />
+              Anrufen
+            </a>
+          )}
           {/* Nicht erreicht → loggt Call + setzt Tag (mit Debounce) */}
           <button
             type="button"
