@@ -159,7 +159,7 @@ export default function ProvisionPage() {
           </div>
 
           {isAdmin && provisionRaw && provisionRaw.provisions.length > 0 && (
-            <div className="relative">
+            <div className="relative print:hidden">
               <Eye size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" strokeWidth={2} />
               <select
                 value={viewUserId}
@@ -182,7 +182,7 @@ export default function ProvisionPage() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium rounded-2xl transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium rounded-2xl transition-all print:hidden"
             style={{
               background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))',
               border: '1px solid rgba(255, 255, 255, 0.06)',
@@ -211,49 +211,43 @@ export default function ProvisionPage() {
         </div>
       )}
 
-      {/* ── KPI Bento (3 cols) ── */}
-      <div className="premium-bento relative z-[1]">
-        <div className="col-span-12 sm:col-span-2 lg:col-span-4">
-          <KpiWidget
-            label="Abschlussvolumen"
-            value={`CHF ${(provision?.summary.totalValue ?? 0).toLocaleString('de-CH')}`}
-            icon={<TrendingUp size={16} strokeWidth={2} className="text-emerald-300" />}
-            iconBg="rgba(16, 185, 129, 0.12)"
-            sparkline={valueSpark}
-            sparklineColor="#10B981"
-            glow="emerald"
-            textGradient="emerald"
-            delay={0}
-          />
-        </div>
-        <div className="col-span-12 sm:col-span-2 lg:col-span-4">
-          <KpiWidget
-            label="Provision Total"
-            value={formatCHFExact(provision?.summary.totalProvision ?? 0)}
-            icon={<Coins size={16} strokeWidth={2} className="text-amber-300" />}
-            iconBg="rgba(212, 175, 55, 0.12)"
-            delta={Number(monthDelta.toFixed(1))}
-            deltaLabel="vs. Vormonat"
-            sparkline={provisionSpark}
-            sparklineColor="#D4AF37"
-            glow="gold"
-            textGradient="gold"
-            delay={80}
-          />
-        </div>
-        <div className="col-span-12 sm:col-span-2 lg:col-span-4">
-          <KpiWidget
-            label="Gewonnene Deals"
-            value={provision?.summary.totalDeals ?? 0}
-            icon={<FileText size={16} strokeWidth={2} className="text-blue-300" />}
-            iconBg="rgba(59, 130, 246, 0.12)"
-            sparkline={dealsSpark}
-            sparklineColor="#3B82F6"
-            glow="electric"
-            textGradient="electric"
-            delay={160}
-          />
-        </div>
+      {/* ── KPI-Grid (3 Hero-Stats) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 relative z-[1]">
+        <KpiWidget
+          label="Abschlussvolumen"
+          value={`CHF ${(provision?.summary.totalValue ?? 0).toLocaleString('de-CH')}`}
+          icon={<TrendingUp size={16} strokeWidth={2} className="text-emerald-300" />}
+          iconBg="rgba(16, 185, 129, 0.12)"
+          sparkline={valueSpark}
+          sparklineColor="#10B981"
+          glow="emerald"
+          textGradient="emerald"
+          delay={0}
+        />
+        <KpiWidget
+          label="Provision Total"
+          value={formatCHFExact(provision?.summary.totalProvision ?? 0)}
+          icon={<Coins size={16} strokeWidth={2} className="text-amber-300" />}
+          iconBg="rgba(212, 175, 55, 0.12)"
+          delta={Number(monthDelta.toFixed(1))}
+          deltaLabel="vs. Vormonat"
+          sparkline={provisionSpark}
+          sparklineColor="#D4AF37"
+          glow="gold"
+          textGradient="gold"
+          delay={80}
+        />
+        <KpiWidget
+          label="Gewonnene Deals"
+          value={provision?.summary.totalDeals ?? 0}
+          icon={<FileText size={16} strokeWidth={2} className="text-blue-300" />}
+          iconBg="rgba(59, 130, 246, 0.12)"
+          sparkline={dealsSpark}
+          sparklineColor="#3B82F6"
+          glow="electric"
+          textGradient="electric"
+          delay={160}
+        />
       </div>
 
       {/* ── Provisionen nach Verkäufer ── */}

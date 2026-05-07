@@ -679,12 +679,30 @@ main > div {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .glass-card {
+  .glass-card,
+  .premium-card {
     background: white !important;
     backdrop-filter: none !important;
     border: 1px solid #e5e7eb !important;
     box-shadow: none !important;
+    animation: none !important;
   }
-  .print\\:hidden { display: none !important; }
-  nav, aside, header, .print\\:hidden { display: none !important; }
+  .premium-glow-orb { display: none !important; }
+  .premium-gradient-text,
+  .premium-gradient-text-gold,
+  .premium-gradient-text-emerald,
+  .premium-gradient-text-electric {
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    color: #0F172A !important;
+  }
+  .print\\:hidden,
+  nav, aside, header { display: none !important; }
+  /* KPI grid auf Druck stapeln, damit Werte voll sichtbar sind */
+  .grid.md\\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  /* Ambient & dekorative Schatten ausschalten */
+  [class*="premium-card-"] { box-shadow: none !important; }
 }
