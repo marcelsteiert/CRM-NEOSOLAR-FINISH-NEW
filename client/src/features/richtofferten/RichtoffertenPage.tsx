@@ -308,7 +308,7 @@ export default function RichtoffertenPage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Richtofferten</h1>
+                <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">Richtofferten</h1>
                 <span
                   className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
                   style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)', color: '#F59E0B' }}

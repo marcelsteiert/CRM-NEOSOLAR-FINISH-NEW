@@ -125,7 +125,7 @@ export default function TasksPage() {
             </div>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Aufgaben</h1>
+                <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">Aufgaben</h1>
                 <span
                   className="inline-flex items-center justify-center h-[22px] px-2.5 rounded-full text-[11px] font-bold tabular-nums"
                   style={{ background: 'color-mix(in srgb, #34D399 12%, transparent)', color: '#34D399' }}

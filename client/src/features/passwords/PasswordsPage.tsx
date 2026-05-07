@@ -107,7 +107,7 @@ export default function PasswordsPage() {
             <KeyRound size={20} className="text-amber" strokeWidth={1.8} />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Meine Passwörter</h1>
+            <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">Meine Passwörter</h1>
             <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">{passwords.length} gespeicherte Zugänge</p>
           </div>
         </div>

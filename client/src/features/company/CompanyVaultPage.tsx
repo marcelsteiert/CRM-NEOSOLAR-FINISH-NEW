@@ -6,7 +6,7 @@ export default function CompanyVaultPage() {
     <div className="space-y-5 max-w-[1100px]">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight flex items-center gap-2">
             <Building2 size={20} strokeWidth={1.8} />
             Firmenablage
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, #F87171 12%, transparent)', color: '#F87171' }}>

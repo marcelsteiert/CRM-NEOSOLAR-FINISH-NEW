@@ -424,7 +424,7 @@ export default function CallcenterPage() {
             <Headphones size={20} className="text-amber" strokeWidth={1.8} />
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-[-0.02em]">Callcenter</h1>
+            <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">Callcenter</h1>
             <p className="text-[12px] text-text-sec mt-0.5 hidden sm:block">Lead-Konvertierung und Termin-Performance</p>
           </div>
         </div>

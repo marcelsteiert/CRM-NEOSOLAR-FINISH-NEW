@@ -79,7 +79,7 @@ export default function ExportPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight flex items-center gap-2">
             <Download size={20} strokeWidth={1.8} />
             Datenexport
           </h1>

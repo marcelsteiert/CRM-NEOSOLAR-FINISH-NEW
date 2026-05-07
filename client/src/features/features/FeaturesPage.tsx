@@ -91,7 +91,7 @@ export default function FeaturesPage() {
             <Puzzle size={20} className="text-violet-400" strokeWidth={1.8} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-[-0.02em]">Features</h1>
+            <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.025em] premium-gradient-text leading-tight">Features</h1>
             <p className="text-[12px] text-text-sec mt-0.5">
               {enabledCount} von {totalCount} Modulen aktiv{isAdmin ? ' · Sidebar wird automatisch angepasst' : ' · Nur Admins koennen aendern'}
             </p>
