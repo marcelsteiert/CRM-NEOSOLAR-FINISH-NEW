@@ -721,6 +721,20 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
                   <button type="button" onClick={() => setShowLostConfirm(true)} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-red hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(248,113,113,0.15)' }}>
                     <XCircle size={14} strokeWidth={1.8} />Verloren
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      addActivity.mutate({ dealId: deal.id, type: 'CALL', text: 'No Show – Kunde reagiert nicht auf das Angebot' })
+                      updateDeal.mutate({ id: deal.id, stage: 'FOLLOW_UP' as DealStage })
+                      setSuccessMsg('Als No Show markiert – Follow-Up faellig')
+                      setTimeout(() => setSuccessMsg(''), 2500)
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-orange-300 hover:bg-surface-hover transition-colors"
+                    style={{ border: '1px solid rgba(251,146,60,0.20)' }}
+                    title="Kunde reagiert nicht – Angebot bleibt offen, Follow-Up wird gesetzt"
+                  >
+                    <AlertTriangle size={14} strokeWidth={1.8} />No Show
+                  </button>
                 </>
               )}
               <a href={`tel:${deal.contactPhone}`} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] font-semibold text-text-sec hover:text-text hover:bg-surface-hover transition-colors" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
