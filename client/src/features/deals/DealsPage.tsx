@@ -470,7 +470,7 @@ export default function DealsPage() {
     assignedTo,
     search: searchQuery.trim() || undefined,
     sortBy, sortOrder,
-    pageSize: 100,
+    pageSize: 500,
   })
 
   const allDeals: Deal[] = dealsResponse?.data ?? []
