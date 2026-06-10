@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Search, AlertTriangle, ExternalLink, FileSpreadsheet } from 'lucide-react'
+import { Search, AlertTriangle, ExternalLink, FileSpreadsheet, ChevronDown, ChevronRight, Minimize2, Maximize2 } from 'lucide-react'
 import {
   useTrackedProjects, useUpdateConstruction,
   type TrackedProject, type Construction,
@@ -28,6 +28,17 @@ export default function BaustellenTable({ onOpenProject }: Props) {
   const [filterMissing, setFilterMissing] = useState(false)
   const [filterBlocked, setFilterBlocked] = useState(false)
   const [filterSinaMissing, setFilterSinaMissing] = useState(false)
+  const [compact, setCompact] = useState(false)
+  const [expandedPronovo, setExpandedPronovo] = useState<Set<string>>(new Set())
+
+  const togglePronovo = (id: string) => {
+    setExpandedPronovo((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const projects = useMemo(() => {
     let items = data?.data ?? []
@@ -108,6 +119,17 @@ export default function BaustellenTable({ onOpenProject }: Props) {
         </button>
         <button
           type="button"
+          onClick={() => setCompact(!compact)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+            compact ? 'bg-amber-soft text-amber' : 'text-text-dim hover:text-text hover:bg-surface-hover'
+          }`}
+          title={compact ? 'Details anzeigen (Daten/Notizen)' : 'Kompakt – nur Pills anzeigen'}
+        >
+          {compact ? <Maximize2 size={13} strokeWidth={1.8} /> : <Minimize2 size={13} strokeWidth={1.8} />}
+          {compact ? 'Detail' : 'Kompakt'}
+        </button>
+        <button
+          type="button"
           onClick={() => exportBaustellenToExcel(projects)}
           disabled={projects.length === 0}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold text-emerald-300 hover:bg-emerald-400/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
@@ -132,6 +154,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
               <thead className="sticky top-0 z-20">
                 <tr className="border-b border-border bg-bg-sub">
                   <Th sticky>Kunde / Adresse</Th>
+                  <Th>GBA</Th>
                   <Th>Baubewilligung</Th>
                   <Th>TAG eingereicht</Th>
                   <Th>TAG bewilligt</Th>
@@ -141,7 +164,9 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                   <Th>DC ausgeführt</Th>
                   <Th>AC-Termin</Th>
                   <Th>AC installiert</Th>
-                  <Th>GBA / SINA / MPP / Pronovo</Th>
+                  <Th>SINA</Th>
+                  <Th>MPP</Th>
+                  <Th>Pronovo</Th>
                   <Th>Fehlt etwas</Th>
                   <Th>Status</Th>
                 </tr>
@@ -176,37 +201,41 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                       </Td>
 
                       <Td>
+                        <Pill p={p} field="gba" dateField="gbaAm" />
+                      </Td>
+
+                      <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="baubewilligung" dateField="baubewilligungAm" />
-                          <DateCell value={c?.baubewilligungAm ?? null} onChange={(d) => patch(p.id, { baubewilligungAm: d })} />
+                          {!compact && <DateCell value={c?.baubewilligungAm ?? null} onChange={(d) => patch(p.id, { baubewilligungAm: d })} />}
                         </div>
                       </Td>
 
                       <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="tagEingereicht" dateField="tagEingereichtAm" />
-                          <DateCell value={c?.tagEingereichtAm ?? null} onChange={(d) => patch(p.id, { tagEingereichtAm: d })} />
+                          {!compact && <DateCell value={c?.tagEingereichtAm ?? null} onChange={(d) => patch(p.id, { tagEingereichtAm: d })} />}
                         </div>
                       </Td>
 
                       <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="tagBewilligt" dateField="tagBewilligtAm" />
-                          <TextCell value={c?.tagNote ?? null} onSave={(v) => patch(p.id, { tagNote: v })} placeholder="Notiz..." />
+                          {!compact && <TextCell value={c?.tagNote ?? null} onSave={(v) => patch(p.id, { tagNote: v })} placeholder="Notiz..." />}
                         </div>
                       </Td>
 
                       <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="iaEingereicht" dateField="iaEingereichtAm" />
-                          <DateCell value={c?.iaEingereichtAm ?? null} onChange={(d) => patch(p.id, { iaEingereichtAm: d })} />
+                          {!compact && <DateCell value={c?.iaEingereichtAm ?? null} onChange={(d) => patch(p.id, { iaEingereichtAm: d })} />}
                         </div>
                       </Td>
 
                       <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="iaBewilligt" dateField="iaBewilligtAm" />
-                          <TextCell value={c?.iaNote ?? null} onSave={(v) => patch(p.id, { iaNote: v })} placeholder="Notiz..." />
+                          {!compact && <TextCell value={c?.iaNote ?? null} onSave={(v) => patch(p.id, { iaNote: v })} placeholder="Notiz..." />}
                         </div>
                       </Td>
 
@@ -217,7 +246,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                       <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="dcMontageAusgefuehrt" dateField="dcMontageAm" />
-                          <DateCell value={c?.dcMontageAm ?? null} onChange={(d) => patch(p.id, { dcMontageAm: d })} />
+                          {!compact && <DateCell value={c?.dcMontageAm ?? null} onChange={(d) => patch(p.id, { dcMontageAm: d })} />}
                         </div>
                       </Td>
 
@@ -228,45 +257,38 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                       <Td>
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="acInstalliert" dateField="acInstalliertAm" />
-                          <DateCell value={c?.acInstalliertAm ?? null} onChange={(d) => patch(p.id, { acInstalliertAm: d })} />
+                          {!compact && <DateCell value={c?.acInstalliertAm ?? null} onChange={(d) => patch(p.id, { acInstalliertAm: d })} />}
                         </div>
                       </Td>
 
                       <Td>
-                        <div className="grid grid-cols-2 gap-1 min-w-[170px]">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">GBA</span>
-                            <StatusPill
-                              value={!!c?.gba}
-                              onChange={(next, dateIso) => patch(p.id, { gba: next, gbaAm: dateIso })}
-                              date={c?.gbaAm ?? null}
-                            />
+                        <Pill p={p} field="sina" dateField="sinaAm" />
+                      </Td>
+
+                      <Td>
+                        <Pill p={p} field="mpp" dateField="mppAm" />
+                      </Td>
+
+                      <Td>
+                        <button
+                          type="button"
+                          onClick={() => togglePronovo(p.id)}
+                          className="flex items-center gap-1 text-[10px] font-bold uppercase text-text-dim hover:text-amber transition-colors"
+                          title="Pronovo Details ein-/ausklappen"
+                        >
+                          {expandedPronovo.has(p.id) ? <ChevronDown size={11} strokeWidth={2} /> : <ChevronRight size={11} strokeWidth={2} />}
+                          <StatusPill
+                            value={!!c?.pronovo}
+                            onChange={(next, dateIso) => patch(p.id, { pronovo: next, pronovoAm: dateIso })}
+                            date={c?.pronovoAm ?? null}
+                          />
+                        </button>
+                        {expandedPronovo.has(p.id) && (
+                          <div className="mt-1.5 p-2 rounded text-[10px]" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <div className="text-text-dim mb-0.5">Pronovo Datum:</div>
+                            <DateCell value={c?.pronovoAm ?? null} onChange={(d) => patch(p.id, { pronovoAm: d })} />
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">SINA</span>
-                            <StatusPill
-                              value={!!c?.sina}
-                              onChange={(next, dateIso) => patch(p.id, { sina: next, sinaAm: dateIso })}
-                              date={c?.sinaAm ?? null}
-                            />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">MPP</span>
-                            <StatusPill
-                              value={!!c?.mpp}
-                              onChange={(next, dateIso) => patch(p.id, { mpp: next, mppAm: dateIso })}
-                              date={c?.mppAm ?? null}
-                            />
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">Pronovo</span>
-                            <StatusPill
-                              value={!!c?.pronovo}
-                              onChange={(next, dateIso) => patch(p.id, { pronovo: next, pronovoAm: dateIso })}
-                              date={c?.pronovoAm ?? null}
-                            />
-                          </div>
-                        </div>
+                        )}
                       </Td>
 
                       <Td>
