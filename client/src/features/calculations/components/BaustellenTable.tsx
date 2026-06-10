@@ -27,6 +27,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
   const [search, setSearch] = useState('')
   const [filterMissing, setFilterMissing] = useState(false)
   const [filterBlocked, setFilterBlocked] = useState(false)
+  const [filterSinaMissing, setFilterSinaMissing] = useState(false)
 
   const projects = useMemo(() => {
     let items = data?.data ?? []
@@ -36,6 +37,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
     }
     if (filterMissing) items = items.filter((p) => !!p.construction?.fehltEtwas)
     if (filterBlocked) items = items.filter((p) => p.construction && !p.construction.acInstalliert)
+    if (filterSinaMissing) items = items.filter((p) => p.construction && !p.construction.sina)
     // Sortier-Regel:
     //   1. Projekte ohne displayOrder (NEU) → ganz oben, neueste zuerst (createdAt DESC)
     //   2. Projekte mit displayOrder → in dieser Reihenfolge (Excel-Position ASC)
@@ -49,7 +51,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
       if (ob == null) return 1    // b ist NEU → oben
       return oa - ob              // beide haben Order → Excel-Reihenfolge
     })
-  }, [data, search, filterMissing, filterBlocked])
+  }, [data, search, filterMissing, filterBlocked, filterSinaMissing])
 
   const patch = (projectId: string, p: Partial<Construction>) =>
     updateConstr.mutate({ projectId, patch: p })
@@ -93,6 +95,16 @@ export default function BaustellenTable({ onOpenProject }: Props) {
           }`}
         >
           Nur offene Baustellen
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterSinaMissing(!filterSinaMissing)}
+          className={`px-3 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+            filterSinaMissing ? 'bg-red/10 text-red' : 'text-text-dim hover:text-text hover:bg-surface-hover'
+          }`}
+          style={filterSinaMissing ? { background: 'color-mix(in srgb, #F87171 14%, transparent)', color: '#F87171' } : undefined}
+        >
+          SINA fehlt
         </button>
         <button
           type="button"
