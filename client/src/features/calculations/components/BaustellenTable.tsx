@@ -129,6 +129,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                   <Th>DC ausgeführt</Th>
                   <Th>AC-Termin</Th>
                   <Th>AC installiert</Th>
+                  <Th>GBA / SINA / MPP / Pronovo</Th>
                   <Th>Fehlt etwas</Th>
                   <Th>Status</Th>
                 </tr>
@@ -216,6 +217,43 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                         <div className="flex flex-col gap-0.5">
                           <Pill p={p} field="acInstalliert" dateField="acInstalliertAm" />
                           <DateCell value={c?.acInstalliertAm ?? null} onChange={(d) => patch(p.id, { acInstalliertAm: d })} />
+                        </div>
+                      </Td>
+
+                      <Td>
+                        <div className="grid grid-cols-2 gap-1 min-w-[170px]">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">GBA</span>
+                            <StatusPill
+                              value={!!c?.gba}
+                              onChange={(next, dateIso) => patch(p.id, { gba: next, gbaAm: dateIso })}
+                              date={c?.gbaAm ?? null}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">SINA</span>
+                            <StatusPill
+                              value={!!c?.sina}
+                              onChange={(next, dateIso) => patch(p.id, { sina: next, sinaAm: dateIso })}
+                              date={c?.sinaAm ?? null}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">MPP</span>
+                            <StatusPill
+                              value={!!c?.mpp}
+                              onChange={(next, dateIso) => patch(p.id, { mpp: next, mppAm: dateIso })}
+                              date={c?.mppAm ?? null}
+                            />
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-text-dim uppercase w-12">Pronovo</span>
+                            <StatusPill
+                              value={!!c?.pronovo}
+                              onChange={(next, dateIso) => patch(p.id, { pronovo: next, pronovoAm: dateIso })}
+                              date={c?.pronovoAm ?? null}
+                            />
+                          </div>
                         </div>
                       </Td>
 

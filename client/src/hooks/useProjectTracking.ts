@@ -28,6 +28,14 @@ export interface Construction {
   acTermin: string | null
   acInstalliert: boolean
   acInstalliertAm: string | null
+  gba: boolean
+  gbaAm: string | null
+  sina: boolean
+  sinaAm: string | null
+  mpp: boolean
+  mppAm: string | null
+  pronovo: boolean
+  pronovoAm: string | null
   fehltEtwas: string | null
   bemerkung: string | null
   createdAt: string
@@ -121,6 +129,14 @@ const constructionFieldMap: Record<string, string> = {
   acTermin: 'ac_termin',
   acInstalliert: 'ac_installiert',
   acInstalliertAm: 'ac_installiert_am',
+  gba: 'gba',
+  gbaAm: 'gba_am',
+  sina: 'sina',
+  sinaAm: 'sina_am',
+  mpp: 'mpp',
+  mppAm: 'mpp_am',
+  pronovo: 'pronovo',
+  pronovoAm: 'pronovo_am',
   fehltEtwas: 'fehlt_etwas',
   bemerkung: 'bemerkung',
 }
