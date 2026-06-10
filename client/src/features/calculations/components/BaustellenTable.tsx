@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
-import { Search, AlertTriangle, ExternalLink } from 'lucide-react'
+import { Search, AlertTriangle, ExternalLink, FileSpreadsheet } from 'lucide-react'
 import {
   useTrackedProjects, useUpdateConstruction,
   type TrackedProject, type Construction,
 } from '@/hooks/useProjectTracking'
 import StatusPill, { DateCell, TextCell } from './StatusPill'
+import { exportBaustellenToExcel } from './exportBaustellen'
 
 const formatAddr = (p: TrackedProject) => {
   const c = p.contact
@@ -92,6 +93,17 @@ export default function BaustellenTable({ onOpenProject }: Props) {
           }`}
         >
           Nur offene Baustellen
+        </button>
+        <button
+          type="button"
+          onClick={() => exportBaustellenToExcel(projects)}
+          disabled={projects.length === 0}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold text-emerald-300 hover:bg-emerald-400/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ border: '1px solid rgba(52,211,153,0.20)' }}
+          title="Aktuelle gefilterte Liste als Excel herunterladen"
+        >
+          <FileSpreadsheet size={13} strokeWidth={1.8} />
+          Excel
         </button>
       </div>
 
