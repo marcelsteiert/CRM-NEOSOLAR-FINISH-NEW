@@ -30,6 +30,17 @@ export default function BaustellenTable({ onOpenProject }: Props) {
   const [filterSinaMissing, setFilterSinaMissing] = useState(false)
   const [compact, setCompact] = useState(false)
   const [expandedPronovo, setExpandedPronovo] = useState<Set<string>>(new Set())
+  // Spalten-Gruppen: Welche sind eingeklappt? Default alle offen
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<'bewilligung' | 'montage' | 'inbetrieb'>>(new Set())
+  const toggleGroup = (g: 'bewilligung' | 'montage' | 'inbetrieb') => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(g)) next.delete(g)
+      else next.add(g)
+      return next
+    })
+  }
+  const isCollapsed = (g: 'bewilligung' | 'montage' | 'inbetrieb') => collapsedGroups.has(g)
 
   const togglePronovo = (id: string) => {
     setExpandedPronovo((prev) => {
@@ -152,21 +163,68 @@ export default function BaustellenTable({ onOpenProject }: Props) {
           <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
             <table className="w-full text-[11px]">
               <thead className="sticky top-0 z-20">
+                {/* Gruppen-Header */}
+                <tr className="border-b border-border/50 bg-bg-sub">
+                  <th className="sticky left-0 bg-bg-sub z-30" />
+                  <th />
+                  <GroupTh
+                    label="Bewilligungen"
+                    color="#60A5FA"
+                    collapsed={isCollapsed('bewilligung')}
+                    onToggle={() => toggleGroup('bewilligung')}
+                    colSpan={isCollapsed('bewilligung') ? 1 : 5}
+                  />
+                  <GroupTh
+                    label="Montage"
+                    color="#F59E0B"
+                    collapsed={isCollapsed('montage')}
+                    onToggle={() => toggleGroup('montage')}
+                    colSpan={isCollapsed('montage') ? 1 : 4}
+                  />
+                  <GroupTh
+                    label="Inbetriebnahme"
+                    color="#34D399"
+                    collapsed={isCollapsed('inbetrieb')}
+                    onToggle={() => toggleGroup('inbetrieb')}
+                    colSpan={isCollapsed('inbetrieb') ? 1 : 3}
+                  />
+                  <th />
+                  <th />
+                </tr>
+                {/* Spalten-Header */}
                 <tr className="border-b border-border bg-bg-sub">
                   <Th sticky>Kunde / Adresse</Th>
                   <Th>GBA</Th>
-                  <Th>Baubewilligung</Th>
-                  <Th>TAG eingereicht</Th>
-                  <Th>TAG bewilligt</Th>
-                  <Th>IA eingereicht</Th>
-                  <Th>IA bewilligt</Th>
-                  <Th>DC-Termin</Th>
-                  <Th>DC ausgeführt</Th>
-                  <Th>AC-Termin</Th>
-                  <Th>AC installiert</Th>
-                  <Th>SINA</Th>
-                  <Th>MPP</Th>
-                  <Th>Pronovo</Th>
+                  {isCollapsed('bewilligung') ? (
+                    <th className="px-2 py-2" />
+                  ) : (
+                    <>
+                      <Th>Baubewilligung</Th>
+                      <Th>TAG eingereicht</Th>
+                      <Th>TAG bewilligt</Th>
+                      <Th>IA eingereicht</Th>
+                      <Th>IA bewilligt</Th>
+                    </>
+                  )}
+                  {isCollapsed('montage') ? (
+                    <th className="px-2 py-2" />
+                  ) : (
+                    <>
+                      <Th>DC-Termin</Th>
+                      <Th>DC ausgeführt</Th>
+                      <Th>AC-Termin</Th>
+                      <Th>AC installiert</Th>
+                    </>
+                  )}
+                  {isCollapsed('inbetrieb') ? (
+                    <th className="px-2 py-2" />
+                  ) : (
+                    <>
+                      <Th>SINA</Th>
+                      <Th>MPP</Th>
+                      <Th>Pronovo</Th>
+                    </>
+                  )}
                   <Th>Fehlt etwas</Th>
                   <Th>Status</Th>
                 </tr>
@@ -204,92 +262,116 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                         <Pill p={p} field="gba" dateField="gbaAm" />
                       </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="baubewilligung" dateField="baubewilligungAm" />
-                          {!compact && <DateCell value={c?.baubewilligungAm ?? null} onChange={(d) => patch(p.id, { baubewilligungAm: d })} />}
-                        </div>
-                      </Td>
+                      {isCollapsed('bewilligung') ? (
+                        <Td>
+                          <BewilligungSummary c={c} />
+                        </Td>
+                      ) : (
+                        <>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="baubewilligung" dateField="baubewilligungAm" />
+                              {!compact && <DateCell value={c?.baubewilligungAm ?? null} onChange={(d) => patch(p.id, { baubewilligungAm: d })} />}
+                            </div>
+                          </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="tagEingereicht" dateField="tagEingereichtAm" />
-                          {!compact && <DateCell value={c?.tagEingereichtAm ?? null} onChange={(d) => patch(p.id, { tagEingereichtAm: d })} />}
-                        </div>
-                      </Td>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="tagEingereicht" dateField="tagEingereichtAm" />
+                              {!compact && <DateCell value={c?.tagEingereichtAm ?? null} onChange={(d) => patch(p.id, { tagEingereichtAm: d })} />}
+                            </div>
+                          </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="tagBewilligt" dateField="tagBewilligtAm" />
-                          {!compact && <TextCell value={c?.tagNote ?? null} onSave={(v) => patch(p.id, { tagNote: v })} placeholder="Notiz..." />}
-                        </div>
-                      </Td>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="tagBewilligt" dateField="tagBewilligtAm" />
+                              {!compact && <TextCell value={c?.tagNote ?? null} onSave={(v) => patch(p.id, { tagNote: v })} placeholder="Notiz..." />}
+                            </div>
+                          </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="iaEingereicht" dateField="iaEingereichtAm" />
-                          {!compact && <DateCell value={c?.iaEingereichtAm ?? null} onChange={(d) => patch(p.id, { iaEingereichtAm: d })} />}
-                        </div>
-                      </Td>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="iaEingereicht" dateField="iaEingereichtAm" />
+                              {!compact && <DateCell value={c?.iaEingereichtAm ?? null} onChange={(d) => patch(p.id, { iaEingereichtAm: d })} />}
+                            </div>
+                          </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="iaBewilligt" dateField="iaBewilligtAm" />
-                          {!compact && <TextCell value={c?.iaNote ?? null} onSave={(v) => patch(p.id, { iaNote: v })} placeholder="Notiz..." />}
-                        </div>
-                      </Td>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="iaBewilligt" dateField="iaBewilligtAm" />
+                              {!compact && <TextCell value={c?.iaNote ?? null} onSave={(v) => patch(p.id, { iaNote: v })} placeholder="Notiz..." />}
+                            </div>
+                          </Td>
+                        </>
+                      )}
 
-                      <Td>
-                        <DateCell value={c?.dcMontageTermin ?? null} onChange={(d) => patch(p.id, { dcMontageTermin: d })} placeholder="Termin..." />
-                      </Td>
+                      {isCollapsed('montage') ? (
+                        <Td>
+                          <MontageSummary c={c} />
+                        </Td>
+                      ) : (
+                        <>
+                          <Td>
+                            <DateCell value={c?.dcMontageTermin ?? null} onChange={(d) => patch(p.id, { dcMontageTermin: d })} placeholder="Termin..." />
+                          </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="dcMontageAusgefuehrt" dateField="dcMontageAm" />
-                          {!compact && <DateCell value={c?.dcMontageAm ?? null} onChange={(d) => patch(p.id, { dcMontageAm: d })} />}
-                        </div>
-                      </Td>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="dcMontageAusgefuehrt" dateField="dcMontageAm" />
+                              {!compact && <DateCell value={c?.dcMontageAm ?? null} onChange={(d) => patch(p.id, { dcMontageAm: d })} />}
+                            </div>
+                          </Td>
 
-                      <Td>
-                        <DateCell value={c?.acTermin ?? null} onChange={(d) => patch(p.id, { acTermin: d })} placeholder="Termin..." />
-                      </Td>
+                          <Td>
+                            <DateCell value={c?.acTermin ?? null} onChange={(d) => patch(p.id, { acTermin: d })} placeholder="Termin..." />
+                          </Td>
 
-                      <Td>
-                        <div className="flex flex-col gap-0.5">
-                          <Pill p={p} field="acInstalliert" dateField="acInstalliertAm" />
-                          {!compact && <DateCell value={c?.acInstalliertAm ?? null} onChange={(d) => patch(p.id, { acInstalliertAm: d })} />}
-                        </div>
-                      </Td>
+                          <Td>
+                            <div className="flex flex-col gap-0.5">
+                              <Pill p={p} field="acInstalliert" dateField="acInstalliertAm" />
+                              {!compact && <DateCell value={c?.acInstalliertAm ?? null} onChange={(d) => patch(p.id, { acInstalliertAm: d })} />}
+                            </div>
+                          </Td>
+                        </>
+                      )}
 
-                      <Td>
-                        <Pill p={p} field="sina" dateField="sinaAm" />
-                      </Td>
+                      {isCollapsed('inbetrieb') ? (
+                        <Td>
+                          <InbetriebSummary c={c} />
+                        </Td>
+                      ) : (
+                        <>
+                          <Td>
+                            <Pill p={p} field="sina" dateField="sinaAm" />
+                          </Td>
 
-                      <Td>
-                        <Pill p={p} field="mpp" dateField="mppAm" />
-                      </Td>
+                          <Td>
+                            <Pill p={p} field="mpp" dateField="mppAm" />
+                          </Td>
 
-                      <Td>
-                        <button
-                          type="button"
-                          onClick={() => togglePronovo(p.id)}
-                          className="flex items-center gap-1 text-[10px] font-bold uppercase text-text-dim hover:text-amber transition-colors"
-                          title="Pronovo Details ein-/ausklappen"
-                        >
-                          {expandedPronovo.has(p.id) ? <ChevronDown size={11} strokeWidth={2} /> : <ChevronRight size={11} strokeWidth={2} />}
-                          <StatusPill
-                            value={!!c?.pronovo}
-                            onChange={(next, dateIso) => patch(p.id, { pronovo: next, pronovoAm: dateIso })}
-                            date={c?.pronovoAm ?? null}
-                          />
-                        </button>
-                        {expandedPronovo.has(p.id) && (
-                          <div className="mt-1.5 p-2 rounded text-[10px]" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div className="text-text-dim mb-0.5">Pronovo Datum:</div>
-                            <DateCell value={c?.pronovoAm ?? null} onChange={(d) => patch(p.id, { pronovoAm: d })} />
-                          </div>
-                        )}
-                      </Td>
+                          <Td>
+                            <button
+                              type="button"
+                              onClick={() => togglePronovo(p.id)}
+                              className="flex items-center gap-1 text-[10px] font-bold uppercase text-text-dim hover:text-amber transition-colors"
+                              title="Pronovo Details ein-/ausklappen"
+                            >
+                              {expandedPronovo.has(p.id) ? <ChevronDown size={11} strokeWidth={2} /> : <ChevronRight size={11} strokeWidth={2} />}
+                              <StatusPill
+                                value={!!c?.pronovo}
+                                onChange={(next, dateIso) => patch(p.id, { pronovo: next, pronovoAm: dateIso })}
+                                date={c?.pronovoAm ?? null}
+                              />
+                            </button>
+                            {expandedPronovo.has(p.id) && (
+                              <div className="mt-1.5 p-2 rounded text-[10px]" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <div className="text-text-dim mb-0.5">Pronovo Datum:</div>
+                                <DateCell value={c?.pronovoAm ?? null} onChange={(d) => patch(p.id, { pronovoAm: d })} />
+                              </div>
+                            )}
+                          </Td>
+                        </>
+                      )}
 
                       <Td>
                         <div className="flex items-center gap-1 min-w-[120px]">
@@ -341,5 +423,63 @@ function Td({ children, sticky }: { children: React.ReactNode; sticky?: boolean 
     >
       {children}
     </td>
+  )
+}
+
+function GroupTh({ label, color, collapsed, onToggle, colSpan }: {
+  label: string; color: string; collapsed: boolean; onToggle: () => void; colSpan: number
+}) {
+  return (
+    <th colSpan={colSpan} className="px-2 py-1.5 text-left" style={{ background: `color-mix(in srgb, ${color} 6%, transparent)` }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] hover:opacity-80 transition-opacity"
+        style={{ color }}
+        title={collapsed ? `${label} ausklappen` : `${label} einklappen`}
+      >
+        {collapsed ? <ChevronRight size={11} strokeWidth={2.5} /> : <ChevronDown size={11} strokeWidth={2.5} />}
+        {label}
+      </button>
+    </th>
+  )
+}
+
+function StatusDot({ value, label }: { value: boolean | null | undefined; label: string }) {
+  const color = value === true ? '#34D399' : value === false ? '#F87171' : 'rgba(255,255,255,0.15)'
+  return (
+    <div className="flex items-center gap-1" title={label}>
+      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+      <span className="text-[9px] font-semibold text-text-dim uppercase">{label}</span>
+    </div>
+  )
+}
+
+function BewilligungSummary({ c }: { c: any }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[100px]">
+      <StatusDot value={c?.baubewilligung} label="Baubew." />
+      <StatusDot value={c?.tagEingereicht && c?.tagBewilligt ? true : (c?.tagEingereicht === false && c?.tagBewilligt === false ? false : null)} label="TAG" />
+      <StatusDot value={c?.iaEingereicht && c?.iaBewilligt ? true : (c?.iaEingereicht === false && c?.iaBewilligt === false ? false : null)} label="IA" />
+    </div>
+  )
+}
+
+function MontageSummary({ c }: { c: any }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[100px]">
+      <StatusDot value={c?.dcMontageAusgefuehrt} label="DC" />
+      <StatusDot value={c?.acInstalliert} label="AC" />
+    </div>
+  )
+}
+
+function InbetriebSummary({ c }: { c: any }) {
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[100px]">
+      <StatusDot value={c?.sina} label="SINA" />
+      <StatusDot value={c?.mpp} label="MPP" />
+      <StatusDot value={c?.pronovo} label="Pronovo" />
+    </div>
   )
 }
