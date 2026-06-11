@@ -49,6 +49,9 @@ const createDealSchema = z.object({
   expectedCloseDate: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
+  callStatus: z.string().nullable().optional(),
+  callNote: z.string().nullable().optional(),
+  lastCalledAt: z.string().nullable().optional(),
 })
 
 const updateDealSchema = createDealSchema.partial()
@@ -437,9 +440,30 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
     if (u.followUpDate !== undefined) updates.follow_up_date = u.followUpDate ?? null
     if (u.expectedCloseDate !== undefined) updates.expected_close_date = u.expectedCloseDate ?? null
     if (u.notes !== undefined) updates.notes = u.notes ?? null
+    if (u.callNote !== undefined) updates.call_note = u.callNote ?? null
+    if (u.lastCalledAt !== undefined) updates.last_called_at = u.lastCalledAt ?? null
 
     // Immer updated_at setzen damit Supabase min. 1 Feld hat
     updates.updated_at = new Date().toISOString()
+
+    // Call-Status Auto-Sync auf Deal-Stage (bidirektional ueber Anrufliste)
+    if (u.callStatus !== undefined) {
+      updates.call_status = u.callStatus ?? null
+      const cs = u.callStatus
+      if (cs === 'VERLOREN' || cs === 'KEIN_INTERESSE') {
+        updates.stage = 'VERLOREN'
+        updates.closed_at = new Date().toISOString()
+        updates.win_probability = 0
+      } else if (cs === 'GEWONNEN') {
+        updates.stage = 'GEWONNEN'
+        updates.closed_at = new Date().toISOString()
+        updates.win_probability = 100
+      } else if (cs === 'TERMIN' && (oldDeal?.stage === 'GESENDET' || oldDeal?.stage === 'ERSTELLT' || oldDeal?.stage === 'FOLLOW_UP')) {
+        updates.stage = 'VERHANDLUNG'
+      } else if (cs === 'RUECKRUF' && oldDeal?.stage === 'GESENDET') {
+        updates.stage = 'FOLLOW_UP'
+      }
+    }
 
     if (u.stage !== undefined) {
       updates.stage = u.stage

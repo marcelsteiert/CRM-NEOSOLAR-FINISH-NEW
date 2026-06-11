@@ -48,6 +48,10 @@ export interface Deal {
   updatedAt: string
   closedAt: string | null
   deletedAt: string | null
+  callStatus: string | null
+  callNote: string | null
+  lastCalledAt: string | null
+  aiSummary?: string | null
 }
 
 export interface DealStats {

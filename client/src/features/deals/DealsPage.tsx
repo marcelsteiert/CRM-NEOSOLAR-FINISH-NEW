@@ -17,6 +17,7 @@ import {
   Users,
   LayoutGrid,
   List,
+  PhoneCall,
 } from 'lucide-react'
 import {
   useDeals,
@@ -40,6 +41,7 @@ import { useDealKanbanColumns, type DealKanbanColumn } from '@/hooks/useAdmin'
 import DealTable from './components/DealTable'
 import DealDetailModal from './components/DealDetailModal'
 import DealCreateDialog from './components/DealCreateDialog'
+import AnruflisteView from './components/AnruflisteView'
 import { useSearchParams } from 'react-router-dom'
 
 /* ── Filter Types ── */
@@ -422,7 +424,7 @@ function DealKanbanView({ deals, users, onSelect, columns }: { deals: Deal[]; us
 
 /* ── View Mode Type ── */
 
-type ViewMode = 'kanban' | 'list'
+type ViewMode = 'kanban' | 'list' | 'anrufliste'
 
 /* ── Main Component ── */
 
@@ -556,6 +558,17 @@ export default function DealsPage() {
               >
                 <List size={15} strokeWidth={1.8} />
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('anrufliste')}
+                className={[
+                  'p-2 rounded-[8px] transition-all',
+                  viewMode === 'anrufliste' ? 'bg-violet-400/10 text-violet-400' : 'text-text-dim hover:text-text',
+                ].join(' ')}
+                title="Anrufliste"
+              >
+                <PhoneCall size={15} strokeWidth={1.8} />
+              </button>
             </div>
 
             {canViewAll && (
@@ -633,7 +646,9 @@ export default function DealsPage() {
         </div>
 
         {/* Content */}
-        {isLoading ? <LoadingSkeleton /> : isError ? (
+        {viewMode === 'anrufliste' ? (
+          <AnruflisteView onOpenDeal={(id) => setSelectedDealId(id)} />
+        ) : isLoading ? <LoadingSkeleton /> : isError ? (
           <ErrorState message={error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten.'} onRetry={() => refetch()} />
         ) : viewMode === 'kanban' ? (
           <DealKanbanView
