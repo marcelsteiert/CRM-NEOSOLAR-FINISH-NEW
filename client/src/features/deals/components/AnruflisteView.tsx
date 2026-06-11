@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Phone, Mail, Search, ExternalLink, Save, X, ChevronDown, AlertCircle, Trophy, XCircle, Calendar, RefreshCw, MessageSquare } from 'lucide-react'
+import { Phone, Mail, Search, ExternalLink, Save, X, ChevronDown, AlertCircle, Trophy, XCircle, Calendar, RefreshCw, MessageSquare, Bell, BellRing } from 'lucide-react'
 import { useDeals, useUpdateDeal, formatCHF, type Deal, type DealStage } from '@/hooks/useDeals'
 import { useUsers } from '@/hooks/useLeads'
 import { useAuth } from '@/hooks/useAuth'
@@ -91,6 +91,10 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
     })
   }
 
+  const setFollowUp = (dealId: string, date: string | null) => {
+    updateDeal.mutate({ id: dealId, followUpDate: date })
+  }
+
   return (
     <div className="space-y-3">
       {/* Filter-Leiste */}
@@ -140,7 +144,7 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
       </div>
 
       {/* KPI-Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
         <KpiPill label="Insgesamt" value={filtered.length} color="#94A3B8" />
         <KpiPill
           label="Noch nicht angerufen"
@@ -161,6 +165,11 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
           label="Rueckruf faellig"
           value={filtered.filter((d) => d.callStatus === 'RUECKRUF').length}
           color="#F59E0B"
+        />
+        <KpiPill
+          label="Follow-up faellig"
+          value={filtered.filter((d) => d.followUpDate && new Date(d.followUpDate) <= new Date()).length}
+          color="#A78BFA"
         />
       </div>
 
@@ -185,6 +194,7 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
                   <Th>Pipeline-Stage</Th>
                   <Th>Anruf-Status</Th>
                   <Th>Letzter Anruf</Th>
+                  <Th>Follow-up</Th>
                   <Th>Notiz</Th>
                   <Th></Th>
                 </tr>
@@ -197,6 +207,7 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
                     rowIdx={idx}
                     users={users}
                     onSetCallStatus={setCallStatus}
+                    onSetFollowUp={setFollowUp}
                     onSaveNote={(note) => updateDeal.mutate({ id: deal.id, callNote: note })}
                     onOpenDeal={onOpenDeal}
                   />
@@ -215,12 +226,14 @@ interface RowProps {
   rowIdx: number
   users: any[]
   onSetCallStatus: (id: string, status: string | null) => void
+  onSetFollowUp: (id: string, date: string | null) => void
   onSaveNote: (note: string | null) => void
   onOpenDeal?: (dealId: string) => void
 }
 
-function CallRow({ deal, rowIdx, users, onSetCallStatus, onSaveNote, onOpenDeal }: RowProps) {
+function CallRow({ deal, rowIdx, users, onSetCallStatus, onSetFollowUp, onSaveNote, onOpenDeal }: RowProps) {
   const [statusOpen, setStatusOpen] = useState(false)
+  const [followUpOpen, setFollowUpOpen] = useState(false)
   const [noteEditing, setNoteEditing] = useState(false)
   const [noteDraft, setNoteDraft] = useState(deal.callNote ?? '')
   const noteRef = useRef<HTMLTextAreaElement>(null)
@@ -377,6 +390,16 @@ function CallRow({ deal, rowIdx, users, onSetCallStatus, onSaveNote, onOpenDeal 
       </Td>
 
       <Td>
+        <FollowUpButton
+          followUpDate={deal.followUpDate}
+          open={followUpOpen}
+          onToggle={() => setFollowUpOpen(!followUpOpen)}
+          onClose={() => setFollowUpOpen(false)}
+          onSet={(date) => { onSetFollowUp(deal.id, date); setFollowUpOpen(false) }}
+        />
+      </Td>
+
+      <Td>
         {noteEditing ? (
           <div className="flex items-start gap-1 min-w-[200px] max-w-[260px]">
             <textarea
@@ -453,5 +476,112 @@ function KpiPill({ label, value, color }: { label: string; value: number; color:
       <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color }}>{label}</span>
       <span className="text-[14px] font-bold tabular-nums" style={{ color }}>{value}</span>
     </div>
+  )
+}
+
+function addDays(days: number): string {
+  const d = new Date()
+  d.setHours(9, 0, 0, 0)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
+
+interface FollowUpButtonProps {
+  followUpDate: string | null
+  open: boolean
+  onToggle: () => void
+  onClose: () => void
+  onSet: (date: string | null) => void
+}
+
+function FollowUpButton({ followUpDate, open, onToggle, onClose, onSet }: FollowUpButtonProps) {
+  const hasDate = !!followUpDate
+  const date = followUpDate ? new Date(followUpDate) : null
+  const now = new Date(); now.setHours(0, 0, 0, 0)
+  const overdue = date && date < now
+  const daysLeft = date ? Math.round((date.getTime() - now.getTime()) / (24 * 3600 * 1000)) : 0
+
+  const labelText = !date
+    ? '+ Reminder'
+    : overdue
+      ? `Faellig (${Math.abs(daysLeft)}T)`
+      : daysLeft === 0
+        ? 'Heute'
+        : daysLeft === 1
+          ? 'Morgen'
+          : `in ${daysLeft} Tagen`
+
+  const fg = !hasDate ? 'rgba(255,255,255,0.4)' : overdue ? '#F87171' : '#A78BFA'
+  const bg = !hasDate
+    ? 'rgba(255,255,255,0.05)'
+    : overdue
+      ? 'rgba(248,113,113,0.14)'
+      : 'rgba(167,139,250,0.14)'
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10.5px] font-bold transition-all hover:scale-105 whitespace-nowrap"
+        style={{ background: bg, color: fg }}
+        title={date ? `Follow-up am ${date.toLocaleDateString('de-CH')}` : 'Reminder setzen'}
+      >
+        {overdue ? <BellRing size={10} strokeWidth={2.5} /> : <Bell size={10} strokeWidth={2.5} />}
+        {labelText}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={onClose} />
+          <div
+            className="absolute top-full mt-1 left-0 z-40 rounded-lg overflow-hidden shadow-2xl min-w-[200px] p-1"
+            style={{
+              background: 'linear-gradient(180deg, #0F172A 0%, #0A0E1F 100%)',
+              border: '1px solid rgba(167,139,250,0.20)',
+            }}
+          >
+            <div className="px-2 py-1.5 text-[9.5px] font-bold uppercase tracking-wider text-text-dim">Reminder setzen</div>
+            <PresetBtn label="Morgen" onClick={() => onSet(addDays(1))} />
+            <PresetBtn label="In 3 Tagen" onClick={() => onSet(addDays(3))} />
+            <PresetBtn label="In 1 Woche" onClick={() => onSet(addDays(7))} />
+            <PresetBtn label="In 2 Wochen" onClick={() => onSet(addDays(14))} />
+            <div className="border-t border-border/40 mt-1 pt-1 px-1">
+              <label className="block text-[9.5px] uppercase tracking-wider text-text-dim mb-1">Custom-Datum</label>
+              <input
+                type="date"
+                value={followUpDate?.split('T')[0] ?? ''}
+                onChange={(e) => onSet(e.target.value || null)}
+                className="glass-input w-full text-[11px] px-2 py-1"
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            {hasDate && (
+              <button
+                type="button"
+                onClick={() => onSet(null)}
+                className="flex items-center gap-1.5 w-full px-2.5 py-1.5 mt-1 text-[10.5px] font-semibold text-red hover:bg-red/10 rounded transition-colors"
+              >
+                <X size={10} strokeWidth={2.5} />
+                Reminder entfernen
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function PresetBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 w-full px-2.5 py-1.5 text-[10.5px] font-semibold text-violet-300 hover:bg-violet-400/10 rounded transition-colors text-left"
+    >
+      <Calendar size={10} strokeWidth={2.5} />
+      {label}
+    </button>
   )
 }
