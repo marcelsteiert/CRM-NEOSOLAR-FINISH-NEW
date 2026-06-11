@@ -49,7 +49,7 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
 
   const { data: dealsResponse, isLoading } = useDeals({
     pageSize: 500,
-    sortBy: 'updated_at',
+    sortBy: 'created_at',
     sortOrder: 'desc',
   })
   const { data: usersResponse } = useUsers()
@@ -79,7 +79,8 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
         (d.title ?? '').toLowerCase().includes(q),
       )
     }
-    return items
+    // Neueste immer zuoberst (stabile Reihenfolge, auch nach Status-Updates)
+    return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [allDeals, filterStatus, assignedTo, search])
 
   const setCallStatus = (dealId: string, status: string | null) => {
