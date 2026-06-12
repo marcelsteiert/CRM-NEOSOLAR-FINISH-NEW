@@ -586,8 +586,8 @@ export default function DealsPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        {stats && (
+        {/* Stats - in Anrufliste-View ausgeblendet (eigene KPIs) */}
+        {stats && viewMode !== 'anrufliste' && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <StatCard icon={TrendingUp} label="Pipeline-Wert" value={formatCHF(stats.pipelineValue)} color="#F59E0B" />
             <StatCard icon={TrendingUp} label="Gewichtet" value={formatCHF(stats.weightedPipelineValue)} color="#A78BFA" />
@@ -597,7 +597,8 @@ export default function DealsPage() {
           </div>
         )}
 
-        {/* Filter Bar */}
+        {/* Filter Bar - in Anrufliste-View ausgeblendet (eigene Filter) */}
+        {viewMode !== 'anrufliste' && (
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 lg:gap-4">
           <div className="flex items-center rounded-full p-0.5 overflow-x-auto max-w-full" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {statusTabs.map((tab) => (
@@ -644,6 +645,7 @@ export default function DealsPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Content */}
         {viewMode === 'anrufliste' ? (

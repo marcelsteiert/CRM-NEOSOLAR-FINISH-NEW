@@ -182,7 +182,7 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
 
       {!isLoading && filtered.length > 0 && (
         <div className="glass-card overflow-hidden" style={{ borderRadius: 'var(--radius-lg)' }}>
-          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+          <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
             <table className="w-full text-[12px]">
               <thead className="sticky top-0 z-20">
                 <tr className="border-b border-border bg-bg-sub">
