@@ -41,7 +41,7 @@ interface Props {
 
 export default function AnruflisteView({ onOpenDeal }: Props) {
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'OFFEN_RUECKRUF'>('OPEN')
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'OPEN' | 'OFFEN_RUECKRUF' | 'HEISS'>('OPEN')
   const [assignedTo, setAssignedTo] = useState<string>('ALL')
 
   const { user } = useAuth()
@@ -65,6 +65,15 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
       items = items.filter((d) => d.stage !== 'GEWONNEN' && d.stage !== 'VERLOREN')
     } else if (filterStatus === 'OFFEN_RUECKRUF') {
       items = items.filter((d) => d.stage !== 'GEWONNEN' && d.stage !== 'VERLOREN' && (d.callStatus === 'RUECKRUF' || d.callStatus === null || !d.callStatus))
+    } else if (filterStatus === 'HEISS') {
+      // Heiss = Erreicht oder Termin + Verhandlung-Stage + nicht abgeschlossen
+      items = items.filter((d) =>
+        d.stage !== 'GEWONNEN' && d.stage !== 'VERLOREN' && (
+          d.callStatus === 'ERREICHT' ||
+          d.callStatus === 'TERMIN' ||
+          d.stage === 'VERHANDLUNG'
+        )
+      )
     }
     if (assignedTo !== 'ALL') {
       items = items.filter((d) => d.assignedTo === assignedTo)
@@ -113,6 +122,7 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
         <div className="flex items-center rounded-lg overflow-hidden" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {([
             { v: 'OPEN', label: 'Offene' },
+            { v: 'HEISS', label: 'Heiss', icon: '🔥' },
             { v: 'OFFEN_RUECKRUF', label: 'Noch nicht angerufen' },
             { v: 'ALL', label: 'Alle' },
           ] as const).map((t) => (
@@ -120,10 +130,14 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
               key={t.v}
               type="button"
               onClick={() => setFilterStatus(t.v)}
-              className={`px-3 py-2 text-[11px] font-semibold transition-all whitespace-nowrap ${
-                filterStatus === t.v ? 'bg-amber-soft text-amber' : 'text-text-dim hover:text-text'
+              className={`px-3 py-2 text-[11px] font-semibold transition-all whitespace-nowrap flex items-center gap-1 ${
+                filterStatus === t.v
+                  ? t.v === 'HEISS' ? 'bg-red/15 text-red' : 'bg-amber-soft text-amber'
+                  : 'text-text-dim hover:text-text'
               }`}
+              style={filterStatus === t.v && t.v === 'HEISS' ? { background: 'color-mix(in srgb, #F87171 18%, transparent)', color: '#F87171' } : undefined}
             >
+              {'icon' in t && t.icon && <span>{t.icon}</span>}
               {t.label}
             </button>
           ))}
@@ -144,8 +158,16 @@ export default function AnruflisteView({ onOpenDeal }: Props) {
       </div>
 
       {/* KPI-Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-7 gap-2">
         <KpiPill label="Insgesamt" value={filtered.length} color="#94A3B8" />
+        <KpiPill
+          label="🔥 Heisse Leads"
+          value={filtered.filter((d) =>
+            d.stage !== 'GEWONNEN' && d.stage !== 'VERLOREN' &&
+            (d.callStatus === 'ERREICHT' || d.callStatus === 'TERMIN' || d.stage === 'VERHANDLUNG')
+          ).length}
+          color="#F87171"
+        />
         <KpiPill
           label="Noch nicht angerufen"
           value={filtered.filter((d) => !d.callStatus).length}
