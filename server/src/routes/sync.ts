@@ -146,7 +146,7 @@ router.post('/google-leads', syncAuth, async (req: Request, res: Response, next:
             .from('leads')
             .select('id')
             .eq('contact_id', contactId)
-            .eq('source', 'HOMEPAGE')
+            .eq('source', 'SEBASTIAN')
             .is('deleted_at', null)
             .maybeSingle()
           if (existingLead) { skipped++; continue }
@@ -179,7 +179,7 @@ router.post('/google-leads', syncAuth, async (req: Request, res: Response, next:
           .from('leads')
           .insert({
             contact_id: contactId,
-            source: 'HOMEPAGE',
+            source: 'SEBASTIAN',
             status: 'ACTIVE',
             notes: buildNotes(r),
           })
