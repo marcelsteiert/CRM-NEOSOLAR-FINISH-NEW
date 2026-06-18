@@ -18,6 +18,7 @@ import dashboardRouter from './routes/dashboard.js'
 import documentsRouter from './routes/documents.js'
 import projectsRouter from './routes/projects.js'
 import personnelRouter from './routes/personnel.js'
+import syncRouter from './routes/sync.js'
 import adminProductsRouter from './routes/admin/products.js'
 import adminIntegrationsRouter from './routes/admin/integrations.js'
 import adminWebhooksRouter from './routes/admin/webhooks.js'
@@ -91,6 +92,8 @@ export function createApp() {
   app.use('/api/v1/health', healthRouter)
   // Kundenportal: eigener Auth-Layer (Magic Link), interne Auth siehe portal.ts
   app.use('/api/v1/portal', portalRouter)
+  // Sync-Endpoints: eigener Token-Auth (Header X-Sync-Token)
+  app.use('/api/v1/sync', syncRouter)
   // Geschuetzte Routes (authMiddleware pro Route)
   app.use('/api/v1/contacts', authMiddleware, contactsRouter)
   app.use('/api/v1/leads', authMiddleware, leadsRouter)
