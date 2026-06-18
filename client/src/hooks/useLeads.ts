@@ -118,8 +118,11 @@ export function useLeads(filters: LeadFilters = {}) {
   return useQuery({
     queryKey: ['leads', filters],
     queryFn: () => api.get<LeadListResponse>(path),
-    staleTime: 60_000,
-    placeholderData: (prev: any) => prev,  // Vorherige Daten während Laden behalten
+    staleTime: 30_000,
+    refetchInterval: 60_000,           // Auto-Refresh alle 60s (fuer Sebastian-Sync etc.)
+    refetchIntervalInBackground: false, // Nur wenn Tab aktiv
+    refetchOnWindowFocus: true,        // Beim Tab-Wechsel zurueck sofort refresh
+    placeholderData: (prev: any) => prev,
   })
 }
 
