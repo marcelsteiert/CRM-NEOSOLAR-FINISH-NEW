@@ -32,21 +32,35 @@ export default function BaustellenTable({ onOpenProject }: Props) {
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   // Erweiterte Status-Filter (alle: nur Eintraege wo Status fehlt/false ist)
   const [extraFilters, setExtraFilters] = useState({
+    // Bewilligungen
     baubewilligungOffen: false,
-    tagOffen: false,
-    iaOffen: false,
-    dcOffen: false,
-    acOffen: false,
+    tagEingereichtOffen: false,
+    tagBewilligtOffen: false,
+    iaEingereichtOffen: false,
+    iaBewilligtOffen: false,
+    // Montage
+    dcTerminFehlt: false,
+    dcAusgefuehrtOffen: false,
+    acTerminFehlt: false,
+    acInstalliertOffen: false,
+    // Inbetriebnahme
     gbaOffen: false,
+    sinaOffen: false,
     mppOffen: false,
     pronovoOffen: false,
+    // Sonstiges
+    fehltEtwasGesetzt: false,
+    hatBemerkung: false,
   })
   const toggleExtra = (key: keyof typeof extraFilters) =>
     setExtraFilters((prev) => ({ ...prev, [key]: !prev[key] }))
   const resetExtraFilters = () =>
     setExtraFilters({
-      baubewilligungOffen: false, tagOffen: false, iaOffen: false,
-      dcOffen: false, acOffen: false, gbaOffen: false, mppOffen: false, pronovoOffen: false,
+      baubewilligungOffen: false, tagEingereichtOffen: false, tagBewilligtOffen: false,
+      iaEingereichtOffen: false, iaBewilligtOffen: false,
+      dcTerminFehlt: false, dcAusgefuehrtOffen: false, acTerminFehlt: false, acInstalliertOffen: false,
+      gbaOffen: false, sinaOffen: false, mppOffen: false, pronovoOffen: false,
+      fehltEtwasGesetzt: false, hatBemerkung: false,
     })
   const activeExtraCount = Object.values(extraFilters).filter(Boolean).length
   const [expandedPronovo, setExpandedPronovo] = useState<Set<string>>(new Set())
@@ -80,15 +94,22 @@ export default function BaustellenTable({ onOpenProject }: Props) {
     if (filterMissing) items = items.filter((p) => !!p.construction?.fehltEtwas)
     if (filterBlocked) items = items.filter((p) => p.construction && !p.construction.acInstalliert)
     if (filterSinaMissing) items = items.filter((p) => p.construction && !p.construction.sina)
-    // Erweiterte Status-Filter (jeder zeigt nur Eintraege wo Status noch nicht erledigt)
+    // Erweiterte Status-Filter (alle: AND - jeder aktive Filter muss erfuellt sein)
     if (extraFilters.baubewilligungOffen) items = items.filter((p) => !p.construction?.baubewilligung)
-    if (extraFilters.tagOffen) items = items.filter((p) => !p.construction?.tagBewilligt || !p.construction?.tagEingereicht)
-    if (extraFilters.iaOffen) items = items.filter((p) => !p.construction?.iaBewilligt || !p.construction?.iaEingereicht)
-    if (extraFilters.dcOffen) items = items.filter((p) => !p.construction?.dcMontageAusgefuehrt)
-    if (extraFilters.acOffen) items = items.filter((p) => !p.construction?.acInstalliert)
+    if (extraFilters.tagEingereichtOffen) items = items.filter((p) => !p.construction?.tagEingereicht)
+    if (extraFilters.tagBewilligtOffen) items = items.filter((p) => !p.construction?.tagBewilligt)
+    if (extraFilters.iaEingereichtOffen) items = items.filter((p) => !p.construction?.iaEingereicht)
+    if (extraFilters.iaBewilligtOffen) items = items.filter((p) => !p.construction?.iaBewilligt)
+    if (extraFilters.dcTerminFehlt) items = items.filter((p) => !p.construction?.dcMontageTermin)
+    if (extraFilters.dcAusgefuehrtOffen) items = items.filter((p) => !p.construction?.dcMontageAusgefuehrt)
+    if (extraFilters.acTerminFehlt) items = items.filter((p) => !p.construction?.acTermin)
+    if (extraFilters.acInstalliertOffen) items = items.filter((p) => !p.construction?.acInstalliert)
     if (extraFilters.gbaOffen) items = items.filter((p) => !p.construction?.gba)
+    if (extraFilters.sinaOffen) items = items.filter((p) => !p.construction?.sina)
     if (extraFilters.mppOffen) items = items.filter((p) => !p.construction?.mpp)
     if (extraFilters.pronovoOffen) items = items.filter((p) => !p.construction?.pronovo)
+    if (extraFilters.fehltEtwasGesetzt) items = items.filter((p) => !!p.construction?.fehltEtwas)
+    if (extraFilters.hatBemerkung) items = items.filter((p) => !!p.construction?.bemerkung)
     // Sortier-Regel:
     //   1. Projekte ohne displayOrder (NEU) → ganz oben, neueste zuerst (createdAt DESC)
     //   2. Projekte mit displayOrder → in dieser Reihenfolge (Excel-Position ASC)
@@ -188,14 +209,14 @@ export default function BaustellenTable({ onOpenProject }: Props) {
             <>
               <div className="fixed inset-0 z-30" onClick={() => setShowFilterPanel(false)} />
               <div
-                className="absolute top-full mt-1 right-0 z-40 rounded-lg overflow-hidden shadow-2xl min-w-[260px] p-2"
+                className="absolute top-full mt-1 right-0 z-40 rounded-lg overflow-hidden shadow-2xl min-w-[300px] max-h-[80vh] overflow-y-auto p-2"
                 style={{
                   background: 'linear-gradient(180deg, #0F172A 0%, #0A0E1F 100%)',
                   border: '1px solid rgba(167,139,250,0.20)',
                 }}
               >
-                <div className="flex items-center justify-between px-2 py-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Status-Filter (offen)</span>
+                <div className="flex items-center justify-between px-2 py-1.5 sticky top-0 z-10" style={{ background: 'linear-gradient(180deg, #0F172A 0%, #0F172A 100%)' }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Status-Filter (15)</span>
                   {activeExtraCount > 0 && (
                     <button
                       type="button"
@@ -203,35 +224,73 @@ export default function BaustellenTable({ onOpenProject }: Props) {
                       className="text-[10px] text-red font-semibold hover:underline flex items-center gap-1"
                     >
                       <X size={9} strokeWidth={2.5} />
-                      Reset
+                      Reset ({activeExtraCount})
                     </button>
                   )}
                 </div>
-                <div className="text-[10px] text-text-dim px-2 pb-2">Zeigt nur Baustellen wo Status noch nicht erledigt ist</div>
+                <div className="text-[10px] text-text-dim px-2 pb-2">AND-Logik: alle aktiven Filter muessen erfuellt sein</div>
+
                 {[
-                  { key: 'baubewilligungOffen' as const, label: 'Baubewilligung fehlt' },
-                  { key: 'tagOffen' as const, label: 'TAG offen' },
-                  { key: 'iaOffen' as const, label: 'IA offen' },
-                  { key: 'dcOffen' as const, label: 'DC-Montage offen' },
-                  { key: 'acOffen' as const, label: 'AC nicht installiert' },
-                  { key: 'gbaOffen' as const, label: 'GBA fehlt' },
-                  { key: 'mppOffen' as const, label: 'MPP fehlt' },
-                  { key: 'pronovoOffen' as const, label: 'Pronovo fehlt' },
-                ].map((opt) => (
-                  <label
-                    key={opt.key}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded text-[11.5px] hover:bg-white/[0.04] cursor-pointer transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={extraFilters[opt.key]}
-                      onChange={() => toggleExtra(opt.key)}
-                      className="w-3.5 h-3.5 cursor-pointer accent-violet-400"
-                    />
-                    <span className={extraFilters[opt.key] ? 'text-violet-300 font-semibold' : 'text-text-sec'}>
-                      {opt.label}
-                    </span>
-                  </label>
+                  {
+                    group: 'Bewilligungen', color: '#60A5FA',
+                    items: [
+                      { key: 'baubewilligungOffen' as const, label: 'Baubewilligung fehlt' },
+                      { key: 'tagEingereichtOffen' as const, label: 'TAG eingereicht fehlt' },
+                      { key: 'tagBewilligtOffen' as const, label: 'TAG bewilligt fehlt' },
+                      { key: 'iaEingereichtOffen' as const, label: 'IA eingereicht fehlt' },
+                      { key: 'iaBewilligtOffen' as const, label: 'IA bewilligt fehlt' },
+                    ],
+                  },
+                  {
+                    group: 'Montage', color: '#F59E0B',
+                    items: [
+                      { key: 'dcTerminFehlt' as const, label: 'DC-Termin fehlt' },
+                      { key: 'dcAusgefuehrtOffen' as const, label: 'DC nicht ausgefuehrt' },
+                      { key: 'acTerminFehlt' as const, label: 'AC-Termin fehlt' },
+                      { key: 'acInstalliertOffen' as const, label: 'AC nicht installiert' },
+                    ],
+                  },
+                  {
+                    group: 'Inbetriebnahme', color: '#34D399',
+                    items: [
+                      { key: 'gbaOffen' as const, label: 'GBA fehlt' },
+                      { key: 'sinaOffen' as const, label: 'SINA fehlt' },
+                      { key: 'mppOffen' as const, label: 'MPP fehlt' },
+                      { key: 'pronovoOffen' as const, label: 'Pronovo fehlt' },
+                    ],
+                  },
+                  {
+                    group: 'Sonstiges', color: '#F87171',
+                    items: [
+                      { key: 'fehltEtwasGesetzt' as const, label: 'Hat "Fehlt etwas"-Eintrag' },
+                      { key: 'hatBemerkung' as const, label: 'Hat Bemerkung' },
+                    ],
+                  },
+                ].map((group) => (
+                  <div key={group.group} className="mb-1">
+                    <div
+                      className="text-[9.5px] font-bold uppercase tracking-wider px-2 py-1.5 mt-1"
+                      style={{ color: group.color }}
+                    >
+                      {group.group}
+                    </div>
+                    {group.items.map((opt) => (
+                      <label
+                        key={opt.key}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded text-[11.5px] hover:bg-white/[0.04] cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={extraFilters[opt.key]}
+                          onChange={() => toggleExtra(opt.key)}
+                          className="w-3.5 h-3.5 cursor-pointer accent-violet-400"
+                        />
+                        <span className={extraFilters[opt.key] ? 'text-violet-300 font-semibold' : 'text-text-sec'}>
+                          {opt.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 ))}
               </div>
             </>
