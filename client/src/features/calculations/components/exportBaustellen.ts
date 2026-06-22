@@ -69,6 +69,7 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
 
   const headers = [
     'Kunde / Adresse',
+    'GBA',
     'Baubewilligung', 'Baubew. am',
     'TAG eingereicht', 'TAG eing. am',
     'TAG bewilligt', 'TAG Notiz',
@@ -78,6 +79,9 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
     'DC ausgeführt', 'DC am',
     'AC-Termin',
     'AC installiert', 'AC am',
+    'SINA',
+    'MPP',
+    'Pronovo', 'Pronovo am',
     'Fehlt etwas',
     'Bemerkung',
     'Status',
@@ -85,6 +89,7 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
 
   ws.columns = [
     { width: 40 },
+    { width: 10 },
     { width: 14 }, { width: 12 },
     { width: 14 }, { width: 12 },
     { width: 14 }, { width: 20 },
@@ -94,6 +99,9 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
     { width: 14 }, { width: 12 },
     { width: 14 },
     { width: 14 }, { width: 12 },
+    { width: 10 },
+    { width: 10 },
+    { width: 12 }, { width: 12 },
     { width: 24 },
     { width: 24 },
     { width: 16 },
@@ -111,20 +119,31 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
       && c.baubewilligung && c.tagBewilligt && c.iaBewilligt
       && c.dcMontageAusgefuehrt && c.acInstalliert
 
+    // Spalten-Indices (1-basiert):
+    // 1=Kunde, 2=GBA, 3=Baubew, 4=Baubew am, 5=TAG eing, 6=TAG eing am, 7=TAG bew, 8=TAG Notiz,
+    // 9=IA eing, 10=IA eing am, 11=IA bew, 12=IA Notiz, 13=DC-Termin, 14=DC ausgef, 15=DC am,
+    // 16=AC-Termin, 17=AC installiert, 18=AC am, 19=SINA, 20=MPP, 21=Pronovo, 22=Pronovo am,
+    // 23=Fehlt etwas, 24=Bemerkung, 25=Status
+    const TOTAL_COLS = 25
+
     const row = ws.addRow([
       formatAddr(p),
-      '', '',
-      '', '',
-      '', c?.tagNote ?? '',
-      '', '',
-      '', c?.iaNote ?? '',
-      formatDate(c?.dcMontageTermin),
-      '', '',
-      formatDate(c?.acTermin),
-      '', '',
-      c?.fehltEtwas ?? '',
-      c?.bemerkung ?? '',
-      allDone ? '✓ ABGESCHLOSSEN' : 'OFFEN',
+      '',                                  // 2 GBA
+      '', '',                              // 3-4 Baubew + am
+      '', '',                              // 5-6 TAG eing + am
+      '', c?.tagNote ?? '',                // 7-8 TAG bew + Notiz
+      '', '',                              // 9-10 IA eing + am
+      '', c?.iaNote ?? '',                 // 11-12 IA bew + Notiz
+      formatDate(c?.dcMontageTermin),      // 13 DC-Termin
+      '', '',                              // 14-15 DC ausg + am
+      formatDate(c?.acTermin),             // 16 AC-Termin
+      '', '',                              // 17-18 AC installiert + am
+      '',                                  // 19 SINA
+      '',                                  // 20 MPP
+      '', '',                              // 21-22 Pronovo + am
+      c?.fehltEtwas ?? '',                 // 23
+      c?.bemerkung ?? '',                  // 24
+      allDone ? '✓ ABGESCHLOSSEN' : 'OFFEN', // 25
     ])
     row.height = 22
 
@@ -134,31 +153,35 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
     kundeCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }
 
     // Status-Pills mit Datum
-    pillCell(row.getCell(2), c?.baubewilligung, c?.baubewilligungAm)
-    pillCell(row.getCell(4), c?.tagEingereicht, c?.tagEingereichtAm)
-    pillCell(row.getCell(6), c?.tagBewilligt, c?.tagBewilligtAm)
-    pillCell(row.getCell(8), c?.iaEingereicht, c?.iaEingereichtAm)
-    pillCell(row.getCell(10), c?.iaBewilligt, c?.iaBewilligtAm)
-    pillCell(row.getCell(13), c?.dcMontageAusgefuehrt, c?.dcMontageAm)
-    pillCell(row.getCell(16), c?.acInstalliert, c?.acInstalliertAm)
+    pillCell(row.getCell(2), c?.gba, c?.gbaAm)
+    pillCell(row.getCell(3), c?.baubewilligung, c?.baubewilligungAm)
+    pillCell(row.getCell(5), c?.tagEingereicht, c?.tagEingereichtAm)
+    pillCell(row.getCell(7), c?.tagBewilligt, c?.tagBewilligtAm)
+    pillCell(row.getCell(9), c?.iaEingereicht, c?.iaEingereichtAm)
+    pillCell(row.getCell(11), c?.iaBewilligt, c?.iaBewilligtAm)
+    pillCell(row.getCell(14), c?.dcMontageAusgefuehrt, c?.dcMontageAm)
+    pillCell(row.getCell(17), c?.acInstalliert, c?.acInstalliertAm)
+    pillCell(row.getCell(19), c?.sina, c?.sinaAm)
+    pillCell(row.getCell(20), c?.mpp, c?.mppAm)
+    pillCell(row.getCell(21), c?.pronovo, c?.pronovoAm)
 
-    // Datums-Zellen (Baubew/TAG/IA/DC/AC am)
-    ;[3, 5, 9, 14, 17].forEach((col, i) => {
-      const dates = [
-        c?.baubewilligungAm,
-        c?.tagEingereichtAm,
-        c?.iaEingereichtAm,
-        c?.dcMontageAm,
-        c?.acInstalliertAm,
-      ]
+    // Reine Datums-Zellen (Baubew am/TAG eing am/IA eing am/DC am/AC am/Pronovo am)
+    ;[
+      { col: 4, val: c?.baubewilligungAm },
+      { col: 6, val: c?.tagEingereichtAm },
+      { col: 10, val: c?.iaEingereichtAm },
+      { col: 15, val: c?.dcMontageAm },
+      { col: 18, val: c?.acInstalliertAm },
+      { col: 22, val: c?.pronovoAm },
+    ].forEach(({ col, val }) => {
       const cell = row.getCell(col)
-      cell.value = formatDate(dates[i])
+      cell.value = formatDate(val)
       cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } }
       cell.alignment = { horizontal: 'center', vertical: 'middle' }
     })
 
-    // Notiz-Zellen
-    ;[7, 11, 18, 19].forEach((col) => {
+    // Notiz-Zellen (TAG Notiz, IA Notiz, Fehlt etwas, Bemerkung)
+    ;[8, 12, 23, 24].forEach((col) => {
       const cell = row.getCell(col)
       cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF475569' } }
       cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }
@@ -166,13 +189,13 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
 
     // Fehlt etwas: amber bg wenn nicht leer
     if (c?.fehltEtwas) {
-      const fc = row.getCell(18)
+      const fc = row.getCell(23)
       fc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.amberBg } }
       fc.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLORS.amberText } }
     }
 
     // Status-Zelle
-    const statusCell = row.getCell(20)
+    const statusCell = row.getCell(25)
     if (allDone) {
       statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.greenBg } }
       statusCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: COLORS.greenText } }
@@ -183,7 +206,7 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
     statusCell.alignment = { horizontal: 'center', vertical: 'middle' }
 
     // Termin-Zellen (DC-Termin/AC-Termin)
-    ;[12, 15].forEach((col) => {
+    ;[13, 16].forEach((col) => {
       const cell = row.getCell(col)
       cell.font = { name: 'Calibri', size: 10, color: { argb: 'FF1E293B' } }
       cell.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -191,7 +214,7 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
 
     // Zebra-Streifen (nur fuer Zellen ohne Hintergrund)
     if (idx % 2 === 1) {
-      for (let i = 1; i <= 20; i++) {
+      for (let i = 1; i <= TOTAL_COLS; i++) {
         const cell = row.getCell(i)
         if (!cell.fill) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.rowAlt } }
@@ -200,7 +223,7 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
     }
 
     // Borders
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= TOTAL_COLS; i++) {
       row.getCell(i).border = {
         top: { style: 'thin', color: { argb: COLORS.border } },
         left: { style: 'thin', color: { argb: COLORS.border } },
@@ -219,11 +242,11 @@ export async function exportBaustellenToExcel(projects: TrackedProject[]) {
   // Footer mit Summen-Info
   ws.addRow([])
   const totalRow = ws.addRow([
-    `Total: ${projects.length} Baustellen`,
-    ...Array(19).fill(''),
+    `Total: ${projects.length} Baustellen (gefilterte Ansicht)`,
+    ...Array(24).fill(''),
   ])
   totalRow.getCell(1).font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF1E293B' } }
-  ws.mergeCells(`A${totalRow.number}:T${totalRow.number}`)
+  ws.mergeCells(`A${totalRow.number}:Y${totalRow.number}`)
 
   // Export
   const buffer = await wb.xlsx.writeBuffer()

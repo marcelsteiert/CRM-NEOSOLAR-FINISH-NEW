@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Search, AlertTriangle, ExternalLink, FileSpreadsheet, ChevronDown, ChevronRight, Minimize2, Maximize2 } from 'lucide-react'
+import { Search, AlertTriangle, ExternalLink, FileSpreadsheet, ChevronDown, ChevronRight, Minimize2, Maximize2, Filter, X } from 'lucide-react'
 import {
   useTrackedProjects, useUpdateConstruction,
   type TrackedProject, type Construction,
@@ -29,6 +29,26 @@ export default function BaustellenTable({ onOpenProject }: Props) {
   const [filterBlocked, setFilterBlocked] = useState(false)
   const [filterSinaMissing, setFilterSinaMissing] = useState(false)
   const [compact, setCompact] = useState(false)
+  const [showFilterPanel, setShowFilterPanel] = useState(false)
+  // Erweiterte Status-Filter (alle: nur Eintraege wo Status fehlt/false ist)
+  const [extraFilters, setExtraFilters] = useState({
+    baubewilligungOffen: false,
+    tagOffen: false,
+    iaOffen: false,
+    dcOffen: false,
+    acOffen: false,
+    gbaOffen: false,
+    mppOffen: false,
+    pronovoOffen: false,
+  })
+  const toggleExtra = (key: keyof typeof extraFilters) =>
+    setExtraFilters((prev) => ({ ...prev, [key]: !prev[key] }))
+  const resetExtraFilters = () =>
+    setExtraFilters({
+      baubewilligungOffen: false, tagOffen: false, iaOffen: false,
+      dcOffen: false, acOffen: false, gbaOffen: false, mppOffen: false, pronovoOffen: false,
+    })
+  const activeExtraCount = Object.values(extraFilters).filter(Boolean).length
   const [expandedPronovo, setExpandedPronovo] = useState<Set<string>>(new Set())
   // Spalten-Gruppen: Welche sind eingeklappt? Default alle offen
   const [collapsedGroups, setCollapsedGroups] = useState<Set<'bewilligung' | 'montage' | 'inbetrieb'>>(new Set())
@@ -60,6 +80,15 @@ export default function BaustellenTable({ onOpenProject }: Props) {
     if (filterMissing) items = items.filter((p) => !!p.construction?.fehltEtwas)
     if (filterBlocked) items = items.filter((p) => p.construction && !p.construction.acInstalliert)
     if (filterSinaMissing) items = items.filter((p) => p.construction && !p.construction.sina)
+    // Erweiterte Status-Filter (jeder zeigt nur Eintraege wo Status noch nicht erledigt)
+    if (extraFilters.baubewilligungOffen) items = items.filter((p) => !p.construction?.baubewilligung)
+    if (extraFilters.tagOffen) items = items.filter((p) => !p.construction?.tagBewilligt || !p.construction?.tagEingereicht)
+    if (extraFilters.iaOffen) items = items.filter((p) => !p.construction?.iaBewilligt || !p.construction?.iaEingereicht)
+    if (extraFilters.dcOffen) items = items.filter((p) => !p.construction?.dcMontageAusgefuehrt)
+    if (extraFilters.acOffen) items = items.filter((p) => !p.construction?.acInstalliert)
+    if (extraFilters.gbaOffen) items = items.filter((p) => !p.construction?.gba)
+    if (extraFilters.mppOffen) items = items.filter((p) => !p.construction?.mpp)
+    if (extraFilters.pronovoOffen) items = items.filter((p) => !p.construction?.pronovo)
     // Sortier-Regel:
     //   1. Projekte ohne displayOrder (NEU) → ganz oben, neueste zuerst (createdAt DESC)
     //   2. Projekte mit displayOrder → in dieser Reihenfolge (Excel-Position ASC)
@@ -73,7 +102,7 @@ export default function BaustellenTable({ onOpenProject }: Props) {
       if (ob == null) return 1    // b ist NEU → oben
       return oa - ob              // beide haben Order → Excel-Reihenfolge
     })
-  }, [data, search, filterMissing, filterBlocked, filterSinaMissing])
+  }, [data, search, filterMissing, filterBlocked, filterSinaMissing, extraFilters])
 
   const patch = (projectId: string, p: Partial<Construction>) =>
     updateConstr.mutate({ projectId, patch: p })
@@ -139,6 +168,75 @@ export default function BaustellenTable({ onOpenProject }: Props) {
           {compact ? <Maximize2 size={13} strokeWidth={1.8} /> : <Minimize2 size={13} strokeWidth={1.8} />}
           {compact ? 'Detail' : 'Kompakt'}
         </button>
+
+        {/* Status-Filter Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowFilterPanel(!showFilterPanel)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+              activeExtraCount > 0 ? 'bg-violet-400/15 text-violet-300' : 'text-text-dim hover:text-text hover:bg-surface-hover'
+            }`}
+            title="Erweiterte Status-Filter"
+            style={activeExtraCount > 0 ? { border: '1px solid rgba(167,139,250,0.30)' } : undefined}
+          >
+            <Filter size={13} strokeWidth={1.8} />
+            Filter{activeExtraCount > 0 ? ` (${activeExtraCount})` : ''}
+            <ChevronDown size={11} strokeWidth={2} />
+          </button>
+          {showFilterPanel && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setShowFilterPanel(false)} />
+              <div
+                className="absolute top-full mt-1 right-0 z-40 rounded-lg overflow-hidden shadow-2xl min-w-[260px] p-2"
+                style={{
+                  background: 'linear-gradient(180deg, #0F172A 0%, #0A0E1F 100%)',
+                  border: '1px solid rgba(167,139,250,0.20)',
+                }}
+              >
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Status-Filter (offen)</span>
+                  {activeExtraCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={resetExtraFilters}
+                      className="text-[10px] text-red font-semibold hover:underline flex items-center gap-1"
+                    >
+                      <X size={9} strokeWidth={2.5} />
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <div className="text-[10px] text-text-dim px-2 pb-2">Zeigt nur Baustellen wo Status noch nicht erledigt ist</div>
+                {[
+                  { key: 'baubewilligungOffen' as const, label: 'Baubewilligung fehlt' },
+                  { key: 'tagOffen' as const, label: 'TAG offen' },
+                  { key: 'iaOffen' as const, label: 'IA offen' },
+                  { key: 'dcOffen' as const, label: 'DC-Montage offen' },
+                  { key: 'acOffen' as const, label: 'AC nicht installiert' },
+                  { key: 'gbaOffen' as const, label: 'GBA fehlt' },
+                  { key: 'mppOffen' as const, label: 'MPP fehlt' },
+                  { key: 'pronovoOffen' as const, label: 'Pronovo fehlt' },
+                ].map((opt) => (
+                  <label
+                    key={opt.key}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded text-[11.5px] hover:bg-white/[0.04] cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={extraFilters[opt.key]}
+                      onChange={() => toggleExtra(opt.key)}
+                      className="w-3.5 h-3.5 cursor-pointer accent-violet-400"
+                    />
+                    <span className={extraFilters[opt.key] ? 'text-violet-300 font-semibold' : 'text-text-sec'}>
+                      {opt.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => exportBaustellenToExcel(projects)}
