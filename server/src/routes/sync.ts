@@ -118,7 +118,9 @@ router.post('/google-leads', syncAuth, async (req: Request, res: Response, next:
         const phone = r.telefon.trim()
         if (!email && !phone) { skipped++; continue }
 
-        // Dedup: Existiert Contact mit dieser Email?
+        // Dedup: Existiert Contact mit dieser Email? (limit(1) statt maybeSingle -
+        // damit auch mehrere Treffer korrekt einen ContactId liefern, sonst
+        // wuerde maybeSingle bei >1 Match NULL geben und Duplikate explodieren)
         let contactId: string | null = null
         if (email) {
           const { data: existingByEmail } = await supabase
@@ -126,30 +128,33 @@ router.post('/google-leads', syncAuth, async (req: Request, res: Response, next:
             .select('id')
             .eq('email', email)
             .is('deleted_at', null)
-            .maybeSingle()
-          if (existingByEmail) contactId = existingByEmail.id
+            .order('created_at', { ascending: true })
+            .limit(1)
+          if (existingByEmail && existingByEmail.length > 0) contactId = existingByEmail[0].id
         }
-        // Fallback: per Telefon
+        // Fallback: per Telefon (normalisiert ohne Spaces)
         if (!contactId && phone) {
+          const phoneNorm = phone.replace(/\s+/g, '')
           const { data: existingByPhone } = await supabase
             .from('contacts')
             .select('id, phone')
             .is('deleted_at', null)
-            .ilike('phone', phone.replace(/\s+/g, ''))
-            .maybeSingle()
-          if (existingByPhone) contactId = existingByPhone.id
+            .or(`phone.eq.${phoneNorm},phone.eq.${phone}`)
+            .order('created_at', { ascending: true })
+            .limit(1)
+          if (existingByPhone && existingByPhone.length > 0) contactId = existingByPhone[0].id
         }
 
         if (contactId) {
-          // Skip wenn schon ein Lead aus dem Sheet existiert (verhindert Duplikate beim Re-Sync)
+          // Skip wenn schon ein Lead aus dem Sheet existiert (limit(1) statt maybeSingle)
           const { data: existingLead } = await supabase
             .from('leads')
             .select('id')
             .eq('contact_id', contactId)
             .eq('source', 'SEBASTIAN')
             .is('deleted_at', null)
-            .maybeSingle()
-          if (existingLead) { skipped++; continue }
+            .limit(1)
+          if (existingLead && existingLead.length > 0) { skipped++; continue }
         }
 
         // Neuer Contact wenn nicht vorhanden
