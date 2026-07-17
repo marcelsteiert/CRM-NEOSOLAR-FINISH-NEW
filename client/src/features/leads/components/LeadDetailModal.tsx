@@ -437,11 +437,11 @@ export default function LeadDetailModal({ leadId, onClose }: LeadDetailModalProp
     setShowLostConfirm(false)
     setLostReason('')
     setLostCategory('')
-    setSuccessMsg('Lead als verloren markiert')
+    setSuccessMsg('Lead als verloren markiert – jetzt im "Verloren"-Tab sichtbar')
     setTimeout(() => {
       setSuccessMsg('')
       onClose()
-    }, 1500)
+    }, 2500)
   }
 
   /* ── Delete lead ── */

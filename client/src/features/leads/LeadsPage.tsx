@@ -486,10 +486,10 @@ export default function LeadsPage({ fixedSource, excludeSource, fixedTag, pageTi
   /* ── Status filter tabs ── */
 
   const statusTabs: { key: StatusFilter; label: string }[] = [
-    { key: 'ALL', label: 'Aktive Leads' },
+    { key: 'ALL', label: 'Aktiv (ohne Verloren)' },
     { key: 'CONVERTED', label: 'Konvertiert' },
     { key: 'AFTER_SALES', label: 'After Sales' },
-    { key: 'LOST', label: 'Verloren' },
+    { key: 'LOST', label: 'Verloren / Absagen' },
   ]
 
   /* ── Source options for dropdown (use custom labels) ── */
