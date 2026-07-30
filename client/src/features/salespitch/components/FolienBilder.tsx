@@ -44,7 +44,7 @@ export function BildFolie({
           src={`${BILD}/${bild}`}
           alt={titel}
           className="max-h-full max-w-full object-contain"
-          style={{ maxHeight: '52vh' }}
+          style={{ maxHeight: '58vh' }}
           loading="lazy"
         />
       </div>
@@ -92,14 +92,14 @@ export function BildTitelFolie({ kunde, untertitel }: { kunde?: string; untertit
   return (
     <div className="relative h-full overflow-hidden">
       <img
-        src={`${BILD}/titel.jpg`}
+        src={`${BILD}/hero-haus.jpg`}
         alt=""
         className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: 0.4 }}
+        style={{ opacity: 0.55 }}
       />
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgba(6,8,12,0.55) 0%, rgba(6,8,12,0.92) 100%)' }}
+        style={{ background: 'linear-gradient(180deg, rgba(6,8,12,0.35) 0%, rgba(6,8,12,0.72) 45%, rgba(6,8,12,0.95) 100%)' }}
       />
       <div className="relative h-full flex flex-col items-center justify-center text-center px-8">
         <img src={`${BILD}/logo.png`} alt="NEOSOLAR" className="h-14 object-contain mb-8" />
@@ -282,6 +282,21 @@ export const ProduktFolien = {
         'Nach Ihrer Zusage vermessen wir das Dach mit der Drohne',
       ]}
       hinweis="Kleine Abweichungen zwischen Geoportal und Vermessung sind möglich – der finale Preis weicht maximal CHF 1–2K ab."
+    />
+  ),
+  montage: () => (
+    <BildFolie
+      bild="montage.jpg"
+      bildLinks
+      kategorie="Die Montage"
+      titel="In wenigen Arbeitstagen auf Ihrem Dach"
+      punkte={[
+        'Eigenes Montageteam – keine wechselnden Subunternehmer auf dem Dach',
+        'Gerüst und Absturzsicherung gehören zum Umfang',
+        'Wir räumen die Baustelle auf, als wären wir nie da gewesen',
+        'Elektroanschluss und Inbetriebnahme durch konzessionierte Fachpersonen',
+      ]}
+      hinweis="Symbolbild"
     />
   ),
   workflow: () => (

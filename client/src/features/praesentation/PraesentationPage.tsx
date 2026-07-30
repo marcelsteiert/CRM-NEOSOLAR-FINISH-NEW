@@ -30,6 +30,7 @@ import {
   FolienDreiBausteine, FolienRueckblick, FolienAmortisation, FolienUnterschied,
   FolienPersoenlich,
 } from '../salespitch/components/FolienBeweis'
+import { FolienReferenzen, FolienZusatzrechner } from '../salespitch/components/FolienReferenzen'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
@@ -39,6 +40,7 @@ type FolienId =
   | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
   | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
   | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
+  | 'referenzen' | 'zusatzrechner' | 'montage'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
 
@@ -52,7 +54,7 @@ interface Variante {
 /** Folien, deren Zahlen sich auf die gewaehlte Anlagenvariante beziehen. */
 const GELD_FOLIEN = new Set<FolienId>([
   'anlage', 'energiefluss', 'motive', 'bausteine', 'gesamtvergleich',
-  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung',
+  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung', 'zusatzrechner',
 ])
 
 /**
@@ -82,6 +84,7 @@ const VARIANTEN: Variante[] = [
       // 3. Vertrauen aufbauen
       { id: 'warum', titel: 'Warum NEOSOLAR' },
       { id: 'team', titel: 'Das Team' },
+      { id: 'referenzen', titel: 'Referenzen' },
       // 4. Lösung zeigen
       { id: 'modul', titel: 'Solarmodule' },
       { id: 'wechselrichter', titel: 'Wechselrichter' },
@@ -94,6 +97,7 @@ const VARIANTEN: Variante[] = [
       { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
       { id: 'energiefluss', titel: 'Ihr Energiefluss' },
       { id: 'motive', titel: 'Ihr Nutzen' },
+      { id: 'zusatzrechner', titel: 'Rechnen wir es durch' },
       // 6. Das Geld – die Kernsequenz
       { id: 'bausteine', titel: 'Woher das Geld kommt' },
       { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
@@ -106,6 +110,7 @@ const VARIANTEN: Variante[] = [
       { id: 'planung', titel: 'Planungssicherheit' },
       { id: 'unterschied', titel: 'Offerten vergleichen' },
       { id: 'fragen', titel: 'Häufige Fragen' },
+      { id: 'montage', titel: 'Die Montage' },
       { id: 'workflow', titel: 'Unser Ablauf' },
       { id: 'zeitplan', titel: 'Umsetzung' },
       // 8. Abschluss
@@ -309,6 +314,8 @@ export default function PraesentationPage() {
         return <ProduktFolien.app />
       case 'dachanalyse':
         return <ProduktFolien.dachanalyse />
+      case 'montage':
+        return <ProduktFolien.montage />
       case 'workflow':
         return <ProduktFolien.workflow />
       case 'rechner':
@@ -347,6 +354,10 @@ export default function PraesentationPage() {
             />
           </div>
         )
+      case 'referenzen':
+        return <FolienReferenzen />
+      case 'zusatzrechner':
+        return <FolienZusatzrechner input={input} ergebnis={ergebnis} config={config} />
       case 'persoenlich':
         return <FolienPersoenlich kunde={kundeAusLink} input={input} ergebnis={ergebnis} />
       case 'rueckblick':
