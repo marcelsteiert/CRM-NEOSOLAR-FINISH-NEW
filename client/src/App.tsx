@@ -15,6 +15,7 @@ const RichtoffertenPage = lazy(() => import('@/features/richtofferten/Richtoffer
 const NoShowPage = lazy(() => import('@/features/noshow/NoShowPage'))
 const DealsPage = lazy(() => import('@/features/deals/DealsPage'))
 const CalculationsPage = lazy(() => import('@/features/calculations/CalculationsPage'))
+const SalesPitchPage = lazy(() => import('@/features/salespitch/SalesPitchPage'))
 const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'))
 const ProvisionPage = lazy(() => import('@/features/provision/ProvisionPage'))
 const TasksPage = lazy(() => import('@/features/tasks/TasksPage'))
@@ -135,6 +136,9 @@ export default function App() {
             <Route path="kalkulation" element={<CalculationsPage defaultTab="kalkulation" />} />
             {/* Legacy-Pfad (alte Links / Bookmarks) */}
             <Route path="calculations" element={<CalculationsPage />} />
+            {/* Solarberatung: gefuehrte Praesentation + Rechner fuer den Kundentermin */}
+            <Route path="solarberatung" element={<ModuleRoute moduleId="solarberatung"><SalesPitchPage /></ModuleRoute>} />
+            <Route path="solarberatung/:contactId" element={<ModuleRoute moduleId="solarberatung"><SalesPitchPage /></ModuleRoute>} />
             <Route path="projects" element={<ModuleRoute moduleId="projects"><ProjectsPage /></ModuleRoute>} />
             <Route path="provision" element={<ModuleRoute moduleId="provision"><ProvisionPage /></ModuleRoute>} />
             <Route path="tasks" element={<ModuleRoute moduleId="tasks"><TasksPage /></ModuleRoute>} />

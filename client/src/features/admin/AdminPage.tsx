@@ -14,6 +14,7 @@ import NotificationSettingsSection from './components/NotificationSettingsSectio
 import AiSettingsSection from './components/AiSettingsSection'
 import AuditLogSection from './components/AuditLogSection'
 import CompanyBrandingSection from './components/CompanyBrandingSection'
+import CalculatorPricingSection from './components/CalculatorPricingSection'
 import DatabaseExportSection from './components/DatabaseExportSection'
 import ProjectPhasesSection from './components/ProjectPhasesSection'
 import SharedPasswordsSection from './components/SharedPasswordsSection'
@@ -62,6 +63,7 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   templates: DocumentTemplatesSection,
   notifications: NotificationSettingsSection,
   branding: CompanyBrandingSection,
+  rechnerPreise: CalculatorPricingSection,
   ai: AiSettingsSection,
   audit: AuditLogSection,
   database: DatabaseExportSection,

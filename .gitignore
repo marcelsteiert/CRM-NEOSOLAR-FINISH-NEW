@@ -19,3 +19,7 @@ package.json.tmp
 netlify-functions-dist/
 deploy.js
 scripts/import-sql/
+
+# Verkaufspraesentationen: gross und teils fremdes Material, bleiben lokal
+*.pptx
+Präsentation Enpal.pdf

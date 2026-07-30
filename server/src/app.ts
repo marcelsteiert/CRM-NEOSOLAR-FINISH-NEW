@@ -35,6 +35,8 @@ import adminNoShowKanbanRouter from './routes/admin/noShowKanban.js'
 import adminProjectKanbanRouter from './routes/admin/projectKanban.js'
 import adminProjectTrackingRouter from './routes/admin/projectTracking.js'
 import adminDuplicatesRouter from './routes/admin/duplicates.js'
+import adminCalculatorPricingRouter from './routes/admin/calculatorPricing.js'
+import publicCalculatorRouter from './routes/publicCalculator.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
 import callLogsRouter from './routes/callLogs.js'
 import searchRouter from './routes/search.js'
@@ -57,6 +59,9 @@ export function createApp() {
     'http://localhost:4173',
     'https://neosolar-crm.com',
     'https://www.neosolar-crm.com',
+    // Firmen-Homepage: bindet den oeffentlichen Solarrechner ein
+    'https://neosolar.ch',
+    'https://www.neosolar.ch',
     process.env.CLIENT_URL,
   ].filter(Boolean) as string[]
 
@@ -68,7 +73,8 @@ export function createApp() {
       if (
         allowedOrigins.includes(origin) ||
         origin.endsWith('.netlify.app') ||
-        origin.endsWith('.neosolar-crm.com')
+        origin.endsWith('.neosolar-crm.com') ||
+        origin.endsWith('.neosolar.ch')
       ) {
         return callback(null, true)
       }
@@ -94,6 +100,8 @@ export function createApp() {
   app.use('/api/v1/portal', portalRouter)
   // Sync-Endpoints: eigener Token-Auth (Header X-Sync-Token)
   app.use('/api/v1/sync', syncRouter)
+  // Solarrechner auf der Homepage: Preise lesen + Richtofferte anfragen
+  app.use('/api/v1/public/calculator', publicCalculatorRouter)
   // Geschuetzte Routes (authMiddleware pro Route)
   app.use('/api/v1/contacts', authMiddleware, contactsRouter)
   app.use('/api/v1/leads', authMiddleware, leadsRouter)
@@ -159,6 +167,16 @@ export function createApp() {
   // Project-Tracking: authentifiziert; Modul-Check (baustellen/kalkulation) macht der Router selbst
   app.use('/api/v1/admin/project-tracking', authMiddleware, adminProjectTrackingRouter)
   app.use('/api/v1/admin/duplicates', ...adminGuard, adminDuplicatesRouter)
+  // Rechner-Preise: jeder Verkaeufer muss sie lesen koennen, aendern nur ADMIN/GL
+  app.use(
+    '/api/v1/admin/calculator-pricing',
+    authMiddleware,
+    (req, res, next) => {
+      if (req.method === 'GET') return next()
+      return requireRole('ADMIN', 'GL')(req, res, next)
+    },
+    adminCalculatorPricingRouter
+  )
   // Portal-Routes: alle eingeloggten User (Verkaeufer + Projektleitung + Admin)
   // Der Frontend-Filter zeigt eh nur eigene Deals; Datenzugriff ist auf
   // Kontakt-Email begrenzt

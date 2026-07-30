@@ -18,6 +18,7 @@ import {
   CalendarCheck,
   FileText,
   PhoneOff,
+  Calculator,
 } from 'lucide-react'
 
 export type AdminSection =
@@ -37,6 +38,7 @@ export type AdminSection =
   | 'templates'
   | 'notifications'
   | 'branding'
+  | 'rechnerPreise'
   | 'ai'
   | 'audit'
   | 'database'
@@ -89,6 +91,7 @@ const navGroups: AdminNavGroup[] = [
       { id: 'templates', icon: FolderOpen, label: 'Dokumenten-Vorlagen', color: '#A78BFA' },
       { id: 'notifications', icon: Bell, label: 'Benachrichtigungen', color: '#F87171' },
       { id: 'branding', icon: Palette, label: 'Firmen-Branding', color: '#F59E0B' },
+      { id: 'rechnerPreise', icon: Calculator, label: 'Rechner-Preise', color: '#FBBF24' },
     ],
   },
   {

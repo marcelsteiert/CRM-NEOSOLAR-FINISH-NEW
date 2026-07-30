@@ -17,6 +17,7 @@ import {
   Download,
   FileBox,
   Calculator,
+  Presentation,
   HardHat,
   PanelLeftClose,
   PanelLeft,
@@ -96,6 +97,7 @@ const allNavGroups: NavGroup[] = [
     items: [
       { to: '/calendar', icon: CalendarDays, label: 'Kalender', featureId: 'calendar', moduleId: 'calendar' },
       { to: '/kalkulation', icon: Calculator, label: 'Kalkulation', moduleId: 'baustellen' },
+      { to: '/solarberatung', icon: Presentation, label: 'Solarberatung', moduleId: 'solarberatung' },
       { to: '/projects', icon: FolderKanban, label: 'Projekte', featureId: 'projects', moduleId: 'projects' },
     ],
   },

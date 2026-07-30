@@ -13,13 +13,13 @@ const router = Router()
 type UserRole = 'ADMIN' | 'VERTRIEB' | 'PROJEKTLEITUNG' | 'BUCHHALTUNG' | 'GL' | 'SUBUNTERNEHMEN' | 'CLOSER' | 'SETTER'
 
 const defaultModulesByRole: Record<UserRole, string[]> = {
-  ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'baustellen', 'kalkulation', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'personal', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
-  GL: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'baustellen', 'kalkulation', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'personal', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
-  VERTRIEB: ['dashboard', 'leads', 'appointments', 'deals', 'tasks', 'communication', 'documents', 'passwords', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllTasks'],
+  ADMIN: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'baustellen', 'kalkulation', 'solarberatung', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'personal', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
+  GL: ['dashboard', 'leads', 'appointments', 'deals', 'provision', 'baustellen', 'kalkulation', 'solarberatung', 'calendar', 'projects', 'tasks', 'admin', 'communication', 'documents', 'passwords', 'personal', 'export', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllProjects', 'canViewAllTasks'],
+  VERTRIEB: ['dashboard', 'leads', 'appointments', 'deals', 'solarberatung', 'tasks', 'communication', 'documents', 'passwords', 'canViewAllLeads', 'canViewAllAppointments', 'canViewAllDeals', 'canViewAllTasks'],
   PROJEKTLEITUNG: ['dashboard', 'projects', 'baustellen', 'calendar', 'tasks', 'appointments', 'communication', 'documents', 'passwords', 'canViewAllProjects', 'canViewAllTasks', 'canViewAllAppointments'],
   BUCHHALTUNG: ['dashboard', 'provision', 'deals', 'documents', 'passwords', 'export'],
   SUBUNTERNEHMEN: ['dashboard', 'projects', 'calendar', 'tasks', 'documents', 'passwords'],
-  CLOSER: ['dashboard', 'leads', 'kaltakquise', 'appointments', 'documents', 'passwords'],
+  CLOSER: ['dashboard', 'leads', 'kaltakquise', 'appointments', 'solarberatung', 'documents', 'passwords'],
   SETTER: ['dashboard', 'leads', 'kaltakquise', 'appointments', 'documents', 'passwords'],
 }
 
