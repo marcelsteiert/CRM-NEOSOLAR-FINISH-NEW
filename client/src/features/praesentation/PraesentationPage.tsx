@@ -233,7 +233,7 @@ export default function PraesentationPage() {
       <div style={{ background: '#06080C', minHeight: '100vh' }} className="text-text">
         <div className="max-w-4xl mx-auto px-6 py-16">
           <div className="text-center mb-12">
-            <img src="/praesentation/logo.png" alt="NEOSOLAR" className="h-12 object-contain mx-auto mb-7" />
+            <img src="/praesentation/logo-hell.png" alt="NEOSOLAR" className="h-12 object-contain mx-auto mb-7" />
             <h1 className="text-[34px] font-bold mb-3">Präsentation starten</h1>
             <p className="text-[15px] text-text-sec">
               Beide Strecken enthalten denselben Live-Rechner. Wählen Sie nach Termin und Kunde.
@@ -454,10 +454,10 @@ export default function PraesentationPage() {
         {!['titel', 'kontakt'].includes(aktuell.id) && (
           <>
             <img
-              src="/praesentation/logo.png"
+              src="/praesentation/logo-hell.png"
               alt="NEOSOLAR"
               className="absolute z-10 pointer-events-none select-none"
-              style={{ top: 18, right: 22, height: 22, opacity: 0.5 }}
+              style={{ top: 18, right: 22, height: 26, opacity: 0.75 }}
             />
             {kundeAusLink && (
               <span

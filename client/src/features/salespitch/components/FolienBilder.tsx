@@ -32,19 +32,18 @@ export function BildFolie({
   const bildSpalte = (
     <div className="flex items-center justify-center min-h-0">
       <div
-        className="p-5 sm:p-7 flex items-center justify-center max-h-full"
+        className="p-6 sm:p-9 flex items-center justify-center max-h-full"
         style={{
-          background: 'linear-gradient(160deg, #FFFFFF 0%, #F3F4F6 100%)',
-          borderRadius: 22,
-          border: '1px solid rgba(255,255,255,0.14)',
-          boxShadow: '0 18px 50px -12px rgba(0,0,0,0.55)',
+          background:
+            'radial-gradient(circle at 50% 42%, rgba(245,158,11,0.13), rgba(255,255,255,0.03) 62%, transparent 78%)',
+          borderRadius: 26,
         }}
       >
         <img
           src={`${BILD}/${bild}`}
           alt={titel}
           className="max-h-full max-w-full object-contain"
-          style={{ maxHeight: '58vh' }}
+          style={{ maxHeight: '60vh', filter: 'drop-shadow(0 22px 42px rgba(0,0,0,0.55))' }}
           loading="lazy"
         />
       </div>
@@ -92,7 +91,7 @@ export function BildTitelFolie({ kunde, untertitel }: { kunde?: string; untertit
   return (
     <div className="relative h-full overflow-hidden">
       <img
-        src={`${BILD}/hero-haus.jpg`}
+        src={`${BILD}/haus.jpg`}
         alt=""
         className="absolute inset-0 w-full h-full object-cover"
         style={{ opacity: 0.55 }}
@@ -102,7 +101,7 @@ export function BildTitelFolie({ kunde, untertitel }: { kunde?: string; untertit
         style={{ background: 'linear-gradient(180deg, rgba(6,8,12,0.35) 0%, rgba(6,8,12,0.72) 45%, rgba(6,8,12,0.95) 100%)' }}
       />
       <div className="relative h-full flex flex-col items-center justify-center text-center px-8">
-        <img src={`${BILD}/logo.png`} alt="NEOSOLAR" className="h-14 object-contain mb-8" />
+        <img src={`${BILD}/logo-hell.png`} alt="NEOSOLAR" className="h-14 object-contain mb-8" />
         <p className="text-[12px] uppercase tracking-[0.25em] text-amber mb-4">Ihr Beratungstermin</p>
         <h1 className="text-[40px] sm:text-[58px] font-bold text-text leading-[1.05] mb-5">
           {kunde ?? 'Ihre Solaranlage'}
@@ -133,8 +132,8 @@ export function FolienTeam() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {[
-          { bild: 'team-1.jpg', name: 'Marcel Steiert', rolle: 'Geschäftsleitung' },
-          { bild: 'team-2.jpg', name: 'Fabienne Suter', rolle: 'Geschäftsleitung' },
+          { bild: 'team-1.jpg', name: 'Jon Turnes', rolle: 'Geschäftsleitung' },
+          { bild: 'team-2.jpg', name: 'Eileen Moewe', rolle: 'Geschäftsleitung' },
         ].map((p) => (
           <div
             key={p.name}
@@ -197,7 +196,7 @@ export function FolienTeam() {
 export const ProduktFolien = {
   modul: () => (
     <BildFolie
-      bild="modul.jpg"
+      bild="modul.png"
       kategorie="Ihre Solarmodule"
       titel="LONGi Hi-MO X10 Explorer"
       typ="LR7-54HVH · 490 Watt"
@@ -212,7 +211,7 @@ export const ProduktFolien = {
   ),
   wechselrichter: () => (
     <BildFolie
-      bild="wechselrichter.jpg"
+      bild="wechselrichter.png"
       bildLinks
       kategorie="Ihr Wechselrichter"
       titel="Huawei SUN2000"
@@ -227,7 +226,7 @@ export const ProduktFolien = {
   ),
   speicher: () => (
     <BildFolie
-      bild="speicher.jpg"
+      bild="speicher.png"
       kategorie="Ihr Batteriespeicher"
       titel="Huawei LUNA2000"
       typ="LUNA2000-7/14/21-S1"
@@ -242,7 +241,7 @@ export const ProduktFolien = {
   ),
   wallbox: () => (
     <BildFolie
-      bild="wallbox.jpg"
+      bild="wallbox.png"
       bildLinks
       kategorie="Ihre Wallbox"
       titel="Huawei sCharger"
@@ -330,7 +329,7 @@ export function BildKontaktFolie() {
         style={{ background: 'linear-gradient(180deg, rgba(6,8,12,0.6) 0%, rgba(6,8,12,0.94) 100%)' }}
       />
       <div className="relative h-full flex flex-col items-center justify-center text-center px-8">
-        <img src={`${BILD}/logo.png`} alt="NEOSOLAR" className="h-12 object-contain mb-7" />
+        <img src={`${BILD}/logo-hell.png`} alt="NEOSOLAR" className="h-12 object-contain mb-7" />
         <h2 className="text-[34px] font-bold text-text mb-4">Haben Sie noch Fragen?</h2>
         <p className="text-[15px] text-text-sec mb-9 max-w-lg">
           Wir nehmen uns die Zeit, bis alles geklärt ist.

@@ -26,11 +26,45 @@ const REFERENZ_ORTE: Array<{ kanton: string; orte: string[] }> = [
   { kanton: 'Graubünden', orte: ['Schnaus'] },
 ]
 
+/** Bilder, die der Verkaeufer im Termin gross zeigen kann. */
+const REFERENZ_BILDER = [
+  { datei: 'haus.jpg', titel: 'Einfamilienhaus mit Vollbelegung', text: 'Schwarzmodule flächig verlegt – so wirkt eine Anlage, die zum Dach passt.' },
+  { datei: 'montage.jpg', titel: 'Montage durch unser Team', text: 'Gesichert, aufgeräumt, in wenigen Arbeitstagen. Symbolbild.' },
+  { datei: 'dachanalyse.jpg', titel: 'Planung über das Geoportal', text: 'Damit legen wir gemeinsam die Modulbelegung fest.' },
+  { datei: 'app.jpg', titel: 'Ihre Anlage in der App', text: 'Produktion, Verbrauch und Speicher jederzeit im Blick.' },
+]
+
 export function FolienReferenzen() {
   const gesamt = REFERENZ_ORTE.reduce((s, k) => s + k.orte.length, 0)
+  const [grossesBild, setGrossesBild] = useState<number | null>(null)
 
   return (
     <div className="h-full overflow-y-auto px-6 sm:px-10 py-8 max-w-5xl mx-auto w-full">
+      {/* Lightbox */}
+      {grossesBild !== null && (
+        <div
+          className="fixed inset-0 z-[110] flex flex-col items-center justify-center p-6 cursor-zoom-out"
+          style={{ background: 'rgba(4,6,10,0.94)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setGrossesBild(null)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === 'Escape' && setGrossesBild(null)}
+        >
+          <img
+            src={`/praesentation/${REFERENZ_BILDER[grossesBild].datei}`}
+            alt={REFERENZ_BILDER[grossesBild].titel}
+            className="max-w-full max-h-[76vh] object-contain rounded-2xl"
+            style={{ boxShadow: '0 30px 80px -20px rgba(0,0,0,0.9)' }}
+          />
+          <div className="text-center mt-5 max-w-xl">
+            <div className="text-[17px] font-bold text-text mb-1">
+              {REFERENZ_BILDER[grossesBild].titel}
+            </div>
+            <div className="text-[13px] text-text-sec">{REFERENZ_BILDER[grossesBild].text}</div>
+            <div className="text-[11px] text-text-dim mt-3">Klicken zum Schliessen</div>
+          </div>
+        </div>
+      )}
       <p className="text-[11px] uppercase tracking-[0.2em] text-amber mb-2">Referenzen</p>
       <h2 className="text-[30px] sm:text-[34px] font-bold text-text mb-2">
         Wir bauen in Ihrer Nachbarschaft
@@ -39,6 +73,35 @@ export function FolienReferenzen() {
         Anlagen an {gesamt} Standorten in {REFERENZ_ORTE.length} Kantonen der Deutschschweiz. Auf Wunsch nennen
         wir Ihnen eine Referenz in Ihrer Nähe – nach Rücksprache mit den betreffenden Kunden.
       </p>
+
+      {/* Anklickbare Bilder – im Termin gross zeigen */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-7">
+        {REFERENZ_BILDER.map((b, i) => (
+          <button
+            key={b.datei}
+            type="button"
+            onClick={() => setGrossesBild(i)}
+            className="group relative overflow-hidden text-left transition-transform duration-200 hover:scale-[1.03]"
+            style={{ borderRadius: 16, border: '1px solid rgba(255,255,255,0.09)' }}
+          >
+            <img
+              src={`/praesentation/${b.datei}`}
+              alt={b.titel}
+              className="w-full h-28 sm:h-32 object-cover"
+              loading="lazy"
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 px-2.5 py-2"
+              style={{ background: 'linear-gradient(180deg, transparent, rgba(6,8,12,0.92))' }}
+            >
+              <div className="text-[11px] font-semibold text-text leading-tight">{b.titel}</div>
+              <div className="text-[9px] text-amber mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                grösser zeigen
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         {REFERENZ_ORTE.filter((k) => k.orte.length > 1).map((k) => (

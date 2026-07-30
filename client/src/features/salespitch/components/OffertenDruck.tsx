@@ -92,11 +92,14 @@ export default function OffertenDruck({
         className="mx-auto my-6 p-10"
         style={{ maxWidth: 820, background: '#FFFFFF', color: '#111827', fontFamily: 'Outfit, system-ui, sans-serif' }}
       >
-        {/* Kopf */}
-        <div className="flex justify-between items-start mb-8 pb-5" style={{ borderBottom: '2px solid #F59E0B' }}>
+        {/* Kopf mit Logo */}
+        <div className="flex justify-between items-start mb-7 pb-5" style={{ borderBottom: '3px solid #F59E0B' }}>
           <div>
-            <div className="text-[22px] font-bold" style={{ color: '#111827' }}>NEOSOLAR AG</div>
-            <div className="text-[11px]" style={{ color: '#6B7280' }}>Dein Schweizer Solarpartner</div>
+            <img
+              src="/praesentation/logo.png"
+              alt="NEOSOLAR"
+              style={{ height: 42, objectFit: 'contain', marginBottom: 6 }}
+            />
           </div>
           <div className="text-right text-[10px]" style={{ color: '#6B7280', lineHeight: 1.7 }}>
             Industriestrasse 28, 9100 Herisau<br />
@@ -135,20 +138,65 @@ export default function OffertenDruck({
         )}
 
         {/* Kennzahlen */}
-        <div className="grid grid-cols-4 gap-3 mb-7">
+        <div className="grid grid-cols-5 gap-2.5 mb-7">
           {[
             { label: 'Leistung', wert: `${input.kwp} kWp` },
             { label: 'Produktion', wert: `${(ergebnis.jahresertragKwh / 1000).toFixed(1).replace('.', ',')} MWh/J` },
             { label: 'Unabhängigkeit', wert: `${Math.round(ergebnis.autarkiegrad * 100)} %` },
+            { label: 'Ersparnis/Monat', wert: chf(ergebnis.ersparnisProMonat).replace('CHF ', '') },
             { label: 'Amortisation', wert: ergebnis.amortisationJahre ? `${ergebnis.amortisationJahre} J.` : '—' },
           ].map((k) => (
-            <div key={k.label} className="p-3 text-center" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
-              <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+            <div
+              key={k.label}
+              className="p-3 text-center"
+              style={{
+                background: 'linear-gradient(165deg, #FFFBEB, #FEF3C7)',
+                borderRadius: 10,
+                border: '1px solid #FDE68A',
+              }}
+            >
+              <div className="text-[8px] uppercase tracking-wider mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
                 {k.label}
               </div>
-              <div className="text-[17px] font-bold" style={{ color: '#B45309' }}>{k.wert}</div>
+              <div className="text-[16px] font-bold tabular-nums" style={{ color: '#B45309' }}>{k.wert}</div>
             </div>
           ))}
+        </div>
+
+        {/* Der Vergleich, der die Offerte traegt */}
+        <div
+          className="flex items-stretch gap-3 mb-7 p-4"
+          style={{ background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}
+        >
+          <div className="flex-1 text-center">
+            <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#6B7280', fontWeight: 700 }}>
+              Stromkosten ohne Anlage
+            </div>
+            <div className="text-[19px] font-bold tabular-nums" style={{ color: '#B91C1C' }}>
+              {chf(ergebnis.stromkostenOhneAnlage)}
+            </div>
+            <div className="text-[9px]" style={{ color: '#9CA3AF' }}>über {config.betrachtungsJahre} Jahre</div>
+          </div>
+          <div style={{ width: 1, background: '#E5E7EB' }} />
+          <div className="flex-1 text-center">
+            <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#6B7280', fontWeight: 700 }}>
+              Mit Ihrer Anlage
+            </div>
+            <div className="text-[19px] font-bold tabular-nums" style={{ color: '#047857' }}>
+              {chf(ergebnis.stromkostenMitAnlage)}
+            </div>
+            <div className="text-[9px]" style={{ color: '#9CA3AF' }}>Reststrom</div>
+          </div>
+          <div style={{ width: 1, background: '#E5E7EB' }} />
+          <div className="flex-1 text-center">
+            <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+              Sie behalten
+            </div>
+            <div className="text-[19px] font-bold tabular-nums" style={{ color: '#B45309' }}>
+              {chf(ergebnis.stromkostenOhneAnlage - ergebnis.stromkostenMitAnlage)}
+            </div>
+            <div className="text-[9px]" style={{ color: '#9CA3AF' }}>statt an den Versorger</div>
+          </div>
         </div>
 
         {/* Leistungsumfang */}
