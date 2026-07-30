@@ -599,28 +599,121 @@ export default function OffertenDruck({
           Ihre Produktion über das Jahr
         </h2>
         <div className="mb-6">
-          <div className="flex items-end gap-1" style={{ height: 92 }}>
-            {MONATSANTEILE.map(([name, anteil]) => (
-              <div key={name} className="flex-1 flex flex-col items-center justify-end h-full">
-                <span className="text-[7px] tabular-nums mb-0.5" style={{ color: '#6B7280' }}>
-                  {Math.round((ergebnis.jahresertragKwh * anteil) / 100)}
-                </span>
-                <div
-                  style={{
-                    width: '100%',
-                    height: `${(anteil / 13.2) * 72}%`,
-                    background: anteil >= 10 ? '#F59E0B' : anteil >= 5 ? '#FCD34D' : '#FDE68A',
-                    borderRadius: '3px 3px 0 0',
-                  }}
-                />
-                <span className="text-[7px] mt-1" style={{ color: '#9CA3AF' }}>{name}</span>
+          {(() => {
+            // Monatswerte aus den Jahressummen ableiten. Der Verbrauch ist im
+            // Winter hoeher, die Produktion deutlich tiefer – daraus ergibt
+            // sich die monatliche Aufteilung in Direkt, Speicher und Einspeisung.
+            const verbrauchAnteil = [10.4, 9.6, 8.8, 7.6, 6.8, 6.0, 6.0, 6.4, 7.2, 8.4, 9.6, 13.2]
+            const zeilen = MONATSANTEILE.map(([name, anteil], i) => {
+              const produktion = (ergebnis.jahresertragKwh * anteil) / 100
+              const verbrauch = (ergebnis.prognoseVerbrauchKwh * verbrauchAnteil[i]) / 100
+              const direktAnteil =
+                ergebnis.eigenverbrauchKwh > 0 ? ergebnis.direktverbrauchKwh / ergebnis.eigenverbrauchKwh : 1
+              const eigen = Math.min(produktion, verbrauch * (ergebnis.autarkiegrad + 0.05))
+              const direkt = eigen * direktAnteil
+              const speicher = eigen - direkt
+              const einspeisung = Math.max(0, produktion - eigen)
+              return { name, produktion, direkt, speicher, einspeisung }
+            })
+            const max = Math.max(...zeilen.map((z) => z.produktion), 1)
+            return (
+              <>
+                <div className="flex items-end gap-1" style={{ height: 110 }}>
+                  {zeilen.map((z) => (
+                    <div key={z.name} className="flex-1 flex flex-col items-center justify-end h-full">
+                      <div className="w-full flex flex-col justify-end" style={{ height: '88%' }}>
+                        {/* Von oben: Einspeisung, Speicher, Direktverbrauch */}
+                        <div style={{ height: `${(z.einspeisung / max) * 100}%`, background: '#DDE21A' }} />
+                        <div style={{ height: `${(z.speicher / max) * 100}%`, background: '#D1D5DB' }} />
+                        <div style={{ height: `${(z.direkt / max) * 100}%`, background: '#6B7280' }} />
+                      </div>
+                      <span className="text-[7px] mt-1" style={{ color: '#9CA3AF' }}>{z.name}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
+                  {[
+                    ['Direktverbrauch', '#6B7280'],
+                    ['Eigenverbrauch durch Batterie', '#D1D5DB'],
+                    ['Netzeinspeisung', '#DDE21A'],
+                  ].map(([label, farbe]) => (
+                    <div key={label} className="flex items-center gap-1.5">
+                      <span style={{ width: 10, height: 10, background: farbe, display: 'inline-block' }} />
+                      <span className="text-[9px]" style={{ color: '#6B7280' }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] mt-2" style={{ color: '#6B7280' }}>
+                  Solarstromproduktion in kWh. Im Juli produziert Ihre Anlage rund fünfmal so viel wie im
+                  Dezember – deshalb bleibt auch mit Speicher ein Netzbezug im Winter.
+                </p>
+              </>
+            )
+          })()}
+        </div>
+
+        {/* Zwei Energieflüsse: wohin geht der Strom, woher kommt er */}
+        <div className="grid grid-cols-2 gap-4 mb-7">
+          {[
+            {
+              titel: 'Wohin geht mein Strom?',
+              summe: ergebnis.jahresertragKwh,
+              summeLabel: 'Ihre Stromproduktion pro Jahr',
+              ergebnisWert: Math.round(ergebnis.eigenverbrauchsquote * 100),
+              ergebnisLabel: 'Ihr Eigenverbrauch',
+              teile: [
+                { label: 'Batterie', wert: ergebnis.speicherverbrauchKwh, farbe: '#9CA3AF' },
+                { label: 'Direktverbrauch', wert: ergebnis.direktverbrauchKwh, farbe: '#DDE21A' },
+                { label: 'Stromnetz', wert: ergebnis.einspeisungKwh, farbe: '#374151' },
+              ],
+            },
+            {
+              titel: 'Woher kommt mein Strom?',
+              summe: ergebnis.prognoseVerbrauchKwh,
+              summeLabel: 'Ihr Stromverbrauch pro Jahr',
+              ergebnisWert: Math.round(ergebnis.autarkiegrad * 100),
+              ergebnisLabel: 'Ihr Unabhängigkeitsgrad',
+              teile: [
+                { label: 'Batterie', wert: ergebnis.speicherverbrauchKwh, farbe: '#9CA3AF' },
+                { label: 'Direktverbrauch', wert: ergebnis.direktverbrauchKwh, farbe: '#DDE21A' },
+                { label: 'Stromnetz', wert: ergebnis.netzbezugKwh, farbe: '#374151' },
+              ],
+            },
+          ].map((d) => (
+            <div key={d.titel} className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+              <div className="text-[11px] font-bold mb-2" style={{ color: '#111827' }}>{d.titel}</div>
+              <div className="text-[9px]" style={{ color: '#6B7280' }}>{d.summeLabel}</div>
+              <div className="text-[15px] font-bold tabular-nums mb-2.5" style={{ color: '#111827' }}>
+                {Math.round(d.summe).toLocaleString('de-CH')} kWh
               </div>
-            ))}
-          </div>
-          <p className="text-[10px] mt-2" style={{ color: '#6B7280' }}>
-            kWh pro Monat. Im Juli produziert Ihre Anlage rund fünfmal so viel wie im Dezember – deshalb
-            bleibt auch mit Speicher ein Netzbezug im Winter.
-          </p>
+              {/* Anteilsbalken */}
+              <div className="flex h-5 rounded overflow-hidden mb-2">
+                {d.teile.map((t) => (
+                  <div
+                    key={t.label}
+                    style={{ width: `${Math.max(2, (t.wert / Math.max(d.summe, 1)) * 100)}%`, background: t.farbe }}
+                  />
+                ))}
+              </div>
+              {d.teile.map((t) => (
+                <div key={t.label} className="flex items-center justify-between text-[9px] py-0.5">
+                  <span className="flex items-center gap-1.5" style={{ color: '#6B7280' }}>
+                    <span style={{ width: 8, height: 8, background: t.farbe, display: 'inline-block' }} />
+                    {t.label}
+                  </span>
+                  <span className="tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                    {Math.round(t.wert).toLocaleString('de-CH')} kWh
+                    <span style={{ color: '#9CA3AF', fontWeight: 400 }}>
+                      {' '}({Math.round((t.wert / Math.max(d.summe, 1)) * 100)} %)
+                    </span>
+                  </span>
+                </div>
+              ))}
+              <div className="mt-2 pt-2 text-[10px]" style={{ borderTop: '1px solid #E5E7EB', color: '#111827' }}>
+                {d.ergebnisLabel}: <b style={{ color: '#B45309' }}>{d.ergebnisWert} %</b>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Amortisation als Verlauf */}

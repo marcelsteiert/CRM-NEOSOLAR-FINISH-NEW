@@ -135,6 +135,12 @@ export interface CalculatorResult {
   eigenverbrauchsquote: number
   /** Anteil des Verbrauchs, der durch die Anlage gedeckt wird */
   autarkiegrad: number
+  /** Direkt verbrauchter Solarstrom (ohne Umweg ueber den Speicher) */
+  direktverbrauchKwh: number
+  /** Ueber den Speicher genutzter Solarstrom */
+  speicherverbrauchKwh: number
+  /** Netzbezug pro Jahr */
+  netzbezugKwh: number
   co2EinsparungKgProJahr: number
 
   // Preis
@@ -274,6 +280,8 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
   const deckungsgrad = prognoseVerbrauchKwh > 0 ? jahresertragKwh / prognoseVerbrauchKwh : 0
   const quoteOhneSpeicher = eigenverbrauchsquoteOhneSpeicher(deckungsgrad)
   let eigenverbrauchKwh = Math.min(jahresertragKwh * quoteOhneSpeicher, prognoseVerbrauchKwh)
+  // Was ohne Speicher direkt verbraucht wird – fuer die Aufteilung in der Offerte
+  const direktverbrauchKwh = eigenverbrauchKwh
 
   // Der Speicher verschiebt Ueberschuss in den Abend. Begrenzt durch das,
   // was er physikalisch durchsetzen kann, und durch den vorhandenen Ueberschuss.
@@ -429,6 +437,9 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     prognoseVerbrauchKwh: Math.round(prognoseVerbrauchKwh),
     eigenverbrauchKwh: Math.round(eigenverbrauchKwh),
     einspeisungKwh: Math.round(einspeisungKwh),
+    direktverbrauchKwh: Math.round(Math.min(direktverbrauchKwh, eigenverbrauchKwh)),
+    speicherverbrauchKwh: Math.round(Math.max(0, eigenverbrauchKwh - direktverbrauchKwh)),
+    netzbezugKwh: Math.round(Math.max(0, prognoseVerbrauchKwh - eigenverbrauchKwh)),
     eigenverbrauchsquote,
     autarkiegrad,
     // Schweizer Strommix-Verdraengung, bewusst konservativ mit 128 g CO2/kWh
