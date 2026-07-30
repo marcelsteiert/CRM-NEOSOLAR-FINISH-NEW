@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, Sun, Printer, LayoutList, FileCheck2,
+  ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, Sun, Printer, LayoutList, FileCheck2, Mail,
 } from 'lucide-react'
 import { berechne } from '../../lib/pvCalculator'
 import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
@@ -9,6 +9,7 @@ import { DEFAULT_CONFIG, DEFAULT_INPUT } from '../../lib/calculatorConfig'
 import RechnerPanel from '../salespitch/components/RechnerPanel'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
+import OfferteSenden from '../salespitch/components/OfferteSenden'
 import { LEERE_BEDUERFNISSE } from '../salespitch/components/BeduerfnisSchritt'
 import { api } from '../../lib/api'
 import { KOMPONENTEN } from '../../lib/calculatorConfig'
@@ -170,6 +171,8 @@ export default function PraesentationPage() {
   const [basisInput, setBasisInput] = useState<CalculatorInput>(DEFAULT_INPUT)
   const [gewaehlteVariante, setGewaehlteVariante] = useState<string | null>('empfehlung')
   const [druckOffen, setDruckOffen] = useState(false)
+  const [sendenOffen, setSendenOffen] = useState(false)
+  const [dealId, setDealId] = useState<string | null>(null)
   const [kontakt, setKontakt] = useState<{ id: string; firstName: string; lastName: string; address: string; email: string; phone: string } | null>(null)
   const [offerteLaeuft, setOfferteLaeuft] = useState(false)
   const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
@@ -282,7 +285,7 @@ export default function PraesentationPage() {
         .filter((z) => z !== null)
         .join('\n')
 
-      await api.post('/deals', {
+      const dealAntwort = await api.post<{ data: { id: string } }>('/deals', {
         contactId,
         title: `Offerte ${input.kwp} kWp – ${kontakt.firstName} ${kontakt.lastName}`,
         value: ergebnis.nettoInvestition,
@@ -290,6 +293,8 @@ export default function PraesentationPage() {
         notes: snapshot,
         ...(terminId ? { appointmentId: terminId } : {}),
       })
+
+      setDealId(dealAntwort?.data?.id ?? null)
 
       // Termin als durchgefuehrt markieren, damit er die Pipeline verlaesst
       if (terminId) {
@@ -527,6 +532,18 @@ export default function PraesentationPage() {
             </button>
           )}
 
+          {kontakt && (
+            <button
+              type="button"
+              onClick={() => setSendenOffen(true)}
+              className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[11px]"
+              title="Offerte per E-Mail an den Kunden senden und ablegen"
+            >
+              <Mail size={13} strokeWidth={2} />
+              Offerte senden
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setDruckOffen(true)}
@@ -654,6 +671,18 @@ export default function PraesentationPage() {
           <ChevronRight size={15} strokeWidth={2} />
         </button>
       </div>
+
+      {sendenOffen && kontakt && (
+        <OfferteSenden
+          kontakt={kontakt}
+          dealId={dealId}
+          input={input}
+          ergebnis={ergebnis}
+          config={config}
+          variantenName={aktiveAnlage.name}
+          onClose={() => setSendenOffen(false)}
+        />
+      )}
 
       {druckOffen && (
         <OffertenDruck

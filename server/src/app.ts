@@ -37,6 +37,7 @@ import adminProjectTrackingRouter from './routes/admin/projectTracking.js'
 import adminDuplicatesRouter from './routes/admin/duplicates.js'
 import adminCalculatorPricingRouter from './routes/admin/calculatorPricing.js'
 import publicCalculatorRouter from './routes/publicCalculator.js'
+import solarOfferRouter from './routes/solarOffer.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
 import callLogsRouter from './routes/callLogs.js'
 import searchRouter from './routes/search.js'
@@ -120,6 +121,8 @@ export function createApp() {
   app.use('/api/v1/projects', authMiddleware, projectsRouter)
   app.use('/api/v1/personnel', authMiddleware, personnelRouter)
   app.use('/api/v1/search', authMiddleware, searchRouter)
+  // Offertenversand aus der Solarberatung (Mail ueber das Konto des Verkaeufers)
+  app.use('/api/v1/solar-offer', authMiddleware, solarOfferRouter)
   app.use('/api/v1/passwords', authMiddleware, passwordsRouter)
   app.use('/api/v1/call-logs', authMiddleware, callLogsRouter)
   app.use('/api/v1/notifications', authMiddleware, notificationsRouter)
