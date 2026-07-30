@@ -108,6 +108,8 @@ export interface CalculatorConfig {
   betrachtungsJahre: number
   /** Zinssatz fuer Kapitalwert und Stromgestehungskosten (z.B. 0.02 = 2 %) */
   kalkulationszinssatz: number
+  /** MwSt-Satz in Prozent – wird auf den Nettopreis aufgeschlagen */
+  mwstProzent: number
 }
 
 // ── Ergebnis ──────────────────────────────────────────────────────────
@@ -145,6 +147,10 @@ export interface CalculatorResult {
   zusatzSumme: number
   /** Gewaehrter Aktionsrabatt in CHF */
   rabatt: number
+  /** Preis ohne MwSt */
+  nettoPreis: number
+  /** MwSt-Betrag */
+  mwst: number
 
   // Wirtschaftlichkeit
   ersparnisJahr1: number
@@ -311,7 +317,7 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
   const speicherPreis = input.speicherKwh * config.speicherPreisProKwh
   // Manuell erfasste Zusatzleistungen zaehlen voll in den Preis
   const zusatzSumme = (input.zusatzPositionen ?? []).reduce((s, z) => s + (Number(z.betrag) || 0), 0)
-  const bruttoPreis = rundeAuf(
+  const nettoPreis = rundeAuf(
     config.grundpreis +
       kwpPreis +
       dachZuschlag +
@@ -321,6 +327,9 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
       zusatzSumme,
     10
   )
+  // MwSt wird wie in der bestehenden Offerte separat ausgewiesen
+  const mwst = rundeAuf((nettoPreis * config.mwstProzent) / 100, 5)
+  const bruttoPreis = nettoPreis + mwst
 
   // ── Foerderung (Pronovo Einmalverguetung) ──
   const bis30 = Math.min(kwp, 30)
@@ -425,6 +434,8 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     preisProKwp: kwp > 0 ? Math.round(bruttoPreis / kwp) : 0,
     zusatzSumme: Math.round(zusatzSumme),
     rabatt,
+    nettoPreis,
+    mwst,
 
     ersparnisJahr1,
     ersparnisProMonat: Math.round(ersparnisJahr1 / 12),

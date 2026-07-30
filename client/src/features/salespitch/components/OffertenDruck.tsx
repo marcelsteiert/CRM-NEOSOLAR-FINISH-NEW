@@ -318,15 +318,27 @@ export default function OffertenDruck({
         )}
 
         {/* Preis */}
-        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre Investition</h2>
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Photovoltaikanlage – Kosten<sup>*</sup></h2>
         <table className="w-full text-[12px] mb-3" style={{ borderCollapse: 'collapse' }}>
           <tbody>
             <tr>
-              <td className="py-2" style={{ color: '#374151' }}>Anlage schlüsselfertig</td>
+              <td className="py-2" style={{ color: '#374151' }}>
+                Solarstromanlage ({input.kwp} kWp)
+              </td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                {chf(ergebnis.bruttoPreis - ergebnis.zusatzSumme)}
+                {chf(ergebnis.nettoPreis - ergebnis.zusatzSumme - (speicherModule > 0 ? input.speicherKwh * config.speicherPreisProKwh : 0))}
               </td>
             </tr>
+            {speicherModule > 0 && (
+              <tr>
+                <td className="py-2" style={{ color: '#374151' }}>
+                  Batteriespeichersystem ({input.speicherKwh} kWh)
+                </td>
+                <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                  {chf(input.speicherKwh * config.speicherPreisProKwh)}
+                </td>
+              </tr>
+            )}
             {ergebnis.zusatzSumme > 0 && (
               <tr>
                 <td className="py-2" style={{ color: '#374151' }}>Zusätzliche Leistungen</td>
@@ -346,11 +358,43 @@ export default function OffertenDruck({
               </tr>
             )}
             <tr>
-              <td className="py-2" style={{ color: '#374151' }}>− Förderbeitrag Pronovo (Einmalvergütung)</td>
+              <td className="py-2" style={{ color: '#374151' }}>
+                MWST {config.mwstProzent.toString().replace('.', ',')} %
+              </td>
+              <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                {chf(ergebnis.mwst)}
+              </td>
+            </tr>
+            <tr style={{ borderTop: '1px solid #E5E7EB' }}>
+              <td className="py-2" style={{ color: '#111827', fontWeight: 700 }}>Kosten inkl. MWST</td>
+              <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
+                {chf(ergebnis.bruttoPreis)}
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2" style={{ color: '#374151' }}>
+                Einmalvergütung (Photovoltaik)<sup>**</sup>
+              </td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
                 − {chf(ergebnis.foerderung)}
               </td>
             </tr>
+            <tr style={{ borderTop: '1px solid #E5E7EB' }}>
+              <td className="py-2" style={{ color: '#111827', fontWeight: 700 }}>Ihre Gesamtinvestition</td>
+              <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
+                {chf(ergebnis.bruttoPreis - ergebnis.rabatt - ergebnis.foerderung)}
+              </td>
+            </tr>
+            {ergebnis.steuerabzug > 0 && (
+              <tr>
+                <td className="py-2" style={{ color: '#374151' }}>
+                  Erwartete Steuerersparnis<sup>***</sup>
+                </td>
+                <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
+                  − {chf(ergebnis.steuerabzug)}
+                </td>
+              </tr>
+            )}
             {ergebnis.steuerabzug > 0 && (
               <tr>
                 <td className="py-2" style={{ color: '#374151' }}>− Steuerabzug (Schätzung)</td>
@@ -360,16 +404,24 @@ export default function OffertenDruck({
               </tr>
             )}
             <tr style={{ borderTop: '2px solid #F59E0B' }}>
-              <td className="py-3 text-[14px] font-bold" style={{ color: '#111827' }}>Ihr Preis</td>
+              <td className="py-3 text-[14px] font-bold" style={{ color: '#111827' }}>Effektive Kosten</td>
               <td className="py-3 text-right text-[20px] font-bold tabular-nums" style={{ color: '#B45309' }}>
                 {chf(ergebnis.nettoInvestition)}
               </td>
             </tr>
           </tbody>
         </table>
-        <p className="text-[10px] mb-6" style={{ color: '#6B7280' }}>
-          Preis inkl. MwSt. Entspricht {chf(ergebnis.preisProKwp)} pro kWp.
-        </p>
+        <div className="text-[9px] mb-6" style={{ color: '#6B7280', lineHeight: 1.8 }}>
+          <div><span style={{ color: '#F59E0B', fontWeight: 700 }}>*</span> Kosten gelten bei der Bestellung aller aufgelisteten Systeme</div>
+          <div><span style={{ color: '#F59E0B', fontWeight: 700 }}>**</span> Die Förderungen können nicht garantiert werden</div>
+          {ergebnis.steuerabzug > 0 && (
+            <div>
+              <span style={{ color: '#F59E0B', fontWeight: 700 }}>***</span> Erwartete Steuerersparnis:
+              {' '}{config.steuerabzugProzent} % (Annahme Grenzsteuersatz)
+            </div>
+          )}
+          <div style={{ marginTop: 4 }}>Entspricht {chf(ergebnis.preisProKwp)} pro kWp.</div>
+        </div>
 
         {/* Zahlungsplan */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Zahlungsplan</h2>
@@ -491,6 +543,55 @@ export default function OffertenDruck({
               {chf(ergebnis.stromkostenOhneAnlage - ergebnis.stromkostenMitAnlage)}
             </span>
           </div>
+        </div>
+
+        {/* Kennzahlen-Ringe und Objektdaten – Aufbau wie in der bisherigen Offerte */}
+        <div className="grid grid-cols-2 gap-6 mb-7 items-center">
+          <div className="flex justify-around">
+            {[
+              { wert: Math.round(ergebnis.autarkiegrad * 100), label: 'Unabhängigkeitsgrad', farbe: '#111827' },
+              { wert: Math.round(ergebnis.eigenverbrauchsquote * 100), label: 'Eigenverbrauch', farbe: '#F59E0B' },
+            ].map((r) => {
+              const umfang = 2 * Math.PI * 30
+              return (
+                <div key={r.label} className="text-center">
+                  <svg width="86" height="86" viewBox="0 0 76 76">
+                    <circle cx="38" cy="38" r="30" fill="none" stroke="#E5E7EB" strokeWidth="7" />
+                    <circle
+                      cx="38" cy="38" r="30" fill="none" stroke={r.farbe} strokeWidth="7"
+                      strokeDasharray={`${(r.wert / 100) * umfang} ${umfang}`}
+                      strokeLinecap="butt"
+                      transform="rotate(-90 38 38)"
+                    />
+                    <text x="38" y="43" textAnchor="middle" style={{ fontSize: 16, fontWeight: 700, fill: '#111827' }}>
+                      {r.wert}%
+                    </text>
+                  </svg>
+                  <div className="text-[10px] mt-1" style={{ color: '#374151', fontWeight: 600 }}>{r.label}</div>
+                </div>
+              )
+            })}
+          </div>
+
+          <table className="w-full text-[11px]" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              {[
+                ['Verbrauch', `${ergebnis.prognoseVerbrauchKwh.toLocaleString('de-CH')} kWh`],
+                ['Solaranlage', `${input.kwp} kWp`],
+                ['Dachneigung', `${input.neigung}°`],
+                ['Ausrichtung', AUSRICHTUNG_LABELS[input.ausrichtung]],
+                ['Jahresertrag', `${ergebnis.jahresertragKwh.toLocaleString('de-CH')} kWh`],
+                ['Batterie', speicherModule > 0 ? `${input.speicherKwh} kWh` : '—'],
+              ].map(([k, v]) => (
+                <tr key={k} style={{ borderBottom: '1px solid #E5E7EB' }}>
+                  <td className="py-1.5 pr-3" style={{ color: '#111827', fontWeight: 600 }}>{k}</td>
+                  <td className="py-1.5 pl-3 tabular-nums" style={{ color: '#B45309', fontWeight: 700, borderLeft: '1px solid #E5E7EB' }}>
+                    {v}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Monatliche Produktion – macht das Sommer/Winter-Gefälle sichtbar */}

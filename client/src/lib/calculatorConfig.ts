@@ -59,9 +59,10 @@ export const DEFAULT_CONFIG: CalculatorConfig = {
     FLACHDACH: 120,
     EERNIT: 80,
   },
-  steuerabzugProzent: 0,
+  steuerabzugProzent: 15,
   betrachtungsJahre: 25,
   kalkulationszinssatz: 0.02,
+  mwstProzent: 8.1,
 }
 
 /** Ausgangswerte fuer ein typisches Schweizer Einfamilienhaus. */

@@ -59,9 +59,10 @@ const DEFAULT_PRICING = {
     FLACHDACH: 120,
     EERNIT: 80,
   },
-  steuerabzugProzent: 0,
+  steuerabzugProzent: 15,
   betrachtungsJahre: 25,
   kalkulationszinssatz: 0.02,
+  mwstProzent: 8.1,
 }
 
 export type CalculatorPricing = typeof DEFAULT_PRICING
@@ -113,6 +114,7 @@ const pricingSchema = z.object({
   steuerabzugProzent: z.number().min(0).max(50).nullable().optional(),
   betrachtungsJahre: z.number().min(5).max(40).nullable().optional(),
   kalkulationszinssatz: z.number().min(0).max(0.2).nullable().optional(),
+  mwstProzent: z.number().min(0).max(30).nullable().optional(),
 })
 
 router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
