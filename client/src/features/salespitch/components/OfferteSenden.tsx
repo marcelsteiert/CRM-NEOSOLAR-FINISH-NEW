@@ -82,6 +82,88 @@ Drohnenvermessung, die Abweichung beträgt maximal CHF 1–2K.
 </p>`
 }
 
+/**
+ * Textvorlagen fuer die Begleit-E-Mail.
+ *
+ * Die Platzhalter werden beim Einsetzen mit den echten Werten der aktuellen
+ * Konfiguration ersetzt, damit der Verkaeufer nichts abschreiben muss:
+ *   {vorname} {nachname} {kwp} {speicher} {ersparnisMonat} {ersparnisJahr}
+ *   {festpreis} {amortisation} {autarkie}
+ * Neue Vorlagen einfach hier ergaenzen.
+ */
+const VORLAGEN: Array<{ id: string; name: string; betreff: string; text: string }> = [
+  {
+    id: 'standard',
+    name: 'Standard',
+    betreff: 'Ihre Richtofferte für {kwp} kWp – NEOSOLAR AG',
+    text:
+      'Guten Tag {vorname} {nachname}\n\n' +
+      'vielen Dank für das Gespräch und Ihr Interesse. Anbei erhalten Sie wie besprochen Ihre persönliche ' +
+      'Richtofferte mit allen Zahlen zum Nachlesen.\n\n' +
+      'Die wichtigsten Punkte auf einen Blick: {kwp} kWp Leistung, rund {ersparnisMonat} Ersparnis pro Monat ' +
+      'und eine Amortisation in {amortisation}.\n\n' +
+      'Nehmen Sie sich Zeit für die Unterlagen. Bei Fragen erreichen Sie mich direkt – ich melde mich in den ' +
+      'nächsten Tagen ohnehin bei Ihnen.',
+  },
+  {
+    id: 'online',
+    name: 'Nach Online-Termin',
+    betreff: 'Ihre Richtofferte nach unserem Online-Termin',
+    text:
+      'Guten Tag {vorname} {nachname}\n\n' +
+      'danke, dass Sie sich heute die Zeit für unseren Online-Termin genommen haben. Wie besprochen finden Sie ' +
+      'hier Ihre Richtofferte – genau die Konfiguration, die wir gemeinsam am Bildschirm durchgerechnet haben.\n\n' +
+      '{kwp} kWp, {speicher}, Festpreis {festpreis}.\n\n' +
+      'Die Offerte basiert auf Geoportal-Daten. Sobald Sie grünes Licht geben, vermessen wir Ihr Dach mit der ' +
+      'Drohne und bestätigen den finalen Preis – die Abweichung liegt bei maximal CHF 1–2K.',
+  },
+  {
+    id: 'vorort',
+    name: 'Nach Vor-Ort-Termin',
+    betreff: 'Ihre Richtofferte – vielen Dank für den Besuch',
+    text:
+      'Guten Tag {vorname} {nachname}\n\n' +
+      'vielen Dank, dass ich mir Ihr Dach vor Ort ansehen durfte. Wie versprochen erhalten Sie hier Ihre ' +
+      'Richtofferte auf Basis unserer gemeinsamen Planung.\n\n' +
+      'Mit {kwp} kWp deckt die Anlage rund {autarkie} Ihres Strombedarfs und spart Ihnen etwa ' +
+      '{ersparnisJahr} pro Jahr.\n\n' +
+      'Melden Sie sich, wenn Sie etwas anpassen möchten – das ist jederzeit möglich.',
+  },
+  {
+    id: 'bedenkzeit',
+    name: 'Kunde will überlegen',
+    betreff: 'Ihre Unterlagen zum Nachlesen – NEOSOLAR AG',
+    text:
+      'Guten Tag {vorname} {nachname}\n\n' +
+      'wie gewünscht schicke ich Ihnen die Unterlagen, damit Sie in Ruhe darüber schauen und alles mit Ihrer ' +
+      'Familie besprechen können.\n\n' +
+      'Ich setze Sie unter keinen Zeitdruck. Die Offerte ist 30 Tage gültig, danach müssten wir die Preise ' +
+      'anhand der aktuellen Materiallage neu rechnen.\n\n' +
+      'Wenn Fragen auftauchen – auch kleine – rufen Sie mich einfach an.',
+  },
+  {
+    id: 'sparen',
+    name: 'Fokus Ersparnis',
+    betreff: '{ersparnisJahr} pro Jahr – Ihre Richtofferte',
+    text:
+      'Guten Tag {vorname} {nachname}\n\n' +
+      'hier ist Ihre Richtofferte mit den durchgerechneten Zahlen.\n\n' +
+      'Kurz zusammengefasst: Die Anlage spart Ihnen im ersten Jahr rund {ersparnisJahr}, also etwa ' +
+      '{ersparnisMonat} im Monat. Nach {amortisation} hat sie sich bezahlt und produziert danach weiter – ' +
+      'die Module haben 30 Jahre Leistungsgarantie.\n\n' +
+      'Der Betrag steigt über die Jahre, weil Netzstrom teurer wird und Ihr eigener Solarstrom gleich viel kostet.',
+  },
+  {
+    id: 'kurz',
+    name: 'Kurz und knapp',
+    betreff: 'Ihre Richtofferte für {kwp} kWp',
+    text:
+      'Guten Tag {vorname} {nachname}\n\n' +
+      'anbei Ihre Richtofferte: {kwp} kWp, Festpreis {festpreis}, Amortisation {amortisation}.\n\n' +
+      'Fragen? Einfach anrufen.',
+  },
+]
+
 interface Props {
   kontakt: Kontakt
   dealId?: string | null
@@ -95,13 +177,39 @@ interface Props {
 export default function OfferteSenden({
   kontakt, dealId, input, ergebnis, config, variantenName, onClose,
 }: Props) {
-  const [betreff, setBetreff] = useState(
-    `Ihre Richtofferte für ${input.kwp} kWp – NEOSOLAR AG`
-  )
-  const [nachricht, setNachricht] = useState('')
+  /** Setzt die Platzhalter einer Vorlage mit den echten Werten. */
+  const fuelle = (text: string) =>
+    text
+      .replace(/\{vorname\}/g, kontakt.firstName)
+      .replace(/\{nachname\}/g, kontakt.lastName)
+      .replace(/\{kwp\}/g, String(input.kwp))
+      .replace(
+        /\{speicher\}/g,
+        input.speicherKwh > 0 ? `${input.speicherKwh} kWh Speicher` : 'ohne Speicher, jederzeit nachrüstbar'
+      )
+      .replace(/\{ersparnisMonat\}/g, chf(ergebnis.ersparnisProMonat))
+      .replace(/\{ersparnisJahr\}/g, chf(ergebnis.ersparnisJahr1))
+      .replace(/\{festpreis\}/g, chf(ergebnis.nettoInvestition))
+      .replace(
+        /\{amortisation\}/g,
+        ergebnis.amortisationJahre ? `${ergebnis.amortisationJahre} Jahren` : 'wenigen Jahren'
+      )
+      .replace(/\{autarkie\}/g, `${Math.round(ergebnis.autarkiegrad * 100)} %`)
+
+  const [vorlageId, setVorlageId] = useState('standard')
+  const [betreff, setBetreff] = useState(() => fuelle(VORLAGEN[0].betreff))
+  const [nachricht, setNachricht] = useState(() => fuelle(VORLAGEN[0].text))
   const [laeuft, setLaeuft] = useState(false)
   const [antwort, setAntwort] = useState<Antwort | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
+
+  const vorlageWaehlen = (id: string) => {
+    const v = VORLAGEN.find((x) => x.id === id)
+    if (!v) return
+    setVorlageId(id)
+    setBetreff(fuelle(v.betreff))
+    setNachricht(fuelle(v.text))
+  }
 
   const senden = async (nurAblegen: boolean) => {
     setLaeuft(true)
@@ -225,6 +333,38 @@ export default function OfferteSenden({
           <>
             <div className="space-y-4">
               <div>
+                <label className="text-[11px] uppercase tracking-wider text-text-dim font-semibold block mb-2">
+                  Vorlage
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {VORLAGEN.map((v) => {
+                    const aktiv = vorlageId === v.id
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => vorlageWaehlen(v.id)}
+                        className="px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all duration-150"
+                        style={{
+                          background: aktiv
+                            ? 'color-mix(in srgb, #F59E0B 18%, transparent)'
+                            : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${aktiv ? 'color-mix(in srgb, #F59E0B 45%, transparent)' : 'rgba(255,255,255,0.07)'}`,
+                          color: aktiv ? '#F59E0B' : undefined,
+                        }}
+                      >
+                        {v.name}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-text-dim mt-2">
+                  Kundenname, Anlagengrösse, Ersparnis und Festpreis sind bereits eingesetzt – Text frei
+                  anpassbar.
+                </p>
+              </div>
+
+              <div>
                 <label className="text-[11px] uppercase tracking-wider text-text-dim font-semibold block mb-1.5">
                   Betreff
                 </label>
@@ -237,14 +377,15 @@ export default function OfferteSenden({
               </div>
               <div>
                 <label className="text-[11px] uppercase tracking-wider text-text-dim font-semibold block mb-1.5">
-                  Persönliche Nachricht (optional)
+                  Ihre Nachricht
                 </label>
                 <textarea
-                  rows={4}
+                  rows={9}
                   value={nachricht}
                   onChange={(e) => setNachricht(e.target.value)}
                   placeholder="Leer lassen für den Standardtext. Ihre Signatur wird automatisch angehängt."
                   className="glass-input w-full px-3 py-2.5 text-[13px]"
+                  style={{ lineHeight: 1.6 }}
                 />
               </div>
 
