@@ -16,6 +16,7 @@ const NoShowPage = lazy(() => import('@/features/noshow/NoShowPage'))
 const DealsPage = lazy(() => import('@/features/deals/DealsPage'))
 const CalculationsPage = lazy(() => import('@/features/calculations/CalculationsPage'))
 const SalesPitchPage = lazy(() => import('@/features/salespitch/SalesPitchPage'))
+const PublicCalculatorPage = lazy(() => import('@/features/publicCalculator/PublicCalculatorPage'))
 const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'))
 const ProvisionPage = lazy(() => import('@/features/provision/ProvisionPage'))
 const TasksPage = lazy(() => import('@/features/tasks/TasksPage'))
@@ -106,6 +107,9 @@ export default function App() {
           <Route path="/portal/*" element={<PortalApp />} />
           {/* Kurzer Login-Link: /p/<token> -> redirect zu Portal-Login */}
           <Route path="/p/:token" element={<ShortPortalRedirect />} />
+
+          {/* Solarrechner fuer die Homepage – oeffentlich, ohne Login */}
+          <Route path="/rechner" element={<PublicCalculatorPage />} />
 
           {/* Login - oeffentlich */}
           <Route

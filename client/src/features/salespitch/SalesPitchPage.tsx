@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Maximize2, Minimize2, Eye, EyeOff,
-  FileText, Loader2, Check, X, Presentation,
+  FileText, Loader2, Check, X, Presentation, Printer,
 } from 'lucide-react'
 import { berechne } from '../../lib/pvCalculator'
 import type { CalculatorInput } from '../../lib/pvCalculator'
@@ -13,6 +13,7 @@ import RechnerPanel from './components/RechnerPanel'
 import VariantenVergleich, { bildeVarianten } from './components/VariantenVergleich'
 import BeduerfnisSchritt, { LEERE_BEDUERFNISSE } from './components/BeduerfnisSchritt'
 import type { Beduerfnisse } from './components/BeduerfnisSchritt'
+import OffertenDruck from './components/OffertenDruck'
 import {
   FolienTitel, FolienAblauf, FolienWarumNeosolar, FolienWarumJetztVerbrauch,
   FolienStrompreis, FolienKomponenten, FolienAblaufUmsetzung, FolienZeitplan, FolienAbschluss,
@@ -79,6 +80,7 @@ export default function SalesPitchPage() {
   const [gewaehlteVariante, setGewaehlteVariante] = useState<string | null>('empfehlung')
   const [offerteLaeuft, setOfferteLaeuft] = useState(false)
   const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
+  const [druckOffen, setDruckOffen] = useState(false)
 
   // ── Kontakt laden ──
   useEffect(() => {
@@ -321,6 +323,15 @@ export default function SalesPitchPage() {
           {kundenansicht ? 'Kundenansicht' : 'Verkäuferansicht'}
         </button>
 
+        <button
+          type="button"
+          onClick={() => setDruckOffen(true)}
+          className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[11px]"
+        >
+          <Printer size={13} strokeWidth={2} />
+          Offerte drucken
+        </button>
+
         {contactId && (
           <button
             type="button"
@@ -453,6 +464,18 @@ export default function SalesPitchPage() {
           </span>
           <span className="text-text-dim ml-auto">Pfeiltasten ← → zum Blättern</span>
         </div>
+      )}
+
+      {druckOffen && (
+        <OffertenDruck
+          kunde={kontakt}
+          variantenName={aktiveVariante.name}
+          input={aktiveVariante.input}
+          ergebnis={variantenErgebnis}
+          config={config}
+          beduerfnisse={beduerfnisse}
+          onClose={() => setDruckOffen(false)}
+        />
       )}
     </div>
   )
