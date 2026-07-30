@@ -1,0 +1,402 @@
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, Sun, Printer, LayoutList,
+} from 'lucide-react'
+import { berechne } from '../../lib/pvCalculator'
+import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
+import { DEFAULT_CONFIG, DEFAULT_INPUT } from '../../lib/calculatorConfig'
+import RechnerPanel from '../salespitch/components/RechnerPanel'
+import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
+import OffertenDruck from '../salespitch/components/OffertenDruck'
+import { LEERE_BEDUERFNISSE } from '../salespitch/components/BeduerfnisSchritt'
+import {
+  FolienAblauf, FolienWarumNeosolar, FolienWarumJetztVerbrauch, FolienStrompreis,
+  FolienAblaufUmsetzung, FolienZeitplan,
+} from '../salespitch/components/Folien'
+import {
+  FolienDreiMotive, FolienStromkostenOhne, FolienEnergiefluss, FolienAnlageUebersicht,
+} from '../salespitch/components/Folien2'
+import {
+  BildTitelFolie, BildKontaktFolie, FolienTeam, ProduktFolien,
+} from '../salespitch/components/FolienBilder'
+
+const API = import.meta.env.VITE_API_URL ?? '/api/v1'
+
+type FolienId =
+  | 'titel' | 'ablauf' | 'warum' | 'team' | 'verbrauch' | 'strompreis' | 'kostenOhne'
+  | 'modul' | 'wechselrichter' | 'speicher' | 'wallbox' | 'app' | 'dachanalyse'
+  | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
+  | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
+
+interface Variante {
+  id: string
+  name: string
+  beschreibung: string
+  folien: Array<{ id: FolienId; titel: string }>
+}
+
+/**
+ * Zwei Praesentations-Strecken, beide mit demselben Live-Rechner:
+ *
+ * "verkauf" folgt der NEOSOLAR-Verkaufspraesentation inklusive der
+ *   Originalbilder (Produkte, Team, App).
+ * "premium" ist die kompaktere, zahlengetriebene Strecke: erst die
+ *   Stromkosten ohne Anlage, dann Rechner, Energiefluss und Varianten.
+ */
+const VARIANTEN: Variante[] = [
+  {
+    id: 'verkauf',
+    name: 'Verkaufspräsentation',
+    beschreibung: 'Der vollständige Ablauf mit Produktbildern, Team und Ablauf – für den ausführlichen Termin.',
+    folien: [
+      { id: 'titel', titel: 'Begrüssung' },
+      { id: 'ablauf', titel: 'Ablauf' },
+      { id: 'warum', titel: 'Warum NEOSOLAR' },
+      { id: 'team', titel: 'Das Team' },
+      { id: 'verbrauch', titel: 'Ihr Strombedarf' },
+      { id: 'strompreis', titel: 'Strompreise' },
+      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
+      { id: 'modul', titel: 'Solarmodule' },
+      { id: 'wechselrichter', titel: 'Wechselrichter' },
+      { id: 'speicher', titel: 'Speicher' },
+      { id: 'wallbox', titel: 'Wallbox' },
+      { id: 'app', titel: 'Die App' },
+      { id: 'dachanalyse', titel: 'Dachanalyse' },
+      { id: 'rechner', titel: 'Ihre Anlage planen' },
+      { id: 'anlage', titel: 'Ihre Anlage' },
+      { id: 'energiefluss', titel: 'Energiefluss' },
+      { id: 'varianten', titel: 'Varianten' },
+      { id: 'planung', titel: 'Planungssicherheit' },
+      { id: 'workflow', titel: 'Unser Ablauf' },
+      { id: 'zeitplan', titel: 'Umsetzung' },
+      { id: 'kontakt', titel: 'Fragen' },
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Zahlen-Präsentation',
+    beschreibung: 'Kompakt und zahlengetrieben: was Strom kostet, was die Anlage bringt, welche Variante passt.',
+    folien: [
+      { id: 'titel', titel: 'Begrüssung' },
+      { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
+      { id: 'strompreis', titel: 'Strompreise' },
+      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
+      { id: 'rechner', titel: 'Ihre Anlage planen' },
+      { id: 'anlage', titel: 'Ihre Anlage' },
+      { id: 'energiefluss', titel: 'Energiefluss' },
+      { id: 'motive', titel: 'Ihr Nutzen' },
+      { id: 'varianten', titel: 'Varianten' },
+      { id: 'warum', titel: 'Warum NEOSOLAR' },
+      { id: 'zeitplan', titel: 'Umsetzung' },
+      { id: 'kontakt', titel: 'Fragen' },
+    ],
+  },
+]
+
+export default function PraesentationPage() {
+  const { varianteId } = useParams<{ varianteId?: string }>()
+  const [suchparameter] = useSearchParams()
+  const navigate = useNavigate()
+
+  const variante = VARIANTEN.find((v) => v.id === varianteId) ?? null
+  const kundeAusLink = suchparameter.get('kunde') ?? undefined
+
+  const [config, setConfig] = useState<CalculatorConfig>(DEFAULT_CONFIG)
+  const [schritt, setSchritt] = useState(0)
+  const [vollbild, setVollbild] = useState(false)
+  const [input, setInput] = useState<CalculatorInput>(DEFAULT_INPUT)
+  const [gewaehlteVariante, setGewaehlteVariante] = useState<string | null>('empfehlung')
+  const [druckOffen, setDruckOffen] = useState(false)
+
+  useEffect(() => {
+    fetch(`${API}/public/calculator/config`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('nicht erreichbar'))))
+      .then((j) => {
+        if (j?.data?.pricing) setConfig({ ...DEFAULT_CONFIG, ...j.data.pricing })
+      })
+      .catch(() => {
+        /* Standardwerte genuegen */
+      })
+  }, [])
+
+  const ergebnis = useMemo(() => berechne(input, config), [input, config])
+  const anlagenVarianten = useMemo(() => bildeVarianten(input), [input])
+  const aktiveAnlage = useMemo(
+    () => anlagenVarianten.find((v) => v.id === gewaehlteVariante) ?? anlagenVarianten[1],
+    [anlagenVarianten, gewaehlteVariante]
+  )
+  const anlageErgebnis = useMemo(() => berechne(aktiveAnlage.input, config), [aktiveAnlage, config])
+
+  const patchInput = useCallback((p: Partial<CalculatorInput>) => setInput((v) => ({ ...v, ...p })), [])
+  const anzahl = variante?.folien.length ?? 0
+  const weiter = useCallback(() => setSchritt((s) => Math.min(s + 1, anzahl - 1)), [anzahl])
+  const zurueck = useCallback(() => setSchritt((s) => Math.max(s - 1, 0)), [])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const ziel = e.target as HTMLElement
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(ziel.tagName)) return
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') weiter()
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') zurueck()
+      if (e.key === 'Escape') setVollbild(false)
+      if (e.key === 'f') setVollbild((v) => !v)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [weiter, zurueck])
+
+  // ── Auswahlseite ──
+  if (!variante) {
+    return (
+      <div style={{ background: '#06080C', minHeight: '100vh' }} className="text-text">
+        <div className="max-w-4xl mx-auto px-6 py-16">
+          <div className="text-center mb-12">
+            <img src="/praesentation/logo.png" alt="NEOSOLAR" className="h-12 object-contain mx-auto mb-7" />
+            <h1 className="text-[34px] font-bold mb-3">Präsentation starten</h1>
+            <p className="text-[15px] text-text-sec">
+              Beide Strecken enthalten denselben Live-Rechner. Wählen Sie nach Termin und Kunde.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+            {VARIANTEN.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => navigate(`/praesentation/${v.id}${kundeAusLink ? `?kunde=${encodeURIComponent(kundeAusLink)}` : ''}`)}
+                className="p-6 rounded-2xl text-left transition-all duration-200 hover:scale-[1.02]"
+                style={{
+                  background: 'color-mix(in srgb, #F59E0B 8%, transparent)',
+                  border: '1px solid color-mix(in srgb, #F59E0B 28%, transparent)',
+                }}
+              >
+                <Presentation size={24} strokeWidth={1.7} className="text-amber mb-4" />
+                <div className="text-[19px] font-bold mb-2">{v.name}</div>
+                <div className="text-[13px] text-text-sec leading-snug mb-4">{v.beschreibung}</div>
+                <div className="flex items-center gap-1.5 text-[11px] text-text-dim">
+                  <LayoutList size={12} strokeWidth={2} />
+                  {v.folien.length} Folien
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div
+            className="p-5 rounded-2xl text-[12px] text-text-sec"
+            style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <div className="font-bold text-text mb-2">Bedienung im Termin</div>
+            <ul className="space-y-1 text-text-dim">
+              <li>Pfeiltasten ← → oder Leertaste blättern</li>
+              <li>Taste <b className="text-text-sec">F</b> schaltet Vollbild ein und aus</li>
+              <li>Auf der Rechner-Folie die Regler verschieben – alle Folgefolien rechnen mit</li>
+              <li>Kundennamen anhängen: <code className="text-amber">?kunde=Familie%20Muster</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const aktuell = variante.folien[Math.min(schritt, variante.folien.length - 1)]
+
+  const inhalt = () => {
+    switch (aktuell.id) {
+      case 'titel':
+        return <BildTitelFolie kunde={kundeAusLink} />
+      case 'ablauf':
+        return <FolienAblauf />
+      case 'warum':
+        return <FolienWarumNeosolar />
+      case 'team':
+        return <FolienTeam />
+      case 'verbrauch':
+        return <FolienWarumJetztVerbrauch />
+      case 'strompreis':
+        return <FolienStrompreis />
+      case 'kostenOhne':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <FolienStromkostenOhne ergebnis={ergebnis} input={input} />
+          </div>
+        )
+      case 'modul':
+        return <ProduktFolien.modul />
+      case 'wechselrichter':
+        return <ProduktFolien.wechselrichter />
+      case 'speicher':
+        return <ProduktFolien.speicher />
+      case 'wallbox':
+        return <ProduktFolien.wallbox />
+      case 'app':
+        return <ProduktFolien.app />
+      case 'dachanalyse':
+        return <ProduktFolien.dachanalyse />
+      case 'workflow':
+        return <ProduktFolien.workflow />
+      case 'rechner':
+        return (
+          <div className="h-full overflow-y-auto px-4 sm:px-6 py-6">
+            <RechnerPanel input={input} ergebnis={ergebnis} onChange={patchInput} />
+          </div>
+        )
+      case 'anlage':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <FolienAnlageUebersicht ergebnis={ergebnis} input={input} />
+          </div>
+        )
+      case 'energiefluss':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <FolienEnergiefluss ergebnis={ergebnis} />
+          </div>
+        )
+      case 'motive':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <FolienDreiMotive ergebnis={ergebnis} />
+          </div>
+        )
+      case 'varianten':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <VariantenVergleich
+              varianten={anlagenVarianten}
+              config={config}
+              empfehlungId="empfehlung"
+              gewaehlteId={gewaehlteVariante}
+              onWaehlen={setGewaehlteVariante}
+            />
+          </div>
+        )
+      case 'planung':
+        return <FolienAblaufUmsetzung />
+      case 'zeitplan':
+        return <FolienZeitplan />
+      case 'kontakt':
+        return <BildKontaktFolie />
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div
+      className="flex flex-col"
+      style={{ background: '#06080C', height: '100vh', padding: vollbild ? 0 : '12px' }}
+    >
+      {/* Kopfzeile – im Vollbild ausgeblendet */}
+      {!vollbild && (
+        <div className="flex items-center gap-2 flex-wrap mb-2.5 px-1">
+          <button
+            type="button"
+            onClick={() => navigate('/praesentation')}
+            className="flex items-center gap-1.5 text-[12px] text-text-dim hover:text-text transition-colors mr-auto"
+          >
+            <Sun size={15} strokeWidth={1.8} className="text-amber" />
+            {variante.name}
+            {kundeAusLink && <span className="text-text-dim">· {kundeAusLink}</span>}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDruckOffen(true)}
+            className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[11px]"
+          >
+            <Printer size={13} strokeWidth={2} />
+            Offerte drucken
+          </button>
+          <button
+            type="button"
+            onClick={() => setVollbild(true)}
+            className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[11px]"
+          >
+            <Maximize2 size={13} strokeWidth={2} />
+            Vollbild
+          </button>
+        </div>
+      )}
+
+      {/* Folie */}
+      <div
+        className="flex-1 min-h-0 overflow-hidden"
+        style={{
+          background: 'rgba(255,255,255,0.02)',
+          border: vollbild ? 'none' : '1px solid rgba(255,255,255,0.06)',
+          borderRadius: vollbild ? 0 : 'var(--radius-lg)',
+        }}
+      >
+        {inhalt()}
+      </div>
+
+      {/* Navigation */}
+      <div className={`flex items-center gap-3 ${vollbild ? 'px-4 py-2.5' : 'mt-2.5 px-1'}`}>
+        <button
+          type="button"
+          onClick={zurueck}
+          disabled={schritt === 0}
+          className="btn-secondary flex items-center gap-1 px-3 py-2 text-[12px] disabled:opacity-25"
+        >
+          <ChevronLeft size={15} strokeWidth={2} />
+          Zurück
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-semibold text-text truncate">{aktuell.titel}</span>
+            <span className="text-[10px] text-text-dim tabular-nums shrink-0 ml-2">
+              {schritt + 1} / {variante.folien.length}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
+            <div
+              className="h-full transition-all duration-300"
+              style={{
+                width: `${((schritt + 1) / variante.folien.length) * 100}%`,
+                background: 'linear-gradient(90deg, #F59E0B, #FBBF24)',
+              }}
+            />
+          </div>
+        </div>
+
+        {vollbild && (
+          <button
+            type="button"
+            onClick={() => setVollbild(false)}
+            className="btn-secondary flex items-center gap-1 px-3 py-2 text-[12px]"
+          >
+            <Minimize2 size={15} strokeWidth={2} />
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={weiter}
+          disabled={schritt === variante.folien.length - 1}
+          className="btn-primary flex items-center gap-1 px-3 py-2 text-[12px] disabled:opacity-25"
+        >
+          Weiter
+          <ChevronRight size={15} strokeWidth={2} />
+        </button>
+      </div>
+
+      {druckOffen && (
+        <OffertenDruck
+          kunde={
+            kundeAusLink
+              ? { firstName: kundeAusLink, lastName: '', address: '', email: '', phone: '' }
+              : null
+          }
+          variantenName={aktiveAnlage.name}
+          input={aktiveAnlage.input}
+          ergebnis={anlageErgebnis}
+          config={config}
+          beduerfnisse={LEERE_BEDUERFNISSE}
+          onClose={() => setDruckOffen(false)}
+        />
+      )}
+    </div>
+  )
+}

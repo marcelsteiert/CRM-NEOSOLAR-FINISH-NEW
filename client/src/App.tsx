@@ -17,6 +17,7 @@ const DealsPage = lazy(() => import('@/features/deals/DealsPage'))
 const CalculationsPage = lazy(() => import('@/features/calculations/CalculationsPage'))
 const SalesPitchPage = lazy(() => import('@/features/salespitch/SalesPitchPage'))
 const PublicCalculatorPage = lazy(() => import('@/features/publicCalculator/PublicCalculatorPage'))
+const PraesentationPage = lazy(() => import('@/features/praesentation/PraesentationPage'))
 const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'))
 const ProvisionPage = lazy(() => import('@/features/provision/ProvisionPage'))
 const TasksPage = lazy(() => import('@/features/tasks/TasksPage'))
@@ -110,6 +111,10 @@ export default function App() {
 
           {/* Solarrechner fuer die Homepage – oeffentlich, ohne Login */}
           <Route path="/rechner" element={<PublicCalculatorPage />} />
+
+          {/* Praesentationen – per Link teilbar, ohne Login praesentierbar */}
+          <Route path="/praesentation" element={<PraesentationPage />} />
+          <Route path="/praesentation/:varianteId" element={<PraesentationPage />} />
 
           {/* Login - oeffentlich */}
           <Route

@@ -323,6 +323,21 @@ export default function SalesPitchPage() {
           {kundenansicht ? 'Kundenansicht' : 'Verkäuferansicht'}
         </button>
 
+        <a
+          href={
+            kundeName
+              ? `/praesentation?kunde=${encodeURIComponent(kundeName)}`
+              : '/praesentation'
+          }
+          target="_blank"
+          rel="noreferrer"
+          className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-[11px]"
+          title="Präsentation in einem eigenen Fenster öffnen – ideal für die Bildschirmfreigabe"
+        >
+          <Presentation size={13} strokeWidth={2} />
+          Präsentation
+        </a>
+
         <button
           type="button"
           onClick={() => setDruckOffen(true)}
