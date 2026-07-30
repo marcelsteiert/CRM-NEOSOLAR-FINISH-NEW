@@ -182,6 +182,20 @@ Inhalte aus "Neosolar Verkaufspraesentation_v2" in einen interaktiven Ablauf ueb
 - **Oeffentlich: `/rechner`** – Selbstrechner fuer die Homepage, ohne Login.
   Anfragen landen als Lead mit Quelle HOMEPAGE (Honeypot + Rate-Limit 5/10 Min pro IP).
 
+### Praesentationen (oeffentlich, per Link teilbar)
+- `/praesentation` – Auswahl der beiden Strecken
+- `/praesentation/verkauf` – 21 Folien mit den Originalbildern aus der PPTX
+  (Produkte, Team, App, Dachanalyse, Workflow)
+- `/praesentation/premium` – 12 Folien, zahlengetrieben
+- `?kunde=Familie%20Muster` personalisiert die Titelfolie
+- Bedienung: Pfeiltasten/Leertaste blaettern, `F` schaltet Vollbild
+- Beide enthalten denselben Live-Rechner; die Reglerwerte gelten fuer alle
+  Folgefolien inklusive Druckofferte
+- Bilder: `client/public/praesentation/` – aus der PPTX extrahiert und
+  komprimiert (26 MB -> 1.5 MB, Skript-Ansatz: System.Drawing, max 1800px, Q82)
+- Komponenten: `features/praesentation/PraesentationPage.tsx`,
+  Folien in `features/salespitch/components/Folien{,2,Bilder}.tsx`
+
 ### Rechen-Engine
 `client/src/lib/pvCalculator.ts` – laeuft im Browser, damit die Regler ohne Latenz reagieren.
 Liefert Ertrag, Eigenverbrauch, Autarkie, Amortisation, Kapitalwert, IRR und
