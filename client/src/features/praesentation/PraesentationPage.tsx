@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, Sun, Printer, LayoutList,
+  ChevronLeft, ChevronRight, Maximize2, Minimize2, Presentation, Sun, Printer, LayoutList, FileCheck2,
 } from 'lucide-react'
 import { berechne } from '../../lib/pvCalculator'
 import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
@@ -10,6 +10,8 @@ import RechnerPanel from '../salespitch/components/RechnerPanel'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
 import { LEERE_BEDUERFNISSE } from '../salespitch/components/BeduerfnisSchritt'
+import { api } from '../../lib/api'
+import { KOMPONENTEN } from '../../lib/calculatorConfig'
 import {
   FolienAblauf, FolienWarumNeosolar, FolienWarumJetztVerbrauch, FolienStrompreis,
   FolienAblaufUmsetzung, FolienZeitplan,
@@ -151,7 +153,9 @@ export default function PraesentationPage() {
   const navigate = useNavigate()
 
   const variante = VARIANTEN.find((v) => v.id === varianteId) ?? null
-  const kundeAusLink = suchparameter.get('kunde') ?? undefined
+  const kundeAusLinkRoh = suchparameter.get('kunde') ?? undefined
+  const contactId = suchparameter.get('contact') ?? undefined
+  const terminId = suchparameter.get('termin') ?? undefined
 
   const [config, setConfig] = useState<CalculatorConfig>(DEFAULT_CONFIG)
   const [schritt, setSchritt] = useState(0)
@@ -166,6 +170,19 @@ export default function PraesentationPage() {
   const [basisInput, setBasisInput] = useState<CalculatorInput>(DEFAULT_INPUT)
   const [gewaehlteVariante, setGewaehlteVariante] = useState<string | null>('empfehlung')
   const [druckOffen, setDruckOffen] = useState(false)
+  const [kontakt, setKontakt] = useState<{ id: string; firstName: string; lastName: string; address: string; email: string; phone: string } | null>(null)
+  const [offerteLaeuft, setOfferteLaeuft] = useState(false)
+  const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
+
+  // Kundendaten laden – funktioniert nur mit angemeldetem Verkaeufer.
+  // Ohne Login bleibt die Praesentation als reine Anschauung nutzbar.
+  useEffect(() => {
+    if (!contactId) return
+    api
+      .get<{ data: typeof kontakt }>(`/contacts/${contactId}`)
+      .then((r) => setKontakt(r.data))
+      .catch(() => setKontakt(null))
+  }, [contactId])
 
   useEffect(() => {
     fetch(`${API}/public/calculator/config`)
@@ -187,6 +204,10 @@ export default function PraesentationPage() {
    * Energiefluss, Geld-Folien, Finanzierung und Offerte garantiert dieselben
    * Zahlen – es gibt kein zweites Ergebnis mehr, das abweichen koennte.
    */
+  // Name aus dem geladenen Kontakt, sonst aus dem Link
+  const kundeAusLink = kontakt ? `${kontakt.firstName} ${kontakt.lastName}`.trim() : kundeAusLinkRoh
+  const beraterName = suchparameter.get('berater') ?? undefined
+
   const ergebnis = useMemo(() => berechne(input, config), [input, config])
   const anlagenVarianten = useMemo(() => bildeVarianten(basisInput), [basisInput])
 
@@ -227,6 +248,78 @@ export default function PraesentationPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [weiter, zurueck])
 
+  /**
+   * Legt das Angebot beim Kontakt an und schliesst den Termin ab.
+   * Dadurch wandert der Fall aus der Termin-Pipeline in die Angebote –
+   * ohne dass der Verkaeufer das CRM separat anfassen muss.
+   */
+  const offerteSpeichern = async () => {
+    if (!contactId || !kontakt) return
+    setOfferteLaeuft(true)
+    setOfferteMeldung(null)
+    try {
+      const module = Math.round((input.kwp * 1000) / KOMPONENTEN.modul.watt)
+      const snapshot = [
+        `Aus der Solarberatung vom ${new Date().toLocaleDateString('de-CH')}`,
+        `Variante: ${aktiveAnlage.name}`,
+        `Anlage: ${input.kwp} kWp (${module} Module ${KOMPONENTEN.modul.name})`,
+        input.speicherKwh > 0 ? `Speicher: ${input.speicherKwh} kWh` : 'Ohne Speicher',
+        input.wallbox ? 'Wallbox inklusive' : null,
+        '',
+        `Produktion: ${ergebnis.jahresertragKwh.toLocaleString('de-CH')} kWh/Jahr`,
+        `Autarkie: ${Math.round(ergebnis.autarkiegrad * 100)} %`,
+        `Ersparnis Jahr 1: CHF ${ergebnis.ersparnisJahr1.toLocaleString('de-CH')}`,
+        `Amortisation: ${ergebnis.amortisationJahre ?? '—'} Jahre`,
+        `Ersparnis ${config.betrachtungsJahre} Jahre: CHF ${ergebnis.gesamtErsparnis.toLocaleString('de-CH')}`,
+        '',
+        `Brutto: CHF ${ergebnis.bruttoPreis.toLocaleString('de-CH')}`,
+        `Foerderung: CHF ${ergebnis.foerderung.toLocaleString('de-CH')}`,
+        `Festpreis: CHF ${ergebnis.nettoInvestition.toLocaleString('de-CH')}`,
+        '',
+        `Grundlage: Verbrauch ${input.verbrauchKwh.toLocaleString('de-CH')} kWh, Strompreis ${input.strompreisRp} Rp./kWh`,
+        'Richtofferte – verbindlich nach Drohnenvermessung.',
+      ]
+        .filter((z) => z !== null)
+        .join('\n')
+
+      await api.post('/deals', {
+        contactId,
+        title: `Offerte ${input.kwp} kWp – ${kontakt.firstName} ${kontakt.lastName}`,
+        value: ergebnis.nettoInvestition,
+        stage: 'ERSTELLT',
+        notes: snapshot,
+        ...(terminId ? { appointmentId: terminId } : {}),
+      })
+
+      // Termin als durchgefuehrt markieren, damit er die Pipeline verlaesst
+      if (terminId) {
+        try {
+          await api.put(`/appointments/${terminId}`, { status: 'DURCHGEFUEHRT' })
+        } catch {
+          setOfferteMeldung({
+            art: 'ok',
+            text: 'Angebot angelegt. Der Termin konnte nicht automatisch abgeschlossen werden – bitte im CRM prüfen.',
+          })
+          setOfferteLaeuft(false)
+          return
+        }
+      }
+
+      setOfferteMeldung({
+        art: 'ok',
+        text: terminId
+          ? 'Angebot angelegt und Termin als durchgeführt markiert – der Fall liegt jetzt bei den Angeboten.'
+          : 'Angebot im CRM angelegt.',
+      })
+    } catch (err) {
+      setOfferteMeldung({
+        art: 'fehler',
+        text: err instanceof Error ? err.message : 'Angebot konnte nicht gespeichert werden',
+      })
+    } finally {
+      setOfferteLaeuft(false)
+    }
+  }
   // ── Auswahlseite ──
   if (!variante) {
     return (
@@ -285,7 +378,7 @@ export default function PraesentationPage() {
   const inhalt = () => {
     switch (aktuell.id) {
       case 'titel':
-        return <BildTitelFolie kunde={kundeAusLink} />
+        return <BildTitelFolie kunde={kundeAusLink} adresse={kontakt?.address} berater={beraterName} />
       case 'ablauf':
         return <FolienAblauf />
       case 'warum':
@@ -421,6 +514,19 @@ export default function PraesentationPage() {
             {kundeAusLink && <span className="text-text-dim">· {kundeAusLink}</span>}
           </button>
 
+          {kontakt && (
+            <button
+              type="button"
+              onClick={offerteSpeichern}
+              disabled={offerteLaeuft}
+              className="btn-primary flex items-center gap-1.5 px-3 py-1.5 text-[11px] disabled:opacity-50"
+              title="Angebot beim Kunden anlegen und Termin abschliessen"
+            >
+              <FileCheck2 size={13} strokeWidth={2} />
+              Angebot speichern
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setDruckOffen(true)}
@@ -437,6 +543,19 @@ export default function PraesentationPage() {
             <Maximize2 size={13} strokeWidth={2} />
             Vollbild
           </button>
+        </div>
+      )}
+
+      {offerteMeldung && !vollbild && (
+        <div
+          className="px-4 py-2.5 mb-2.5 rounded-xl text-[12px]"
+          style={{
+            background: offerteMeldung.art === 'ok' ? 'color-mix(in srgb, #34D399 12%, transparent)' : 'color-mix(in srgb, #F87171 12%, transparent)',
+            border: `1px solid ${offerteMeldung.art === 'ok' ? 'color-mix(in srgb, #34D399 35%, transparent)' : 'color-mix(in srgb, #F87171 35%, transparent)'}`,
+            color: offerteMeldung.art === 'ok' ? '#34D399' : '#F87171',
+          }}
+        >
+          {offerteMeldung.text}
         </div>
       )}
 

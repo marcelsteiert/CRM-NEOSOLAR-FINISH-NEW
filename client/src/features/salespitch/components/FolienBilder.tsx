@@ -87,7 +87,17 @@ export function BildFolie({
 }
 
 /** Titelfolie mit dem Originalbild im Hintergrund. */
-export function BildTitelFolie({ kunde, untertitel }: { kunde?: string; untertitel?: string }) {
+export function BildTitelFolie({
+  kunde,
+  untertitel,
+  adresse,
+  berater,
+}: {
+  kunde?: string
+  untertitel?: string
+  adresse?: string
+  berater?: string
+}) {
   return (
     <div className="relative h-full overflow-hidden">
       <img
@@ -109,7 +119,37 @@ export function BildTitelFolie({ kunde, untertitel }: { kunde?: string; untertit
         <p className="text-[16px] sm:text-[18px] text-text-sec max-w-xl">
           {untertitel ?? 'Wir planen heute gemeinsam Ihre Anlage – und Sie sehen sofort, was Sie damit sparen.'}
         </p>
-        <p className="text-[13px] text-text-dim mt-12">NEOSOLAR AG · Dein Schweizer Solarpartner</p>
+
+        {/* Kundendaten – zeigt dem Kunden, dass die Unterlage fuer ihn gemacht ist */}
+        {(adresse || berater) && (
+          <div
+            className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2 mt-9 px-6 py-3.5 rounded-2xl"
+            style={{
+              background: 'rgba(255,255,255,0.055)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              backdropFilter: 'blur(10px)',
+            }}
+          >
+            {adresse && (
+              <span className="text-[13px] text-text-sec">
+                <span className="text-text-dim">Objekt: </span>
+                {adresse}
+              </span>
+            )}
+            <span className="text-[13px] text-text-sec">
+              <span className="text-text-dim">Termin: </span>
+              {new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </span>
+            {berater && (
+              <span className="text-[13px] text-text-sec">
+                <span className="text-text-dim">Ihr Berater: </span>
+                {berater}
+              </span>
+            )}
+          </div>
+        )}
+
+        <p className="text-[13px] text-text-dim mt-10">NEOSOLAR AG · Dein Schweizer Solarpartner</p>
       </div>
     </div>
   )

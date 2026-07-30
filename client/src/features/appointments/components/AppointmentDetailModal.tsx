@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Clock,
   Trash2, ChevronDown, FileText, ArrowRight, Car, AlertTriangle, Globe, CalendarPlus,
+  Presentation,
 } from 'lucide-react'
 import {
   useAppointment, useUpdateAppointment, useDeleteAppointment,
@@ -262,6 +263,21 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusColors[appt.status] }} />
             {statusLabels[appt.status]}
           </span>
+
+          {/* Beratung starten: oeffnet die Praesentation mit diesem Kunden.
+              Eigenes Fenster, damit das CRM fuer Notizen offen bleibt. */}
+          {appt.contactId && (
+            <a
+              href={`/praesentation/komplett?contact=${appt.contactId}&termin=${appt.id}&berater=${encodeURIComponent([user?.firstName, user?.lastName].filter(Boolean).join(" "))}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold shrink-0"
+              title="Verkaufspräsentation mit den Daten dieses Kunden starten"
+            >
+              <Presentation size={13} strokeWidth={2} />
+              Präsentation
+            </a>
+          )}
 
           {/* Edit toggle */}
           {!isClosed && (
