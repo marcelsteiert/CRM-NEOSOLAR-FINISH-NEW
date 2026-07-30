@@ -20,6 +20,12 @@ import {
 import {
   BildTitelFolie, BildKontaktFolie, FolienTeam, ProduktFolien,
 } from '../salespitch/components/FolienBilder'
+import {
+  FolienSicherheiten, FolienHaeufigeFragen, FolienEntscheidung,
+} from '../salespitch/components/FolienAbschluss'
+import {
+  FolienGesamtvergleich, FolienMonatsvergleich, FolienFinanzierung,
+} from '../salespitch/components/FolienGeld'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
@@ -27,6 +33,8 @@ type FolienId =
   | 'titel' | 'ablauf' | 'warum' | 'team' | 'verbrauch' | 'strompreis' | 'kostenOhne'
   | 'modul' | 'wechselrichter' | 'speicher' | 'wallbox' | 'app' | 'dachanalyse'
   | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
+  | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
+  | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
 
 interface Variante {
@@ -35,6 +43,15 @@ interface Variante {
   beschreibung: string
   folien: Array<{ id: FolienId; titel: string }>
 }
+
+/** Folien, deren Zahlen sich auf die gewaehlte Anlagenvariante beziehen. */
+const GELD_FOLIEN = new Set<FolienId>([
+  'varianten',
+  'gesamtvergleich',
+  'monatsvergleich',
+  'finanzierung',
+  'entscheidung',
+])
 
 /**
  * Zwei Praesentations-Strecken, beide mit demselben Live-Rechner:
@@ -46,50 +63,69 @@ interface Variante {
  */
 const VARIANTEN: Variante[] = [
   {
-    id: 'verkauf',
-    name: 'Verkaufspräsentation',
-    beschreibung: 'Der vollständige Ablauf mit Produktbildern, Team und Ablauf – für den ausführlichen Termin.',
+    id: 'komplett',
+    name: 'Komplette Beratung',
+    beschreibung:
+      'Der volle Ablauf: Bedarf, Produkte, Rechner, Geld-Vergleich, Sicherheiten und Abschluss. Für den regulären Beratungstermin.',
     folien: [
+      // 1. Ankommen und Rahmen setzen
       { id: 'titel', titel: 'Begrüssung' },
-      { id: 'ablauf', titel: 'Ablauf' },
+      { id: 'ablauf', titel: 'Ablauf des Termins' },
+      // 2. Problem aufbauen – bevor irgendeine Lösung kommt
+      { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
+      { id: 'strompreis', titel: 'Strompreis-Entwicklung' },
+      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
+      // 3. Vertrauen aufbauen
       { id: 'warum', titel: 'Warum NEOSOLAR' },
       { id: 'team', titel: 'Das Team' },
-      { id: 'verbrauch', titel: 'Ihr Strombedarf' },
-      { id: 'strompreis', titel: 'Strompreise' },
-      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
+      // 4. Lösung zeigen
       { id: 'modul', titel: 'Solarmodule' },
       { id: 'wechselrichter', titel: 'Wechselrichter' },
       { id: 'speicher', titel: 'Speicher' },
       { id: 'wallbox', titel: 'Wallbox' },
       { id: 'app', titel: 'Die App' },
       { id: 'dachanalyse', titel: 'Dachanalyse' },
+      // 5. Gemeinsam planen – hier bewegt der Verkäufer die Regler
       { id: 'rechner', titel: 'Ihre Anlage planen' },
-      { id: 'anlage', titel: 'Ihre Anlage' },
-      { id: 'energiefluss', titel: 'Energiefluss' },
-      { id: 'varianten', titel: 'Varianten' },
+      { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
+      { id: 'energiefluss', titel: 'Ihr Energiefluss' },
+      { id: 'motive', titel: 'Ihr Nutzen' },
+      // 6. Das Geld – die Kernsequenz
+      { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
+      { id: 'monatsvergleich', titel: 'Pro Monat' },
+      { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
+      { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
+      // 7. Sicherheit geben
+      { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'planung', titel: 'Planungssicherheit' },
+      { id: 'fragen', titel: 'Häufige Fragen' },
       { id: 'workflow', titel: 'Unser Ablauf' },
       { id: 'zeitplan', titel: 'Umsetzung' },
-      { id: 'kontakt', titel: 'Fragen' },
+      // 8. Abschluss
+      { id: 'entscheidung', titel: 'Ihre Entscheidung' },
+      { id: 'kontakt', titel: 'Fragen offen?' },
     ],
   },
   {
-    id: 'premium',
-    name: 'Zahlen-Präsentation',
-    beschreibung: 'Kompakt und zahlengetrieben: was Strom kostet, was die Anlage bringt, welche Variante passt.',
+    id: 'kurz',
+    name: 'Kurzfassung',
+    beschreibung:
+      'Zahlengetrieben in 14 Folien – für den Online-Termin mit wenig Zeit oder den zweiten Kontakt.',
     folien: [
       { id: 'titel', titel: 'Begrüssung' },
       { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
-      { id: 'strompreis', titel: 'Strompreise' },
       { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
-      { id: 'rechner', titel: 'Ihre Anlage planen' },
-      { id: 'anlage', titel: 'Ihre Anlage' },
-      { id: 'energiefluss', titel: 'Energiefluss' },
-      { id: 'motive', titel: 'Ihr Nutzen' },
-      { id: 'varianten', titel: 'Varianten' },
       { id: 'warum', titel: 'Warum NEOSOLAR' },
+      { id: 'rechner', titel: 'Ihre Anlage planen' },
+      { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
+      { id: 'energiefluss', titel: 'Ihr Energiefluss' },
+      { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
+      { id: 'monatsvergleich', titel: 'Pro Monat' },
+      { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
+      { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'zeitplan', titel: 'Umsetzung' },
-      { id: 'kontakt', titel: 'Fragen' },
+      { id: 'entscheidung', titel: 'Ihre Entscheidung' },
+      { id: 'kontakt', titel: 'Fragen offen?' },
     ],
   },
 ]
@@ -271,6 +307,26 @@ export default function PraesentationPage() {
             />
           </div>
         )
+      case 'gesamtvergleich':
+        return <FolienGesamtvergleich ergebnis={anlageErgebnis} config={config} />
+      case 'monatsvergleich':
+        return <FolienMonatsvergleich ergebnis={anlageErgebnis} config={config} />
+      case 'finanzierung':
+        return <FolienFinanzierung ergebnis={anlageErgebnis} config={config} />
+      case 'sicherheiten':
+        return <FolienSicherheiten />
+      case 'fragen':
+        return <FolienHaeufigeFragen />
+      case 'entscheidung':
+        return (
+          <FolienEntscheidung
+            input={aktiveAnlage.input}
+            ergebnis={anlageErgebnis}
+            config={config}
+            variantenName={aktiveAnlage.name}
+            kunde={kundeAusLink}
+          />
+        )
       case 'planung':
         return <FolienAblaufUmsetzung />
       case 'zeitplan':
@@ -345,7 +401,17 @@ export default function PraesentationPage() {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-semibold text-text truncate">{aktuell.titel}</span>
+            <span className="text-[11px] font-semibold text-text truncate">
+              {aktuell.titel}
+              {/* Ab dem Variantenvergleich beziehen sich die Zahlen auf die gewaehlte
+                  Variante – das muss im Termin jederzeit sichtbar sein. */}
+              {GELD_FOLIEN.has(aktuell.id) && (
+                <span className="text-text-dim font-normal">
+                  {' '}· Variante «{aktiveAnlage.name}» · {aktiveAnlage.input.kwp} kWp
+                  {aktiveAnlage.input.speicherKwh > 0 ? ` + ${aktiveAnlage.input.speicherKwh} kWh` : ''}
+                </span>
+              )}
+            </span>
             <span className="text-[10px] text-text-dim tabular-nums shrink-0 ml-2">
               {schritt + 1} / {variante.folien.length}
             </span>
