@@ -741,3 +741,35 @@ main > div {
   .grid.md\\:grid-cols-3 svg[viewBox] { display: none !important; }
   .grid.md\\:grid-cols-3 .premium-card > div:last-child:has(svg) { display: none !important; }
 }
+
+/* Sanfter Folienwechsel in der Praesentation */
+@keyframes folieEin {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.folie-einblenden {
+  animation: folieEin 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .folie-einblenden { animation: none; }
+}
+
+/* Regler in Praesentation und Rechner: sichtbarer Griff */
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #F59E0B;
+  border: 2px solid #06080C;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #F59E0B;
+  border: 2px solid #06080C;
+  cursor: pointer;
+}

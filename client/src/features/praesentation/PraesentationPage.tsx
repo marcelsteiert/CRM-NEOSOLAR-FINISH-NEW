@@ -26,6 +26,10 @@ import {
 import {
   FolienGesamtvergleich, FolienMonatsvergleich, FolienFinanzierung,
 } from '../salespitch/components/FolienGeld'
+import {
+  FolienDreiBausteine, FolienRueckblick, FolienAmortisation, FolienUnterschied,
+  FolienPersoenlich,
+} from '../salespitch/components/FolienBeweis'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
@@ -34,6 +38,7 @@ type FolienId =
   | 'modul' | 'wechselrichter' | 'speicher' | 'wallbox' | 'app' | 'dachanalyse'
   | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
   | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
+  | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
 
@@ -46,11 +51,8 @@ interface Variante {
 
 /** Folien, deren Zahlen sich auf die gewaehlte Anlagenvariante beziehen. */
 const GELD_FOLIEN = new Set<FolienId>([
-  'varianten',
-  'gesamtvergleich',
-  'monatsvergleich',
-  'finanzierung',
-  'entscheidung',
+  'anlage', 'energiefluss', 'motive', 'bausteine', 'gesamtvergleich',
+  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung',
 ])
 
 /**
@@ -71,7 +73,9 @@ const VARIANTEN: Variante[] = [
       // 1. Ankommen und Rahmen setzen
       { id: 'titel', titel: 'Begrüssung' },
       { id: 'ablauf', titel: 'Ablauf des Termins' },
-      // 2. Problem aufbauen – bevor irgendeine Lösung kommt
+      { id: 'persoenlich', titel: 'Ihre Ausgangslage' },
+      // 2. Problem aufbauen – erst belegte Vergangenheit, dann Prognose
+      { id: 'rueckblick', titel: 'Was bisher passiert ist' },
       { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
       { id: 'strompreis', titel: 'Strompreis-Entwicklung' },
       { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
@@ -91,13 +95,16 @@ const VARIANTEN: Variante[] = [
       { id: 'energiefluss', titel: 'Ihr Energiefluss' },
       { id: 'motive', titel: 'Ihr Nutzen' },
       // 6. Das Geld – die Kernsequenz
+      { id: 'bausteine', titel: 'Woher das Geld kommt' },
       { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
       { id: 'monatsvergleich', titel: 'Pro Monat' },
+      { id: 'amortisation', titel: 'Der Wendepunkt' },
       { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
       { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
       // 7. Sicherheit geben
       { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'planung', titel: 'Planungssicherheit' },
+      { id: 'unterschied', titel: 'Offerten vergleichen' },
       { id: 'fragen', titel: 'Häufige Fragen' },
       { id: 'workflow', titel: 'Unser Ablauf' },
       { id: 'zeitplan', titel: 'Umsetzung' },
@@ -119,9 +126,12 @@ const VARIANTEN: Variante[] = [
       { id: 'rechner', titel: 'Ihre Anlage planen' },
       { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
       { id: 'energiefluss', titel: 'Ihr Energiefluss' },
+      { id: 'bausteine', titel: 'Woher das Geld kommt' },
       { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
       { id: 'monatsvergleich', titel: 'Pro Monat' },
+      { id: 'amortisation', titel: 'Der Wendepunkt' },
       { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
+      { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
       { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'zeitplan', titel: 'Umsetzung' },
       { id: 'entscheidung', titel: 'Ihre Entscheidung' },
@@ -141,7 +151,14 @@ export default function PraesentationPage() {
   const [config, setConfig] = useState<CalculatorConfig>(DEFAULT_CONFIG)
   const [schritt, setSchritt] = useState(0)
   const [vollbild, setVollbild] = useState(false)
+  /** Aktive Konfiguration – gilt fuer alle Folien und die Offerte. */
   const [input, setInput] = useState<CalculatorInput>(DEFAULT_INPUT)
+  /**
+   * Reglerstand vom Rechner. Die Varianten leiten sich hiervon ab, nicht von
+   * `input` – sonst wuerde eine gewaehlte Variante die naechste Ableitung
+   * verschieben und die Werte wandern bei jedem Wechsel weiter.
+   */
+  const [basisInput, setBasisInput] = useState<CalculatorInput>(DEFAULT_INPUT)
   const [gewaehlteVariante, setGewaehlteVariante] = useState<string | null>('empfehlung')
   const [druckOffen, setDruckOffen] = useState(false)
 
@@ -156,15 +173,38 @@ export default function PraesentationPage() {
       })
   }, [])
 
+  /**
+   * Eine einzige Konfiguration fuer die gesamte Praesentation.
+   *
+   * `input` ist die Wahrheit – vom Rechner, von der Variantenwahl oder vom
+   * Kundenlink. Die Varianten sind daraus abgeleitete Vorschlaege; waehlt der
+   * Kunde eine, wird sie zur Konfiguration. Dadurch zeigen Anlagen-Uebersicht,
+   * Energiefluss, Geld-Folien, Finanzierung und Offerte garantiert dieselben
+   * Zahlen – es gibt kein zweites Ergebnis mehr, das abweichen koennte.
+   */
   const ergebnis = useMemo(() => berechne(input, config), [input, config])
-  const anlagenVarianten = useMemo(() => bildeVarianten(input), [input])
+  const anlagenVarianten = useMemo(() => bildeVarianten(basisInput), [basisInput])
+
+  const varianteWaehlen = useCallback(
+    (id: string) => {
+      const gewaehlt = anlagenVarianten.find((v) => v.id === id)
+      if (!gewaehlt) return
+      setGewaehlteVariante(id)
+      setInput(gewaehlt.input)
+    },
+    [anlagenVarianten]
+  )
+
   const aktiveAnlage = useMemo(
     () => anlagenVarianten.find((v) => v.id === gewaehlteVariante) ?? anlagenVarianten[1],
     [anlagenVarianten, gewaehlteVariante]
   )
-  const anlageErgebnis = useMemo(() => berechne(aktiveAnlage.input, config), [aktiveAnlage, config])
 
-  const patchInput = useCallback((p: Partial<CalculatorInput>) => setInput((v) => ({ ...v, ...p })), [])
+  /** Reglerbewegung am Rechner: setzt Basis und aktive Konfiguration gleich. */
+  const patchInput = useCallback((p: Partial<CalculatorInput>) => {
+    setInput((v) => ({ ...v, ...p }))
+    setBasisInput((v) => ({ ...v, ...p }))
+  }, [])
   const anzahl = variante?.folien.length ?? 0
   const weiter = useCallback(() => setSchritt((s) => Math.min(s + 1, anzahl - 1)), [anzahl])
   const zurueck = useCallback(() => setSchritt((s) => Math.max(s - 1, 0)), [])
@@ -303,16 +343,30 @@ export default function PraesentationPage() {
               config={config}
               empfehlungId="empfehlung"
               gewaehlteId={gewaehlteVariante}
-              onWaehlen={setGewaehlteVariante}
+              onWaehlen={varianteWaehlen}
             />
           </div>
         )
+      case 'persoenlich':
+        return <FolienPersoenlich kunde={kundeAusLink} input={input} ergebnis={ergebnis} />
+      case 'rueckblick':
+        return <FolienRueckblick ergebnis={ergebnis} />
+      case 'bausteine':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <FolienDreiBausteine ergebnis={ergebnis} config={config} />
+          </div>
+        )
+      case 'amortisation':
+        return <FolienAmortisation ergebnis={ergebnis} config={config} />
+      case 'unterschied':
+        return <FolienUnterschied />
       case 'gesamtvergleich':
-        return <FolienGesamtvergleich ergebnis={anlageErgebnis} config={config} />
+        return <FolienGesamtvergleich ergebnis={ergebnis} config={config} />
       case 'monatsvergleich':
-        return <FolienMonatsvergleich ergebnis={anlageErgebnis} config={config} />
+        return <FolienMonatsvergleich ergebnis={ergebnis} config={config} />
       case 'finanzierung':
-        return <FolienFinanzierung ergebnis={anlageErgebnis} config={config} />
+        return <FolienFinanzierung ergebnis={ergebnis} config={config} />
       case 'sicherheiten':
         return <FolienSicherheiten />
       case 'fragen':
@@ -320,8 +374,8 @@ export default function PraesentationPage() {
       case 'entscheidung':
         return (
           <FolienEntscheidung
-            input={aktiveAnlage.input}
-            ergebnis={anlageErgebnis}
+            input={input}
+            ergebnis={ergebnis}
             config={config}
             variantenName={aktiveAnlage.name}
             kunde={kundeAusLink}
@@ -375,16 +429,39 @@ export default function PraesentationPage() {
         </div>
       )}
 
-      {/* Folie */}
+      {/* Folie mit dezenter Markenleiste – auf Titel- und Kontaktfolie steht
+          das Logo schon gross im Bild, dort waere es doppelt. */}
       <div
-        className="flex-1 min-h-0 overflow-hidden"
+        className="flex-1 min-h-0 overflow-hidden relative"
         style={{
-          background: 'rgba(255,255,255,0.02)',
-          border: vollbild ? 'none' : '1px solid rgba(255,255,255,0.06)',
+          background:
+            'radial-gradient(1200px 600px at 15% -10%, rgba(245,158,11,0.055), transparent 60%), rgba(255,255,255,0.018)',
+          border: vollbild ? 'none' : '1px solid rgba(255,255,255,0.07)',
           borderRadius: vollbild ? 0 : 'var(--radius-lg)',
         }}
       >
-        {inhalt()}
+        {!['titel', 'kontakt'].includes(aktuell.id) && (
+          <>
+            <img
+              src="/praesentation/logo.png"
+              alt="NEOSOLAR"
+              className="absolute z-10 pointer-events-none select-none"
+              style={{ top: 18, right: 22, height: 22, opacity: 0.5 }}
+            />
+            {kundeAusLink && (
+              <span
+                className="absolute z-10 text-[10px] uppercase tracking-[0.18em] pointer-events-none"
+                style={{ top: 22, left: 24, color: 'rgba(255,255,255,0.30)' }}
+              >
+                {kundeAusLink}
+              </span>
+            )}
+          </>
+        )}
+        {/* key sorgt fuer einen sanften Einblendeffekt bei jedem Folienwechsel */}
+        <div key={`${variante.id}-${schritt}`} className="h-full folie-einblenden">
+          {inhalt()}
+        </div>
       </div>
 
       {/* Navigation */}
@@ -407,7 +484,7 @@ export default function PraesentationPage() {
                   Variante – das muss im Termin jederzeit sichtbar sein. */}
               {GELD_FOLIEN.has(aktuell.id) && (
                 <span className="text-text-dim font-normal">
-                  {' '}· Variante «{aktiveAnlage.name}» · {aktiveAnlage.input.kwp} kWp
+                  {' '}· «{aktiveAnlage.name}» · {input.kwp} kWp
                   {aktiveAnlage.input.speicherKwh > 0 ? ` + ${aktiveAnlage.input.speicherKwh} kWh` : ''}
                 </span>
               )}
@@ -456,8 +533,8 @@ export default function PraesentationPage() {
               : null
           }
           variantenName={aktiveAnlage.name}
-          input={aktiveAnlage.input}
-          ergebnis={anlageErgebnis}
+          input={input}
+          ergebnis={ergebnis}
           config={config}
           beduerfnisse={LEERE_BEDUERFNISSE}
           onClose={() => setDruckOffen(false)}

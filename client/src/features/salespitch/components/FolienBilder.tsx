@@ -26,15 +26,28 @@ export function BildFolie({
   hinweis?: string
   bildLinks?: boolean
 }) {
+  // Die Produktbilder stammen aus der PPTX und haben weissen Hintergrund.
+  // Auf einer hellen Karte wirkt das wie ein Produktdatenblatt statt wie ein
+  // Bild mit falschem Rand auf dunklem Grund.
   const bildSpalte = (
     <div className="flex items-center justify-center min-h-0">
-      <img
-        src={`${BILD}/${bild}`}
-        alt={titel}
-        className="max-h-full max-w-full object-contain rounded-2xl"
-        style={{ border: '1px solid rgba(255,255,255,0.08)' }}
-        loading="lazy"
-      />
+      <div
+        className="p-5 sm:p-7 flex items-center justify-center max-h-full"
+        style={{
+          background: 'linear-gradient(160deg, #FFFFFF 0%, #F3F4F6 100%)',
+          borderRadius: 22,
+          border: '1px solid rgba(255,255,255,0.14)',
+          boxShadow: '0 18px 50px -12px rgba(0,0,0,0.55)',
+        }}
+      >
+        <img
+          src={`${BILD}/${bild}`}
+          alt={titel}
+          className="max-h-full max-w-full object-contain"
+          style={{ maxHeight: '52vh' }}
+          loading="lazy"
+        />
+      </div>
     </div>
   )
 
