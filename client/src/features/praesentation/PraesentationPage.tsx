@@ -35,6 +35,7 @@ import {
 } from '../salespitch/components/FolienBeweis'
 import { FolienReferenzen, FolienZusatzrechner } from '../salespitch/components/FolienReferenzen'
 import KundendatenPruefen from '../salespitch/components/KundendatenPruefen'
+import { FolienSpeicherUpgrade, FolienBetreuung, FolienEmpfehlung } from '../salespitch/components/FolienExtras'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
@@ -45,6 +46,7 @@ type FolienId =
   | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
   | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
   | 'referenzen' | 'zusatzrechner' | 'montage'
+  | 'speicherUpgrade' | 'betreuung' | 'empfehlung'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
 
@@ -58,7 +60,7 @@ interface Variante {
 /** Folien, deren Zahlen sich auf die gewaehlte Anlagenvariante beziehen. */
 const GELD_FOLIEN = new Set<FolienId>([
   'anlage', 'energiefluss', 'motive', 'bausteine', 'gesamtvergleich',
-  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung', 'zusatzrechner',
+  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung', 'zusatzrechner', 'speicherUpgrade',
 ])
 
 /**
@@ -109,9 +111,11 @@ const VARIANTEN: Variante[] = [
       { id: 'amortisation', titel: 'Der Wendepunkt' },
       { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
       { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
+      { id: 'speicherUpgrade', titel: 'Speicher-Ausbau' },
       // 7. Sicherheit geben
       { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'planung', titel: 'Planungssicherheit' },
+      { id: 'betreuung', titel: 'Ihre Betreuung' },
       { id: 'unterschied', titel: 'Offerten vergleichen' },
       { id: 'fragen', titel: 'Häufige Fragen' },
       { id: 'montage', titel: 'Die Montage' },
@@ -119,6 +123,7 @@ const VARIANTEN: Variante[] = [
       { id: 'zeitplan', titel: 'Umsetzung' },
       // 8. Abschluss
       { id: 'entscheidung', titel: 'Ihre Entscheidung' },
+      { id: 'empfehlung', titel: 'Weiterempfehlung' },
       { id: 'kontakt', titel: 'Fragen offen?' },
     ],
   },
@@ -453,6 +458,14 @@ export default function PraesentationPage() {
             />
           </div>
         )
+      case 'speicherUpgrade':
+        return (
+          <FolienSpeicherUpgrade input={input} ergebnis={ergebnis} config={config} onChange={patchInput} />
+        )
+      case 'betreuung':
+        return <FolienBetreuung berater={beraterName} />
+      case 'empfehlung':
+        return <FolienEmpfehlung kontaktId={contactId} kundeName={kundeAusLink} />
       case 'referenzen':
         return <FolienReferenzen />
       case 'zusatzrechner':
