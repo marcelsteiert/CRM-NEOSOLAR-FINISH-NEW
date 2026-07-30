@@ -81,7 +81,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 
 ## Sidebar-Struktur (allNavGroups in Sidebar.tsx)
 - **Vertrieb**: Leads, Kaltakquise, Termine, Richtofferten, No Show, Angebote, Provision
-- **Planung**: Kalender, **Kalkulation** (= Baustellen + Kalkulation Tabs), Projekte
+- **Planung**: Kalender, **Kalkulation** (= Baustellen + Kalkulation Tabs), **Solarberatung**, Projekte
 - **Betrieb**: Tasks (KI-Summary + Kommunikation aktuell ausgeblendet)
 - **System**: Meldungen, Callcenter, Admin, **Firma** (admin-only), **Personal** (mit Berechtigung), Export, Dokumente, Passwoerter, Features
 
