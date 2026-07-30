@@ -173,7 +173,7 @@ export default function PraesentationPage() {
   const [druckOffen, setDruckOffen] = useState(false)
   const [sendenOffen, setSendenOffen] = useState(false)
   const [dealId, setDealId] = useState<string | null>(null)
-  const [kontakt, setKontakt] = useState<{ id: string; firstName: string; lastName: string; address: string; email: string; phone: string } | null>(null)
+  const [kontakt, setKontakt] = useState<{ id: string; firstName: string; lastName: string; address: string; email: string; phone: string; company?: string | null } | null>(null)
   const [offerteLaeuft, setOfferteLaeuft] = useState(false)
   const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
 
@@ -696,6 +696,16 @@ export default function PraesentationPage() {
           ergebnis={ergebnis}
           config={config}
           beduerfnisse={LEERE_BEDUERFNISSE}
+          verkaeufer={
+            beraterName
+              ? {
+                  firstName: beraterName.split(' ')[0],
+                  lastName: beraterName.split(' ').slice(1).join(' '),
+                  email: suchparameter.get('beraterMail') ?? undefined,
+                  phone: suchparameter.get('beraterTel') ?? undefined,
+                }
+              : null
+          }
           onClose={() => setDruckOffen(false)}
         />
       )}

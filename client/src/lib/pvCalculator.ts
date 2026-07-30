@@ -32,6 +32,20 @@ export interface CalculatorInput {
   strompreisRp: number
   /** Anzahl Geruestseiten bzw. Aufwandstufe fuer die Montage */
   geruest: boolean
+  /**
+   * Manuell erfasste Zusatzleistungen, die in der Offerte einzeln
+   * ausgewiesen werden – z.B. Demontage der alten Anlage oder
+   * Anpassungen am Zaehlerkasten.
+   */
+  zusatzPositionen?: ZusatzPosition[]
+  /** Gewaehlte Zahlungsart – erscheint in der Offerte */
+  zahlungsart?: 'TRANCHEN' | 'FINANZIERUNG'
+}
+
+export interface ZusatzPosition {
+  id: string
+  bezeichnung: string
+  betrag: number
 }
 
 // ── Konfiguration (aus dem Admin-Bereich) ─────────────────────────────
@@ -121,6 +135,8 @@ export interface CalculatorResult {
   steuerabzug: number
   nettoInvestition: number
   preisProKwp: number
+  /** Summe der manuell erfassten Zusatzleistungen */
+  zusatzSumme: number
 
   // Wirtschaftlichkeit
   ersparnisJahr1: number
@@ -285,13 +301,16 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
 
   const dachZuschlag = (config.dachtypZuschlagProKwp[input.dachtyp] ?? 0) * kwp
   const speicherPreis = input.speicherKwh * config.speicherPreisProKwh
+  // Manuell erfasste Zusatzleistungen zaehlen voll in den Preis
+  const zusatzSumme = (input.zusatzPositionen ?? []).reduce((s, z) => s + (Number(z.betrag) || 0), 0)
   const bruttoPreis = rundeAuf(
     config.grundpreis +
       kwpPreis +
       dachZuschlag +
       speicherPreis +
       (input.wallbox ? config.wallboxPreis : 0) +
-      (input.geruest ? config.geruestPreis : 0),
+      (input.geruest ? config.geruestPreis : 0) +
+      zusatzSumme,
     10
   )
 
@@ -394,6 +413,7 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     steuerabzug,
     nettoInvestition,
     preisProKwp: kwp > 0 ? Math.round(bruttoPreis / kwp) : 0,
+    zusatzSumme: Math.round(zusatzSumme),
 
     ersparnisJahr1,
     ersparnisProMonat: Math.round(ersparnisJahr1 / 12),

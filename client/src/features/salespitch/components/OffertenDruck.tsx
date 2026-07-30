@@ -12,6 +12,15 @@ interface Kunde {
   address: string
   email: string
   phone: string
+  company?: string | null
+}
+
+/** Daten des betreuenden Verkaeufers – erscheinen im Offertenkopf. */
+export interface Verkaeufer {
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
 }
 
 interface Props {
@@ -21,6 +30,7 @@ interface Props {
   ergebnis: CalculatorResult
   config: CalculatorConfig
   beduerfnisse: Beduerfnisse
+  verkaeufer?: Verkaeufer | null
   onClose: () => void
 }
 
@@ -30,8 +40,16 @@ interface Props {
  * Die Druckregeln liegen inline, damit sie unabhaengig vom Dark-Theme greifen.
  */
 export default function OffertenDruck({
-  kunde, variantenName, input, ergebnis, config, beduerfnisse, onClose,
+  kunde, variantenName, input, ergebnis, config, beduerfnisse, verkaeufer, onClose,
 }: Props) {
+  const zusatz = input.zusatzPositionen ?? []
+  const istFinanzierung = input.zahlungsart === 'FINANZIERUNG'
+  // Zahlungsplan nach den ueblichen Tranchen
+  const tranchen = [
+    { anteil: 50, wann: 'bei Vertragsabschluss' },
+    { anteil: 40, wann: 'bei Montagebeginn' },
+    { anteil: 10, wann: 'nach Inbetriebnahme' },
+  ]
   const module = Math.round((input.kwp * 1000) / KOMPONENTEN.modul.watt)
   const speicherModule = input.speicherKwh > 0 ? Math.round(input.speicherKwh / KOMPONENTEN.speicher.modulKwh) : 0
   const heute = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -122,20 +140,50 @@ export default function OffertenDruck({
         </div>
 
         {/* Kunde */}
-        {kunde && (
-          <div className="mb-7 p-4" style={{ background: '#F9FAFB', borderRadius: 8 }}>
+        {/* Kunde und Berater nebeneinander */}
+        <div className="grid grid-cols-2 gap-3 mb-7">
+          <div className="p-4" style={{ background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
             <div className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: '#6B7280', fontWeight: 700 }}>
-              Für
+              Offerte für
             </div>
-            <div className="text-[14px] font-bold" style={{ color: '#111827' }}>
-              {kunde.firstName} {kunde.lastName}
-            </div>
-            <div className="text-[12px]" style={{ color: '#374151' }}>{kunde.address}</div>
-            <div className="text-[11px]" style={{ color: '#6B7280' }}>
-              {kunde.phone} · {kunde.email}
-            </div>
+            {kunde ? (
+              <>
+                {kunde.company && (
+                  <div className="text-[13px] font-bold" style={{ color: '#111827' }}>{kunde.company}</div>
+                )}
+                <div className="text-[14px] font-bold" style={{ color: '#111827' }}>
+                  {kunde.firstName} {kunde.lastName}
+                </div>
+                <div className="text-[12px] mt-0.5" style={{ color: '#374151' }}>{kunde.address}</div>
+                <div className="text-[11px] mt-1" style={{ color: '#6B7280', lineHeight: 1.6 }}>
+                  {kunde.phone && <>T {kunde.phone}<br /></>}
+                  {kunde.email}
+                </div>
+              </>
+            ) : (
+              <div className="text-[12px]" style={{ color: '#9CA3AF' }}>Kundendaten werden ergänzt</div>
+            )}
           </div>
-        )}
+          <div className="p-4" style={{ background: '#FFFBEB', borderRadius: 10, border: '1px solid #FDE68A' }}>
+            <div className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: '#92400E', fontWeight: 700 }}>
+              Ihr Berater
+            </div>
+            {verkaeufer?.firstName || verkaeufer?.lastName ? (
+              <>
+                <div className="text-[14px] font-bold" style={{ color: '#111827' }}>
+                  {[verkaeufer.firstName, verkaeufer.lastName].filter(Boolean).join(' ')}
+                </div>
+                <div className="text-[12px] mt-0.5" style={{ color: '#374151' }}>NEOSOLAR AG</div>
+                <div className="text-[11px] mt-1" style={{ color: '#6B7280', lineHeight: 1.6 }}>
+                  {verkaeufer.phone && <>T {verkaeufer.phone}<br /></>}
+                  {verkaeufer.email}
+                </div>
+              </>
+            ) : (
+              <div className="text-[12px]" style={{ color: '#9CA3AF' }}>NEOSOLAR AG · 071 544 91 00</div>
+            )}
+          </div>
+        </div>
 
         {/* Kennzahlen */}
         <div className="grid grid-cols-5 gap-2.5 mb-7">
@@ -212,6 +260,35 @@ export default function OffertenDruck({
           </tbody>
         </table>
 
+        {/* Zusatzleistungen, falls erfasst */}
+        {zusatz.length > 0 && (
+          <>
+            <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Zusätzliche Leistungen</h2>
+            <table className="w-full text-[11px] mb-7" style={{ borderCollapse: 'collapse' }}>
+              <tbody>
+                {zusatz.map((z, i) => (
+                  <tr key={z.id} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                    <td className="py-2 px-3" style={{ color: '#111827', fontWeight: 600, width: '70%' }}>
+                      {z.bezeichnung}
+                    </td>
+                    <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                      {chf(z.betrag)}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td className="py-2 px-3" style={{ color: '#374151', fontWeight: 700, borderTop: '1px solid #E5E7EB' }}>
+                    Summe Zusatzleistungen
+                  </td>
+                  <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700, borderTop: '1px solid #E5E7EB' }}>
+                    {chf(ergebnis.zusatzSumme)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
+
         {/* Preis */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre Investition</h2>
         <table className="w-full text-[12px] mb-3" style={{ borderCollapse: 'collapse' }}>
@@ -219,9 +296,17 @@ export default function OffertenDruck({
             <tr>
               <td className="py-2" style={{ color: '#374151' }}>Anlage schlüsselfertig</td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                {chf(ergebnis.bruttoPreis)}
+                {chf(ergebnis.bruttoPreis - ergebnis.zusatzSumme)}
               </td>
             </tr>
+            {ergebnis.zusatzSumme > 0 && (
+              <tr>
+                <td className="py-2" style={{ color: '#374151' }}>Zusätzliche Leistungen</td>
+                <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                  {chf(ergebnis.zusatzSumme)}
+                </td>
+              </tr>
+            )}
             <tr>
               <td className="py-2" style={{ color: '#374151' }}>− Förderbeitrag Pronovo (Einmalvergütung)</td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
@@ -244,9 +329,38 @@ export default function OffertenDruck({
             </tr>
           </tbody>
         </table>
-        <p className="text-[10px] mb-7" style={{ color: '#6B7280' }}>
+        <p className="text-[10px] mb-6" style={{ color: '#6B7280' }}>
           Preis inkl. MwSt. Entspricht {chf(ergebnis.preisProKwp)} pro kWp.
         </p>
+
+        {/* Zahlungsplan */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Zahlungsplan</h2>
+        {istFinanzierung ? (
+          <div className="p-4 mb-7" style={{ background: '#EFF6FF', borderRadius: 10, border: '1px solid #BFDBFE' }}>
+            <div className="text-[12px] font-bold mb-1" style={{ color: '#1E40AF' }}>Finanzierung gewünscht</div>
+            <p className="text-[11px]" style={{ color: '#374151', lineHeight: 1.7 }}>
+              Sie möchten die Anlage finanzieren. Wir stellen Ihnen die Unterlagen für Ihre Bank zusammen –
+              Offerte, technische Beschreibung und Ertragsprognose. Die Konditionen erhalten Sie direkt von
+              Ihrem Finanzierungspartner; NEOSOLAR vermittelt keine Kredite.
+            </p>
+          </div>
+        ) : (
+          <table className="w-full text-[11px] mb-7" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              {tranchen.map((tr, i) => (
+                <tr key={tr.anteil} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                  <td className="py-2 px-3" style={{ color: '#111827', fontWeight: 600, width: '20%' }}>
+                    {tr.anteil} %
+                  </td>
+                  <td className="py-2 px-3" style={{ color: '#6B7280' }}>{tr.wann}</td>
+                  <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                    {chf((ergebnis.nettoInvestition * tr.anteil) / 100)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
         {/* Seite 2 */}
         <div className="offerte-seitenumbruch" />

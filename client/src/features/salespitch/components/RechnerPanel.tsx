@@ -1,9 +1,24 @@
-import { Sun, Battery, Car, Flame, Home, TrendingUp } from 'lucide-react'
+import { Sun, Battery, Car, Flame, Home, TrendingUp, Plus, Trash2 } from 'lucide-react'
 import type { CalculatorInput, CalculatorResult, Ausrichtung, Dachtyp } from '../../../lib/pvCalculator'
 import { AUSRICHTUNG_LABELS, DACHTYP_LABELS, KOMPONENTEN } from '../../../lib/calculatorConfig'
 import { moduleAusKwp } from '../../../lib/pvCalculator'
 
 const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
+
+/**
+ * Haeufige Zusatzleistungen mit Erfahrungswerten. Beim Anklicken landen sie
+ * als Position in der Offerte und im Preis – Betrag bleibt danach editierbar.
+ */
+const ZUSATZ_VORSCHLAEGE: Array<{ bezeichnung: string; betrag: number }> = [
+  { bezeichnung: 'Demontage alte Anlage', betrag: 1800 },
+  { bezeichnung: 'Zählerkasten anpassen', betrag: 1500 },
+  { bezeichnung: 'Erdarbeiten / Leerrohr', betrag: 1200 },
+  { bezeichnung: 'Blitzschutz-Anbindung', betrag: 900 },
+  { bezeichnung: 'Schneefang ergänzen', betrag: 700 },
+  { bezeichnung: 'Dachdurchführung Spengler', betrag: 600 },
+  { bezeichnung: 'Zusätzliche Kabelwege', betrag: 500 },
+  { bezeichnung: 'Notstrom-Umschaltung', betrag: 2400 },
+]
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
 const pct = (n: number) => Math.round(n * 100) + ' %'
 
@@ -252,6 +267,135 @@ export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar
           einheit="Grad"
           onChange={(v) => onChange({ neigung: v })}
         />
+
+        {/* ── Zusatzleistungen ── */}
+        <div className="pt-1">
+          <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-2">
+            Zusatzleistungen
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            {ZUSATZ_VORSCHLAEGE.map((v) => {
+              const drin = (input.zusatzPositionen ?? []).some((p) => p.bezeichnung === v.bezeichnung)
+              return (
+                <button
+                  key={v.bezeichnung}
+                  type="button"
+                  onClick={() => {
+                    const aktuell = input.zusatzPositionen ?? []
+                    onChange({
+                      zusatzPositionen: drin
+                        ? aktuell.filter((p) => p.bezeichnung !== v.bezeichnung)
+                        : [...aktuell, { id: `z${Date.now()}`, bezeichnung: v.bezeichnung, betrag: v.betrag }],
+                    })
+                  }}
+                  className="px-2.5 py-1.5 rounded-full text-[10px] font-semibold transition-all"
+                  style={{
+                    background: drin ? 'color-mix(in srgb, #F59E0B 18%, transparent)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${drin ? 'color-mix(in srgb, #F59E0B 45%, transparent)' : 'rgba(255,255,255,0.07)'}`,
+                    color: drin ? '#F59E0B' : undefined,
+                  }}
+                >
+                  {drin ? '− ' : '+ '}
+                  {v.bezeichnung}
+                </button>
+              )
+            })}
+          </div>
+
+          {(input.zusatzPositionen ?? []).length > 0 && (
+            <div className="space-y-1.5">
+              {(input.zusatzPositionen ?? []).map((p) => (
+                <div key={p.id} className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={p.bezeichnung}
+                    onChange={(e) =>
+                      onChange({
+                        zusatzPositionen: (input.zusatzPositionen ?? []).map((x) =>
+                          x.id === p.id ? { ...x, bezeichnung: e.target.value } : x
+                        ),
+                      })
+                    }
+                    className="glass-input flex-1 min-w-0 px-2 py-1.5 text-[11px]"
+                  />
+                  <input
+                    type="number"
+                    value={p.betrag}
+                    onChange={(e) =>
+                      onChange({
+                        zusatzPositionen: (input.zusatzPositionen ?? []).map((x) =>
+                          x.id === p.id ? { ...x, betrag: Number(e.target.value) || 0 } : x
+                        ),
+                      })
+                    }
+                    step={50}
+                    className="glass-input w-20 px-2 py-1.5 text-[11px] tabular-nums"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onChange({
+                        zusatzPositionen: (input.zusatzPositionen ?? []).filter((x) => x.id !== p.id),
+                      })
+                    }
+                    className="p-1.5 rounded-lg text-text-dim hover:text-red transition-colors shrink-0"
+                    aria-label="Position entfernen"
+                  >
+                    <Trash2 size={13} strokeWidth={1.8} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() =>
+              onChange({
+                zusatzPositionen: [
+                  ...(input.zusatzPositionen ?? []),
+                  { id: `z${Date.now()}`, bezeichnung: 'Eigene Position', betrag: 0 },
+                ],
+              })
+            }
+            className="btn-secondary flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] mt-2"
+          >
+            <Plus size={12} strokeWidth={2} />
+            Eigene Position
+          </button>
+        </div>
+
+        {/* ── Zahlungsart ── */}
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-2">
+            Zahlungsart für die Offerte
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { id: 'TRANCHEN' as const, label: 'Kauf', zusatz: '50 / 40 / 10' },
+              { id: 'FINANZIERUNG' as const, label: 'Finanzierung', zusatz: 'monatlich' },
+            ].map((z) => {
+              const aktiv = (input.zahlungsart ?? 'TRANCHEN') === z.id
+              return (
+                <button
+                  key={z.id}
+                  type="button"
+                  onClick={() => onChange({ zahlungsart: z.id })}
+                  className="px-3 py-2 rounded-xl text-left transition-all"
+                  style={{
+                    background: aktiv ? 'color-mix(in srgb, #34D399 14%, transparent)' : 'rgba(255,255,255,0.035)',
+                    border: `1px solid ${aktiv ? 'color-mix(in srgb, #34D399 40%, transparent)' : 'rgba(255,255,255,0.06)'}`,
+                  }}
+                >
+                  <span className={`block text-[12px] font-semibold ${aktiv ? 'text-emerald' : 'text-text-sec'}`}>
+                    {z.label}
+                  </span>
+                  <span className="block text-[10px] text-text-dim">{z.zusatz}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
 
       {/* ── Ergebnis ── */}
@@ -364,8 +508,18 @@ export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar
               <dl className="space-y-2 text-[12px]">
                 <div className="flex justify-between gap-3">
                   <dt className="text-text-dim">Anlage schlüsselfertig</dt>
-                  <dd className="text-text font-semibold tabular-nums">{chf(ergebnis.bruttoPreis)}</dd>
+                  <dd className="text-text font-semibold tabular-nums">
+                    {chf(ergebnis.bruttoPreis - ergebnis.zusatzSumme)}
+                  </dd>
                 </div>
+                {ergebnis.zusatzSumme > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-text-dim">
+                      Zusatzleistungen ({(input.zusatzPositionen ?? []).length})
+                    </dt>
+                    <dd className="text-text font-semibold tabular-nums">+ {chf(ergebnis.zusatzSumme)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-3">
                   <dt className="text-text-dim">− Förderung Pronovo</dt>
                   <dd className="text-emerald font-semibold tabular-nums">− {chf(ergebnis.foerderung)}</dd>

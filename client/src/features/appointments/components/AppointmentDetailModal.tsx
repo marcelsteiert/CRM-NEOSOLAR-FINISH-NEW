@@ -268,7 +268,7 @@ export default function AppointmentDetailModal({ appointmentId, onClose }: Props
               Eigenes Fenster, damit das CRM fuer Notizen offen bleibt. */}
           {appt.contactId && (
             <a
-              href={`/praesentation/komplett?contact=${appt.contactId}&termin=${appt.id}&berater=${encodeURIComponent([user?.firstName, user?.lastName].filter(Boolean).join(" "))}`}
+              href={`/praesentation/komplett?contact=${appt.contactId}&termin=${appt.id}&berater=${encodeURIComponent([user?.firstName, user?.lastName].filter(Boolean).join(" "))}&beraterMail=${encodeURIComponent(user?.email ?? "")}&beraterTel=${encodeURIComponent(user?.phone ?? "")}`}
               target="_blank"
               rel="noreferrer"
               className="btn-primary hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold shrink-0"
