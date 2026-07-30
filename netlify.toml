@@ -54,3 +54,9 @@
   for = "/index.html"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+
+# Automatisches Nachfassen: taeglich Mo-Fr um 07:15 UTC.
+# Deklarativ hier, damit der Zeitplan auch bei manuellen Deploys greift.
+[functions."followup"]
+  schedule = "15 7 * * 1-5"

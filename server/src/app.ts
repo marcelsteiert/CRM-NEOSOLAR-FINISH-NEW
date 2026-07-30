@@ -38,6 +38,7 @@ import adminDuplicatesRouter from './routes/admin/duplicates.js'
 import adminCalculatorPricingRouter from './routes/admin/calculatorPricing.js'
 import publicCalculatorRouter from './routes/publicCalculator.js'
 import solarOfferRouter from './routes/solarOffer.js'
+import followUpRouter from './routes/followUp.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
 import callLogsRouter from './routes/callLogs.js'
 import searchRouter from './routes/search.js'
@@ -101,6 +102,9 @@ export function createApp() {
   app.use('/api/v1/portal', portalRouter)
   // Sync-Endpoints: eigener Token-Auth (Header X-Sync-Token)
   app.use('/api/v1/sync', syncRouter)
+  // Automatisches Nachfassen: eigener Token-Auth (x-sync-token), von der
+  // Netlify Scheduled Function taeglich aufgerufen
+  app.use('/api/v1/follow-up', followUpRouter)
   // Solarrechner auf der Homepage: Preise lesen + Richtofferte anfragen
   app.use('/api/v1/public/calculator', publicCalculatorRouter)
   // Geschuetzte Routes (authMiddleware pro Route)
