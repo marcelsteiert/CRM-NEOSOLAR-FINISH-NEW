@@ -1,4 +1,5 @@
-import { X, Printer } from 'lucide-react'
+import { useState } from 'react'
+import { X, Printer, PenLine } from 'lucide-react'
 import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
 import { AUSRICHTUNG_LABELS, DACHTYP_LABELS, KOMPONENTEN } from '../../../lib/calculatorConfig'
 import type { Beduerfnisse } from './BeduerfnisSchritt'
@@ -53,6 +54,18 @@ interface Props {
 export default function OffertenDruck({
   kunde, variantenName, input, ergebnis, config, beduerfnisse, verkaeufer, onClose,
 }: Props) {
+  // Beim Druck der Bestellung blenden wir alle uebrigen Blaetter aus,
+  // damit der Kunde ein einzelnes Blatt zum Unterschreiben erhaelt.
+  const [nurBestellung, setNurBestellung] = useState(false)
+  const bestellungDrucken = () => {
+    setNurBestellung(true)
+    // Ein Tick, damit React die Klasse gesetzt hat, bevor der Druckdialog oeffnet
+    setTimeout(() => {
+      window.print()
+      setNurBestellung(false)
+    }, 80)
+  }
+
   const zusatz = input.zusatzPositionen ?? []
   const istFinanzierung = input.zahlungsart === 'FINANZIERUNG'
   // Zahlungsplan nach den ueblichen Tranchen
@@ -68,6 +81,12 @@ export default function OffertenDruck({
         { anteil: 40, wann: 'bei Lieferung des erforderlichen Materials' },
         { anteil: 10, wann: 'bei erfolgreichem Abschluss der Baustelle' },
       ]
+  /**
+   * Der Betrag, den der Kunde tatsaechlich an NEOSOLAR zahlt.
+   * Foerderung und Steuerersparnis fliessen spaeter von Pronovo bzw. vom
+   * Steueramt zurueck – die Tranchen duerfen daher nicht darauf rechnen.
+   */
+  const werklohn = ergebnis.bruttoPreis - ergebnis.rabatt
   const module = Math.round((input.kwp * 1000) / KOMPONENTEN.modul.watt)
   const speicherModule = input.speicherKwh > 0 ? Math.round(input.speicherKwh / KOMPONENTEN.speicher.modulKwh) : 0
   const heute = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -112,6 +131,9 @@ export default function OffertenDruck({
           }
           .offerte-keindruck { display: none !important; }
           .offerte-seitenumbruch { page-break-before: always; }
+          /* Nur-Bestellung-Modus: alle Geschwister der Bestellseite raus */
+          #offerte-druck.nur-bestellung > *:not(#bestellseite) { display: none !important; }
+          #offerte-druck.nur-bestellung #bestellseite { page-break-before: auto !important; }
           @page { size: A4; margin: 16mm 14mm; }
         }
       `}</style>
@@ -126,6 +148,14 @@ export default function OffertenDruck({
           <Printer size={14} strokeWidth={2} />
           Drucken / als PDF speichern
         </button>
+        <button
+          type="button"
+          onClick={bestellungDrucken}
+          className="btn-secondary flex items-center gap-2 px-4 py-2 text-[12px]"
+        >
+          <PenLine size={14} strokeWidth={2} />
+          Nur Bestellseite
+        </button>
         <button type="button" onClick={onClose} className="btn-secondary flex items-center gap-2 px-4 py-2 text-[12px]">
           <X size={14} strokeWidth={2} />
           Schliessen
@@ -135,7 +165,7 @@ export default function OffertenDruck({
       {/* Dokument – bewusst hell, damit der Druck stimmt */}
       <div
         id="offerte-druck"
-        className="mx-auto my-6 p-10"
+        className={`mx-auto my-6 p-10${nurBestellung ? ' nur-bestellung' : ''}`}
         style={{ maxWidth: 820, background: '#FFFFFF', color: '#111827', fontFamily: 'Outfit, system-ui, sans-serif' }}
       >
         {/* Kopf mit Logo */}
@@ -335,6 +365,7 @@ export default function OffertenDruck({
               '4 · Unabhängigkeit und Eigenverbrauch',
               '5 · Wirtschaftlichkeit über die Laufzeit',
               '6 · Ihre Sicherheiten und der Ablauf',
+              '7 · Bestellung zum Unterschreiben',
             ].map((z) => (
               <div key={z} className="text-[10px]" style={{ color: '#374151' }}>{z}</div>
             ))}
@@ -465,14 +496,6 @@ export default function OffertenDruck({
                 </td>
               </tr>
             )}
-            {ergebnis.steuerabzug > 0 && (
-              <tr>
-                <td className="py-2" style={{ color: '#374151' }}>− Steuerabzug (Schätzung)</td>
-                <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
-                  − {chf(ergebnis.steuerabzug)}
-                </td>
-              </tr>
-            )}
             <tr style={{ borderTop: '2px solid #F59E0B' }}>
               <td className="py-3 text-[14px] font-bold" style={{ color: '#111827' }}>Effektive Kosten</td>
               <td className="py-3 text-right text-[20px] font-bold tabular-nums" style={{ color: '#B45309' }}>
@@ -514,13 +537,26 @@ export default function OffertenDruck({
                   </td>
                   <td className="py-2 px-3" style={{ color: '#6B7280' }}>{tr.wann}</td>
                   <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                    {chf((ergebnis.nettoInvestition * tr.anteil) / 100)}
+                    {chf((werklohn * tr.anteil) / 100)}
                   </td>
                 </tr>
               ))}
+              <tr style={{ borderTop: '1px solid #E5E7EB' }}>
+                <td className="py-2 px-3" style={{ color: '#111827', fontWeight: 700 }} colSpan={2}>
+                  Werklohn inkl. MWST
+                </td>
+                <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
+                  {chf(werklohn)}
+                </td>
+              </tr>
             </tbody>
           </table>
         )}
+        <p className="text-[9px] mb-7" style={{ color: '#9CA3AF', lineHeight: 1.6 }}>
+          Die Tranchen beziehen sich auf den Werklohn inklusive MWST. Einmalvergütung und Steuerersparnis
+          fliessen Ihnen später von Pronovo beziehungsweise über die Steuererklärung zu und senken die
+          effektiven Kosten auf {chf(ergebnis.nettoInvestition)}.
+        </p>
 
         {/* Zufriedenheitspaket */}
         <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
@@ -1084,14 +1120,201 @@ export default function OffertenDruck({
           für Ihre Anforderungen.
         </p>
 
-        <div className="flex justify-between items-end pt-6" style={{ borderTop: '1px solid #E5E7EB' }}>
-          <div className="text-[10px]" style={{ color: '#9CA3AF' }}>
-            NEOSOLAR AG · Richtofferte vom {heute}
-          </div>
-          <div className="text-right">
-            <div style={{ borderTop: '1px solid #9CA3AF', width: 180, paddingTop: 4 }} className="text-[9px]">
-              <span style={{ color: '#6B7280' }}>Datum und Unterschrift Kunde</span>
+        <div className="pt-6 text-[10px]" style={{ borderTop: '1px solid #E5E7EB', color: '#9CA3AF' }}>
+          NEOSOLAR AG · Richtofferte vom {heute} · Die Bestellung finden Sie auf der letzten Seite.
+        </div>
+
+        {/* ══════════════ Bestellseite ══════════════
+            Eigenes Blatt, damit der Kunde nur diese Seite unterschrieben
+            zurueckschicken muss. Alle Betraege stammen aus derselben
+            Berechnung wie die Offerte. */}
+        <div id="bestellseite" className="offerte-seitenumbruch">
+          <div className="flex justify-between items-start mb-6 pb-4" style={{ borderBottom: '3px solid #F59E0B' }}>
+            <img src="/praesentation/logo.png" alt="NEOSOLAR" style={{ height: 38, objectFit: 'contain' }} />
+            <div className="text-right text-[9px]" style={{ color: '#6B7280', lineHeight: 1.7 }}>
+              NEOSOLAR AG · Industriestrasse 28, 9100 Herisau<br />
+              T +41 (0)71 544 91 00 · info@neosolar.ch<br />
+              CHE-109.669.061
             </div>
+          </div>
+
+          <div className="mb-5">
+            <div className="text-[10px] uppercase tracking-widest mb-1" style={{ color: '#F59E0B', fontWeight: 700 }}>
+              Bestellung
+            </div>
+            <h1 className="text-[24px] font-bold mb-1" style={{ color: '#111827' }}>
+              Verbindliche Bestellung Ihrer Photovoltaikanlage
+            </h1>
+            <div className="text-[11px]" style={{ color: '#6B7280' }}>
+              Zur Richtofferte «{variantenName}» vom {heute} · gültig bis {gueltigBis}
+            </div>
+          </div>
+
+          {/* Besteller und Standort */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="p-4" style={{ background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+              <div className="text-[9px] uppercase tracking-wider mb-2" style={{ color: '#6B7280', fontWeight: 700 }}>
+                Besteller
+              </div>
+              {kunde ? (
+                <div className="text-[11px]" style={{ color: '#111827', lineHeight: 1.8 }}>
+                  {kunde.company && <div style={{ fontWeight: 700 }}>{kunde.company}</div>}
+                  <div style={{ fontWeight: 700 }}>{kunde.firstName} {kunde.lastName}</div>
+                  {kunde.address && <div style={{ color: '#374151' }}>{kunde.address}</div>}
+                  {kunde.email && <div style={{ color: '#374151' }}>{kunde.email}</div>}
+                  {kunde.phone && <div style={{ color: '#374151' }}>{kunde.phone}</div>}
+                </div>
+              ) : (
+                <div className="text-[11px]" style={{ color: '#9CA3AF', lineHeight: 2.4 }}>
+                  <div style={{ borderBottom: '1px solid #D1D5DB' }}>Name</div>
+                  <div style={{ borderBottom: '1px solid #D1D5DB' }}>Adresse</div>
+                  <div style={{ borderBottom: '1px solid #D1D5DB' }}>E-Mail und Telefon</div>
+                </div>
+              )}
+            </div>
+            <div className="p-4" style={{ background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+              <div className="text-[9px] uppercase tracking-wider mb-2" style={{ color: '#6B7280', fontWeight: 700 }}>
+                Ihr Ansprechpartner
+              </div>
+              <div className="text-[11px]" style={{ color: '#111827', lineHeight: 1.8 }}>
+                <div style={{ fontWeight: 700 }}>
+                  {[verkaeufer?.firstName, verkaeufer?.lastName].filter(Boolean).join(' ') || 'NEOSOLAR AG'}
+                </div>
+                {verkaeufer?.email && <div style={{ color: '#374151' }}>{verkaeufer.email}</div>}
+                {verkaeufer?.phone && <div style={{ color: '#374151' }}>{verkaeufer.phone}</div>}
+                <div style={{ color: '#6B7280' }}>Montageort: {kunde?.address || '________________________'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bestellte Leistung */}
+          <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>Bestellte Leistung</h2>
+          <table className="w-full text-[11px] mb-5" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              {positionen.map(([pos, detail], i) => (
+                <tr key={pos} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                  <td className="py-1.5 px-3" style={{ color: '#111827', width: '55%' }}>{pos}</td>
+                  <td className="py-1.5 px-3" style={{ color: '#6B7280' }}>{detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Preis und Zahlung */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="p-4" style={{ background: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)', borderRadius: 10, border: '1px solid #FCD34D' }}>
+              <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+                Werklohn inkl. MWST
+              </div>
+              <div className="text-[26px] font-bold tabular-nums leading-none" style={{ color: '#B45309' }}>
+                {chf(werklohn)}
+              </div>
+              <div className="text-[9px] mt-2" style={{ color: '#78350F', lineHeight: 1.6 }}>
+                Nach Einmalvergütung ({chf(ergebnis.foerderung)})
+                {ergebnis.steuerabzug > 0 ? ` und Steuerersparnis (${chf(ergebnis.steuerabzug)})` : ''} betragen
+                Ihre effektiven Kosten {chf(ergebnis.nettoInvestition)}.
+              </div>
+            </div>
+            <div className="p-4" style={{ background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+              <div className="text-[9px] uppercase tracking-wider mb-2" style={{ color: '#6B7280', fontWeight: 700 }}>
+                Zahlungsweise
+              </div>
+              {[
+                { id: 'TRANCHEN', text: '50 % / 40 % / 10 % nach Baufortschritt' },
+                { id: 'ANZAHLUNG90', text: '90 % bei Vertragsunterzeichnung, 10 % nach Abschluss' },
+                { id: 'FINANZIERUNG', text: 'Finanzierung über meine Bank' },
+              ].map((z) => {
+                const gewaehlt = (input.zahlungsart ?? 'TRANCHEN') === z.id
+                return (
+                  <div key={z.id} className="flex items-start gap-2 mb-1.5">
+                    <span
+                      className="flex items-center justify-center"
+                      style={{
+                        width: 13, height: 13, marginTop: 1, flexShrink: 0,
+                        border: `1.5px solid ${gewaehlt ? '#B45309' : '#9CA3AF'}`,
+                        borderRadius: 3,
+                        background: gewaehlt ? '#B45309' : '#FFFFFF',
+                        color: '#FFFFFF', fontSize: 10, fontWeight: 700, lineHeight: 1,
+                      }}
+                    >
+                      {gewaehlt ? '✓' : ''}
+                    </span>
+                    <span className="text-[10px]" style={{ color: gewaehlt ? '#111827' : '#6B7280', fontWeight: gewaehlt ? 600 : 400 }}>
+                      {z.text}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Erklaerungen des Bestellers */}
+          <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>Ich bestätige</h2>
+          <div className="mb-5">
+            {[
+              'Ich bestelle die oben aufgeführte Photovoltaikanlage verbindlich zum genannten Werklohn.',
+              'Die Allgemeinen Geschäftsbedingungen und den Werkvertrag der NEOSOLAR AG habe ich erhalten und akzeptiert.',
+              'Mir ist bekannt, dass der finale Preis nach der technischen Aufnahme vor Ort bestätigt wird und um maximal CHF 2\'000 abweichen kann.',
+              'Ich stelle einen Internetanschluss im Technikraum für das Monitoring bereit.',
+              'NEOSOLAR darf den Förderantrag bei Pronovo in meinem Namen einreichen.',
+            ].map((z) => (
+              <div key={z} className="flex items-start gap-2 mb-1.5">
+                <span
+                  style={{
+                    width: 13, height: 13, marginTop: 1, flexShrink: 0,
+                    border: '1.5px solid #9CA3AF', borderRadius: 3, background: '#FFFFFF',
+                  }}
+                />
+                <span className="text-[10px]" style={{ color: '#374151', lineHeight: 1.5 }}>{z}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Ruecktrittsrecht – gehoert direkt ueber die Unterschrift */}
+          <div className="p-3 mb-5" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
+            <div className="text-[11px] font-bold mb-1" style={{ color: '#92400E' }}>
+              Ihr Rücktrittsrecht
+            </div>
+            <p className="text-[9px]" style={{ color: '#78350F', lineHeight: 1.6 }}>
+              Sie können innert 7 Tagen ab Unterzeichnung ohne Begründung und ohne Kostenfolge von dieser
+              Bestellung zurücktreten. Die Mitteilung genügt schriftlich an NEOSOLAR AG, Industriestrasse 28,
+              9100 Herisau oder per E-Mail an info@neosolar.ch. Wird die Baubewilligung nicht erteilt, treten
+              Sie ebenfalls kostenlos zurück.
+            </p>
+          </div>
+
+          {/* Unterschriften beider Parteien */}
+          <div className="grid grid-cols-2 gap-8 pt-2">
+            {[
+              { rolle: 'Besteller', name: kunde ? `${kunde.firstName} ${kunde.lastName}` : '' },
+              {
+                rolle: 'NEOSOLAR AG',
+                name: [verkaeufer?.firstName, verkaeufer?.lastName].filter(Boolean).join(' '),
+              },
+            ].map((u) => (
+              <div key={u.rolle}>
+                <div className="text-[9px] uppercase tracking-wider mb-4" style={{ color: '#6B7280', fontWeight: 700 }}>
+                  {u.rolle}
+                </div>
+                <div className="flex gap-3 mb-3">
+                  <div style={{ flex: 1, borderBottom: '1px solid #9CA3AF', height: 22 }} />
+                  <div style={{ width: 90, borderBottom: '1px solid #9CA3AF', height: 22 }} />
+                </div>
+                <div className="flex gap-3 text-[9px]" style={{ color: '#9CA3AF' }}>
+                  <span style={{ flex: 1 }}>Ort</span>
+                  <span style={{ width: 90 }}>Datum</span>
+                </div>
+                <div style={{ borderBottom: '1px solid #9CA3AF', height: 34, marginTop: 14 }} />
+                <div className="text-[9px] mt-1" style={{ color: '#9CA3AF' }}>
+                  Unterschrift{u.name ? ` · ${u.name}` : ''}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-[9px] mt-6 pt-4" style={{ borderTop: '1px solid #E5E7EB', color: '#9CA3AF', lineHeight: 1.6 }}>
+            Bitte senden Sie die unterzeichnete Bestellung an info@neosolar.ch oder geben Sie sie Ihrem
+            Berater mit. Es gilt Schweizer Recht, Gerichtsstand Herisau.
           </div>
         </div>
       </div>
