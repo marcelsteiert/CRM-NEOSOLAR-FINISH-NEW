@@ -45,8 +45,13 @@ const anfrageSchema = z.object({
   wallbox: z.boolean().nullable().optional(),
   geschaetzterPreis: z.number().min(0).max(10_000_000).nullable().optional(),
   bemerkung: z.string().max(2000).nullable().optional(),
-  /** Honeypot: von Bots ausgefuellt, von Menschen nie */
-  website: z.string().max(0).nullable().optional(),
+  /**
+   * Honeypot: von Bots ausgefuellt, von Menschen nie.
+   * Absichtlich ohne Laengenbegrenzung – sonst wuerde die Validierung mit 400
+   * antworten und der Bot wuesste, dass er entdeckt wurde. Die Auswertung
+   * passiert unten im Handler mit einem stillen Erfolg.
+   */
+  website: z.string().max(500).nullable().optional(),
 })
 
 // Einfacher Spam-Schutz pro IP. Bewusst im Speicher – bei Serverless
