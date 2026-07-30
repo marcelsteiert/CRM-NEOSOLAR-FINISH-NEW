@@ -213,6 +213,53 @@ export default function OffertenDruck({
           </div>
         </div>
 
+        {/* Das Wichtigste zuerst – der Kunde soll nicht suchen müssen */}
+        <div
+          className="p-5 mb-7"
+          style={{
+            background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+            borderRadius: 12,
+            border: '1px solid #FCD34D',
+          }}
+        >
+          <div className="grid grid-cols-3 gap-4 items-end">
+            <div>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+                Ihre Anlage
+              </div>
+              <div className="text-[22px] font-bold tabular-nums leading-none" style={{ color: '#111827' }}>
+                {input.kwp} kWp
+              </div>
+              <div className="text-[10px] mt-1" style={{ color: '#78350F' }}>
+                {module} Module{speicherModule > 0 ? ` · ${input.speicherKwh} kWh Speicher` : ''}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+                Sie sparen
+              </div>
+              <div className="text-[22px] font-bold tabular-nums leading-none" style={{ color: '#047857' }}>
+                {chf(ergebnis.ersparnisProMonat)}
+              </div>
+              <div className="text-[10px] mt-1" style={{ color: '#78350F' }}>
+                pro Monat · {chf(ergebnis.gesamtErsparnis)} über {config.betrachtungsJahre} Jahre
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase tracking-widest mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+                Effektive Kosten
+              </div>
+              <div className="text-[26px] font-bold tabular-nums leading-none" style={{ color: '#B45309' }}>
+                {chf(ergebnis.nettoInvestition)}
+              </div>
+              <div className="text-[10px] mt-1" style={{ color: '#78350F' }}>
+                nach Förderung{ergebnis.steuerabzug > 0 ? ' und Steuerersparnis' : ''}
+                {ergebnis.amortisationJahre ? ` · bezahlt nach ${ergebnis.amortisationJahre} Jahren` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Kennzahlen */}
         <div className="grid grid-cols-5 gap-2.5 mb-7">
           {[
@@ -275,6 +322,25 @@ export default function OffertenDruck({
           </div>
         </div>
 
+        {/* Inhalt – der Kunde weiss auf Seite 1, was ihn erwartet */}
+        <div className="mb-7 p-4" style={{ background: '#F9FAFB', borderRadius: 10, border: '1px solid #E5E7EB' }}>
+          <div className="text-[9px] uppercase tracking-widest mb-2" style={{ color: '#92400E', fontWeight: 700 }}>
+            Inhalt dieser Offerte
+          </div>
+          <div className="grid grid-cols-3 gap-x-5 gap-y-1">
+            {[
+              '1 · Überblick und Leistungsumfang',
+              '2 · Ihre Investition und Zahlung',
+              '3 · Ihr PV-System im Detail',
+              '4 · Unabhängigkeit und Eigenverbrauch',
+              '5 · Wirtschaftlichkeit über die Laufzeit',
+              '6 · Ihre Sicherheiten und der Ablauf',
+            ].map((z) => (
+              <div key={z} className="text-[10px]" style={{ color: '#374151' }}>{z}</div>
+            ))}
+          </div>
+        </div>
+
         {/* Leistungsumfang */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Leistungsumfang</h2>
         <table className="w-full text-[11px] mb-7" style={{ borderCollapse: 'collapse' }}>
@@ -316,6 +382,10 @@ export default function OffertenDruck({
             </table>
           </>
         )}
+
+        {/* ── Seite 2: Ihre Investition ── */}
+        <div className="offerte-seitenumbruch" />
+        <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihre Investition</h1>
 
         {/* Preis */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Photovoltaikanlage – Kosten<sup>*</sup></h2>
@@ -468,82 +538,9 @@ export default function OffertenDruck({
           Ausgenommen Sonderfälle und Materialkosten über die üblichen Grenzen hinaus.
         </p>
 
-        {/* Seite 2 */}
+        {/* ── Seite 3: Ihr PV-System ── */}
         <div className="offerte-seitenumbruch" />
-
-        <h2 className="text-[14px] font-bold mb-3 mt-2" style={{ color: '#111827' }}>
-          Wohin Ihr Solarstrom geht
-        </h2>
-        {/* Energiefluss als Balken – druckt sauber, weil nur Flaechen */}
-        <div className="mb-6">
-          <div className="flex h-9 rounded-lg overflow-hidden" style={{ border: '1px solid #E5E7EB' }}>
-            <div
-              className="flex items-center justify-center"
-              style={{
-                width: `${Math.max(8, ergebnis.eigenverbrauchsquote * 100)}%`,
-                background: '#34D399',
-              }}
-            >
-              <span className="text-[10px] font-bold" style={{ color: '#053B29' }}>
-                {Math.round(ergebnis.eigenverbrauchsquote * 100)} % selbst genutzt
-              </span>
-            </div>
-            <div
-              className="flex items-center justify-center"
-              style={{ flex: 1, background: '#BFDBFE' }}
-            >
-              <span className="text-[10px] font-bold" style={{ color: '#1E3A8A' }}>
-                {Math.round((1 - ergebnis.eigenverbrauchsquote) * 100)} % eingespeist
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: '#6B7280' }}>
-            <span>{kwh(ergebnis.eigenverbrauchKwh)} für Ihren Haushalt</span>
-            <span>{kwh(ergebnis.einspeisungKwh)} ins Netz</span>
-          </div>
-        </div>
-
-        {/* Stromkosten-Vergleich als Balken */}
-        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
-          Ihre Stromkosten über {config.betrachtungsJahre} Jahre
-        </h2>
-        <div className="mb-6">
-          {[
-            { label: 'Ohne Solaranlage', wert: ergebnis.stromkostenOhneAnlage, farbe: '#FCA5A5', text: '#7F1D1D' },
-            { label: 'Mit Ihrer Anlage', wert: ergebnis.stromkostenMitAnlage, farbe: '#6EE7B7', text: '#053B29' },
-          ].map((b) => (
-            <div key={b.label} className="mb-2">
-              <div className="flex justify-between text-[11px] mb-1">
-                <span style={{ color: '#374151' }}>{b.label}</span>
-                <span className="tabular-nums font-bold" style={{ color: '#111827' }}>{chf(b.wert)}</span>
-              </div>
-              <div className="h-6 rounded" style={{ background: '#F3F4F6' }}>
-                <div
-                  className="h-full rounded flex items-center justify-end pr-2"
-                  style={{
-                    width: `${Math.max(6, (b.wert / Math.max(ergebnis.stromkostenOhneAnlage, 1)) * 100)}%`,
-                    background: b.farbe,
-                  }}
-                >
-                  <span className="text-[9px] font-bold" style={{ color: b.text }}>
-                    {Math.round((b.wert / Math.max(ergebnis.stromkostenOhneAnlage, 1)) * 100)} %
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-          <div
-            className="flex items-center justify-between mt-3 px-4 py-3"
-            style={{ background: '#ECFDF5', borderRadius: 8, border: '1px solid #A7F3D0' }}
-          >
-            <span className="text-[12px] font-bold" style={{ color: '#065F46' }}>
-              Das bleibt bei Ihnen
-            </span>
-            <span className="text-[19px] font-bold tabular-nums" style={{ color: '#047857' }}>
-              {chf(ergebnis.stromkostenOhneAnlage - ergebnis.stromkostenMitAnlage)}
-            </span>
-          </div>
-        </div>
+        <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihr PV-System</h1>
 
         {/* Kennzahlen-Ringe und Objektdaten – Aufbau wie in der bisherigen Offerte */}
         <div className="grid grid-cols-2 gap-6 mb-7 items-center">
@@ -716,6 +713,88 @@ export default function OffertenDruck({
           ))}
         </div>
 
+        {/* ── Seite 4: Unabhängigkeit und Eigenverbrauch ── */}
+        <div className="offerte-seitenumbruch" />
+        <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Unabhängigkeit und Eigenverbrauch</h1>
+
+        <h2 className="text-[14px] font-bold mb-3 mt-2" style={{ color: '#111827' }}>
+          Wohin Ihr Solarstrom geht
+        </h2>
+        {/* Energiefluss als Balken – druckt sauber, weil nur Flaechen */}
+        <div className="mb-6">
+          <div className="flex h-9 rounded-lg overflow-hidden" style={{ border: '1px solid #E5E7EB' }}>
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: `${Math.max(8, ergebnis.eigenverbrauchsquote * 100)}%`,
+                background: '#34D399',
+              }}
+            >
+              <span className="text-[10px] font-bold" style={{ color: '#053B29' }}>
+                {Math.round(ergebnis.eigenverbrauchsquote * 100)} % selbst genutzt
+              </span>
+            </div>
+            <div
+              className="flex items-center justify-center"
+              style={{ flex: 1, background: '#BFDBFE' }}
+            >
+              <span className="text-[10px] font-bold" style={{ color: '#1E3A8A' }}>
+                {Math.round((1 - ergebnis.eigenverbrauchsquote) * 100)} % eingespeist
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: '#6B7280' }}>
+            <span>{kwh(ergebnis.eigenverbrauchKwh)} für Ihren Haushalt</span>
+            <span>{kwh(ergebnis.einspeisungKwh)} ins Netz</span>
+          </div>
+        </div>
+
+        {/* Stromkosten-Vergleich als Balken */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
+          Ihre Stromkosten über {config.betrachtungsJahre} Jahre
+        </h2>
+        <div className="mb-6">
+          {[
+            { label: 'Ohne Solaranlage', wert: ergebnis.stromkostenOhneAnlage, farbe: '#FCA5A5', text: '#7F1D1D' },
+            { label: 'Mit Ihrer Anlage', wert: ergebnis.stromkostenMitAnlage, farbe: '#6EE7B7', text: '#053B29' },
+          ].map((b) => (
+            <div key={b.label} className="mb-2">
+              <div className="flex justify-between text-[11px] mb-1">
+                <span style={{ color: '#374151' }}>{b.label}</span>
+                <span className="tabular-nums font-bold" style={{ color: '#111827' }}>{chf(b.wert)}</span>
+              </div>
+              <div className="h-6 rounded" style={{ background: '#F3F4F6' }}>
+                <div
+                  className="h-full rounded flex items-center justify-end pr-2"
+                  style={{
+                    width: `${Math.max(6, (b.wert / Math.max(ergebnis.stromkostenOhneAnlage, 1)) * 100)}%`,
+                    background: b.farbe,
+                  }}
+                >
+                  <span className="text-[9px] font-bold" style={{ color: b.text }}>
+                    {Math.round((b.wert / Math.max(ergebnis.stromkostenOhneAnlage, 1)) * 100)} %
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div
+            className="flex items-center justify-between mt-3 px-4 py-3"
+            style={{ background: '#ECFDF5', borderRadius: 8, border: '1px solid #A7F3D0' }}
+          >
+            <span className="text-[12px] font-bold" style={{ color: '#065F46' }}>
+              Das bleibt bei Ihnen
+            </span>
+            <span className="text-[19px] font-bold tabular-nums" style={{ color: '#047857' }}>
+              {chf(ergebnis.stromkostenOhneAnlage - ergebnis.stromkostenMitAnlage)}
+            </span>
+          </div>
+        </div>
+
+        {/* ── Seite 5: Wirtschaftlichkeit Ihrer Anlage ── */}
+        <div className="offerte-seitenumbruch" />
+        <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Wirtschaftlichkeit Ihrer Anlage</h1>
+
         {/* Amortisation als Verlauf */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
           Wann sich Ihre Anlage bezahlt macht
@@ -790,90 +869,6 @@ export default function OffertenDruck({
             ))}
           </tbody>
         </table>
-
-        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Grundlage der Berechnung</h2>
-        <div className="text-[10px] mb-6" style={{ color: '#374151', lineHeight: 1.8 }}>
-          Dachausrichtung {AUSRICHTUNG_LABELS[input.ausrichtung]}, Neigung {input.neigung}°,{' '}
-          {DACHTYP_LABELS[input.dachtyp]} · spezifischer Ertrag {ergebnis.spezifischerErtrag} kWh/kWp ·
-          Strompreis {input.strompreisRp} Rp./kWh mit {(config.strompreisSteigerung * 100).toFixed(1)} %
-          Steigerung pro Jahr · Rückliefervergütung {config.einspeiseverguetungRp} Rp./kWh ·
-          Moduldegradation {(config.degradationProJahr * 100).toFixed(1)} % pro Jahr ·
-          Betriebskosten {chf(config.betriebskostenProJahr)} pro Jahr ·
-          Betrachtungszeitraum {config.betrachtungsJahre} Jahre
-          {(input.geplantWaermepumpe || input.geplantEAuto) && (
-            <>
-              {' '}· berücksichtigter Mehrverbrauch:{' '}
-              {[
-                input.geplantWaermepumpe ? `Wärmepumpe ${config.mehrverbrauchWaermepumpe} kWh` : null,
-                input.geplantEAuto ? `Elektroauto ${config.mehrverbrauchEAuto} kWh` : null,
-              ].filter(Boolean).join(', ')}
-            </>
-          )}
-        </div>
-
-        {beduerfnisse.motivation.length > 0 && (
-          <>
-            <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>Was Ihnen wichtig ist</h2>
-            <div className="text-[11px] mb-6" style={{ color: '#374151' }}>
-              {beduerfnisse.motivation.join(' · ')}
-              {beduerfnisse.zeitraum && <> · Realisierung: {beduerfnisse.zeitraum}</>}
-            </div>
-          </>
-        )}
-
-        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>So geht es weiter</h2>
-        <ol className="text-[11px] mb-6" style={{ color: '#374151', lineHeight: 1.9, paddingLeft: 18 }}>
-          <li>Sie prüfen diese Richtofferte in Ruhe.</li>
-          <li>Bei Zusage vermessen wir Ihr Dach mit der Drohne und bestätigen den finalen Preis (Abweichung max. CHF 1–2K).</li>
-          <li>Sie unterzeichnen das verbindliche Angebot.</li>
-          <li>Wir übernehmen Baugesuch, Netzanmeldung und Förderantrag.</li>
-          <li>Ab Baubewilligung bis zur fertigen Montage maximal zwei Monate.</li>
-        </ol>
-
-        {/* Vertragliche Sicherheiten – Formulierungen aus dem NEOSOLAR-Werkvertrag */}
-        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre vertraglichen Rechte</h2>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {[
-            {
-              titel: '7 Tage Rücktrittsrecht',
-              text: 'Ab Unterzeichnung, ohne Begründung und ohne Verpflichtungen. Schriftlich an unsere Adresse.',
-            },
-            {
-              titel: 'Keine Bewilligung, kein Vertrag',
-              text: 'Wird die Baubewilligung nicht erteilt, treten Sie zurück. Bis dahin erbrachte Leistungen stellen wir nicht in Rechnung.',
-            },
-            {
-              titel: 'Mängelrechte nach OR',
-              text: '2 Jahre auf bewegliche Teile, 5 Jahre auf fest ins Gebäude integrierte Werke.',
-            },
-            {
-              titel: 'Ein Ansprechpartner',
-              text: 'Der Vertrag besteht nur zwischen Ihnen und NEOSOLAR. Verträge mit Subunternehmern berühren ihn nicht.',
-            },
-          ].map((r) => (
-            <div key={r.titel} className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
-              <div className="text-[11px] font-bold mb-1" style={{ color: '#111827' }}>{r.titel}</div>
-              <div className="text-[10px]" style={{ color: '#6B7280', lineHeight: 1.6 }}>{r.text}</div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[10px] mb-6" style={{ color: '#9CA3AF', lineHeight: 1.6 }}>
-          Bauseits erforderlich: Internetverbindung im Technikraum für das Monitoring. Die Kosten der
-          Elektrokontrolle erhebt das Kontrollorgan direkt bei Ihnen. Es gilt Schweizer Recht,
-          Gerichtsstand Herisau. Der Werklohn ist indexiert und wird bei der Schlussrechnung angepasst, sofern der Landesindex der Konsumentenpreise seit Vertragsunterzeichnung um mehr als 5 Prozent gestiegen ist. Massgebend sind die beiliegenden AGB und der Werkvertrag.
-        </p>
-
-        <div className="p-4 mb-6" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
-          <div className="text-[12px] font-bold mb-1" style={{ color: '#92400E' }}>Wichtiger Hinweis</div>
-          <p className="text-[10px]" style={{ color: '#78350F', lineHeight: 1.7 }}>
-            Dies ist eine Richtofferte auf Basis der im Beratungsgespräch gemachten Angaben und öffentlicher
-            Geodaten – noch kein verbindliches Festpreisangebot. Ertrag, Eigenverbrauch und Autarkie sind
-            rechnerische Prognosen ohne stundengenaues Lastprofil; die tatsächlichen Werte hängen von Wetter,
-            Verschattung und Nutzungsverhalten ab. Die Strompreisentwicklung ist eine Annahme, keine Garantie.
-            Der Förderbeitrag richtet sich nach dem zum Zeitpunkt der Anmeldung gültigen Pronovo-Tarif.
-            Das verbindliche Festpreisangebot erhalten Sie nach der technischen Prüfung vor Ort.
-          </p>
-        </div>
 
         {/* Investition gegen Ertrag – der Vergleich aus der bisherigen Offerte */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
@@ -960,6 +955,26 @@ export default function OffertenDruck({
           IEA Lebenszyklusanalyse Photovoltaik.
         </p>
 
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Grundlage der Berechnung</h2>
+        <div className="text-[10px] mb-6" style={{ color: '#374151', lineHeight: 1.8 }}>
+          Dachausrichtung {AUSRICHTUNG_LABELS[input.ausrichtung]}, Neigung {input.neigung}°,{' '}
+          {DACHTYP_LABELS[input.dachtyp]} · spezifischer Ertrag {ergebnis.spezifischerErtrag} kWh/kWp ·
+          Strompreis {input.strompreisRp} Rp./kWh mit {(config.strompreisSteigerung * 100).toFixed(1)} %
+          Steigerung pro Jahr · Rückliefervergütung {config.einspeiseverguetungRp} Rp./kWh ·
+          Moduldegradation {(config.degradationProJahr * 100).toFixed(1)} % pro Jahr ·
+          Betriebskosten {chf(config.betriebskostenProJahr)} pro Jahr ·
+          Betrachtungszeitraum {config.betrachtungsJahre} Jahre
+          {(input.geplantWaermepumpe || input.geplantEAuto) && (
+            <>
+              {' '}· berücksichtigter Mehrverbrauch:{' '}
+              {[
+                input.geplantWaermepumpe ? `Wärmepumpe ${config.mehrverbrauchWaermepumpe} kWh` : null,
+                input.geplantEAuto ? `Elektroauto ${config.mehrverbrauchEAuto} kWh` : null,
+              ].filter(Boolean).join(', ')}
+            </>
+          )}
+        </div>
+
         {/* Berechnungsgrundlagen – offengelegt wie im Original */}
         <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>Berechnungsgrundlagen</h2>
         <table className="w-full text-[9px] mb-6" style={{ borderCollapse: 'collapse' }}>
@@ -979,6 +994,74 @@ export default function OffertenDruck({
             ))}
           </tbody>
         </table>
+
+        {/* ── Seite 6: Ihre Sicherheiten ── */}
+        <div className="offerte-seitenumbruch" />
+        <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihre Sicherheiten</h1>
+
+        {/* Vertragliche Sicherheiten – Formulierungen aus dem NEOSOLAR-Werkvertrag */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre vertraglichen Rechte</h2>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {[
+            {
+              titel: '7 Tage Rücktrittsrecht',
+              text: 'Ab Unterzeichnung, ohne Begründung und ohne Verpflichtungen. Schriftlich an unsere Adresse.',
+            },
+            {
+              titel: 'Keine Bewilligung, kein Vertrag',
+              text: 'Wird die Baubewilligung nicht erteilt, treten Sie zurück. Bis dahin erbrachte Leistungen stellen wir nicht in Rechnung.',
+            },
+            {
+              titel: 'Mängelrechte nach OR',
+              text: '2 Jahre auf bewegliche Teile, 5 Jahre auf fest ins Gebäude integrierte Werke.',
+            },
+            {
+              titel: 'Ein Ansprechpartner',
+              text: 'Der Vertrag besteht nur zwischen Ihnen und NEOSOLAR. Verträge mit Subunternehmern berühren ihn nicht.',
+            },
+          ].map((r) => (
+            <div key={r.titel} className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+              <div className="text-[11px] font-bold mb-1" style={{ color: '#111827' }}>{r.titel}</div>
+              <div className="text-[10px]" style={{ color: '#6B7280', lineHeight: 1.6 }}>{r.text}</div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] mb-6" style={{ color: '#9CA3AF', lineHeight: 1.6 }}>
+          Bauseits erforderlich: Internetverbindung im Technikraum für das Monitoring. Die Kosten der
+          Elektrokontrolle erhebt das Kontrollorgan direkt bei Ihnen. Es gilt Schweizer Recht,
+          Gerichtsstand Herisau. Der Werklohn ist indexiert und wird bei der Schlussrechnung angepasst, sofern der Landesindex der Konsumentenpreise seit Vertragsunterzeichnung um mehr als 5 Prozent gestiegen ist. Massgebend sind die beiliegenden AGB und der Werkvertrag.
+        </p>
+
+        <div className="p-4 mb-6" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
+          <div className="text-[12px] font-bold mb-1" style={{ color: '#92400E' }}>Wichtiger Hinweis</div>
+          <p className="text-[10px]" style={{ color: '#78350F', lineHeight: 1.7 }}>
+            Dies ist eine Richtofferte auf Basis der im Beratungsgespräch gemachten Angaben und öffentlicher
+            Geodaten – noch kein verbindliches Festpreisangebot. Ertrag, Eigenverbrauch und Autarkie sind
+            rechnerische Prognosen ohne stundengenaues Lastprofil; die tatsächlichen Werte hängen von Wetter,
+            Verschattung und Nutzungsverhalten ab. Die Strompreisentwicklung ist eine Annahme, keine Garantie.
+            Der Förderbeitrag richtet sich nach dem zum Zeitpunkt der Anmeldung gültigen Pronovo-Tarif.
+            Das verbindliche Festpreisangebot erhalten Sie nach der technischen Prüfung vor Ort.
+          </p>
+        </div>
+
+        {beduerfnisse.motivation.length > 0 && (
+          <>
+            <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>Was Ihnen wichtig ist</h2>
+            <div className="text-[11px] mb-6" style={{ color: '#374151' }}>
+              {beduerfnisse.motivation.join(' · ')}
+              {beduerfnisse.zeitraum && <> · Realisierung: {beduerfnisse.zeitraum}</>}
+            </div>
+          </>
+        )}
+
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>So geht es weiter</h2>
+        <ol className="text-[11px] mb-6" style={{ color: '#374151', lineHeight: 1.9, paddingLeft: 18 }}>
+          <li>Sie prüfen diese Richtofferte in Ruhe.</li>
+          <li>Bei Zusage vermessen wir Ihr Dach mit der Drohne und bestätigen den finalen Preis (Abweichung max. CHF 1–2K).</li>
+          <li>Sie unterzeichnen das verbindliche Angebot.</li>
+          <li>Wir übernehmen Baugesuch, Netzanmeldung und Förderantrag.</li>
+          <li>Ab Baubewilligung bis zur fertigen Montage maximal zwei Monate.</li>
+        </ol>
 
         {/* Optionale Komponenten mit echten Preisen */}
         <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
