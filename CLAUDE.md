@@ -75,6 +75,7 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [x] Export-Center (CSV/JSON fuer 8 Entitaeten)
 - [x] Callcenter-Dashboard (Lead/Termin-Stats pro User, Daily-Stats)
 - [x] Globale Suche (TopBar Cmd+K, Volltext ueber Kontakte)
+- [x] **Solarberatung & Verkaufsrechner** (NEU – gefuehrte Praesentation + oeffentlicher Rechner)
 - [ ] Rechnungen
 - [ ] KI-Summary (Modul existiert, aktuell ueber Feature-Flag deaktiviert)
 
@@ -171,6 +172,63 @@ Route: `/admin`, Komponente: AdminPage.tsx
 13. Audit-Log
 14. Datenbank & Export
 15. Projekt-Kanban Spalten (Custom-Spalten + Phasen-Vorlagen)
+
+## Solarberatung & Verkaufsrechner (NEU)
+Gefuehrte Beratung fuer den Kundentermin (Zoom/vor Ort) mit Live-Rechner.
+Inhalte aus "Neosolar Verkaufspraesentation_v2" in einen interaktiven Ablauf ueberfuehrt.
+
+- Modul-ID: `solarberatung` (ADMIN/GL/VERTRIEB/CLOSER)
+- Routes: `/solarberatung` und `/solarberatung/:contactId` (mit Kundenbezug)
+- **Oeffentlich: `/rechner`** – Selbstrechner fuer die Homepage, ohne Login.
+  Anfragen landen als Lead mit Quelle HOMEPAGE (Honeypot + Rate-Limit 5/10 Min pro IP).
+
+### Rechen-Engine
+`client/src/lib/pvCalculator.ts` – laeuft im Browser, damit die Regler ohne Latenz reagieren.
+Liefert Ertrag, Eigenverbrauch, Autarkie, Amortisation, Kapitalwert, IRR und
+Stromgestehungskosten (LCOE) plus Jahresverlauf ueber den Betrachtungszeitraum.
+- Autarkie ist ueber `maxAutarkiegrad` (Standard 80 %) gedeckelt: ohne Saisonspeicher
+  ist Vollautarkie in der Schweiz nicht erreichbar – verhindert falsche Versprechen.
+- Eigenverbrauchsquote per Stuetzwert-Interpolation, Speicherbeitrag physikalisch
+  begrenzt (Kapazitaet x Zyklen x Wirkungsgrad).
+
+### Annahmen (belegt, im Admin aenderbar)
+- Strompreis: ElCom-Median H4 2026 = 27.7 Rp./kWh, Steigerung 2 %/Jahr
+- Foerderung: Pronovo EIV 2026, ca. 360 CHF/kWp bis 30 kWp, darueber ca. 300
+- Preise: abgeleitet aus 14 echten Kalkulationen (Ø VK CHF 32'830).
+  **Die kWp-Werte waren in den Projekten nicht erfasst** – die Staffel ist ueber die
+  Gesamtsummen plausibilisiert und sollte fachlich geprueft werden.
+- Deutsche Regelungen (EEG-Verguetung, MwSt-Befreiung, Negativpreis-Kuerzung)
+  wurden bewusst NICHT uebernommen – sie gelten in der Schweiz nicht.
+
+### Ablauf (16 Schritte)
+Begruessung → Ablauf → Beduerfnisse → Warum NEOSOLAR → Strombedarf steigt →
+Strompreise → **Kosten ohne Anlage** → Komponenten → **Rechner mit Reglern** →
+Anlage-Uebersicht → Energiefluss → Nutzen → **Variantenvergleich** →
+Planungssicherheit → Umsetzung → Fragen
+
+Der Rechner kommt bewusst NACH der Kostenfolie: der Kunde soll den Vergleichswert
+im Kopf haben, bevor er den Preis sieht.
+
+### Verkaeufer- vs. Kundenansicht
+Umschaltbar per Klick. In der Kundenansicht sind Rendite, IRR und Kapitalwert
+ausgeblendet; Preise erscheinen erst ab der Anlagenplanung.
+
+### Ausgabe
+- "Offerte drucken": zweiseitige Richtofferte, per Browser-Druck als PDF speicherbar
+  (`components/OffertenDruck.tsx`, kein zusaetzliches PDF-Paket)
+- "Offerte ins CRM": legt ein Angebot beim Kontakt an, mit dem kompletten
+  Rechenstand als Snapshot in der Notiz. Spaetere Preisaenderungen veraendern
+  bestehende Offerten dadurch nicht.
+
+### Preise pflegen
+Admin → **Rechner-Preise** (`settings.calculator_pricing`).
+Backend: `server/src/routes/admin/calculatorPricing.ts` (GET fuer alle
+authentifizierten User, Schreiben nur ADMIN/GL), `server/src/routes/publicCalculator.ts`.
+
+### Bewusst nicht umgesetzt
+Geo-/Dachplaner mit Modulplatzierung, 3D-Verschattung, 8760-Stunden-Simulation,
+digitale Signatur mit Online-Offerte, Produktkatalog mit Kompatibilitaetsmatrix,
+Stringplanung. Jeweils eigene Ausbaustufe.
 
 ## Rollen & Berechtigungen
 - UserRole: ADMIN, VERTRIEB, PROJEKTLEITUNG, BUCHHALTUNG, GL, SUBUNTERNEHMEN, **CLOSER**, **SETTER**
