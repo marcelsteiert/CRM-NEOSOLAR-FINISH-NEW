@@ -717,10 +717,20 @@ export default function PraesentationPage() {
 
       {druckOffen && (
         <OffertenDruck
+          // Der geladene Kontakt hat Vorrang – nur so stehen Adresse,
+          // Telefon und E-Mail auf der Offerte. Ohne Kontakt bleibt der
+          // Name aus dem Link als Notloesung.
           kunde={
-            kundeAusLink
-              ? { firstName: kundeAusLink, lastName: '', address: '', email: '', phone: '' }
-              : null
+            kontakt ??
+            (kundeAusLinkRoh
+              ? {
+                  firstName: kundeAusLinkRoh,
+                  lastName: '',
+                  address: '',
+                  email: '',
+                  phone: '',
+                }
+              : null)
           }
           variantenName={aktiveAnlage.name}
           input={input}
