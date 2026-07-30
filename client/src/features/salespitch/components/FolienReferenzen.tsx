@@ -26,12 +26,15 @@ const REFERENZ_ORTE: Array<{ kanton: string; orte: string[] }> = [
   { kanton: 'Graubünden', orte: ['Schnaus'] },
 ]
 
-/** Bilder, die der Verkaeufer im Termin gross zeigen kann. */
+/**
+ * Anlagenbilder, die der Verkaeufer im Termin gross zeigen kann.
+ * Geoportal und App sind eigene Folien und stehen deshalb hier nicht.
+ */
 const REFERENZ_BILDER = [
-  { datei: 'haus.jpg', titel: 'Einfamilienhaus mit Vollbelegung', text: 'Schwarzmodule flächig verlegt – so wirkt eine Anlage, die zum Dach passt.' },
+  { datei: 'haus.jpg', titel: 'Einfamilienhaus, Ziegeldach', text: 'Schwarzmodule flächig verlegt – so wirkt eine Anlage, die zum Dach passt.' },
+  { datei: 'flachdach.jpg', titel: 'Flachdach, Gewerbe', text: 'Auf Ballastrahmen aufgestellt, optimal ausgerichtet. Symbolbild.' },
+  { datei: 'technikraum.jpg', titel: 'Wechselrichter und Speicher', text: 'So sieht es bei Ihnen im Technikraum aus – aufgeräumt und zugänglich. Symbolbild.' },
   { datei: 'montage.jpg', titel: 'Montage durch unser Team', text: 'Gesichert, aufgeräumt, in wenigen Arbeitstagen. Symbolbild.' },
-  { datei: 'dachanalyse.jpg', titel: 'Planung über das Geoportal', text: 'Damit legen wir gemeinsam die Modulbelegung fest.' },
-  { datei: 'app.jpg', titel: 'Ihre Anlage in der App', text: 'Produktion, Verbrauch und Speicher jederzeit im Blick.' },
 ]
 
 export function FolienReferenzen() {
