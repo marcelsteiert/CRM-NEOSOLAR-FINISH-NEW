@@ -6,6 +6,17 @@ import type { Beduerfnisse } from './BeduerfnisSchritt'
 const chf = (n: number) => "CHF " + Math.round(n).toLocaleString('de-CH')
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
 
+/**
+ * Monatliche Ertragsverteilung fuer das Schweizer Mittelland, Summe 100 %.
+ * Macht das Sommer/Winter-Gefaelle sichtbar und erklaert, warum auch mit
+ * Speicher ein Netzbezug im Winter bleibt.
+ */
+const MONATSANTEILE: Array<[string, number]> = [
+  ['Jan', 3.0], ['Feb', 4.8], ['Mär', 8.0], ['Apr', 10.4],
+  ['Mai', 12.2], ['Jun', 12.8], ['Jul', 13.2], ['Aug', 11.8],
+  ['Sep', 9.4], ['Okt', 6.6], ['Nov', 3.6], ['Dez', 2.4],
+]
+
 interface Kunde {
   firstName: string
   lastName: string
@@ -482,6 +493,86 @@ export default function OffertenDruck({
           </div>
         </div>
 
+        {/* Monatliche Produktion – macht das Sommer/Winter-Gefälle sichtbar */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
+          Ihre Produktion über das Jahr
+        </h2>
+        <div className="mb-6">
+          <div className="flex items-end gap-1" style={{ height: 92 }}>
+            {MONATSANTEILE.map(([name, anteil]) => (
+              <div key={name} className="flex-1 flex flex-col items-center justify-end h-full">
+                <span className="text-[7px] tabular-nums mb-0.5" style={{ color: '#6B7280' }}>
+                  {Math.round((ergebnis.jahresertragKwh * anteil) / 100)}
+                </span>
+                <div
+                  style={{
+                    width: '100%',
+                    height: `${(anteil / 13.2) * 72}%`,
+                    background: anteil >= 10 ? '#F59E0B' : anteil >= 5 ? '#FCD34D' : '#FDE68A',
+                    borderRadius: '3px 3px 0 0',
+                  }}
+                />
+                <span className="text-[7px] mt-1" style={{ color: '#9CA3AF' }}>{name}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] mt-2" style={{ color: '#6B7280' }}>
+            kWh pro Monat. Im Juli produziert Ihre Anlage rund fünfmal so viel wie im Dezember – deshalb
+            bleibt auch mit Speicher ein Netzbezug im Winter.
+          </p>
+        </div>
+
+        {/* Amortisation als Verlauf */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
+          Wann sich Ihre Anlage bezahlt macht
+        </h2>
+        <div className="mb-6">
+          {(() => {
+            const werte = ergebnis.jahresverlauf.map((z) => z.kumuliertChf)
+            const min = Math.min(...werte, 0)
+            const max = Math.max(...werte, 1)
+            const spanne = max - min || 1
+            const nullLinie = ((max - 0) / spanne) * 100
+            return (
+              <>
+                <div className="relative" style={{ height: 110 }}>
+                  <div
+                    className="absolute left-0 right-0"
+                    style={{ top: `${nullLinie}%`, borderTop: '1px dashed #9CA3AF' }}
+                  />
+                  <div className="flex items-stretch gap-px h-full">
+                    {ergebnis.jahresverlauf.map((z) => {
+                      const positiv = z.kumuliertChf >= 0
+                      const wertLinie = ((max - z.kumuliertChf) / spanne) * 100
+                      return (
+                        <div key={z.jahr} className="flex-1 relative">
+                          <div
+                            className="absolute w-full"
+                            style={{
+                              top: positiv ? `${wertLinie}%` : `${nullLinie}%`,
+                              height: `${Math.abs(nullLinie - wertLinie)}%`,
+                              background: positiv ? '#6EE7B7' : '#FCA5A5',
+                            }}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div className="flex justify-between text-[9px] mt-1.5" style={{ color: '#6B7280' }}>
+                  <span>Jahr 1</span>
+                  {ergebnis.amortisationJahre && (
+                    <span style={{ color: '#B45309', fontWeight: 700 }}>
+                      Bezahlt nach {ergebnis.amortisationJahre} Jahren
+                    </span>
+                  )}
+                  <span>Jahr {config.betrachtungsJahre}</span>
+                </div>
+              </>
+            )
+          })()}
+        </div>
+
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre Ersparnis im Detail</h2>
         <table className="w-full text-[11px] mb-6" style={{ borderCollapse: 'collapse' }}>
           <tbody>
@@ -575,7 +666,7 @@ export default function OffertenDruck({
         <p className="text-[10px] mb-6" style={{ color: '#9CA3AF', lineHeight: 1.6 }}>
           Bauseits erforderlich: Internetverbindung im Technikraum für das Monitoring. Die Kosten der
           Elektrokontrolle erhebt das Kontrollorgan direkt bei Ihnen. Es gilt Schweizer Recht,
-          Gerichtsstand Herisau. Massgebend sind die beiliegenden AGB und der Werkvertrag.
+          Gerichtsstand Herisau. Der Werklohn ist indexiert und wird bei der Schlussrechnung angepasst, sofern der Landesindex der Konsumentenpreise seit Vertragsunterzeichnung um mehr als 5 Prozent gestiegen ist. Massgebend sind die beiliegenden AGB und der Werkvertrag.
         </p>
 
         <div className="p-4 mb-6" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
