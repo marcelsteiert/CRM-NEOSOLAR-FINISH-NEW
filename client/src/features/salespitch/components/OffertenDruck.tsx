@@ -782,6 +782,132 @@ export default function OffertenDruck({
           </p>
         </div>
 
+        {/* Investition gegen Ertrag – der Vergleich aus der bisherigen Offerte */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
+          Investition und Ertrag im Vergleich
+        </h2>
+        <div className="grid grid-cols-2 gap-6 mb-6 items-end">
+          <div className="flex items-end justify-around" style={{ height: 130 }}>
+            {[
+              { label: 'Effektive Kosten', wert: ergebnis.nettoInvestition, farbe: '#111827' },
+              { label: `Ertrag über ${config.betrachtungsJahre} Jahre`, wert: ergebnis.gesamtErsparnis, farbe: '#F59E0B' },
+            ].map((b) => {
+              const max = Math.max(ergebnis.nettoInvestition, ergebnis.gesamtErsparnis, 1)
+              return (
+                <div key={b.label} className="flex flex-col items-center" style={{ width: '42%' }}>
+                  <span className="text-[12px] font-bold tabular-nums mb-1" style={{ color: b.farbe }}>
+                    {Math.round(b.wert).toLocaleString('de-CH')}
+                  </span>
+                  <div
+                    style={{
+                      width: '100%',
+                      height: `${Math.max(6, (b.wert / max) * 95)}px`,
+                      background: b.farbe,
+                    }}
+                  />
+                </div>
+              )
+            })}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+              <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#6B7280', fontWeight: 700 }}>
+                Rendite
+              </div>
+              <div className="text-[19px] font-bold tabular-nums" style={{ color: '#B45309' }}>
+                {ergebnis.irr !== null ? `${ergebnis.irr} %` : `${ergebnis.renditeProzent} %`}
+              </div>
+              <div className="text-[9px]" style={{ color: '#9CA3AF' }}>interner Zinsfuss</div>
+            </div>
+            <div className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+              <div className="text-[9px] uppercase tracking-wider mb-1" style={{ color: '#6B7280', fontWeight: 700 }}>
+                Produktionskosten
+              </div>
+              <div className="text-[19px] font-bold tabular-nums" style={{ color: '#B45309' }}>
+                {ergebnis.lcoe} Rp.
+              </div>
+              <div className="text-[9px]" style={{ color: '#9CA3AF' }}>je kWh Solarstrom</div>
+            </div>
+          </div>
+        </div>
+
+        {/* CO2-Bilanz mit den gewohnten Vergleichen */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
+          Ihr Beitrag für die Umwelt
+        </h2>
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          {[
+            {
+              wert: Math.round((ergebnis.co2EinsparungKgProJahr / 0.2) / 10) * 10,
+              einheit: 'km',
+              text: 'fahren Sie mit einem Benziner für dieselbe Menge CO₂',
+            },
+            {
+              wert: Math.round((ergebnis.co2EinsparungKgProJahr / 4050) * 100),
+              einheit: '%',
+              text: 'reduzieren Sie Ihren CO₂-Fussabdruck (Ø 4.05 t pro Kopf)',
+            },
+            {
+              wert: Math.round(ergebnis.co2EinsparungKgProJahr / 12.5),
+              einheit: 'Bäume',
+              text: 'nehmen jährlich gleich viel CO₂ auf',
+            },
+          ].map((c) => (
+            <div key={c.einheit} className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+              <div className="text-[18px] font-bold tabular-nums" style={{ color: '#B45309' }}>
+                {c.wert.toLocaleString('de-CH')} {c.einheit}
+              </div>
+              <div className="text-[9px] mt-1" style={{ color: '#6B7280', lineHeight: 1.5 }}>{c.text}</div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[9px] mb-6" style={{ color: '#9CA3AF' }}>
+          Bei einer jährlichen Einsparung von {ergebnis.co2EinsparungKgProJahr.toLocaleString('de-CH')} kg CO₂,
+          gerechnet mit 128 g CO₂ je kWh Schweizer Verbraucher-Strommix. Quellen: BAFU Umweltbilanz Strommixe,
+          IEA Lebenszyklusanalyse Photovoltaik.
+        </p>
+
+        {/* Berechnungsgrundlagen – offengelegt wie im Original */}
+        <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>Berechnungsgrundlagen</h2>
+        <table className="w-full text-[9px] mb-6" style={{ borderCollapse: 'collapse' }}>
+          <tbody>
+            {[
+              ['Strompreis', `${input.strompreisRp} Rp./kWh`, 'Nutzungsdauer', `${config.betrachtungsJahre} Jahre`],
+              ['Inflation Strompreis', `${(config.strompreisSteigerung * 100).toFixed(1)} % jährlich`, 'Kalkulationszins', `${(config.kalkulationszinssatz * 100).toFixed(1)} %`],
+              ['Rückliefervergütung', `${config.einspeiseverguetungRp} Rp./kWh`, 'Unterhalt', `${chf(config.betriebskostenProJahr)} jährlich`],
+              ['Moduldegradation', `${(config.degradationProJahr * 100).toFixed(1)} % jährlich`, 'Ertrag je kWp', `${ergebnis.spezifischerErtrag} kWh`],
+            ].map((zeile, i) => (
+              <tr key={i} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                <td className="py-1.5 px-2" style={{ color: '#6B7280' }}>{zeile[0]}</td>
+                <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>{zeile[1]}</td>
+                <td className="py-1.5 px-2" style={{ color: '#6B7280', borderLeft: '1px solid #E5E7EB' }}>{zeile[2]}</td>
+                <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>{zeile[3]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Optionale Komponenten mit echten Preisen */}
+        <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
+          Optionale Zusatzkomponenten
+        </h2>
+        <table className="w-full text-[10px] mb-2" style={{ borderCollapse: 'collapse' }}>
+          <tbody>
+            {KOMPONENTEN.optionen.map((o, i) => (
+              <tr key={o.id} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                <td className="py-1.5 px-2" style={{ color: '#111827' }}>{o.name}</td>
+                <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                  {chf(o.preis)} / Stück
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-[9px] mb-6" style={{ color: '#9CA3AF' }}>
+          Alle Preise verstehen sich exkl. MwSt. und Montage. Gerne beraten wir Sie zur idealen Kombination
+          für Ihre Anforderungen.
+        </p>
+
         <div className="flex justify-between items-end pt-6" style={{ borderTop: '1px solid #E5E7EB' }}>
           <div className="text-[10px]" style={{ color: '#9CA3AF' }}>
             NEOSOLAR AG · Richtofferte vom {heute}

@@ -314,7 +314,14 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
   }
 
   const dachZuschlag = (config.dachtypZuschlagProKwp[input.dachtyp] ?? 0) * kwp
-  const speicherPreis = input.speicherKwh * config.speicherPreisProKwh
+  // Speicherpreis: echte Staffelpreise aus der Offerte, sonst linear
+  const speicherStaffel: Array<[number, number]> = [
+    [6.9, 5046.8],
+    [13.8, 9071.2],
+    [20.7, 10889.6],
+  ]
+  const treffer = speicherStaffel.find(([k]) => Math.abs(k - input.speicherKwh) < 0.05)
+  const speicherPreis = treffer ? treffer[1] : input.speicherKwh * config.speicherPreisProKwh
   // Manuell erfasste Zusatzleistungen zaehlen voll in den Preis
   const zusatzSumme = (input.zusatzPositionen ?? []).reduce((s, z) => s + (Number(z.betrag) || 0), 0)
   const nettoPreis = rundeAuf(
