@@ -71,7 +71,7 @@ export default function OffertenDruck({
     ...(input.wallbox
       ? ([[`Wallbox ${KOMPONENTEN.wallbox.name}`, '1 Stück inkl. PV-Überschussladen']] as Array<[string, string]>)
       : []),
-    ['Unterkonstruktion und Montagesystem', `passend für ${DACHTYP_LABELS[input.dachtyp]}`],
+    [`Unterkonstruktion ${KOMPONENTEN.montage.name}`, `passend für ${DACHTYP_LABELS[input.dachtyp]}`],
     ['DC- und AC-Installation', 'inklusive Verkabelung und Absicherung'],
     ['Planung, Bewilligung, Netzanmeldung', 'Baugesuch, TAG und IA, Pronovo'],
     ['Montage und Inbetriebnahme', 'schlüsselfertig durch NEOSOLAR'],
@@ -544,6 +544,39 @@ export default function OffertenDruck({
           <li>Wir übernehmen Baugesuch, Netzanmeldung und Förderantrag.</li>
           <li>Ab Baubewilligung bis zur fertigen Montage maximal zwei Monate.</li>
         </ol>
+
+        {/* Vertragliche Sicherheiten – Formulierungen aus dem NEOSOLAR-Werkvertrag */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre vertraglichen Rechte</h2>
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {[
+            {
+              titel: '7 Tage Rücktrittsrecht',
+              text: 'Ab Unterzeichnung, ohne Begründung und ohne Verpflichtungen. Schriftlich an unsere Adresse.',
+            },
+            {
+              titel: 'Keine Bewilligung, kein Vertrag',
+              text: 'Wird die Baubewilligung nicht erteilt, treten Sie zurück. Bis dahin erbrachte Leistungen stellen wir nicht in Rechnung.',
+            },
+            {
+              titel: 'Mängelrechte nach OR',
+              text: '2 Jahre auf bewegliche Teile, 5 Jahre auf fest ins Gebäude integrierte Werke.',
+            },
+            {
+              titel: 'Ein Ansprechpartner',
+              text: 'Der Vertrag besteht nur zwischen Ihnen und NEOSOLAR. Verträge mit Subunternehmern berühren ihn nicht.',
+            },
+          ].map((r) => (
+            <div key={r.titel} className="p-3" style={{ background: '#F9FAFB', borderRadius: 8, border: '1px solid #E5E7EB' }}>
+              <div className="text-[11px] font-bold mb-1" style={{ color: '#111827' }}>{r.titel}</div>
+              <div className="text-[10px]" style={{ color: '#6B7280', lineHeight: 1.6 }}>{r.text}</div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] mb-6" style={{ color: '#9CA3AF', lineHeight: 1.6 }}>
+          Bauseits erforderlich: Internetverbindung im Technikraum für das Monitoring. Die Kosten der
+          Elektrokontrolle erhebt das Kontrollorgan direkt bei Ihnen. Es gilt Schweizer Recht,
+          Gerichtsstand Herisau. Massgebend sind die beiliegenden AGB und der Werkvertrag.
+        </p>
 
         <div className="p-4 mb-6" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
           <div className="text-[12px] font-bold mb-1" style={{ color: '#92400E' }}>Wichtiger Hinweis</div>

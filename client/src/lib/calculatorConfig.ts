@@ -103,6 +103,15 @@ export const KOMPONENTEN = {
     watt: 490,
     garantieJahre: 30,
     hagelklasse: 3,
+    // Technische Daten aus dem Datenblatt der bestehenden NEOSOLAR-Offerte
+    zellen: '108 Halbzellen',
+    masse: '1800 × 1134 × 30 mm',
+    gewichtKg: 21.6,
+    wirkungsgrad: 24.0,
+    degradationErstesJahr: 1.0,
+    degradationFolgejahre: 0.35,
+    lastDruckPa: 5400,
+    lastZugPa: 2400,
   },
   wechselrichter: {
     name: 'Huawei SUN2000',
@@ -114,6 +123,10 @@ export const KOMPONENTEN = {
     typ: 'LUNA2000-7/14/21-S1',
     modulKwh: 6.9,
     hinweis: 'LFP-Zellchemie, 100 % Entladetiefe, IP66',
+  },
+  montage: {
+    name: 'K2 SingleRail mit CrossHook 3S',
+    hinweis: 'Kreuzverbund für hohe Lasten, Rastmontage ohne Verschraubung an der Grundplatte',
   },
   wallbox: {
     name: 'Huawei sCharger',
