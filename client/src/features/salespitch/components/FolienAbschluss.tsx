@@ -241,18 +241,24 @@ export function FolienEntscheidung({
             }}
           >
             <div className="flex justify-between items-baseline mb-1">
-              <span className="text-[12px] text-text-sec">Anlage schlüsselfertig</span>
-              <span className="text-[13px] text-text tabular-nums">{chf(ergebnis.bruttoPreis)}</span>
+              <span className="text-[12px] text-text-sec">Rechnungsbetrag inkl. MWST</span>
+              <span className="text-[13px] text-text tabular-nums">{chf(ergebnis.werklohn)}</span>
             </div>
-            <div className="flex justify-between items-baseline mb-2.5">
+            <div className="flex justify-between items-baseline mb-1">
               <span className="text-[12px] text-text-sec">− Förderung Pronovo</span>
               <span className="text-[13px] text-emerald tabular-nums">− {chf(ergebnis.foerderung)}</span>
             </div>
+            {ergebnis.steuerabzug > 0 && (
+              <div className="flex justify-between items-baseline mb-2.5">
+                <span className="text-[12px] text-text-sec">− erwartete Steuerersparnis</span>
+                <span className="text-[13px] text-emerald tabular-nums">− {chf(ergebnis.steuerabzug)}</span>
+              </div>
+            )}
             <div
               className="flex justify-between items-baseline pt-2.5"
               style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }}
             >
-              <span className="text-[14px] font-bold text-text">Ihr Festpreis</span>
+              <span className="text-[14px] font-bold text-text">Ihre effektiven Kosten</span>
               <span className="text-[26px] font-bold text-amber tabular-nums leading-none">
                 {chf(ergebnis.nettoInvestition)}
               </span>

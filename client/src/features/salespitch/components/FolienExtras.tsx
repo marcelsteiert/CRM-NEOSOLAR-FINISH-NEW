@@ -35,7 +35,8 @@ export function FolienSpeicherUpgrade({
       module: Math.round(kwh / modulKwh),
       ergebnis: e,
       mehrProMonat: e.ersparnisProMonat - ergebnis.ersparnisProMonat,
-      mehrpreis: e.nettoInvestition - ergebnis.nettoInvestition,
+      // Was der Kunde wirklich mehr bezahlt: Rechnungsbetrag inkl. MWST
+      mehrpreis: e.werklohn - ergebnis.werklohn,
       aktuell: Math.abs(kwh - input.speicherKwh) < 0.05,
     }
   })

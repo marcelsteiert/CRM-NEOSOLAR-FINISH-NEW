@@ -87,9 +87,10 @@ export default function VariantenVergleich({
   ]
 
   const preisZeilen: Array<{ label: string; wert: (i: number) => string; hervor?: boolean }> = [
-    { label: 'Anlage schlüsselfertig', wert: (i) => chf(berechnet[i].ergebnis.bruttoPreis) },
+    { label: 'Rechnungsbetrag inkl. MWST', wert: (i) => chf(berechnet[i].ergebnis.werklohn) },
     { label: 'Förderung Pronovo', wert: (i) => '− ' + chf(berechnet[i].ergebnis.foerderung) },
-    { label: 'Ihr Preis', wert: (i) => chf(berechnet[i].ergebnis.nettoInvestition), hervor: true },
+    { label: 'Steuerersparnis', wert: (i) => '− ' + chf(berechnet[i].ergebnis.steuerabzug) },
+    { label: 'Effektive Kosten', wert: (i) => chf(berechnet[i].ergebnis.nettoInvestition), hervor: true },
   ]
 
   return (

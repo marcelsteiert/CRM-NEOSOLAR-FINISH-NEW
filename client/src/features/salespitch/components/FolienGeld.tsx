@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { TrendingDown, Wallet, Receipt, Percent, ArrowRight, Info } from 'lucide-react'
 import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
+import { berechneFinanzierung } from '../../../lib/pvCalculator'
 
 const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
 const chfKurz = (n: number) => Math.round(n).toLocaleString('de-CH')
@@ -299,16 +300,13 @@ export function FolienFinanzierung({
   const [zins, setZins] = useState(3.5)
   const [laufzeit, setLaufzeit] = useState(15)
 
-  const kredit = ergebnis.nettoInvestition
-  const monate = laufzeit * 12
-  const monatsZins = zins / 100 / 12
-  // Annuitaet; bei 0 % einfache Division
-  const rate =
-    monatsZins > 0
-      ? (kredit * monatsZins) / (1 - Math.pow(1 + monatsZins, -monate))
-      : kredit / monate
-  const gesamtKosten = rate * monate
-  const zinsKosten = gesamtKosten - kredit
+  // Finanziert wird der Rechnungsbetrag inklusive MwSt – die Foerderung
+  // trifft erst rund ein Jahr spaeter ein und dient als Sondertilgung.
+  const fin = berechneFinanzierung(ergebnis, zins, laufzeit)
+  const kredit = fin.kredit
+  const rate = fin.monatsrate
+  const gesamtKosten = fin.gesamtKosten
+  const zinsKosten = fin.zinsKosten
 
   const heuteMonat = ergebnis.jahresverlauf.length
     ? (ergebnis.prognoseVerbrauchKwh * ergebnis.jahresverlauf[0].strompreisRp) / 100 / 12
@@ -316,11 +314,11 @@ export function FolienFinanzierung({
   const ersparnisMonat = ergebnis.ersparnisProMonat
   const differenz = rate - ersparnisMonat
 
-  // Die A1/A2/A3-Tranchen entsprechen dem Zahlungsplan aus der Kalkulation.
+  // Wortlaut wie im Werkvertrag und in der gedruckten Offerte
   const tranchen = [
-    { name: 'A1', anteil: 50, wann: 'bei Vertragsabschluss' },
-    { name: 'A2', anteil: 40, wann: 'bei Montagebeginn' },
-    { name: 'A3', anteil: 10, wann: 'nach Inbetriebnahme' },
+    { name: 'A1', anteil: 50, wann: 'bei Unterzeichnung des Vertrags' },
+    { name: 'A2', anteil: 40, wann: 'bei Lieferung des Materials' },
+    { name: 'A3', anteil: 10, wann: 'nach Abschluss der Baustelle' },
   ]
 
   return (
@@ -340,9 +338,12 @@ export function FolienFinanzierung({
         >
           <h3 className="text-[14px] font-bold text-text mb-3">Kauf</h3>
           <div className="text-[32px] font-bold text-amber leading-none tabular-nums mb-1">
-            {chf(ergebnis.nettoInvestition)}
+            {chf(ergebnis.werklohn)}
           </div>
-          <p className="text-[12px] text-text-sec mb-4">einmalig, nach Abzug der Förderung</p>
+          <p className="text-[12px] text-text-sec mb-4">
+            Rechnungsbetrag inkl. MWST · effektiv {chf(ergebnis.nettoInvestition)} nach Förderung
+            {ergebnis.steuerabzug > 0 ? ' und Steuerersparnis' : ''}
+          </p>
           <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-2">
             Zahlungsplan
           </div>
@@ -353,7 +354,7 @@ export function FolienFinanzierung({
                   <b className="text-text">{t.anteil} %</b> {t.wann}
                 </span>
                 <span className="text-text tabular-nums font-semibold">
-                  {chf((ergebnis.nettoInvestition * t.anteil) / 100)}
+                  {chf((ergebnis.werklohn * t.anteil) / 100)}
                 </span>
               </div>
             ))}
@@ -372,7 +373,9 @@ export function FolienFinanzierung({
           <div className="text-[32px] font-bold leading-none tabular-nums mb-1" style={{ color: '#60A5FA' }}>
             {chf(rate)}
           </div>
-          <p className="text-[12px] text-text-sec mb-4">pro Monat über {laufzeit} Jahre</p>
+          <p className="text-[12px] text-text-sec mb-4">
+            pro Monat über {laufzeit} Jahre · Kreditbetrag {chf(kredit)} inkl. MWST
+          </p>
 
           <div className="space-y-3">
             <div>
@@ -410,6 +413,17 @@ export function FolienFinanzierung({
             <div className="flex justify-between text-[11px] pt-1">
               <span className="text-text-dim">Zinskosten insgesamt</span>
               <span className="text-text-sec tabular-nums">{chf(zinsKosten)}</span>
+            </div>
+            <div
+              className="flex justify-between text-[11px] pt-2"
+              style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <span className="text-text-dim">
+                Rate nach Sondertilgung mit der Förderung ({chf(ergebnis.foerderung)})
+              </span>
+              <span className="tabular-nums font-semibold" style={{ color: '#34D399' }}>
+                {chf(fin.rateNachSondertilgung)}
+              </span>
             </div>
           </div>
         </div>

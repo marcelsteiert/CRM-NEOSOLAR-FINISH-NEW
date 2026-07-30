@@ -82,11 +82,11 @@ export default function OffertenDruck({
         { anteil: 10, wann: 'bei erfolgreichem Abschluss der Baustelle' },
       ]
   /**
-   * Der Betrag, den der Kunde tatsaechlich an NEOSOLAR zahlt.
+   * Der Betrag, den der Kunde tatsaechlich an NEOSOLAR zahlt – inklusive MWST.
    * Foerderung und Steuerersparnis fliessen spaeter von Pronovo bzw. vom
-   * Steueramt zurueck – die Tranchen duerfen daher nicht darauf rechnen.
+   * Steueramt zurueck, die Tranchen duerfen daher nicht darauf rechnen.
    */
-  const werklohn = ergebnis.bruttoPreis - ergebnis.rabatt
+  const werklohn = ergebnis.werklohn
   const module = Math.round((input.kwp * 1000) / KOMPONENTEN.modul.watt)
   const speicherModule = input.speicherKwh > 0 ? Math.round(input.speicherKwh / KOMPONENTEN.speicher.modulKwh) : 0
   const heute = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -427,7 +427,7 @@ export default function OffertenDruck({
                 Solarstromanlage ({input.kwp} kWp)
               </td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                {chf(ergebnis.nettoPreis - ergebnis.zusatzSumme - (speicherModule > 0 ? input.speicherKwh * config.speicherPreisProKwh : 0))}
+                {chf(ergebnis.anlagePreisNetto)}
               </td>
             </tr>
             {speicherModule > 0 && (
@@ -436,7 +436,7 @@ export default function OffertenDruck({
                   Batteriespeichersystem ({input.speicherKwh} kWh)
                 </td>
                 <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                  {chf(input.speicherKwh * config.speicherPreisProKwh)}
+                  {chf(ergebnis.speicherPreisNetto)}
                 </td>
               </tr>
             )}
@@ -448,16 +448,12 @@ export default function OffertenDruck({
                 </td>
               </tr>
             )}
-            {ergebnis.rabatt > 0 && (
-              <tr>
-                <td className="py-2" style={{ color: '#374151' }}>
-                  − {input.rabattTitel?.trim() || 'Aktionsrabatt'} ({input.rabattProzent} %)
-                </td>
-                <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
-                  − {chf(ergebnis.rabatt)}
-                </td>
-              </tr>
-            )}
+            <tr style={{ borderTop: '1px solid #E5E7EB' }}>
+              <td className="py-2" style={{ color: '#374151', fontWeight: 600 }}>Zwischensumme exkl. MWST</td>
+              <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                {chf(ergebnis.nettoPreis)}
+              </td>
+            </tr>
             <tr>
               <td className="py-2" style={{ color: '#374151' }}>
                 MWST {config.mwstProzent.toString().replace('.', ',')} %
@@ -472,6 +468,26 @@ export default function OffertenDruck({
                 {chf(ergebnis.bruttoPreis)}
               </td>
             </tr>
+            {ergebnis.rabatt > 0 && (
+              <>
+                <tr>
+                  <td className="py-2" style={{ color: '#374151' }}>
+                    {input.rabattTitel?.trim() || 'Aktionsrabatt'} ({input.rabattProzent} %)
+                  </td>
+                  <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
+                    − {chf(ergebnis.rabatt)}
+                  </td>
+                </tr>
+                <tr style={{ borderTop: '1px solid #E5E7EB' }}>
+                  <td className="py-2" style={{ color: '#111827', fontWeight: 700 }}>
+                    Rechnungsbetrag inkl. MWST
+                  </td>
+                  <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
+                    {chf(werklohn)}
+                  </td>
+                </tr>
+              </>
+            )}
             <tr>
               <td className="py-2" style={{ color: '#374151' }}>
                 Einmalvergütung (Photovoltaik)<sup>**</sup>
@@ -483,7 +499,7 @@ export default function OffertenDruck({
             <tr style={{ borderTop: '1px solid #E5E7EB' }}>
               <td className="py-2" style={{ color: '#111827', fontWeight: 700 }}>Ihre Gesamtinvestition</td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
-                {chf(ergebnis.bruttoPreis - ergebnis.rabatt - ergebnis.foerderung)}
+                {chf(werklohn - ergebnis.foerderung)}
               </td>
             </tr>
             {ergebnis.steuerabzug > 0 && (
@@ -1219,32 +1235,37 @@ export default function OffertenDruck({
               <div className="text-[9px] uppercase tracking-wider mb-2" style={{ color: '#6B7280', fontWeight: 700 }}>
                 Zahlungsweise
               </div>
+              <div className="text-[9px] mb-2" style={{ color: '#9CA3AF' }}>Bitte ankreuzen</div>
               {[
-                { id: 'TRANCHEN', text: '50 % / 40 % / 10 % nach Baufortschritt' },
-                { id: 'ANZAHLUNG90', text: '90 % bei Vertragsunterzeichnung, 10 % nach Abschluss' },
-                { id: 'FINANZIERUNG', text: 'Finanzierung über meine Bank' },
-              ].map((z) => {
-                const gewaehlt = (input.zahlungsart ?? 'TRANCHEN') === z.id
-                return (
-                  <div key={z.id} className="flex items-start gap-2 mb-1.5">
-                    <span
-                      className="flex items-center justify-center"
-                      style={{
-                        width: 13, height: 13, marginTop: 1, flexShrink: 0,
-                        border: `1.5px solid ${gewaehlt ? '#B45309' : '#9CA3AF'}`,
-                        borderRadius: 3,
-                        background: gewaehlt ? '#B45309' : '#FFFFFF',
-                        color: '#FFFFFF', fontSize: 10, fontWeight: 700, lineHeight: 1,
-                      }}
-                    >
-                      {gewaehlt ? '✓' : ''}
-                    </span>
-                    <span className="text-[10px]" style={{ color: gewaehlt ? '#111827' : '#6B7280', fontWeight: gewaehlt ? 600 : 400 }}>
-                      {z.text}
-                    </span>
-                  </div>
-                )
-              })}
+                {
+                  id: 'TRANCHEN',
+                  text: '50 % / 40 % / 10 % nach Baufortschritt',
+                  detail: `${chf(werklohn * 0.5)} · ${chf(werklohn * 0.4)} · ${chf(werklohn * 0.1)}`,
+                },
+                {
+                  id: 'ANZAHLUNG90',
+                  text: '90 % bei Vertragsunterzeichnung, 10 % nach Abschluss',
+                  detail: `${chf(werklohn * 0.9)} · ${chf(werklohn * 0.1)}`,
+                },
+                {
+                  id: 'FINANZIERUNG',
+                  text: 'Finanzierung über meine Bank',
+                  detail: 'Unterlagen für die Bank stellen wir zusammen',
+                },
+              ].map((z) => (
+                <div key={z.id} className="flex items-start gap-2 mb-2">
+                  <span
+                    style={{
+                      width: 13, height: 13, marginTop: 1, flexShrink: 0,
+                      border: '1.5px solid #9CA3AF', borderRadius: 3, background: '#FFFFFF',
+                    }}
+                  />
+                  <span>
+                    <span className="text-[10px] block" style={{ color: '#374151', lineHeight: 1.4 }}>{z.text}</span>
+                    <span className="text-[9px] block tabular-nums" style={{ color: '#9CA3AF' }}>{z.detail}</span>
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 

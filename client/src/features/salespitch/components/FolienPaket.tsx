@@ -202,7 +202,8 @@ export function FolienAktion({
           >
             <Check size={15} strokeWidth={2.5} className="text-emerald shrink-0" />
             <span className="text-[13px] text-text">
-              Ihr Preis mit Aktion: <b className="text-emerald">{chf(ergebnis.nettoInvestition)}</b>
+              Rechnungsbetrag mit Aktion: <b className="text-emerald">{chf(ergebnis.werklohn)}</b> inkl. MWST
+              {' '}· effektiv <b className="text-emerald">{chf(ergebnis.nettoInvestition)}</b>
             </span>
           </div>
         </div>

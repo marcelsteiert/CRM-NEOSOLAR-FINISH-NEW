@@ -106,7 +106,8 @@ export default function PublicCalculatorPage() {
           speicherKwh: input.speicherKwh,
           verbrauchKwh: input.verbrauchKwh,
           wallbox: input.wallbox,
-          geschaetzterPreis: ergebnis.nettoInvestition,
+          // Umsatzrelevanter Wert fuer den Lead: Rechnungsbetrag inkl. MWST
+          geschaetzterPreis: ergebnis.werklohn,
         }),
       })
       if (!res.ok) {
@@ -337,18 +338,24 @@ export default function PublicCalculatorPage() {
                 <h3 className="text-[13px] font-bold mb-3">Richtwert Investition</h3>
                 <dl className="space-y-2 text-[12px]">
                   <div className="flex justify-between gap-3">
-                    <dt className="text-text-dim">Anlage schlüsselfertig</dt>
-                    <dd className="font-semibold tabular-nums">{chf(ergebnis.bruttoPreis)}</dd>
+                    <dt className="text-text-dim">Anlage schlüsselfertig inkl. MWST</dt>
+                    <dd className="font-semibold tabular-nums">{chf(ergebnis.werklohn)}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-text-dim">− Förderung Pronovo</dt>
                     <dd className="text-emerald font-semibold tabular-nums">− {chf(ergebnis.foerderung)}</dd>
                   </div>
+                  {ergebnis.steuerabzug > 0 && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-text-dim">− erwartete Steuerersparnis</dt>
+                      <dd className="text-emerald font-semibold tabular-nums">− {chf(ergebnis.steuerabzug)}</dd>
+                    </div>
+                  )}
                   <div
                     className="flex justify-between gap-3 pt-2 mt-1"
                     style={{ borderTop: '1px solid rgba(255,255,255,0.10)' }}
                   >
-                    <dt className="font-bold text-[13px]">Richtwert</dt>
+                    <dt className="font-bold text-[13px]">Richtwert effektive Kosten</dt>
                     <dd className="text-amber font-bold text-[19px] tabular-nums">{chf(ergebnis.nettoInvestition)}</dd>
                   </div>
                 </dl>

@@ -64,11 +64,27 @@ function offerteHtml(
 
 <table style="width:100%;border-collapse:collapse;margin-bottom:8px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px">
   <tr><td colspan="2" style="padding:12px 14px 6px;font-size:14px;font-weight:700;color:#111827">Ihre Investition</td></tr>
-  <tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">Anlage schlüsselfertig</td>
-      <td style="padding:5px 14px;text-align:right;font-size:13px;color:#111827;font-weight:600">${chf(e.bruttoPreis)}</td></tr>
-  <tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">− Förderbeitrag Pronovo</td>
+  <tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">Anlage schlüsselfertig exkl. MWST</td>
+      <td style="padding:5px 14px;text-align:right;font-size:13px;color:#111827;font-weight:600">${chf(e.nettoPreis)}</td></tr>
+  <tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">MWST ${config.mwstProzent.toString().replace('.', ',')} %</td>
+      <td style="padding:5px 14px;text-align:right;font-size:13px;color:#111827;font-weight:600">${chf(e.mwst)}</td></tr>
+  ${
+    e.rabatt > 0
+      ? `<tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">− ${input.rabattTitel?.trim() || 'Aktionsrabatt'}</td>
+      <td style="padding:5px 14px;text-align:right;font-size:13px;color:#047857;font-weight:600">− ${chf(e.rabatt)}</td></tr>`
+      : ''
+  }
+  <tr><td style="padding:8px 14px;font-size:14px;font-weight:700;color:#111827;border-top:1px solid #FDE68A">Rechnungsbetrag inkl. MWST</td>
+      <td style="padding:8px 14px;text-align:right;font-size:15px;font-weight:700;color:#111827;border-top:1px solid #FDE68A">${chf(e.werklohn)}</td></tr>
+  <tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">− Einmalvergütung Pronovo</td>
       <td style="padding:5px 14px;text-align:right;font-size:13px;color:#047857;font-weight:600">− ${chf(e.foerderung)}</td></tr>
-  <tr><td style="padding:10px 14px 14px;font-size:15px;font-weight:700;color:#111827;border-top:2px solid #F59E0B">Ihr Festpreis</td>
+  ${
+    e.steuerabzug > 0
+      ? `<tr><td style="padding:5px 14px;color:#4B5563;font-size:13px">− erwartete Steuerersparnis</td>
+      <td style="padding:5px 14px;text-align:right;font-size:13px;color:#047857;font-weight:600">− ${chf(e.steuerabzug)}</td></tr>`
+      : ''
+  }
+  <tr><td style="padding:10px 14px 14px;font-size:15px;font-weight:700;color:#111827;border-top:2px solid #F59E0B">Ihre effektiven Kosten</td>
       <td style="padding:10px 14px 14px;text-align:right;font-size:20px;font-weight:700;color:#B45309;border-top:2px solid #F59E0B">${chf(e.nettoInvestition)}</td></tr>
 </table>
 
@@ -189,7 +205,10 @@ export default function OfferteSenden({
       )
       .replace(/\{ersparnisMonat\}/g, chf(ergebnis.ersparnisProMonat))
       .replace(/\{ersparnisJahr\}/g, chf(ergebnis.ersparnisJahr1))
+      // {festpreis} bleibt der effektive Betrag nach Foerderung,
+      // {rechnungsbetrag} ist die Summe inkl. MWST auf der Rechnung
       .replace(/\{festpreis\}/g, chf(ergebnis.nettoInvestition))
+      .replace(/\{rechnungsbetrag\}/g, chf(ergebnis.werklohn))
       .replace(
         /\{amortisation\}/g,
         ergebnis.amortisationJahre ? `${ergebnis.amortisationJahre} Jahren` : 'wenigen Jahren'
@@ -393,9 +412,10 @@ export default function OfferteSenden({
                 className="p-3.5 rounded-xl text-[11px] text-text-dim"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
               >
-                Die E-Mail enthält Anlage, Ertrag, Ersparnis, Amortisation und den Festpreis von{' '}
-                <b className="text-text-sec">{chf(ergebnis.nettoInvestition)}</b> – plus den Hinweis, dass es
-                eine Richtofferte ist. Sie wird zusätzlich im Dokumentenarchiv des Kunden abgelegt.
+                Die E-Mail enthält Anlage, Ertrag, Ersparnis, Amortisation, den Rechnungsbetrag von{' '}
+                <b className="text-text-sec">{chf(ergebnis.werklohn)}</b> inkl. MWST und die effektiven Kosten
+                von <b className="text-text-sec">{chf(ergebnis.nettoInvestition)}</b> – plus den Hinweis, dass
+                es eine Richtofferte ist. Sie wird zusätzlich im Dokumentenarchiv des Kunden abgelegt.
               </div>
 
               {fehler && (

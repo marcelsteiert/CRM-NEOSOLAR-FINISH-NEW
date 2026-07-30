@@ -508,9 +508,9 @@ export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar
               <h3 className="text-[13px] font-bold text-text mb-3">Ihre Investition</h3>
               <dl className="space-y-2 text-[12px]">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-text-dim">Anlage schlüsselfertig</dt>
+                  <dt className="text-text-dim">Anlage schlüsselfertig exkl. MWST</dt>
                   <dd className="text-text font-semibold tabular-nums">
-                    {chf(ergebnis.bruttoPreis - ergebnis.zusatzSumme)}
+                    {chf(ergebnis.nettoPreis - ergebnis.zusatzSumme)}
                   </dd>
                 </div>
                 {ergebnis.zusatzSumme > 0 && (
@@ -522,12 +522,29 @@ export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar
                   </div>
                 )}
                 <div className="flex justify-between gap-3">
+                  <dt className="text-text-dim">MWST {config.mwstProzent.toString().replace('.', ',')} %</dt>
+                  <dd className="text-text font-semibold tabular-nums">+ {chf(ergebnis.mwst)}</dd>
+                </div>
+                {ergebnis.rabatt > 0 && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-text-dim">− {input.rabattTitel?.trim() || 'Aktionsrabatt'}</dt>
+                    <dd className="text-emerald font-semibold tabular-nums">− {chf(ergebnis.rabatt)}</dd>
+                  </div>
+                )}
+                <div
+                  className="flex justify-between gap-3 pt-2 mt-1"
+                  style={{ borderTop: '1px solid rgba(255,255,255,0.10)' }}
+                >
+                  <dt className="text-text font-bold">Rechnungsbetrag inkl. MWST</dt>
+                  <dd className="text-text font-bold text-[14px] tabular-nums">{chf(ergebnis.werklohn)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
                   <dt className="text-text-dim">− Förderung Pronovo</dt>
                   <dd className="text-emerald font-semibold tabular-nums">− {chf(ergebnis.foerderung)}</dd>
                 </div>
                 {ergebnis.steuerabzug > 0 && (
                   <div className="flex justify-between gap-3">
-                    <dt className="text-text-dim">− Steuerabzug</dt>
+                    <dt className="text-text-dim">− Steuerersparnis</dt>
                     <dd className="text-emerald font-semibold tabular-nums">− {chf(ergebnis.steuerabzug)}</dd>
                   </div>
                 )}
@@ -535,7 +552,7 @@ export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar
                   className="flex justify-between gap-3 pt-2 mt-1"
                   style={{ borderTop: '1px solid rgba(255,255,255,0.10)' }}
                 >
-                  <dt className="text-text font-bold text-[13px]">Ihr Preis</dt>
+                  <dt className="text-text font-bold text-[13px]">Ihre effektiven Kosten</dt>
                   <dd className="text-amber font-bold text-[19px] tabular-nums">{chf(ergebnis.nettoInvestition)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">

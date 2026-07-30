@@ -157,6 +157,17 @@ export interface CalculatorResult {
   nettoPreis: number
   /** MwSt-Betrag */
   mwst: number
+  /**
+   * Der Betrag, den der Kunde tatsaechlich an NEOSOLAR zahlt:
+   * Preis inklusive MwSt abzueglich Rabatt.
+   * Grundlage fuer Zahlungsplan, Bestellung und Finanzierung –
+   * Foerderung und Steuerersparnis fliessen erst spaeter zurueck.
+   */
+  werklohn: number
+  /** Anlage ohne Speicher, ohne MwSt – Position in der Offerte */
+  anlagePreisNetto: number
+  /** Speicher ohne MwSt – Position in der Offerte */
+  speicherPreisNetto: number
 
   // Wirtschaftlichkeit
   ersparnisJahr1: number
@@ -332,16 +343,16 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
   const speicherPreis = treffer ? treffer[1] : input.speicherKwh * config.speicherPreisProKwh
   // Manuell erfasste Zusatzleistungen zaehlen voll in den Preis
   const zusatzSumme = (input.zusatzPositionen ?? []).reduce((s, z) => s + (Number(z.betrag) || 0), 0)
-  const nettoPreis = rundeAuf(
+  // Anlage ohne Speicher – wird in der Offerte als eigene Position gezeigt
+  const anlagePreisNetto = rundeAuf(
     config.grundpreis +
       kwpPreis +
       dachZuschlag +
-      speicherPreis +
       (input.wallbox ? config.wallboxPreis : 0) +
-      (input.geruest ? config.geruestPreis : 0) +
-      zusatzSumme,
+      (input.geruest ? config.geruestPreis : 0),
     10
   )
+  const nettoPreis = rundeAuf(anlagePreisNetto + speicherPreis + zusatzSumme, 10)
   // MwSt wird wie in der bestehenden Offerte separat ausgewiesen
   const mwst = rundeAuf((nettoPreis * config.mwstProzent) / 100, 5)
   const bruttoPreis = nettoPreis + mwst
@@ -359,8 +370,10 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
 
   // Aktionsrabatt wirkt auf den Anlagenpreis, nicht auf die Foerderung
   const rabatt = rundeAuf((bruttoPreis * Math.max(0, Math.min(50, input.rabattProzent ?? 0))) / 100, 10)
-  const steuerabzug = rundeAuf(((bruttoPreis - rabatt) * config.steuerabzugProzent) / 100, 10)
-  const nettoInvestition = Math.max(0, bruttoPreis - rabatt - foerderung - steuerabzug)
+  // Rechnungsbetrag an NEOSOLAR – inklusive MwSt, das ist die Zahlungsbasis
+  const werklohn = Math.max(0, bruttoPreis - rabatt)
+  const steuerabzug = rundeAuf((werklohn * config.steuerabzugProzent) / 100, 10)
+  const nettoInvestition = Math.max(0, werklohn - foerderung - steuerabzug)
 
   // ── Wirtschaftlichkeit ueber den Betrachtungszeitraum ──
   const jahresverlauf: JahresZeile[] = []
@@ -454,6 +467,9 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     rabatt,
     nettoPreis,
     mwst,
+    werklohn,
+    anlagePreisNetto,
+    speicherPreisNetto: Math.round(speicherPreis),
 
     ersparnisJahr1,
     ersparnisProMonat: Math.round(ersparnisJahr1 / 12),
@@ -467,6 +483,69 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
 
     stromkostenOhneAnlage: Math.round(stromkostenOhneAnlage),
     stromkostenMitAnlage: Math.round(stromkostenMitAnlage),
+  }
+}
+
+// ── Finanzierung ──────────────────────────────────────────────────────
+
+export interface Finanzierung {
+  /** Finanzierter Betrag inklusive MwSt */
+  kredit: number
+  monatsrate: number
+  laufzeitJahre: number
+  zinsProzent: number
+  /** Summe aller Raten */
+  gesamtKosten: number
+  /** Reine Zinskosten */
+  zinsKosten: number
+  /**
+   * Rate nach der Sondertilgung mit der Einmalverguetung.
+   * Die Pronovo-Zahlung trifft rund ein Jahr nach Inbetriebnahme ein;
+   * wer sie einsetzt, senkt die Rate fuer die Restlaufzeit.
+   */
+  rateNachSondertilgung: number
+}
+
+/**
+ * Annuitaetendarlehen.
+ *
+ * Finanziert wird immer der Werklohn inklusive MwSt – das ist der Betrag
+ * auf der Rechnung. Die Einmalverguetung von Pronovo kommt erst rund ein
+ * Jahr nach Inbetriebnahme und die Steuerersparnis erst mit der Veranlagung;
+ * beide taugen deshalb nicht als Kreditbasis, wohl aber als Sondertilgung.
+ */
+export function berechneFinanzierung(
+  ergebnis: CalculatorResult,
+  zinsProzent: number,
+  laufzeitJahre: number
+): Finanzierung {
+  const kredit = ergebnis.werklohn
+  const monate = Math.max(1, Math.round(laufzeitJahre * 12))
+  const monatsZins = zinsProzent / 100 / 12
+  const rate = (betrag: number, restMonate: number) =>
+    monatsZins > 0
+      ? (betrag * monatsZins) / (1 - Math.pow(1 + monatsZins, -restMonate))
+      : betrag / restMonate
+
+  const monatsrate = rate(kredit, monate)
+
+  // Nach zwoelf Raten trifft die Foerderung ein und tilgt einen Teil
+  const restschuldNachJahr =
+    monatsZins > 0
+      ? kredit * Math.pow(1 + monatsZins, 12) -
+        monatsrate * ((Math.pow(1 + monatsZins, 12) - 1) / monatsZins)
+      : kredit - monatsrate * 12
+  const restNachTilgung = Math.max(0, restschuldNachJahr - ergebnis.foerderung)
+  const restMonate = Math.max(1, monate - 12)
+
+  return {
+    kredit: Math.round(kredit),
+    monatsrate: Math.round(monatsrate),
+    laufzeitJahre,
+    zinsProzent,
+    gesamtKosten: Math.round(monatsrate * monate),
+    zinsKosten: Math.round(monatsrate * monate - kredit),
+    rateNachSondertilgung: Math.round(rate(restNachTilgung, restMonate)),
   }
 }
 

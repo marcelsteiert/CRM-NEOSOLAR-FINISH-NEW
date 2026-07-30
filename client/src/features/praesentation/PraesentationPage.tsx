@@ -284,9 +284,13 @@ export default function PraesentationPage() {
         `Amortisation: ${ergebnis.amortisationJahre ?? '—'} Jahre`,
         `Ersparnis ${config.betrachtungsJahre} Jahre: CHF ${ergebnis.gesamtErsparnis.toLocaleString('de-CH')}`,
         '',
-        `Brutto: CHF ${ergebnis.bruttoPreis.toLocaleString('de-CH')}`,
+        `Netto exkl. MWST: CHF ${ergebnis.nettoPreis.toLocaleString('de-CH')}`,
+        `MWST: CHF ${ergebnis.mwst.toLocaleString('de-CH')}`,
+        ergebnis.rabatt > 0 ? `Rabatt: CHF ${ergebnis.rabatt.toLocaleString('de-CH')}` : null,
+        `Rechnungsbetrag inkl. MWST: CHF ${ergebnis.werklohn.toLocaleString('de-CH')}`,
         `Foerderung: CHF ${ergebnis.foerderung.toLocaleString('de-CH')}`,
-        `Festpreis: CHF ${ergebnis.nettoInvestition.toLocaleString('de-CH')}`,
+        `Steuerersparnis: CHF ${ergebnis.steuerabzug.toLocaleString('de-CH')}`,
+        `Effektive Kosten: CHF ${ergebnis.nettoInvestition.toLocaleString('de-CH')}`,
         '',
         `Grundlage: Verbrauch ${input.verbrauchKwh.toLocaleString('de-CH')} kWh, Strompreis ${input.strompreisRp} Rp./kWh`,
         'Richtofferte – verbindlich nach Drohnenvermessung.',
@@ -297,7 +301,9 @@ export default function PraesentationPage() {
       const dealAntwort = await api.post<{ data: { id: string } }>('/deals', {
         contactId,
         title: `Offerte ${input.kwp} kWp – ${kontakt.firstName} ${kontakt.lastName}`,
-        value: ergebnis.nettoInvestition,
+        // Der Deal-Wert ist der Umsatz von NEOSOLAR, also der Rechnungsbetrag
+        // inkl. MWST – nicht der Betrag nach Foerderung und Steuerersparnis.
+        value: ergebnis.werklohn,
         stage: 'ERSTELLT',
         notes: snapshot,
         ...(terminId ? { appointmentId: terminId } : {}),

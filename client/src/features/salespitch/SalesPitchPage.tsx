@@ -179,9 +179,12 @@ export default function SalesPitchPage() {
         `Ersparnis über ${config.betrachtungsJahre} Jahre: CHF ${e.gesamtErsparnis.toLocaleString('de-CH')}`,
         `Stromgestehungskosten: ${e.lcoe} Rp./kWh`,
         '',
-        `Anlage schlüsselfertig: CHF ${e.bruttoPreis.toLocaleString('de-CH')}`,
+        `Anlage schlüsselfertig exkl. MWST: CHF ${e.nettoPreis.toLocaleString('de-CH')}`,
+        `MWST: CHF ${e.mwst.toLocaleString('de-CH')}`,
+        `Rechnungsbetrag inkl. MWST: CHF ${e.werklohn.toLocaleString('de-CH')}`,
         `Förderung Pronovo: CHF ${e.foerderung.toLocaleString('de-CH')}`,
-        `Ihr Preis: CHF ${e.nettoInvestition.toLocaleString('de-CH')}`,
+        `Steuerersparnis: CHF ${e.steuerabzug.toLocaleString('de-CH')}`,
+        `Effektive Kosten: CHF ${e.nettoInvestition.toLocaleString('de-CH')}`,
         '',
         '— Angaben des Kunden —',
         `Verbrauch heute: ${v.input.verbrauchKwh.toLocaleString('de-CH')} kWh`,
@@ -202,7 +205,8 @@ export default function SalesPitchPage() {
       await api.post('/deals', {
         contactId,
         title: `Richtofferte ${v.input.kwp} kWp – ${kontakt.firstName} ${kontakt.lastName}`,
-        value: e.nettoInvestition,
+        // Umsatzwert für die Pipeline: Rechnungsbetrag inkl. MWST
+        value: e.werklohn,
         stage: 'ERSTELLT',
         notes: snapshot,
       })
@@ -464,7 +468,7 @@ export default function SalesPitchPage() {
             Gewählt: <b className="text-text">{aktiveVariante.name}</b>
           </span>
           <span className="text-text-sec">
-            VK: <b className="text-text tabular-nums">CHF {variantenErgebnis.nettoInvestition.toLocaleString('de-CH')}</b>
+            VK inkl. MWST: <b className="text-text tabular-nums">CHF {variantenErgebnis.werklohn.toLocaleString('de-CH')}</b>
           </span>
           <span className="text-text-sec">
             Rendite Kunde: <b className="text-text tabular-nums">{variantenErgebnis.renditeProzent} %/J</b>
