@@ -365,7 +365,81 @@ export default function OffertenDruck({
         {/* Seite 2 */}
         <div className="offerte-seitenumbruch" />
 
-        <h2 className="text-[14px] font-bold mb-3 mt-2" style={{ color: '#111827' }}>Ihre Ersparnis</h2>
+        <h2 className="text-[14px] font-bold mb-3 mt-2" style={{ color: '#111827' }}>
+          Wohin Ihr Solarstrom geht
+        </h2>
+        {/* Energiefluss als Balken – druckt sauber, weil nur Flaechen */}
+        <div className="mb-6">
+          <div className="flex h-9 rounded-lg overflow-hidden" style={{ border: '1px solid #E5E7EB' }}>
+            <div
+              className="flex items-center justify-center"
+              style={{
+                width: `${Math.max(8, ergebnis.eigenverbrauchsquote * 100)}%`,
+                background: '#34D399',
+              }}
+            >
+              <span className="text-[10px] font-bold" style={{ color: '#053B29' }}>
+                {Math.round(ergebnis.eigenverbrauchsquote * 100)} % selbst genutzt
+              </span>
+            </div>
+            <div
+              className="flex items-center justify-center"
+              style={{ flex: 1, background: '#BFDBFE' }}
+            >
+              <span className="text-[10px] font-bold" style={{ color: '#1E3A8A' }}>
+                {Math.round((1 - ergebnis.eigenverbrauchsquote) * 100)} % eingespeist
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-between mt-1.5 text-[10px]" style={{ color: '#6B7280' }}>
+            <span>{kwh(ergebnis.eigenverbrauchKwh)} für Ihren Haushalt</span>
+            <span>{kwh(ergebnis.einspeisungKwh)} ins Netz</span>
+          </div>
+        </div>
+
+        {/* Stromkosten-Vergleich als Balken */}
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>
+          Ihre Stromkosten über {config.betrachtungsJahre} Jahre
+        </h2>
+        <div className="mb-6">
+          {[
+            { label: 'Ohne Solaranlage', wert: ergebnis.stromkostenOhneAnlage, farbe: '#FCA5A5', text: '#7F1D1D' },
+            { label: 'Mit Ihrer Anlage', wert: ergebnis.stromkostenMitAnlage, farbe: '#6EE7B7', text: '#053B29' },
+          ].map((b) => (
+            <div key={b.label} className="mb-2">
+              <div className="flex justify-between text-[11px] mb-1">
+                <span style={{ color: '#374151' }}>{b.label}</span>
+                <span className="tabular-nums font-bold" style={{ color: '#111827' }}>{chf(b.wert)}</span>
+              </div>
+              <div className="h-6 rounded" style={{ background: '#F3F4F6' }}>
+                <div
+                  className="h-full rounded flex items-center justify-end pr-2"
+                  style={{
+                    width: `${Math.max(6, (b.wert / Math.max(ergebnis.stromkostenOhneAnlage, 1)) * 100)}%`,
+                    background: b.farbe,
+                  }}
+                >
+                  <span className="text-[9px] font-bold" style={{ color: b.text }}>
+                    {Math.round((b.wert / Math.max(ergebnis.stromkostenOhneAnlage, 1)) * 100)} %
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div
+            className="flex items-center justify-between mt-3 px-4 py-3"
+            style={{ background: '#ECFDF5', borderRadius: 8, border: '1px solid #A7F3D0' }}
+          >
+            <span className="text-[12px] font-bold" style={{ color: '#065F46' }}>
+              Das bleibt bei Ihnen
+            </span>
+            <span className="text-[19px] font-bold tabular-nums" style={{ color: '#047857' }}>
+              {chf(ergebnis.stromkostenOhneAnlage - ergebnis.stromkostenMitAnlage)}
+            </span>
+          </div>
+        </div>
+
+        <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Ihre Ersparnis im Detail</h2>
         <table className="w-full text-[11px] mb-6" style={{ borderCollapse: 'collapse' }}>
           <tbody>
             {[

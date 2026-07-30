@@ -338,19 +338,91 @@ export const ProduktFolien = {
       hinweis="Symbolbild"
     />
   ),
+  /**
+   * Ablauf als Prozess-Darstellung. Die PPTX hatte hier nur ein Deko-Bild;
+   * eine Timeline zeigt den Weg vom Termin zur Anlage deutlich klarer.
+   */
   workflow: () => (
-    <BildFolie
-      bild="workflow.jpg"
-      kategorie="Unser Ablauf"
-      titel="Von der Beratung bis zur fertigen Anlage"
-      punkte={[
-        'Beratung: Wir klären alle Ihre Fragen',
-        'Planung: Ausführungsplanung und verbindliche Offerte',
-        'Ausführung: Projektplan mit festen Terminen',
-        'Montage: in wenigen Arbeitstagen auf Ihrem Dach',
-        'Abschluss: Inbetriebnahme, Doku, Förderantrag',
-      ]}
-    />
+    <div className="h-full flex flex-col justify-center px-6 sm:px-10 max-w-5xl mx-auto w-full">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-amber mb-2">Unser Ablauf</p>
+      <h2 className="text-[30px] sm:text-[34px] font-bold text-text mb-2">
+        Von der Beratung bis zur fertigen Anlage
+      </h2>
+      <p className="text-[14px] text-text-sec mb-9">
+        Fünf Schritte, ein Ansprechpartner – Sie müssen nichts koordinieren.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        {[
+          { nr: '1', titel: 'Beratung', text: 'Wir klären alle Ihre Fragen und planen gemeinsam.', dauer: 'heute' },
+          { nr: '2', titel: 'Planung', text: 'Drohnenvermessung, Ausführungsplanung, verbindliche Offerte.', dauer: '1–2 Wochen' },
+          { nr: '3', titel: 'Bewilligung', text: 'Baugesuch, Netzanmeldung, Förderantrag – machen wir.', dauer: 'läuft parallel' },
+          { nr: '4', titel: 'Montage', text: 'Gerüst, Module, Elektro – in wenigen Arbeitstagen.', dauer: 'wenige Tage' },
+          { nr: '5', titel: 'Abschluss', text: 'Inbetriebnahme, Dokumentation, App-Einrichtung.', dauer: 'Ihre Anlage läuft' },
+        ].map((s, i) => (
+          <div key={s.nr} className="relative">
+            {/* Verbindungslinie zwischen den Schritten */}
+            {i < 4 && (
+              <div
+                className="hidden sm:block absolute top-5 left-full w-3 h-px z-0"
+                style={{ background: 'rgba(245,158,11,0.35)' }}
+              />
+            )}
+            <div
+              className="relative h-full p-4 rounded-2xl"
+              style={{
+                background:
+                  i === 0
+                    ? 'color-mix(in srgb, #F59E0B 13%, transparent)'
+                    : i === 4
+                      ? 'color-mix(in srgb, #34D399 12%, transparent)'
+                      : 'rgba(255,255,255,0.035)',
+                border: `1px solid ${
+                  i === 0
+                    ? 'color-mix(in srgb, #F59E0B 34%, transparent)'
+                    : i === 4
+                      ? 'color-mix(in srgb, #34D399 32%, transparent)'
+                      : 'rgba(255,255,255,0.07)'
+                }`,
+              }}
+            >
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-[15px] font-bold mb-3"
+                style={{
+                  background:
+                    i === 4 ? 'color-mix(in srgb, #34D399 20%, transparent)' : 'color-mix(in srgb, #F59E0B 18%, transparent)',
+                  color: i === 4 ? '#34D399' : '#F59E0B',
+                }}
+              >
+                {s.nr}
+              </div>
+              <div className="text-[14px] font-bold text-text mb-1.5">{s.titel}</div>
+              <div className="text-[11px] text-text-dim leading-snug mb-3">{s.text}</div>
+              <div
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: i === 4 ? '#34D399' : '#F59E0B' }}
+              >
+                {s.dauer}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="flex items-center gap-4 mt-6 p-5 rounded-2xl"
+        style={{
+          background: 'color-mix(in srgb, #34D399 10%, transparent)',
+          border: '1px solid color-mix(in srgb, #34D399 30%, transparent)',
+        }}
+      >
+        <div className="text-[30px] font-bold text-emerald leading-none shrink-0">2</div>
+        <div className="text-[13px] text-text-sec">
+          <b className="text-text">Monate maximal</b> – ab Baubewilligung bis zur fertig montierten Anlage.
+          Das ist unsere Zeitgarantie, und sie steht im Vertrag.
+        </div>
+      </div>
+    </div>
   ),
 }
 

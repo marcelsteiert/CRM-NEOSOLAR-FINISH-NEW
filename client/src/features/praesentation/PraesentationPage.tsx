@@ -34,6 +34,7 @@ import {
   FolienPersoenlich,
 } from '../salespitch/components/FolienBeweis'
 import { FolienReferenzen, FolienZusatzrechner } from '../salespitch/components/FolienReferenzen'
+import KundendatenPruefen from '../salespitch/components/KundendatenPruefen'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
@@ -457,7 +458,17 @@ export default function PraesentationPage() {
       case 'zusatzrechner':
         return <FolienZusatzrechner input={input} ergebnis={ergebnis} config={config} />
       case 'persoenlich':
-        return <FolienPersoenlich kunde={kundeAusLink} input={input} ergebnis={ergebnis} />
+        return contactId ? (
+          <KundendatenPruefen
+            kontakt={kontakt}
+            input={input}
+            ergebnis={ergebnis}
+            berater={beraterName}
+            onKontaktGeaendert={setKontakt}
+          />
+        ) : (
+          <FolienPersoenlich kunde={kundeAusLink} input={input} ergebnis={ergebnis} />
+        )
       case 'rueckblick':
         return <FolienRueckblick ergebnis={ergebnis} />
       case 'bausteine':
