@@ -45,11 +45,18 @@ export default function OffertenDruck({
   const zusatz = input.zusatzPositionen ?? []
   const istFinanzierung = input.zahlungsart === 'FINANZIERUNG'
   // Zahlungsplan nach den ueblichen Tranchen
-  const tranchen = [
-    { anteil: 50, wann: 'bei Vertragsabschluss' },
-    { anteil: 40, wann: 'bei Montagebeginn' },
-    { anteil: 10, wann: 'nach Inbetriebnahme' },
-  ]
+  // Zahlungsoptionen wortgleich zur bestehenden NEOSOLAR-Offerte
+  const istAnzahlung90 = input.zahlungsart === 'ANZAHLUNG90'
+  const tranchen = istAnzahlung90
+    ? [
+        { anteil: 90, wann: 'bei Unterzeichnung des Vertrags' },
+        { anteil: 10, wann: 'bei erfolgreichem Abschluss der Baustelle' },
+      ]
+    : [
+        { anteil: 50, wann: 'bei Unterzeichnung des Vertrags' },
+        { anteil: 40, wann: 'bei Lieferung des erforderlichen Materials' },
+        { anteil: 10, wann: 'bei erfolgreichem Abschluss der Baustelle' },
+      ]
   const module = Math.round((input.kwp * 1000) / KOMPONENTEN.modul.watt)
   const speicherModule = input.speicherKwh > 0 ? Math.round(input.speicherKwh / KOMPONENTEN.speicher.modulKwh) : 0
   const heute = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -69,6 +76,16 @@ export default function OffertenDruck({
     ['Planung, Bewilligung, Netzanmeldung', 'Baugesuch, TAG und IA, Pronovo'],
     ['Montage und Inbetriebnahme', 'schlüsselfertig durch NEOSOLAR'],
     ...(input.geruest ? ([['Gerüst', 'Auf- und Abbau inklusive']] as Array<[string, string]>) : []),
+    ['NEOSOLAR Zufriedenheitspaket', '5 Jahre Wartung, Thermografie, Reinigung, 24/7 Service'],
+  ]
+
+  // Leistungen des Zufriedenheitspakets, wortgleich zur bestehenden Offerte
+  const paket = [
+    'Thermografie-Drohnenaufnahme direkt nach Inbetriebnahme',
+    '5 Jahre Wartungs- und Servicevertrag mit jährlicher Inspektion',
+    'Professionelle Modulreinigung nach 3 Jahren',
+    '24/7 Störungsservice mit klaren Reaktionszeiten',
+    'Detaillierter Bericht mit Bildern nach jeder Inspektion',
   ]
 
   return (
@@ -307,6 +324,16 @@ export default function OffertenDruck({
                 </td>
               </tr>
             )}
+            {ergebnis.rabatt > 0 && (
+              <tr>
+                <td className="py-2" style={{ color: '#374151' }}>
+                  − {input.rabattTitel?.trim() || 'Aktionsrabatt'} ({input.rabattProzent} %)
+                </td>
+                <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
+                  − {chf(ergebnis.rabatt)}
+                </td>
+              </tr>
+            )}
             <tr>
               <td className="py-2" style={{ color: '#374151' }}>− Förderbeitrag Pronovo (Einmalvergütung)</td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#047857', fontWeight: 600 }}>
@@ -361,6 +388,22 @@ export default function OffertenDruck({
             </tbody>
           </table>
         )}
+
+        {/* Zufriedenheitspaket */}
+        <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
+          Im Preis enthalten: NEOSOLAR Zufriedenheitspaket
+        </h2>
+        <div className="grid grid-cols-2 gap-x-5 gap-y-1 mb-3">
+          {paket.map((p) => (
+            <div key={p} className="flex items-start gap-1.5 text-[11px]" style={{ color: '#374151' }}>
+              <span style={{ color: '#047857', fontWeight: 700 }}>✓</span>
+              <span>{p}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] mb-7" style={{ color: '#9CA3AF' }}>
+          Ausgenommen Sonderfälle und Materialkosten über die üblichen Grenzen hinaus.
+        </p>
 
         {/* Seite 2 */}
         <div className="offerte-seitenumbruch" />

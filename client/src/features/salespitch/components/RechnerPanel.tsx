@@ -370,9 +370,10 @@ export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar
           <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-2">
             Zahlungsart für die Offerte
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 'TRANCHEN' as const, label: 'Kauf', zusatz: '50 / 40 / 10' },
+              { id: 'TRANCHEN' as const, label: 'Kauf', zusatz: '50/40/10' },
+              { id: 'ANZAHLUNG90' as const, label: 'Anzahlung', zusatz: '90/10' },
               { id: 'FINANZIERUNG' as const, label: 'Finanzierung', zusatz: 'monatlich' },
             ].map((z) => {
               const aktiv = (input.zahlungsart ?? 'TRANCHEN') === z.id

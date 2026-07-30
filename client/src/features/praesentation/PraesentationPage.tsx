@@ -36,6 +36,7 @@ import {
 import { FolienReferenzen, FolienZusatzrechner } from '../salespitch/components/FolienReferenzen'
 import KundendatenPruefen from '../salespitch/components/KundendatenPruefen'
 import { FolienSpeicherUpgrade, FolienBetreuung, FolienEmpfehlung } from '../salespitch/components/FolienExtras'
+import { FolienZufriedenheitspaket, FolienAktion } from '../salespitch/components/FolienPaket'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
@@ -46,7 +47,7 @@ type FolienId =
   | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
   | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
   | 'referenzen' | 'zusatzrechner' | 'montage'
-  | 'speicherUpgrade' | 'betreuung' | 'empfehlung'
+  | 'speicherUpgrade' | 'betreuung' | 'empfehlung' | 'paket' | 'aktion'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
 
@@ -60,7 +61,7 @@ interface Variante {
 /** Folien, deren Zahlen sich auf die gewaehlte Anlagenvariante beziehen. */
 const GELD_FOLIEN = new Set<FolienId>([
   'anlage', 'energiefluss', 'motive', 'bausteine', 'gesamtvergleich',
-  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung', 'zusatzrechner', 'speicherUpgrade',
+  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung', 'zusatzrechner', 'speicherUpgrade', 'aktion',
 ])
 
 /**
@@ -111,8 +112,10 @@ const VARIANTEN: Variante[] = [
       { id: 'amortisation', titel: 'Der Wendepunkt' },
       { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
       { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
+      { id: 'aktion', titel: 'Aktion' },
       { id: 'speicherUpgrade', titel: 'Speicher-Ausbau' },
       // 7. Sicherheit geben
+      { id: 'paket', titel: 'Zufriedenheitspaket' },
       { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'planung', titel: 'Planungssicherheit' },
       { id: 'betreuung', titel: 'Ihre Betreuung' },
@@ -458,6 +461,10 @@ export default function PraesentationPage() {
             />
           </div>
         )
+      case 'paket':
+        return <FolienZufriedenheitspaket />
+      case 'aktion':
+        return <FolienAktion input={input} ergebnis={ergebnis} onChange={patchInput} />
       case 'speicherUpgrade':
         return (
           <FolienSpeicherUpgrade input={input} ergebnis={ergebnis} config={config} onChange={patchInput} />

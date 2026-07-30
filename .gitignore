@@ -23,3 +23,6 @@ scripts/import-sql/
 # Verkaufspraesentationen: gross und teils fremdes Material, bleiben lokal
 *.pptx
 Präsentation Enpal.pdf
+
+# Kunden-PDFs und Flyer: enthalten Kundendaten, bleiben lokal
+*.pdf

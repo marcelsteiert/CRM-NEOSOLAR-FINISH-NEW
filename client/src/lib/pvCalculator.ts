@@ -39,7 +39,13 @@ export interface CalculatorInput {
    */
   zusatzPositionen?: ZusatzPosition[]
   /** Gewaehlte Zahlungsart – erscheint in der Offerte */
-  zahlungsart?: 'TRANCHEN' | 'FINANZIERUNG'
+  zahlungsart?: 'TRANCHEN' | 'FINANZIERUNG' | 'ANZAHLUNG90'
+  /** Aktionsrabatt in Prozent auf den Anlagenpreis (0 = keine Aktion) */
+  rabattProzent?: number
+  /** Bezeichnung der Aktion, erscheint in der Offerte */
+  rabattTitel?: string
+  /** Zufriedenheitspaket mit anbieten */
+  zufriedenheitspaket?: boolean
 }
 
 export interface ZusatzPosition {
@@ -137,6 +143,8 @@ export interface CalculatorResult {
   preisProKwp: number
   /** Summe der manuell erfassten Zusatzleistungen */
   zusatzSumme: number
+  /** Gewaehrter Aktionsrabatt in CHF */
+  rabatt: number
 
   // Wirtschaftlichkeit
   ersparnisJahr1: number
@@ -325,8 +333,10 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
         )
       : 0
 
-  const steuerabzug = rundeAuf((bruttoPreis * config.steuerabzugProzent) / 100, 10)
-  const nettoInvestition = Math.max(0, bruttoPreis - foerderung - steuerabzug)
+  // Aktionsrabatt wirkt auf den Anlagenpreis, nicht auf die Foerderung
+  const rabatt = rundeAuf((bruttoPreis * Math.max(0, Math.min(50, input.rabattProzent ?? 0))) / 100, 10)
+  const steuerabzug = rundeAuf(((bruttoPreis - rabatt) * config.steuerabzugProzent) / 100, 10)
+  const nettoInvestition = Math.max(0, bruttoPreis - rabatt - foerderung - steuerabzug)
 
   // ── Wirtschaftlichkeit ueber den Betrachtungszeitraum ──
   const jahresverlauf: JahresZeile[] = []
@@ -414,6 +424,7 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     nettoInvestition,
     preisProKwp: kwp > 0 ? Math.round(bruttoPreis / kwp) : 0,
     zusatzSumme: Math.round(zusatzSumme),
+    rabatt,
 
     ersparnisJahr1,
     ersparnisProMonat: Math.round(ersparnisJahr1 / 12),
