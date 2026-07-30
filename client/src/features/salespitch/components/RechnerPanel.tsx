@@ -9,7 +9,19 @@ const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
  * Haeufige Zusatzleistungen mit Erfahrungswerten. Beim Anklicken landen sie
  * als Position in der Offerte und im Preis – Betrag bleibt danach editierbar.
  */
+/**
+ * Zusatzleistungen zum Anklicken.
+ *
+ * Die Hardware-Optionen tragen die echten Listenpreise aus der bestehenden
+ * NEOSOLAR-Offerte (KOMPONENTEN.optionen). Die Bauleistungen darunter sind
+ * Erfahrungswerte und im Rechner jederzeit ueberschreibbar.
+ */
+const HARDWARE_OPTIONEN = KOMPONENTEN.optionen
+  .filter((o) => o.kwh === 0)
+  .map((o) => ({ bezeichnung: o.name, betrag: o.preis }))
+
 const ZUSATZ_VORSCHLAEGE: Array<{ bezeichnung: string; betrag: number }> = [
+  ...HARDWARE_OPTIONEN,
   { bezeichnung: 'Demontage alte Anlage', betrag: 1800 },
   { bezeichnung: 'Zählerkasten anpassen', betrag: 1500 },
   { bezeichnung: 'Erdarbeiten / Leerrohr', betrag: 1200 },
@@ -17,7 +29,6 @@ const ZUSATZ_VORSCHLAEGE: Array<{ bezeichnung: string; betrag: number }> = [
   { bezeichnung: 'Schneefang ergänzen', betrag: 700 },
   { bezeichnung: 'Dachdurchführung Spengler', betrag: 600 },
   { bezeichnung: 'Zusätzliche Kabelwege', betrag: 500 },
-  { bezeichnung: 'Notstrom-Umschaltung', betrag: 2400 },
 ]
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
 const pct = (n: number) => Math.round(n * 100) + ' %'

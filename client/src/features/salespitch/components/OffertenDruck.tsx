@@ -106,8 +106,20 @@ export default function OffertenDruck({
     ['Planung, Bewilligung, Netzanmeldung', 'Baugesuch, TAG und IA, Pronovo'],
     ['Montage und Inbetriebnahme', 'schlüsselfertig durch NEOSOLAR'],
     ...(input.geruest ? ([['Gerüst', 'Auf- und Abbau inklusive']] as Array<[string, string]>) : []),
+    // Manuell erfasste Zusatzleistungen gehoeren in den Leistungsumfang,
+    // sonst tauchen sie nur als Betrag in der Kostentabelle auf.
+    ...zusatz.map((z) => [z.bezeichnung, 'zusätzlich vereinbart'] as [string, string]),
     ['NEOSOLAR Zufriedenheitspaket', '5 Jahre Wartung, Thermografie, Reinigung, 24/7 Service'],
   ]
+
+  /**
+   * Nur das anbieten, was noch nicht bestellt ist – der bereits gewaehlte
+   * Speicher und angeklickte Hardware gehoeren nicht in die Optionsliste.
+   */
+  const offeneOptionen = KOMPONENTEN.optionen.filter((o) => {
+    if (o.kwh > 0) return Math.abs(o.kwh - input.speicherKwh) > 0.05
+    return !zusatz.some((z) => z.bezeichnung === o.name)
+  })
 
   // Leistungen des Zufriedenheitspakets, wortgleich zur bestehenden Offerte
   const paket = [
@@ -385,35 +397,6 @@ export default function OffertenDruck({
           </tbody>
         </table>
 
-        {/* Zusatzleistungen, falls erfasst */}
-        {zusatz.length > 0 && (
-          <>
-            <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Zusätzliche Leistungen</h2>
-            <table className="w-full text-[11px] mb-7" style={{ borderCollapse: 'collapse' }}>
-              <tbody>
-                {zusatz.map((z, i) => (
-                  <tr key={z.id} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
-                    <td className="py-2 px-3" style={{ color: '#111827', fontWeight: 600, width: '70%' }}>
-                      {z.bezeichnung}
-                    </td>
-                    <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                      {chf(z.betrag)}
-                    </td>
-                  </tr>
-                ))}
-                <tr>
-                  <td className="py-2 px-3" style={{ color: '#374151', fontWeight: 700, borderTop: '1px solid #E5E7EB' }}>
-                    Summe Zusatzleistungen
-                  </td>
-                  <td className="py-2 px-3 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700, borderTop: '1px solid #E5E7EB' }}>
-                    {chf(ergebnis.zusatzSumme)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </>
-        )}
-
         {/* ── Seite 2: Ihre Investition ── */}
         <div className="offerte-seitenumbruch" />
         <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihre Investition</h1>
@@ -440,14 +423,33 @@ export default function OffertenDruck({
                 </td>
               </tr>
             )}
-            {ergebnis.zusatzSumme > 0 && (
+            {ergebnis.wallboxPreisNetto > 0 && (
               <tr>
-                <td className="py-2" style={{ color: '#374151' }}>Zusätzliche Leistungen</td>
+                <td className="py-2" style={{ color: '#374151' }}>
+                  Wallbox {KOMPONENTEN.wallbox.name}
+                </td>
                 <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                  {chf(ergebnis.zusatzSumme)}
+                  {chf(ergebnis.wallboxPreisNetto)}
                 </td>
               </tr>
             )}
+            {ergebnis.geruestPreisNetto > 0 && (
+              <tr>
+                <td className="py-2" style={{ color: '#374151' }}>Gerüst, Auf- und Abbau</td>
+                <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                  {chf(ergebnis.geruestPreisNetto)}
+                </td>
+              </tr>
+            )}
+            {/* Zusatzleistungen einzeln, damit der Kunde jede Position sieht */}
+            {zusatz.map((z) => (
+              <tr key={z.id}>
+                <td className="py-2" style={{ color: '#374151' }}>{z.bezeichnung}</td>
+                <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                  {chf(z.betrag)}
+                </td>
+              </tr>
+            ))}
             <tr style={{ borderTop: '1px solid #E5E7EB' }}>
               <td className="py-2" style={{ color: '#374151', fontWeight: 600 }}>Zwischensumme exkl. MWST</td>
               <td className="py-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
@@ -1115,26 +1117,30 @@ export default function OffertenDruck({
           <li>Ab Baubewilligung bis zur fertigen Montage maximal zwei Monate.</li>
         </ol>
 
-        {/* Optionale Komponenten mit echten Preisen */}
-        <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
-          Optionale Zusatzkomponenten
-        </h2>
-        <table className="w-full text-[10px] mb-2" style={{ borderCollapse: 'collapse' }}>
-          <tbody>
-            {KOMPONENTEN.optionen.map((o, i) => (
-              <tr key={o.id} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
-                <td className="py-1.5 px-2" style={{ color: '#111827' }}>{o.name}</td>
-                <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
-                  {chf(o.preis)} / Stück
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="text-[9px] mb-6" style={{ color: '#9CA3AF' }}>
-          Alle Preise verstehen sich exkl. MwSt. und Montage. Gerne beraten wir Sie zur idealen Kombination
-          für Ihre Anforderungen.
-        </p>
+        {/* Optionale Komponenten mit echten Preisen – nur was noch offen ist */}
+        {offeneOptionen.length > 0 && (
+          <>
+            <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
+              Optionale Zusatzkomponenten
+            </h2>
+            <table className="w-full text-[10px] mb-2" style={{ borderCollapse: 'collapse' }}>
+              <tbody>
+                {offeneOptionen.map((o, i) => (
+                  <tr key={o.id} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                    <td className="py-1.5 px-2" style={{ color: '#111827' }}>{o.name}</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                      {chf(o.preis)} / Stück
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-[9px] mb-6" style={{ color: '#9CA3AF' }}>
+              Alle Preise verstehen sich exkl. MWST und Montage. Gerne beraten wir Sie zur idealen
+              Kombination für Ihre Anforderungen.
+            </p>
+          </>
+        )}
 
         <div className="pt-6 text-[10px]" style={{ borderTop: '1px solid #E5E7EB', color: '#9CA3AF' }}>
           NEOSOLAR AG · Richtofferte vom {heute} · Die Bestellung finden Sie auf der letzten Seite.

@@ -44,8 +44,6 @@ export interface CalculatorInput {
   rabattProzent?: number
   /** Bezeichnung der Aktion, erscheint in der Offerte */
   rabattTitel?: string
-  /** Zufriedenheitspaket mit anbieten */
-  zufriedenheitspaket?: boolean
 }
 
 export interface ZusatzPosition {
@@ -164,10 +162,14 @@ export interface CalculatorResult {
    * Foerderung und Steuerersparnis fliessen erst spaeter zurueck.
    */
   werklohn: number
-  /** Anlage ohne Speicher, ohne MwSt – Position in der Offerte */
+  /** Anlage ohne Speicher, Wallbox und Geruest, ohne MwSt */
   anlagePreisNetto: number
   /** Speicher ohne MwSt – Position in der Offerte */
   speicherPreisNetto: number
+  /** Wallbox ohne MwSt, 0 wenn nicht gewaehlt */
+  wallboxPreisNetto: number
+  /** Geruest ohne MwSt, 0 wenn nicht noetig */
+  geruestPreisNetto: number
 
   // Wirtschaftlichkeit
   ersparnisJahr1: number
@@ -342,17 +344,24 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
   const treffer = speicherStaffel.find(([k]) => Math.abs(k - input.speicherKwh) < 0.05)
   const speicherPreis = treffer ? treffer[1] : input.speicherKwh * config.speicherPreisProKwh
   // Manuell erfasste Zusatzleistungen zaehlen voll in den Preis
-  const zusatzSumme = (input.zusatzPositionen ?? []).reduce((s, z) => s + (Number(z.betrag) || 0), 0)
-  // Anlage ohne Speicher – wird in der Offerte als eigene Position gezeigt
-  const anlagePreisNetto = rundeAuf(
-    config.grundpreis +
-      kwpPreis +
-      dachZuschlag +
-      (input.wallbox ? config.wallboxPreis : 0) +
-      (input.geruest ? config.geruestPreis : 0),
-    10
+  // Jede Komponente als eigene Position, damit die Offerte sie
+  // einzeln ausweisen kann statt alles in einer Summe zu verstecken.
+  // Jeder Posten wird auf ganze Franken gerundet und die Zwischensumme
+  // ist deren Summe – sonst geht die Tabelle in der Offerte nicht auf.
+  const anlagePreisNetto = rundeAuf(config.grundpreis + kwpPreis + dachZuschlag, 10)
+  const wallboxPreisNetto = input.wallbox ? Math.round(config.wallboxPreis) : 0
+  const geruestPreisNetto = input.geruest ? Math.round(config.geruestPreis) : 0
+  const speicherPreisNetto = Math.round(speicherPreis)
+  const zusatzSummeGerundet = (input.zusatzPositionen ?? []).reduce(
+    (s, z) => s + Math.round(Number(z.betrag) || 0),
+    0
   )
-  const nettoPreis = rundeAuf(anlagePreisNetto + speicherPreis + zusatzSumme, 10)
+  const nettoPreis =
+    anlagePreisNetto +
+    speicherPreisNetto +
+    wallboxPreisNetto +
+    geruestPreisNetto +
+    zusatzSummeGerundet
   // MwSt wird wie in der bestehenden Offerte separat ausgewiesen
   const mwst = rundeAuf((nettoPreis * config.mwstProzent) / 100, 5)
   const bruttoPreis = nettoPreis + mwst
@@ -463,13 +472,15 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     steuerabzug,
     nettoInvestition,
     preisProKwp: kwp > 0 ? Math.round(bruttoPreis / kwp) : 0,
-    zusatzSumme: Math.round(zusatzSumme),
+    zusatzSumme: zusatzSummeGerundet,
     rabatt,
     nettoPreis,
     mwst,
     werklohn,
     anlagePreisNetto,
-    speicherPreisNetto: Math.round(speicherPreis),
+    speicherPreisNetto,
+    wallboxPreisNetto,
+    geruestPreisNetto,
 
     ersparnisJahr1,
     ersparnisProMonat: Math.round(ersparnisJahr1 / 12),
