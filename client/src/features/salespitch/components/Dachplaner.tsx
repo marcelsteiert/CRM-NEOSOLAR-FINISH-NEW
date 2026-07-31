@@ -38,6 +38,12 @@ export interface Dachfeld {
   entfernt: string[]
   /** Von Hand zusaetzlich gesetzte Rasterzellen */
   zusaetzlich: string[]
+  /**
+   * Freie Feinverschiebung einzelner Module in Metern, relativ zu ihrer
+   * Rasterzelle. Damit laesst sich ein Modul um wenige Zentimeter versetzen,
+   * etwa um an einem Dachfenster vorbeizukommen.
+   */
+  versatz: Record<string, { dx: number; dy: number }>
 }
 
 /** Was der Planer an die Präsentation und die Offerte weitergibt. */
@@ -106,8 +112,8 @@ interface Props {
 type Werkzeug = 'auswahl' | 'markieren' | 'dach' | 'sperre' | 'modulPlus' | 'modulMinus'
 
 const WERKZEUGE: Array<{ id: Werkzeug; icon: typeof Search; text: string; hilfe: string }> = [
-  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Modul ziehen · Umrandung ziehen verschiebt die Fläche · Ecken anfassen · Doppelklick auf eine Kante richtet die Module aus' },
-  { id: 'markieren', icon: SquareDashedMousePointer, text: 'Markieren', hilfe: 'Module anklicken oder ein Rechteck aufziehen · markierte Module gemeinsam verschieben' },
+  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Modul stufenlos ziehen · Umrandung ziehen verschiebt die Fläche · Ecken anfassen · Doppelklick auf eine Kante richtet die Module aus' },
+  { id: 'markieren', icon: SquareDashedMousePointer, text: 'Markieren', hilfe: 'Module anklicken oder ein Rechteck aufziehen · markierte gemeinsam und stufenlos verschieben' },
   { id: 'dach', icon: Pencil, text: 'Dachfläche', hilfe: 'Ecken anklicken, Klick auf den ersten Punkt schliesst die Fläche' },
   { id: 'sperre', icon: Ban, text: 'Sperrfläche', hilfe: 'Kamin, Dachfenster oder Verschattung umranden – dort bleibt frei' },
   { id: 'modulPlus', icon: Plus, text: 'Modul setzen', hilfe: 'Modul einzeln setzen, es rastet am Raster ein' },
@@ -220,6 +226,8 @@ export default function Dachplaner({
   const [gefundene, setGefundene] = useState<Dachflaeche[]>(planung?.gefundene ?? [])
   /** Markierte Module des aktiven Feldes, als Zellschlüssel */
   const [markiert, setMarkiert] = useState<string[]>([])
+  /** Beim Verschieben aufs Raster einrasten statt frei zu positionieren */
+  const [einrasten, setEinrasten] = useState(false)
   const [bild, setBild] = useState<string | null>(gespeichert?.bild ?? null)
   const [masseZeigen, setMasseZeigen] = useState(true)
 
@@ -264,10 +272,21 @@ export default function Dachplaner({
           const [reihe, spalte] = s.split(':').map(Number)
           return modulAusZelle(raster, reihe, spalte, feld.opt.ostWest, true)
         })
-        // Auch von Hand gesetzte Module weichen einer Sperrflaeche
-        .filter((m) => !feld.sperrflaechen.some((sp) => beruehrtSperrflaeche(m.ecken, m.mitte, sp)))
 
-      return [...automatisch, ...dazu]
+      // Feinverschiebung anwenden, danach erst gegen die Sperrflaechen pruefen
+      const verschoben = [...automatisch, ...dazu].map((m) => {
+        const v = feld.versatz[m.id]
+        if (!v) return m
+        return {
+          ...m,
+          ecken: m.ecken.map((p) => ({ x: p.x + v.dx, y: p.y + v.dy })),
+          mitte: { x: m.mitte.x + v.dx, y: m.mitte.y + v.dy },
+        }
+      })
+
+      return verschoben.filter(
+        (m) => !feld.sperrflaechen.some((sp) => beruehrtSperrflaeche(m.ecken, m.mitte, sp))
+      )
     },
     [modulMasse]
   )
@@ -387,6 +406,7 @@ export default function Dachplaner({
       sperrflaechen: [],
       entfernt: [],
       zusaetzlich: [],
+      versatz: {},
     }
   }
 
@@ -512,7 +532,7 @@ export default function Dachplaner({
       },
       // Format- und Systemwechsel aendern das Raster grundlegend,
       // die alte Zellauswahl passt dann nicht mehr
-      ...(m.hochformat !== aktiv.opt.hochformat ? { entfernt: [], zusaetzlich: [] } : {}),
+      ...(m.hochformat !== aktiv.opt.hochformat ? { entfernt: [], zusaetzlich: [], versatz: {} } : {}),
     })
   }
 
@@ -521,7 +541,7 @@ export default function Dachplaner({
     const formatWechsel = patch.hochformat !== undefined && patch.hochformat !== aktiv.opt.hochformat
     feldAendern(aktiv.id, {
       opt: { ...aktiv.opt, ...patch },
-      ...(formatWechsel ? { entfernt: [], zusaetzlich: [] } : {}),
+      ...(formatWechsel ? { entfernt: [], zusaetzlich: [], versatz: {} } : {}),
     })
   }
 
@@ -628,6 +648,7 @@ export default function Dachplaner({
         sperrflaechen: [],
         entfernt: [],
         zusaetzlich: [],
+        versatz: {},
       }
       setFelder((alle) => [...alle, feld])
       setAktivId(feld.id)
@@ -696,20 +717,19 @@ export default function Dachplaner({
     zieh.current = { x: ev.clientX, y: ev.clientY, lon: zentrum.lon, lat: zentrum.lat }
   }
 
-  /** Ein Modul mit der Maus auf eine andere Rasterzelle ziehen. */
-  const modulZug = useRef<{ feldId: string; vonId: string } | null>(null)
-  /** Gemeinsam verschieben: alle markierten Module um dasselbe Zellen-Delta */
-  const gruppenZug = useRef<{ feldId: string; startZelle: { reihe: number; spalte: number } } | null>(null)
-  const [gruppenVersatz, setGruppenVersatz] = useState<{ reihe: number; spalte: number } | null>(null)
+  /**
+   * Module lassen sich frei verschieben, nicht nur um ganze Rasterfelder.
+   * Gezogen wird in Metern; erst wenn "Einrasten" eingeschaltet ist, faellt
+   * das Modul auf die naechste Rasterposition.
+   */
+  const modulZug = useRef<{ feldId: string; vonId: string; start: MeterPunkt } | null>(null)
+  const [modulVersatz, setModulVersatz] = useState<{ dx: number; dy: number } | null>(null)
+  /** Gemeinsam verschieben: alle markierten Module um dasselbe Delta */
+  const gruppenZug = useRef<{ feldId: string; start: MeterPunkt } | null>(null)
+  const [gruppenVersatz, setGruppenVersatz] = useState<{ dx: number; dy: number } | null>(null)
   /** Aufziehendes Auswahlrechteck in lokalen Metern */
   const auswahlBox = useRef<MeterPunkt | null>(null)
   const [box, setBox] = useState<{ von: MeterPunkt; bis: MeterPunkt } | null>(null)
-  const [modulVorschau, setModulVorschau] = useState<{
-    feldId: string
-    vonId: string
-    reihe: number
-    spalte: number
-  } | null>(null)
 
   function modulAnfassen(ev: React.MouseEvent, feldId: string, modulId: string) {
     if (werkzeug !== 'auswahl' && werkzeug !== 'markieren') return
@@ -717,40 +737,52 @@ export default function Dachplaner({
     gezogen.current = false
     setAktivId(feldId)
 
+    const r = (ev.currentTarget as SVGElement).ownerSVGElement!.getBoundingClientRect()
+    const start = pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top)
+
     // Ist das Modul markiert, wandert die ganze Markierung mit
     if (werkzeug === 'markieren' && markiert.includes(modulId)) {
-      const [reihe, spalte] = modulId.split(':').map(Number)
-      gruppenZug.current = { feldId, startZelle: { reihe, spalte } }
+      gruppenZug.current = { feldId, start }
       return
     }
     if (werkzeug === 'markieren') return
 
-    modulZug.current = { feldId, vonId: modulId }
+    modulZug.current = { feldId, vonId: modulId, start }
   }
 
-  /** Verschiebt alle markierten Module um ein Zellen-Delta. */
-  function markierteVerschieben(feldId: string, dReihe: number, dSpalte: number) {
-    const feld = felder.find((f) => f.id === feldId)
-    const mitModulen = felderMitModulen.find((f) => f.id === feldId)
-    if (!feld || !mitModulen || (!dReihe && !dSpalte)) return
-
-    const alt = new Set(markiert)
-    const ziele = markiert.map((s) => {
-      const [r, c] = s.split(':').map(Number)
-      return zellenSchluessel(r + dReihe, c + dSpalte)
-    })
-    // Ein Ziel darf nicht auf einem nicht markierten Modul landen
-    const blockiert = ziele.some((z) => mitModulen.module.some((m) => m.id === z && !alt.has(m.id)))
-    if (blockiert) {
-      setMeldung('Dort liegen bereits Module – bitte an eine freie Stelle schieben.')
-      return
+  /**
+   * Rundet eine Verschiebung auf ganze Rasterschritte, wenn Einrasten
+   * eingeschaltet ist. Sonst bleibt sie zentimetergenau.
+   */
+  function delta(feld: Dachfeld, dx: number, dy: number) {
+    if (!einrasten) {
+      return { dx: Math.round(dx * 100) / 100, dy: Math.round(dy * 100) / 100 }
     }
+    const ras = rasterFuer(feld.polygon, modulMasse, feld.opt)
+    if (!ras) return { dx, dy }
+    // Im gedrehten System runden, damit das Raster stimmt
+    const c = Math.cos(-ras.winkel)
+    const s = Math.sin(-ras.winkel)
+    const lx = dx * c - dy * s
+    const ly = dx * s + dy * c
+    const rx = Math.round(lx / ras.schrittX) * ras.schrittX
+    const ry = Math.round(ly / ras.schrittY) * ras.schrittY
+    return {
+      dx: rx * Math.cos(ras.winkel) - ry * Math.sin(ras.winkel),
+      dy: rx * Math.sin(ras.winkel) + ry * Math.cos(ras.winkel),
+    }
+  }
 
-    feldAendern(feldId, {
-      entfernt: [...feld.entfernt.filter((x) => !ziele.includes(x)), ...markiert],
-      zusaetzlich: [...feld.zusaetzlich.filter((x) => !markiert.includes(x)), ...ziele],
-    })
-    setMarkiert(ziele)
+  /** Verschiebt alle markierten Module um dasselbe Delta in Metern. */
+  function markierteVerschieben(feldId: string, dx: number, dy: number) {
+    const feld = felder.find((f) => f.id === feldId)
+    if (!feld || (Math.abs(dx) < 0.005 && Math.abs(dy) < 0.005)) return
+    const neu = { ...feld.versatz }
+    for (const id of markiert) {
+      const alt = neu[id] ?? { dx: 0, dy: 0 }
+      neu[id] = { dx: alt.dx + dx, dy: alt.dy + dy }
+    }
+    feldAendern(feldId, { versatz: neu })
   }
 
   function flaecheAnfassen(ev: React.MouseEvent, feldId: string) {
@@ -782,25 +814,24 @@ export default function Dachplaner({
     // Markierte Gruppe verschieben
     if (gruppenZug.current) {
       gezogen.current = true
-      const feld = felderMitModulen.find((f) => f.id === gruppenZug.current!.feldId)
-      const ras = feld ? rasterFuer(feld.polygon, modulMasse, feld.opt) : null
-      if (!ras) return
-      const jetzt = zelleAnPunkt(pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top), ras)
-      setGruppenVersatz({
-        reihe: jetzt.reihe - gruppenZug.current.startZelle.reihe,
-        spalte: jetzt.spalte - gruppenZug.current.startZelle.spalte,
-      })
+      const feld = felder.find((f) => f.id === gruppenZug.current!.feldId)
+      if (!feld) return
+      const jetzt = pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top)
+      setGruppenVersatz(
+        delta(feld, jetzt.x - gruppenZug.current.start.x, jetzt.y - gruppenZug.current.start.y)
+      )
       return
     }
 
-    // Modul auf eine andere Rasterzelle ziehen
+    // Einzelnes Modul frei verschieben
     if (modulZug.current) {
       gezogen.current = true
-      const feld = felderMitModulen.find((f) => f.id === modulZug.current!.feldId)
-      const ras = feld ? rasterFuer(feld.polygon, modulMasse, feld.opt) : null
-      if (!ras) return
-      const zelle = zelleAnPunkt(pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top), ras)
-      setModulVorschau({ ...modulZug.current, reihe: zelle.reihe, spalte: zelle.spalte })
+      const feld = felder.find((f) => f.id === modulZug.current!.feldId)
+      if (!feld) return
+      const jetzt = pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top)
+      setModulVersatz(
+        delta(feld, jetzt.x - modulZug.current.start.x, jetzt.y - modulZug.current.start.y)
+      )
       return
     }
 
@@ -899,7 +930,7 @@ export default function Dachplaner({
     if (gruppenZug.current) {
       const feldId = gruppenZug.current.feldId
       gruppenZug.current = null
-      if (gruppenVersatz) markierteVerschieben(feldId, gruppenVersatz.reihe, gruppenVersatz.spalte)
+      if (gruppenVersatz) markierteVerschieben(feldId, gruppenVersatz.dx, gruppenVersatz.dy)
       setGruppenVersatz(null)
       setTimeout(() => {
         gezogen.current = false
@@ -907,22 +938,22 @@ export default function Dachplaner({
       return
     }
 
-    // Modulverschiebung übernehmen: alte Zelle frei, neue belegt
-    if (modulZug.current && modulVorschau) {
-      const zuId = zellenSchluessel(modulVorschau.reihe, modulVorschau.spalte)
-      const feld = felder.find((f) => f.id === modulVorschau.feldId)
-      const belegt = felderMitModulen
-        .find((f) => f.id === modulVorschau.feldId)
-        ?.module.some((m) => m.id === zuId)
-      if (feld && zuId !== modulVorschau.vonId && !belegt) {
-        feldAendern(feld.id, {
-          entfernt: [...feld.entfernt.filter((x) => x !== zuId), modulVorschau.vonId],
-          zusaetzlich: [...feld.zusaetzlich.filter((x) => x !== modulVorschau.vonId), zuId],
+    // Einzelnes Modul absetzen – der Versatz bleibt zentimetergenau erhalten
+    if (modulZug.current && modulVersatz) {
+      const { feldId, vonId } = modulZug.current
+      const feld = felder.find((f) => f.id === feldId)
+      if (feld && (Math.abs(modulVersatz.dx) > 0.005 || Math.abs(modulVersatz.dy) > 0.005)) {
+        const alt = feld.versatz[vonId] ?? { dx: 0, dy: 0 }
+        feldAendern(feldId, {
+          versatz: {
+            ...feld.versatz,
+            [vonId]: { dx: alt.dx + modulVersatz.dx, dy: alt.dy + modulVersatz.dy },
+          },
         })
       }
     }
     modulZug.current = null
-    setModulVorschau(null)
+    setModulVersatz(null)
 
     // Die Belegung ist ein abgeleiteter Wert und folgt der Fläche von selbst
     zieh.current = null
@@ -1221,6 +1252,7 @@ export default function Dachplaner({
         opt: { ...feld.opt, hochformat: !feld.opt.hochformat },
         entfernt: [],
         zusaetzlich: [],
+        versatz: {},
       })
       setMeldung(
         `Module ${!feld.opt.hochformat ? 'im Hochformat' : 'im Querformat'} an dieser Kante ausgerichtet.`
@@ -1539,7 +1571,7 @@ export default function Dachplaner({
               )}
 
               <div className="flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => { feldAendern(aktiv.id, { entfernt: [], zusaetzlich: [] }); setMarkiert([]) }}
+                <button type="button" onClick={() => { feldAendern(aktiv.id, { entfernt: [], zusaetzlich: [], versatz: {} }); setMarkiert([]) }}
                   className="btn-secondary flex items-center gap-1.5 px-2.5 py-1.5 text-[10px]">
                   <RotateCw size={11} strokeWidth={2} />
                   Neu belegen
@@ -1655,6 +1687,16 @@ export default function Dachplaner({
                 Zurück
               </button>
             )}
+            <button type="button" onClick={() => setEinrasten((e) => !e)}
+              title="Module beim Verschieben auf das Raster einrasten lassen"
+              className="px-2 py-1.5 rounded-lg text-[10px] font-semibold"
+              style={{
+                background: einrasten ? 'color-mix(in srgb, #F59E0B 16%, transparent)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${einrasten ? 'color-mix(in srgb, #F59E0B 40%, transparent)' : 'rgba(255,255,255,0.07)'}`,
+                color: einrasten ? '#F59E0B' : undefined,
+              }}>
+              Einrasten
+            </button>
             <button type="button" onClick={() => setMasseZeigen((m) => !m)}
               className="px-2 py-1.5 rounded-lg text-[10px] font-semibold"
               style={{
@@ -1704,22 +1746,39 @@ export default function Dachplaner({
                       strokeWidth={an ? 2.5 : 1.5}
                       strokeOpacity={an ? 1 : 0.6}
                     />
-                    {/* Module – einzeln oder als Markierung verschiebbar */}
+                    {/* Module – einzeln oder als Markierung frei verschiebbar */}
                     {f.module.map((m) => {
                       const istMarkiert = an && markiert.includes(m.id)
-                      const wirdGezogen =
-                        (modulVorschau?.feldId === f.id && modulVorschau.vonId === m.id) ||
-                        (gruppenVersatz !== null && istMarkiert)
+                      // Der laufende Zug wird als Vorschau darüber gezeichnet
+                      const zug =
+                        modulZug.current?.feldId === f.id && modulZug.current.vonId === m.id
+                          ? modulVersatz
+                          : gruppenZug.current?.feldId === f.id && istMarkiert
+                            ? gruppenVersatz
+                            : null
                       const anfassbar = werkzeug === 'auswahl' || werkzeug === 'markieren'
+                      const gezeigt = zug
+                        ? {
+                            ...m,
+                            ecken: m.ecken.map((p) => ({ x: p.x + zug.dx, y: p.y + zug.dy })),
+                            mitte: { x: m.mitte.x + zug.dx, y: m.mitte.y + zug.dy },
+                          }
+                        : m
                       return (
                         <g
                           key={m.id}
-                          opacity={wirdGezogen ? 0.25 : 1}
                           style={anfassbar ? { pointerEvents: 'auto', cursor: 'move' } : undefined}
                           onMouseDown={(e) => modulAnfassen(e, f.id, m.id)}
                         >
+                          {/* Ausgangslage bleibt blass sichtbar */}
+                          {zug && (
+                            <polygon
+                              points={m.ecken.map((p) => { const s = meterZuPixel(p); return `${s.x},${s.y}` }).join(' ')}
+                              fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={0.8} strokeDasharray="3 2"
+                            />
+                          )}
                           <ModulZeichnung
-                            modul={m}
+                            modul={gezeigt}
                             nachPixel={meterZuPixel}
                             zellenZeigen={pixelProModul > 26}
                             markiert={istMarkiert}
@@ -1727,31 +1786,6 @@ export default function Dachplaner({
                         </g>
                       )
                     })}
-                    {/* Vorschau der verschobenen Markierung */}
-                    {an && gruppenVersatz && (() => {
-                      const ras = rasterFuer(f.polygon, modulMasse, f.opt)
-                      if (!ras) return null
-                      return markiert.map((s) => {
-                        const [r, c] = s.split(':').map(Number)
-                        const v = modulAusZelle(ras, r + gruppenVersatz.reihe, c + gruppenVersatz.spalte, f.opt.ostWest, true)
-                        return (
-                          <g key={`v${s}`} opacity={0.9}>
-                            <ModulZeichnung modul={v} nachPixel={meterZuPixel} zellenZeigen={pixelProModul > 26} markiert />
-                          </g>
-                        )
-                      })
-                    })()}
-                    {/* Vorschau des gezogenen Moduls an der Zielzelle */}
-                    {modulVorschau?.feldId === f.id && (() => {
-                      const ras = rasterFuer(f.polygon, modulMasse, f.opt)
-                      if (!ras) return null
-                      const vorschau = modulAusZelle(ras, modulVorschau.reihe, modulVorschau.spalte, f.opt.ostWest, true)
-                      return (
-                        <g opacity={0.85}>
-                          <ModulZeichnung modul={vorschau} nachPixel={meterZuPixel} zellenZeigen={pixelProModul > 26} />
-                        </g>
-                      )
-                    })()}
                     {/* Sperrflächen */}
                     {f.sperrflaechen.map((s) => (
                       <g key={s.id}>
