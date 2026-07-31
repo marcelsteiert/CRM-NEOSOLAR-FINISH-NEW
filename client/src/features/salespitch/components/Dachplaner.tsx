@@ -18,7 +18,7 @@ import type {
 import { KOMPONENTEN } from '../../../lib/calculatorConfig'
 
 /** Eine belegbare Teilfläche des Dachs – ein Haus kann mehrere haben. */
-interface Dachfeld {
+export interface Dachfeld {
   id: string
   name: string
   polygon: MeterPunkt[]
@@ -76,10 +76,30 @@ export interface DachErgebnis {
   adresse: string
 }
 
+/**
+ * Der komplette Planungsstand.
+ *
+ * Die Folie wird beim Blaettern aus- und wieder eingehaengt. Damit die
+ * Auslegung dabei nicht verloren geht, liegt der Zustand in der
+ * Praesentation und wird von dort zurueckgegeben.
+ */
+export interface DachPlanung {
+  zentrum: LonLat
+  ursprung: LonLat | null
+  zoom: number
+  suche: string
+  felder: Dachfeld[]
+  aktivId: string | null
+  gefundene: Dachflaeche[]
+}
+
 interface Props {
   startAdresse?: string | null
   onUebernehmen: (e: DachErgebnis) => void
   gespeichert?: DachErgebnis | null
+  /** Zuletzt gesehener Planungsstand, wird beim Aufschlagen wiederhergestellt */
+  planung?: DachPlanung | null
+  onPlanungAendern?: (p: DachPlanung) => void
 }
 
 type Werkzeug = 'auswahl' | 'dach' | 'sperre' | 'modulPlus' | 'modulMinus'
@@ -160,11 +180,17 @@ function ModulZeichnung({
   )
 }
 
-export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }: Props) {
+export default function Dachplaner({
+  startAdresse,
+  onUebernehmen,
+  gespeichert,
+  planung,
+  onPlanungAendern,
+}: Props) {
   const kartenBox = useRef<HTMLDivElement>(null)
   const [groesse, setGroesse] = useState({ b: 800, h: 560 })
 
-  const [zentrum, setZentrum] = useState<LonLat>({ lon: 8.2275, lat: 46.8182 })
+  const [zentrum, setZentrum] = useState<LonLat>(planung?.zentrum ?? { lon: 8.2275, lat: 46.8182 })
   /**
    * Fester Bezugspunkt der Meterkoordinaten.
    *
@@ -173,21 +199,32 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
    * sobald man die Karte verschiebt. Er wird einmal gesetzt, wenn die erste
    * Adresse gefunden ist, und bleibt dann stehen.
    */
-  const [ursprung, setUrsprung] = useState<LonLat | null>(null)
-  const [zoom, setZoom] = useState(20)
-  const [suche, setSuche] = useState(startAdresse ?? '')
+  const [ursprung, setUrsprung] = useState<LonLat | null>(planung?.ursprung ?? null)
+  const [zoom, setZoom] = useState(planung?.zoom ?? 20)
+  const [suche, setSuche] = useState(planung?.suche ?? startAdresse ?? '')
   const [treffer, setTreffer] = useState<AdressTreffer[]>([])
   const [laedt, setLaedt] = useState(false)
   const [meldung, setMeldung] = useState<string | null>(null)
-  const [adresseGesetzt, setAdresseGesetzt] = useState('')
+  // Wenn schon geplant wurde, nicht erneut anfliegen und ueberschreiben
+  const [adresseGesetzt, setAdresseGesetzt] = useState(planung?.felder.length ? (startAdresse ?? '') : '')
 
   const [werkzeug, setWerkzeug] = useState<Werkzeug>('auswahl')
   const [zeichnung, setZeichnung] = useState<MeterPunkt[]>([])
-  const [felder, setFelder] = useState<Dachfeld[]>([])
-  const [aktivId, setAktivId] = useState<string | null>(null)
-  const [gefundene, setGefundene] = useState<Dachflaeche[]>([])
+  const [felder, setFelder] = useState<Dachfeld[]>(planung?.felder ?? [])
+  const [aktivId, setAktivId] = useState<string | null>(planung?.aktivId ?? null)
+  const [gefundene, setGefundene] = useState<Dachflaeche[]>(planung?.gefundene ?? [])
   const [bild, setBild] = useState<string | null>(gespeichert?.bild ?? null)
   const [masseZeigen, setMasseZeigen] = useState(true)
+
+  /**
+   * Planungsstand nach oben melden, damit er das Blaettern ueberlebt.
+   * Die Praesentation reicht ihn beim naechsten Aufschlagen zurueck.
+   */
+  useEffect(() => {
+    onPlanungAendern?.({ zentrum, ursprung, zoom, suche, felder, aktivId, gefundene })
+    // onPlanungAendern ist stabil; auf die Werte reagieren genuegt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zentrum, ursprung, zoom, suche, felder, aktivId, gefundene])
 
   const modulMasse = useMemo(
     () => ({

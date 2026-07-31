@@ -8,7 +8,7 @@ import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
 import { DEFAULT_CONFIG, DEFAULT_INPUT } from '../../lib/calculatorConfig'
 import RechnerPanel from '../salespitch/components/RechnerPanel'
 import Dachplaner from '../salespitch/components/Dachplaner'
-import type { DachErgebnis } from '../salespitch/components/Dachplaner'
+import type { DachErgebnis, DachPlanung } from '../salespitch/components/Dachplaner'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
 import OfferteSenden from '../salespitch/components/OfferteSenden'
@@ -192,6 +192,11 @@ export default function PraesentationPage() {
   const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
   /** Ergebnis der Dachbelegung – speist Rechner, Bericht und Offerte */
   const [dach, setDach] = useState<DachErgebnis | null>(null)
+  /**
+   * Arbeitsstand des Dachplaners. Die Folie wird beim Blaettern
+   * ausgehaengt, deshalb liegt der Zustand hier und nicht in ihr.
+   */
+  const [dachPlanung, setDachPlanung] = useState<DachPlanung | null>(null)
 
   // Kundendaten laden – funktioniert nur mit angemeldetem Verkaeufer.
   // Ohne Login bleibt die Praesentation als reine Anschauung nutzbar.
@@ -477,6 +482,8 @@ export default function PraesentationPage() {
           <Dachplaner
             startAdresse={kontakt?.address ?? null}
             gespeichert={dach}
+            planung={dachPlanung}
+            onPlanungAendern={setDachPlanung}
             onUebernehmen={dachUebernehmen}
           />
         )
