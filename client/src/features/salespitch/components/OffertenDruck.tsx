@@ -104,7 +104,10 @@ export default function OffertenDruck({
     ...(input.wallbox
       ? ([[`Wallbox ${KOMPONENTEN.wallbox.name}`, '1 Stück inkl. PV-Überschussladen']] as Array<[string, string]>)
       : []),
-    [`Unterkonstruktion ${KOMPONENTEN.montage.name}`, `passend für ${DACHTYP_LABELS[input.dachtyp]}`],
+    [
+      `Unterkonstruktion ${dach?.montagesystem || KOMPONENTEN.montage.name}`,
+      dach?.montageHinweis || `passend für ${DACHTYP_LABELS[input.dachtyp]}`,
+    ],
     ['DC- und AC-Installation', 'inklusive Verkabelung und Absicherung'],
     ['Planung, Bewilligung, Netzanmeldung', 'Baugesuch, TAG und IA, Pronovo'],
     ['Montage und Inbetriebnahme', 'schlüsselfertig durch NEOSOLAR'],
@@ -857,6 +860,17 @@ export default function OffertenDruck({
                       ['Module', `${dach.modulAnzahl} × ${KOMPONENTEN.modul.name}`],
                       ['Modulmass', KOMPONENTEN.modul.masse],
                       ['Modulleistung', `${KOMPONENTEN.modul.watt} W`],
+                      ...(dach.montagesystem
+                        ? ([
+                            ['Unterkonstruktion', dach.montagesystem],
+                            [
+                              'Montageart',
+                              dach.aufstaenderung > 0
+                                ? `${dach.aufstaenderung}° aufgeständert${dach.ostWest ? ', Ost-West' : ', Süd'}`
+                                : 'dachparallel',
+                            ],
+                          ] as Array<[string, string]>)
+                        : []),
                       ...(dach.wechselrichter
                         ? ([
                             ['Wechselrichter', dach.wechselrichter],

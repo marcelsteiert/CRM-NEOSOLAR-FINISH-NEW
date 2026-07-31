@@ -111,6 +111,18 @@ body {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/*
+ * Platz fuer die Scrollbar dauerhaft reservieren.
+ *
+ * Ohne das springt der Inhalt um die Scrollbarbreite zur Seite, sobald er
+ * beim Ziehen eines Reglers kurz laenger oder kuerzer wird. In der
+ * Praesentation faellt das als Wackeln auf.
+ */
+.overflow-y-auto,
+.overflow-auto {
+  scrollbar-gutter: stable;
+}
+
 /* ── Select/Option Dark Theme ── */
 
 select option {

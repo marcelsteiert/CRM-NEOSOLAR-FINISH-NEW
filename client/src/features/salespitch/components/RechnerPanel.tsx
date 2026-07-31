@@ -54,9 +54,10 @@ function Regler({ label, wert, min, max, schritt, einheit, onChange, hinweis }: 
   const anteil = ((wert - min) / (max - min)) * 100
   return (
     <div>
-      <div className="flex items-baseline justify-between mb-2">
+      <div className="flex items-baseline justify-between gap-2 mb-2">
         <label className="text-[11px] uppercase tracking-wider text-text-dim font-semibold">{label}</label>
-        <span className="text-[17px] font-bold text-amber tabular-nums">
+        {/* Feste Breite, sonst springt die Einheit beim Ziehen mit der Zahl mit */}
+        <span className="text-[17px] font-bold text-amber tabular-nums shrink-0 text-right" style={{ minWidth: 96 }}>
           {wert.toLocaleString('de-CH')} <span className="text-[12px] text-text-dim font-medium">{einheit}</span>
         </span>
       </div>

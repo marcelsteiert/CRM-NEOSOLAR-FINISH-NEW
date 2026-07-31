@@ -262,8 +262,10 @@ export default function PraesentationPage() {
       setDach(e)
       patchInput({
         kwp: e.kwp,
-        ausrichtung: e.ausrichtung,
-        neigung: e.neigungGrad,
+        // Ost-West-Aufstaenderung rechnet der Rechner mit dem eigenen Faktor
+        ausrichtung: e.ostWest ? 'OST_WEST' : e.ausrichtung,
+        neigung: e.aufstaenderung > 0 ? e.aufstaenderung : e.neigungGrad,
+        ...(e.dachart === 'FLACH' ? { dachtyp: 'FLACHDACH' as const } : {}),
       })
       setGewaehlteVariante(null)
     },

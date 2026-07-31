@@ -26,7 +26,14 @@ export interface MeterPunkt {
 // ── Kachel-Layer ──────────────────────────────────────────────────────
 
 export const KACHEL_GROESSE = 256
-export const MAX_ZOOM = 20
+/** Hoechste Stufe, die swisstopo als Kachel liefert. */
+export const MAX_KACHEL_ZOOM = 20
+/**
+ * Darueber hinaus skalieren wir die Kacheln hoch. Das Bild wird unschaerfer,
+ * aber die Module lassen sich deutlich genauer setzen – bei 1.13 m Modulbreite
+ * sind auf Stufe 20 nur rund 9 Pixel pro Modulkante verfuegbar.
+ */
+export const MAX_ZOOM = 22
 export const MIN_ZOOM = 15
 
 /** Luftbild der swisstopo. Reihenfolge im Pfad ist {z}/{x}/{y}. */
@@ -128,10 +135,141 @@ export interface BelegungsOptionen {
   hochformat: boolean
   /** Abstand zur Dachkante in Metern */
   randabstand: number
-  /** Abstand zwischen den Modulen in Metern */
+  /** Abstand zwischen den Modulen einer Reihe in Metern */
   modulabstand: number
+  /**
+   * Abstand zwischen den Reihen in Metern. Auf dem Steildach entspricht er
+   * dem Modulabstand, bei aufgestaenderten Flachdach-Systemen muss er den
+   * Schattenwurf der vorderen Reihe aufnehmen.
+   */
+  reihenabstand: number
   /** Drehung des Rasters in Grad, 0 = entlang der Firstrichtung */
   drehungGrad: number
+  /** Ost-West-Aufstaenderung: die Reihen kippen abwechselnd */
+  ostWest?: boolean
+}
+
+// ── Unterkonstruktion ─────────────────────────────────────────────────
+
+export type Dachart = 'STEIL' | 'FLACH'
+
+export interface Montagesystem {
+  id: string
+  name: string
+  hersteller: string
+  dachart: Dachart
+  /** Fuer welche Dachdeckung bzw. welchen Untergrund */
+  untergrund: string
+  /**
+   * Aufstaenderungswinkel in Grad. 0 bedeutet dachparallel – dann gilt die
+   * Dachneigung selbst.
+   */
+  aufstaenderung: number
+  /** Ost-West-Aufstaenderung: die Reihen stehen paarweise Ruecken an Ruecken */
+  ostWest: boolean
+  /** Empfohlener Reihenabstand als Vielfaches der Modul-Hochkante */
+  reihenfaktor: number
+  /** Modulausrichtung, die das System vorgibt */
+  hochformat: boolean
+  hinweis: string
+}
+
+/**
+ * Die bei NEOSOLAR eingesetzten K2-Systeme.
+ *
+ * Der Reihenfaktor ist der uebliche Auslegungswert fuer das Schweizer
+ * Mittelland: dachparallele Systeme brauchen keinen Verschattungsabstand,
+ * eine Sued-Aufstaenderung dagegen rund das Zweieinhalbfache der Modulhoehe,
+ * damit sich die Reihen im Winter nicht gegenseitig verschatten.
+ * Ost-West-Systeme stehen dicht, weil sich die Reihen gegenseitig stuetzen.
+ */
+export const MONTAGESYSTEME: Montagesystem[] = [
+  {
+    id: 'k2-singlerail',
+    name: 'K2 SingleRail mit CrossHook 3S',
+    hersteller: 'K2 Systems',
+    dachart: 'STEIL',
+    untergrund: 'Ziegel- und Betonsteindach',
+    aufstaenderung: 0,
+    ostWest: false,
+    reihenfaktor: 1.02,
+    hochformat: true,
+    hinweis: 'Kreuzverbund für hohe Lasten, Rastmontage ohne Verschraubung an der Grundplatte',
+  },
+  {
+    id: 'k2-solidrail',
+    name: 'K2 SolidRail mit Faserzementhaken',
+    hersteller: 'K2 Systems',
+    dachart: 'STEIL',
+    untergrund: 'Eternit- und Faserzementdach',
+    aufstaenderung: 0,
+    ostWest: false,
+    reihenfaktor: 1.02,
+    hochformat: true,
+    hinweis: 'Für Wellplatten und Faserzement, Befestigung im Sparren',
+  },
+  {
+    id: 'k2-minirail',
+    name: 'K2 MiniRail',
+    hersteller: 'K2 Systems',
+    dachart: 'STEIL',
+    untergrund: 'Trapez- und Blechdach',
+    aufstaenderung: 0,
+    ostWest: false,
+    reihenfaktor: 1.02,
+    hochformat: false,
+    hinweis: 'Direktmontage auf der Sicke, geklebt oder geschraubt',
+  },
+  {
+    id: 'k2-dome-ow',
+    name: 'K2 Dome 6 Ost-West',
+    hersteller: 'K2 Systems',
+    dachart: 'FLACH',
+    untergrund: 'Flachdach mit Bitumen oder Folie',
+    aufstaenderung: 10,
+    ostWest: true,
+    reihenfaktor: 1.05,
+    hochformat: false,
+    hinweis: 'Ballastiert, keine Dachdurchdringung, höchste Flächenausnutzung',
+  },
+  {
+    id: 'k2-sdome',
+    name: 'K2 S-Dome 6 Süd',
+    hersteller: 'K2 Systems',
+    dachart: 'FLACH',
+    untergrund: 'Flachdach mit Bitumen oder Folie',
+    aufstaenderung: 15,
+    ostWest: false,
+    reihenfaktor: 2.4,
+    hochformat: false,
+    hinweis: 'Südaufständerung mit dem höchsten Ertrag je Modul, dafür grössere Reihenabstände',
+  },
+  {
+    id: 'k2-tiltup',
+    name: 'K2 TiltUp Vento',
+    hersteller: 'K2 Systems',
+    dachart: 'FLACH',
+    untergrund: 'Flachdach und flach geneigte Blechdächer',
+    aufstaenderung: 10,
+    ostWest: false,
+    reihenfaktor: 1.9,
+    hochformat: true,
+    hinweis: 'Windkanalgeprüft, geringe Ballastierung',
+  },
+]
+
+/**
+ * Reihenabstand in Metern.
+ *
+ * Dachparallel gilt der reine Montagespalt. Bei Aufstaenderung ergibt sich der
+ * Abstand aus dem Schattenwurf: die aufgestaenderte Reihe wirft am 21. Dezember
+ * mittags bei rund 18 Grad Sonnenhoehe einen Schatten, der die naechste Reihe
+ * nicht treffen darf.
+ */
+export function reihenabstandFuer(system: Montagesystem, modulHochkante: number): number {
+  if (system.aufstaenderung === 0) return 0.02
+  const belegt = modulHochkante * Math.cos((system.aufstaenderung * Math.PI) / 180)
+  return Math.max(0.05, Math.round((system.reihenfaktor * modulHochkante - belegt) * 100) / 100)
 }
 
 export interface PlatziertesModul {
@@ -143,6 +281,8 @@ export interface PlatziertesModul {
   aus?: boolean
   /** Von Hand gesetzt statt aus dem Raster erzeugt */
   manuell?: boolean
+  /** Bei Ost-West-Aufstaenderung: wohin diese Reihe kippt */
+  richtung?: 'OST' | 'WEST'
 }
 
 /**
@@ -243,7 +383,7 @@ export function belegeDach(
   const breiteX = opt.hochformat ? modul.breite : modul.laenge
   const hoeheY = opt.hochformat ? modul.laenge : modul.breite
   const schrittX = breiteX + opt.modulabstand
-  const schrittY = hoeheY + opt.modulabstand
+  const schrittY = hoeheY + opt.reihenabstand
 
   const minX = Math.min(...gedreht.map((p) => p.x))
   const maxX = Math.max(...gedreht.map((p) => p.x))
@@ -252,11 +392,11 @@ export function belegeDach(
 
   // Raster mittig ausrichten, damit die Belegung symmetrisch wirkt
   const spalten = Math.floor((maxX - minX - 2 * opt.randabstand + opt.modulabstand) / schrittX)
-  const reihen = Math.floor((maxY - minY - 2 * opt.randabstand + opt.modulabstand) / schrittY)
+  const reihen = Math.floor((maxY - minY - 2 * opt.randabstand + opt.reihenabstand) / schrittY)
   if (spalten < 1 || reihen < 1) return []
 
   const startX = minX + (maxX - minX - (spalten * schrittX - opt.modulabstand)) / 2
-  const startY = minY + (maxY - minY - (reihen * schrittY - opt.modulabstand)) / 2
+  const startY = minY + (maxY - minY - (reihen * schrittY - opt.reihenabstand)) / 2
 
   const module: PlatziertesModul[] = []
   const r = opt.randabstand
@@ -289,7 +429,12 @@ export function belegeDach(
       // Kamin, Dachfenster und Verschattung bleiben frei
       if (sperrflaechen.some((s) => beruehrtSperrflaeche(ecken, mitte, s))) continue
 
-      module.push({ id: `m${reihe}-${spalte}`, ecken, mitte })
+      module.push({
+        id: `m${reihe}-${spalte}`,
+        ecken,
+        mitte,
+        ...(opt.ostWest ? { richtung: reihe % 2 === 0 ? ('OST' as const) : ('WEST' as const) } : {}),
+      })
     }
   }
   return module
