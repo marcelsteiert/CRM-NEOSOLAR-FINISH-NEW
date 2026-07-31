@@ -20,7 +20,11 @@ export interface AblageAuftrag {
   /** Ordner der Dokumentenablage, z.B. "Vertraege" */
   ordner: string
   mimeType?: string
-  entityType?: string
+  /**
+   * Muss einer der vom Backend erlaubten Typen sein. Fuer Angebote gilt
+   * ANGEBOT – nicht DEAL, auch wenn die Tabelle so heisst.
+   */
+  entityType?: 'LEAD' | 'TERMIN' | 'ANGEBOT' | 'PROJEKT' | 'KONTAKT'
   entityId?: string | null
   uploadedBy?: string | null
   notes?: string
@@ -44,16 +48,18 @@ export async function dokumentAblegen(a: AblageAuftrag): Promise<{ storagePath: 
     throw new Error(`Ablage fehlgeschlagen (${res.status}): ${await res.text()}`)
   }
 
+  // Das Backend nimmt fuer uploadedBy und notes nur Zeichenketten,
+  // null fuehrt zu einem Validierungsfehler – daher weglassen statt null.
   await api.post('/documents/metadata', {
     contactId: a.contactId,
     fileName: a.dateiName,
     fileSize: a.datei.size,
     mimeType: mime,
-    entityType: a.entityType ?? 'CONTACT',
+    entityType: a.entityType ?? 'KONTAKT',
     entityId: a.entityId ?? a.contactId,
     storagePath,
     folderPath: a.ordner,
-    uploadedBy: a.uploadedBy ?? null,
+    ...(a.uploadedBy ? { uploadedBy: a.uploadedBy } : {}),
     ...(a.notes ? { notes: a.notes } : {}),
   })
 

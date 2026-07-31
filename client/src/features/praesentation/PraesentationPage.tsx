@@ -224,19 +224,46 @@ export default function PraesentationPage() {
     setStandGeladen(fortsetzenDealId)
 
     void (async () => {
-      try {
-        const liste = await api.get<{
-          data: Array<{ fileName: string; storagePath: string; createdAt?: string }>
-        }>(`/documents?entityType=DEAL&entityId=${fortsetzenDealId}`)
-        const stand = (liste.data ?? [])
+      type Dok = {
+        fileName: string
+        storagePath: string
+        createdAt?: string
+        downloadUrl?: string | null
+      }
+      const neuste = (liste: Dok[]) =>
+        liste
           .filter((d) => d.fileName.endsWith('.neosolar.json'))
           .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0]
-        if (!stand) return
 
-        const res = await fetch(
+      try {
+        // Zuerst am Angebot, sonst über den Kontakt suchen. Ein Stand, der
+        // ohne Verknüpfung abgelegt wurde, geht sonst verloren.
+        let stand: Dok | undefined
+        try {
+          const amAngebot = await api.get<{ data: Dok[] }>(
+            `/documents?entityType=ANGEBOT&entityId=${fortsetzenDealId}`
+          )
+          stand = neuste(amAngebot.data ?? [])
+        } catch {
+          /* dann eben über den Kontakt */
+        }
+        if (!stand && contactId) {
+          const beimKunden = await api.get<{ data: Dok[] }>(`/documents?contactId=${contactId}`)
+          stand = neuste(beimKunden.data ?? [])
+        }
+        if (!stand) {
+          setOfferteMeldung({
+            art: 'ok',
+            text: 'Zu diesem Angebot ist kein gespeicherter Stand hinterlegt – die Beratung startet neu.',
+          })
+          return
+        }
+
+        const url =
+          stand.downloadUrl ??
           `https://tzoquorcgygmrougevgm.supabase.co/storage/v1/object/public/documents/${stand.storagePath}`
-        )
-        if (!res.ok) return
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`Datei nicht lesbar (${res.status})`)
         const j = (await res.json()) as {
           input?: CalculatorInput
           dach?: DachErgebnis | null
@@ -254,14 +281,17 @@ export default function PraesentationPage() {
           art: 'ok',
           text: 'Gespeicherter Stand geladen – Sie können die Beratung weiterbearbeiten.',
         })
-      } catch {
+      } catch (err) {
         setOfferteMeldung({
           art: 'fehler',
-          text: 'Der gespeicherte Stand konnte nicht geladen werden. Die Präsentation startet mit den Standardwerten.',
+          text:
+            'Der gespeicherte Stand konnte nicht geladen werden: ' +
+            (err instanceof Error ? err.message : 'unbekannter Fehler') +
+            '. Die Präsentation startet mit den Standardwerten.',
         })
       }
     })()
-  }, [fortsetzenDealId, standGeladen])
+  }, [fortsetzenDealId, standGeladen, contactId])
 
   useEffect(() => {
     fetch(`${API}/public/calculator/config`)
@@ -427,12 +457,19 @@ export default function PraesentationPage() {
           dateiName: `Praesentation_${input.kwp}kWp_${new Date().toISOString().slice(0, 10)}.neosolar.json`,
           ordner: 'Termin',
           mimeType: 'application/json',
-          entityType: 'DEAL',
+          entityType: 'ANGEBOT',
           entityId: neueDealId,
           notes: 'Arbeitsstand der Solarberatung – öffnet die Präsentation zum Weiterbearbeiten',
         })
-      } catch {
-        // Ohne Arbeitsstand bleibt das Angebot trotzdem gültig
+      } catch (err) {
+        // Das Angebot bleibt gültig, aber der Verkäufer muss wissen,
+        // dass die Beratung nicht fortgesetzt werden kann
+        setOfferteMeldung({
+          art: 'fehler',
+          text:
+            'Angebot gespeichert, aber der Arbeitsstand konnte nicht abgelegt werden: ' +
+            (err instanceof Error ? err.message : 'unbekannter Fehler'),
+        })
       }
 
       // Termin als durchgefuehrt markieren, damit er die Pipeline verlaesst
@@ -495,11 +532,12 @@ export default function PraesentationPage() {
           contactId,
           datei: pdf.blob,
           dateiName: pdf.dateiName,
-          ordner: 'Vertraege',
+          // Muss genau einem Ordner der DocumentSection entsprechen,
+          // sonst landet die Datei unter "Sonstiges"
+          ordner: 'Verträge',
           mimeType: 'application/pdf',
-          entityType: 'DEAL',
+          entityType: 'ANGEBOT',
           entityId: pdfAblegen,
-          uploadedBy: null,
           notes: `Richtofferte ${input.kwp} kWp, ${ergebnis.werklohn.toLocaleString('de-CH')} CHF inkl. MWST`,
         })
         if (!abgebrochen) {
