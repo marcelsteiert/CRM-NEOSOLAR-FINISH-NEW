@@ -4,7 +4,7 @@ import {
   X, Pencil, Check, Phone, Mail, MapPin, Building2, Calendar,
   Trash2, ChevronDown, Trophy, XCircle, Clock, AlertTriangle,
   MessageSquare, PhoneCall, Users as UsersIcon,
-  Zap, Send, Percent, CalendarClock,
+  Zap, Send, Percent, CalendarClock, Presentation,
 } from 'lucide-react'
 import {
   useDeal, useUpdateDeal, useDeleteDeal, useAddActivity,
@@ -297,6 +297,21 @@ export default function DealDetailModal({ dealId, onClose }: Props) {
               </span>
             )}
           </div>
+
+          {/* Beratung fortsetzen: laedt den gespeicherten Stand der
+              Praesentation samt Dachbelegung und Reglerwerten */}
+          {deal.contactId && (
+            <a
+              href={`/praesentation/komplett?contact=${deal.contactId}&deal=${deal.id}&berater=${encodeURIComponent([authUser?.firstName, authUser?.lastName].filter(Boolean).join(' '))}&beraterMail=${encodeURIComponent(authUser?.email ?? '')}&beraterTel=${encodeURIComponent(authUser?.phone ?? '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold shrink-0"
+              title="Präsentation mit dem gespeicherten Stand öffnen und weiterbearbeiten"
+            >
+              <Presentation size={13} strokeWidth={2} />
+              Präsentation
+            </a>
+          )}
 
           {/* Edit toggle */}
           {(!isClosed || isAdmin) && (

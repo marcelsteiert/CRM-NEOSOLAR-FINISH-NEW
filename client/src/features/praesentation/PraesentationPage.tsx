@@ -14,6 +14,8 @@ import OffertenDruck from '../salespitch/components/OffertenDruck'
 import OfferteSenden from '../salespitch/components/OfferteSenden'
 import { LEERE_BEDUERFNISSE } from '../salespitch/components/BeduerfnisSchritt'
 import { api } from '../../lib/api'
+import { offerteAlsPdf } from '../../lib/offertePdf'
+import { dokumentAblegen } from '../../lib/dokumentAblegen'
 import { KOMPONENTEN } from '../../lib/calculatorConfig'
 import {
   FolienAblauf, FolienWarumNeosolar, FolienWarumJetztVerbrauch, FolienStrompreis,
@@ -197,6 +199,9 @@ export default function PraesentationPage() {
    * ausgehaengt, deshalb liegt der Zustand hier und nicht in ihr.
    */
   const [dachPlanung, setDachPlanung] = useState<DachPlanung | null>(null)
+  /** Deal-ID, für die nach dem Rendern ein PDF abgelegt werden soll */
+  const [pdfAblegen, setPdfAblegen] = useState<string | null>(null)
+  const [standGeladen, setStandGeladen] = useState<string | null>(null)
 
   // Kundendaten laden – funktioniert nur mit angemeldetem Verkaeufer.
   // Ohne Login bleibt die Praesentation als reine Anschauung nutzbar.
@@ -207,6 +212,56 @@ export default function PraesentationPage() {
       .then((r) => setKontakt(r.data))
       .catch(() => setKontakt(null))
   }, [contactId])
+
+  /**
+   * Fortsetzen: mit `?deal=<id>` wird der zuletzt gespeicherte Arbeitsstand
+   * geladen. Damit laesst sich eine Beratung jederzeit wieder oeffnen und
+   * weiterbearbeiten, statt sie von vorn aufzubauen.
+   */
+  const fortsetzenDealId = suchparameter.get('deal')
+  useEffect(() => {
+    if (!fortsetzenDealId || standGeladen === fortsetzenDealId) return
+    setStandGeladen(fortsetzenDealId)
+
+    void (async () => {
+      try {
+        const liste = await api.get<{
+          data: Array<{ fileName: string; storagePath: string; createdAt?: string }>
+        }>(`/documents?entityType=DEAL&entityId=${fortsetzenDealId}`)
+        const stand = (liste.data ?? [])
+          .filter((d) => d.fileName.endsWith('.neosolar.json'))
+          .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))[0]
+        if (!stand) return
+
+        const res = await fetch(
+          `https://tzoquorcgygmrougevgm.supabase.co/storage/v1/object/public/documents/${stand.storagePath}`
+        )
+        if (!res.ok) return
+        const j = (await res.json()) as {
+          input?: CalculatorInput
+          dach?: DachErgebnis | null
+          dachPlanung?: DachPlanung | null
+        }
+        if (j.input) {
+          setInput(j.input)
+          setBasisInput(j.input)
+          setGewaehlteVariante(null)
+        }
+        if (j.dach) setDach(j.dach)
+        if (j.dachPlanung) setDachPlanung(j.dachPlanung)
+        setDealId(fortsetzenDealId)
+        setOfferteMeldung({
+          art: 'ok',
+          text: 'Gespeicherter Stand geladen – Sie können die Beratung weiterbearbeiten.',
+        })
+      } catch {
+        setOfferteMeldung({
+          art: 'fehler',
+          text: 'Der gespeicherte Stand konnte nicht geladen werden. Die Präsentation startet mit den Standardwerten.',
+        })
+      }
+    })()
+  }, [fortsetzenDealId, standGeladen])
 
   useEffect(() => {
     fetch(`${API}/public/calculator/config`)
@@ -355,7 +410,30 @@ export default function PraesentationPage() {
         ...(terminId ? { appointmentId: terminId } : {}),
       })
 
-      setDealId(dealAntwort?.data?.id ?? null)
+      const neueDealId = dealAntwort?.data?.id ?? null
+      setDealId(neueDealId)
+
+      // Arbeitsstand ablegen, damit die Präsentation später mit denselben
+      // Werten und derselben Dachbelegung wieder geöffnet werden kann
+      try {
+        const stand = JSON.stringify(
+          { version: 1, gespeichertAm: new Date().toISOString(), input, dach, dachPlanung },
+          null,
+          1
+        )
+        await dokumentAblegen({
+          contactId,
+          datei: new Blob([stand], { type: 'application/json' }),
+          dateiName: `Praesentation_${input.kwp}kWp_${new Date().toISOString().slice(0, 10)}.neosolar.json`,
+          ordner: 'Termin',
+          mimeType: 'application/json',
+          entityType: 'DEAL',
+          entityId: neueDealId,
+          notes: 'Arbeitsstand der Solarberatung – öffnet die Präsentation zum Weiterbearbeiten',
+        })
+      } catch {
+        // Ohne Arbeitsstand bleibt das Angebot trotzdem gültig
+      }
 
       // Termin als durchgefuehrt markieren, damit er die Pipeline verlaesst
       if (terminId) {
@@ -374,9 +452,13 @@ export default function PraesentationPage() {
       setOfferteMeldung({
         art: 'ok',
         text: terminId
-          ? 'Angebot angelegt und Termin als durchgeführt markiert – der Fall liegt jetzt bei den Angeboten.'
-          : 'Angebot im CRM angelegt.',
+          ? 'Angebot angelegt und Termin als durchgeführt markiert. Die Offerte wird jetzt als PDF abgelegt …'
+          : 'Angebot im CRM angelegt. Die Offerte wird jetzt als PDF abgelegt …',
       })
+
+      // Offerte anzeigen und im Hintergrund als PDF in die Dokumente legen
+      setDruckOffen(true)
+      setPdfAblegen(dealAntwort?.data?.id ?? null)
     } catch (err) {
       setOfferteMeldung({
         art: 'fehler',
@@ -386,6 +468,66 @@ export default function PraesentationPage() {
       setOfferteLaeuft(false)
     }
   }
+  /**
+   * Legt die gerade sichtbare Offerte als PDF in der Dokumentenablage ab.
+   *
+   * Das Rendern braucht das fertige DOM der Druckansicht, deshalb laeuft es
+   * erst, wenn sie eingehaengt ist. Zwei Frames Wartezeit reichen, damit
+   * Bilder und Diagramme stehen.
+   */
+  useEffect(() => {
+    if (!pdfAblegen || !druckOffen || !contactId || !kontakt) return
+    let abgebrochen = false
+
+    const lauf = async () => {
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      await new Promise((r) => setTimeout(r, 400))
+      if (abgebrochen) return
+
+      const el = document.getElementById('offerte-druck')
+      if (!el) return
+      try {
+        const name =
+          `Richtofferte_${kontakt.lastName || 'Kunde'}_${input.kwp}kWp_` +
+          new Date().toISOString().slice(0, 10)
+        const pdf = await offerteAlsPdf(el, name)
+        await dokumentAblegen({
+          contactId,
+          datei: pdf.blob,
+          dateiName: pdf.dateiName,
+          ordner: 'Vertraege',
+          mimeType: 'application/pdf',
+          entityType: 'DEAL',
+          entityId: pdfAblegen,
+          uploadedBy: null,
+          notes: `Richtofferte ${input.kwp} kWp, ${ergebnis.werklohn.toLocaleString('de-CH')} CHF inkl. MWST`,
+        })
+        if (!abgebrochen) {
+          setOfferteMeldung({
+            art: 'ok',
+            text: `Angebot angelegt und die Offerte als PDF (${pdf.seiten} Seiten) unter Dokumente abgelegt.`,
+          })
+        }
+      } catch (err) {
+        if (!abgebrochen) {
+          setOfferteMeldung({
+            art: 'fehler',
+            text:
+              'Das Angebot ist gespeichert, aber die PDF-Ablage hat nicht geklappt: ' +
+              (err instanceof Error ? err.message : 'unbekannter Fehler'),
+          })
+        }
+      } finally {
+        if (!abgebrochen) setPdfAblegen(null)
+      }
+    }
+
+    void lauf()
+    return () => {
+      abgebrochen = true
+    }
+  }, [pdfAblegen, druckOffen, contactId, kontakt, input.kwp, ergebnis.werklohn])
+
   // ── Auswahlseite ──
   if (!variante) {
     return (
