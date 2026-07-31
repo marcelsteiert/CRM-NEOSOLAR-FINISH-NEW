@@ -1,5 +1,11 @@
 import { Sun, Battery, Car, Flame, Home, TrendingUp, Plus, Trash2 } from 'lucide-react'
-import type { CalculatorInput, CalculatorResult, Ausrichtung, Dachtyp } from '../../../lib/pvCalculator'
+import type {
+  CalculatorInput,
+  CalculatorResult,
+  CalculatorConfig,
+  Ausrichtung,
+  Dachtyp,
+} from '../../../lib/pvCalculator'
 import { AUSRICHTUNG_LABELS, DACHTYP_LABELS, KOMPONENTEN } from '../../../lib/calculatorConfig'
 import { moduleAusKwp } from '../../../lib/pvCalculator'
 
@@ -142,12 +148,14 @@ function Kennzahl({
 interface Props {
   input: CalculatorInput
   ergebnis: CalculatorResult
+  /** Annahmen und Preise aus dem Admin – liefert unter anderem den MWST-Satz */
+  config: CalculatorConfig
   onChange: (patch: Partial<CalculatorInput>) => void
   /** Preise ausblenden, solange der Verkaeufer sie nicht zeigen will */
   preiseSichtbar?: boolean
 }
 
-export default function RechnerPanel({ input, ergebnis, onChange, preiseSichtbar = true }: Props) {
+export default function RechnerPanel({ input, ergebnis, config, onChange, preiseSichtbar = true }: Props) {
   const module = moduleAusKwp(input.kwp, KOMPONENTEN.modul.watt)
 
   return (

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { TrendingDown, Wallet, Receipt, Percent, ArrowRight, Info } from 'lucide-react'
-import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
+import type { CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
 import { berechneFinanzierung } from '../../../lib/pvCalculator'
 
 const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
@@ -292,9 +292,9 @@ export function FolienMonatsvergleich({
  */
 export function FolienFinanzierung({
   ergebnis,
-  config,
 }: {
   ergebnis: CalculatorResult
+  /** Wird von der Praesentation mitgegeben, hier aktuell nicht gebraucht */
   config: CalculatorConfig
 }) {
   const [zins, setZins] = useState(3.5)
@@ -305,7 +305,6 @@ export function FolienFinanzierung({
   const fin = berechneFinanzierung(ergebnis, zins, laufzeit)
   const kredit = fin.kredit
   const rate = fin.monatsrate
-  const gesamtKosten = fin.gesamtKosten
   const zinsKosten = fin.zinsKosten
 
   const heuteMonat = ergebnis.jahresverlauf.length

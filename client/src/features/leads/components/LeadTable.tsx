@@ -288,7 +288,7 @@ function FilterableHeader({
   onFilterChange,
 }: FilterableHeaderProps) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLThElement>(null)
+  const ref = useRef<HTMLTableCellElement>(null)
   const isActive = sortField === sortBy
   const isSortable = !!sortField
   const hasFilter = filterType !== 'none'

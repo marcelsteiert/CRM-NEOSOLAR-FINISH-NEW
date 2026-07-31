@@ -51,7 +51,15 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 ## Workflow
 - Aenderungen automatisch durchfuehren ohne Bestaetigung zu verlangen
 - Nach jedem abgeschlossenen Feature/Stand: Git commit
-- TypeScript mit `npx tsc --noEmit` pruefen vor Commit
+- TypeScript vor dem Commit pruefen:
+  - Client: `npx tsc --noEmit -p client/tsconfig.app.json`
+    (NICHT `-p client` – client/tsconfig.json hat `"files": []` und prueft nichts)
+  - Server: `npx tsc --noEmit` im server/
+  - Achtung: der Client hat rund 95 bestehende Fehler. Vor dem Commit
+    die Ausgabe nach den eigenen Dateien filtern und die Zahl vergleichen,
+    damit keine neuen dazukommen.
+  - Besonders auf TS2304 (Cannot find name) achten – das sind echte
+    Laufzeit-Abstuerze, die der Vite-Build nicht bemerkt.
 
 ## Module (Status)
 - [x] Lead Hub (After Sales Tab, Termin-Typ Filter, responsive)

@@ -250,7 +250,13 @@ export default function SalesPitchPage() {
       case 'rechner':
         return (
           <div className="h-full overflow-y-auto px-4 sm:px-6 py-6">
-            <RechnerPanel input={input} ergebnis={ergebnis} onChange={patchInput} preiseSichtbar={preiseSichtbar} />
+            <RechnerPanel
+              input={input}
+              ergebnis={ergebnis}
+              config={config}
+              onChange={patchInput}
+              preiseSichtbar={preiseSichtbar}
+            />
           </div>
         )
       case 'anlage':

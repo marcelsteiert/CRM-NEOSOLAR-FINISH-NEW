@@ -434,7 +434,7 @@ export default function PraesentationPage() {
       case 'rechner':
         return (
           <div className="h-full overflow-y-auto px-4 sm:px-6 py-6">
-            <RechnerPanel input={input} ergebnis={ergebnis} onChange={patchInput} />
+            <RechnerPanel input={input} ergebnis={ergebnis} config={config} onChange={patchInput} />
           </div>
         )
       case 'anlage':

@@ -271,6 +271,9 @@ interface DroppableColumnProps {
   totalValue: number
   color: string
   onSelectLead: (lead: Lead) => void
+  /** Quellen-Beschriftung und -Farbe, kommen aus useLeadSourceMaps */
+  srcLabels: Record<string, string>
+  srcColors: Record<string, string>
 }
 
 function DroppableColumn({
@@ -280,6 +283,8 @@ function DroppableColumn({
   totalValue,
   color,
   onSelectLead,
+  srcLabels,
+  srcColors,
 }: DroppableColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: bucket.id })
 
@@ -498,6 +503,8 @@ export default function LeadKanban({
               totalValue={totalValue}
               color={color}
               onSelectLead={onSelectLead}
+              srcLabels={srcLabels}
+              srcColors={srcColors}
             />
           )
         })}
