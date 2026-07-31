@@ -889,6 +889,58 @@ export default function OffertenDruck({
               </div>
             </div>
 
+            {dach.felderDetail && dach.felderDetail.length > 1 && (
+              <>
+                <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>
+                  Aufteilung auf die Dachflächen
+                </h2>
+                <table className="w-full text-[10px] mb-6" style={{ borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #E5E7EB' }}>
+                      {['Fläche', 'Ausrichtung', 'Neigung', 'Unterkonstruktion', 'Module', 'kWp'].map((h, i) => (
+                        <th
+                          key={h}
+                          className="py-1.5 px-2"
+                          style={{ color: '#6B7280', fontWeight: 700, textAlign: i >= 4 ? 'right' : 'left' }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dach.felderDetail.map((f, i) => (
+                      <tr key={f.name + i} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                        <td className="py-1.5 px-2" style={{ color: '#111827', fontWeight: 600 }}>
+                          {f.flaecheM2} m²
+                        </td>
+                        <td className="py-1.5 px-2" style={{ color: '#374151' }}>{f.ausrichtung}</td>
+                        <td className="py-1.5 px-2" style={{ color: '#374151' }}>{f.neigung}°</td>
+                        <td className="py-1.5 px-2" style={{ color: '#374151' }}>{f.system}</td>
+                        <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                          {f.module}
+                        </td>
+                        <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 600 }}>
+                          {f.kwp.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: '1px solid #E5E7EB' }}>
+                      <td className="py-1.5 px-2" colSpan={4} style={{ color: '#111827', fontWeight: 700 }}>
+                        Gesamt
+                      </td>
+                      <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
+                        {dach.modulAnzahl}
+                      </td>
+                      <td className="py-1.5 px-2 text-right tabular-nums" style={{ color: '#111827', fontWeight: 700 }}>
+                        {dach.kwp.toFixed(2)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            )}
+
             {dach.ertragBfeKwh > 0 && (
               <div className="p-3.5 mb-6" style={{ background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
                 <div className="text-[11px] font-bold mb-1" style={{ color: '#166534' }}>

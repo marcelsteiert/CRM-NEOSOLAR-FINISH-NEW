@@ -33,7 +33,7 @@ export const MAX_KACHEL_ZOOM = 20
  * aber die Module lassen sich deutlich genauer setzen – bei 1.13 m Modulbreite
  * sind auf Stufe 20 nur rund 9 Pixel pro Modulkante verfuegbar.
  */
-export const MAX_ZOOM = 22
+export const MAX_ZOOM = 23
 export const MIN_ZOOM = 15
 
 /** Luftbild der swisstopo. Reihenfolge im Pfad ist {z}/{x}/{y}. */
@@ -339,26 +339,56 @@ export function beruehrtSperrflaeche(
 }
 
 /**
- * Erzeugt ein einzelnes Modul an der angeklickten Stelle – fuer Daecher,
- * bei denen das Raster nicht passt und der Planer von Hand nachlegt.
+ * Erzeugt ein einzelnes Modul an der angeklickten Stelle.
+ *
+ * Ist ein Raster vorhanden, rastet das Modul in die naechste Rasterzelle ein.
+ * Nur so liegen von Hand gesetzte Module bündig an den uebrigen – frei
+ * platzierte Module sehen auf dem Dach immer schief aus.
  */
 export function moduleAnPunkt(
-  mitte: MeterPunkt,
+  klick: MeterPunkt,
   modul: ModulMasse,
   opt: Pick<BelegungsOptionen, 'hochformat' | 'drehungGrad'>,
-  id: string
+  id: string,
+  raster?: Raster | null
 ): PlatziertesModul {
   const winkel = (opt.drehungGrad * Math.PI) / 180
-  const halbX = (opt.hochformat ? modul.breite : modul.laenge) / 2
-  const halbY = (opt.hochformat ? modul.laenge : modul.breite) / 2
-  const lokal = drehe(mitte, -winkel)
+  const lokal = drehe(klick, -winkel)
+
+  let x0: number
+  let y0: number
+  let breiteX: number
+  let hoeheY: number
+
+  if (raster) {
+    breiteX = raster.breiteX
+    hoeheY = raster.hoeheY
+    // Zellenindex bestimmen – auch ausserhalb des urspruenglichen Rasters,
+    // damit sich die Belegung ueber die Rasterkante hinaus erweitern laesst
+    const spalte = Math.round((lokal.x - raster.startX - breiteX / 2) / raster.schrittX)
+    const reihe = Math.round((lokal.y - raster.startY - hoeheY / 2) / raster.schrittY)
+    x0 = raster.startX + spalte * raster.schrittX
+    y0 = raster.startY + reihe * raster.schrittY
+  } else {
+    breiteX = opt.hochformat ? modul.breite : modul.laenge
+    hoeheY = opt.hochformat ? modul.laenge : modul.breite
+    x0 = lokal.x - breiteX / 2
+    y0 = lokal.y - hoeheY / 2
+  }
+
   const ecken = [
-    { x: lokal.x - halbX, y: lokal.y - halbY },
-    { x: lokal.x + halbX, y: lokal.y - halbY },
-    { x: lokal.x + halbX, y: lokal.y + halbY },
-    { x: lokal.x - halbX, y: lokal.y + halbY },
+    { x: x0, y: y0 },
+    { x: x0 + breiteX, y: y0 },
+    { x: x0 + breiteX, y: y0 + hoeheY },
+    { x: x0, y: y0 + hoeheY },
   ].map((p) => drehe(p, winkel))
-  return { id, ecken, mitte, manuell: true }
+
+  return {
+    id,
+    ecken,
+    mitte: drehe({ x: x0 + breiteX / 2, y: y0 + hoeheY / 2 }, winkel),
+    manuell: true,
+  }
 }
 
 /**
@@ -369,13 +399,30 @@ export function moduleAnPunkt(
  * Ein Modul wird uebernommen, wenn alle vier Ecken plus der Mittelpunkt im
  * Polygon liegen – mit dem Randabstand als zusaetzlichem Puffer rundherum.
  */
-export function belegeDach(
+/**
+ * Das Belegungsraster einer Dachflaeche.
+ *
+ * Automatik und Handarbeit muessen dasselbe Raster verwenden, sonst liegen
+ * von Hand gesetzte Module schief zwischen den uebrigen.
+ */
+export interface Raster {
+  winkel: number
+  startX: number
+  startY: number
+  schrittX: number
+  schrittY: number
+  breiteX: number
+  hoeheY: number
+  spalten: number
+  reihen: number
+}
+
+export function rasterFuer(
   polygon: MeterPunkt[],
   modul: ModulMasse,
-  opt: BelegungsOptionen,
-  sperrflaechen: Sperrflaeche[] = []
-): PlatziertesModul[] {
-  if (polygon.length < 3) return []
+  opt: BelegungsOptionen
+): Raster | null {
+  if (polygon.length < 3) return null
 
   const winkel = (opt.drehungGrad * Math.PI) / 180
   const gedreht = polygon.map((p) => drehe(p, -winkel))
@@ -393,10 +440,32 @@ export function belegeDach(
   // Raster mittig ausrichten, damit die Belegung symmetrisch wirkt
   const spalten = Math.floor((maxX - minX - 2 * opt.randabstand + opt.modulabstand) / schrittX)
   const reihen = Math.floor((maxY - minY - 2 * opt.randabstand + opt.reihenabstand) / schrittY)
-  if (spalten < 1 || reihen < 1) return []
+  if (spalten < 1 || reihen < 1) return null
 
-  const startX = minX + (maxX - minX - (spalten * schrittX - opt.modulabstand)) / 2
-  const startY = minY + (maxY - minY - (reihen * schrittY - opt.reihenabstand)) / 2
+  return {
+    winkel,
+    startX: minX + (maxX - minX - (spalten * schrittX - opt.modulabstand)) / 2,
+    startY: minY + (maxY - minY - (reihen * schrittY - opt.reihenabstand)) / 2,
+    schrittX,
+    schrittY,
+    breiteX,
+    hoeheY,
+    spalten,
+    reihen,
+  }
+}
+
+export function belegeDach(
+  polygon: MeterPunkt[],
+  modul: ModulMasse,
+  opt: BelegungsOptionen,
+  sperrflaechen: Sperrflaeche[] = []
+): PlatziertesModul[] {
+  const raster = rasterFuer(polygon, modul, opt)
+  if (!raster) return []
+
+  const { winkel, startX, startY, schrittX, schrittY, breiteX, hoeheY, spalten, reihen } = raster
+  const gedreht = polygon.map((p) => drehe(p, -winkel))
 
   const module: PlatziertesModul[] = []
   const r = opt.randabstand
