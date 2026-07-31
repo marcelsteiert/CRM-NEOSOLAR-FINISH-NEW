@@ -85,7 +85,7 @@ interface Props {
 type Werkzeug = 'auswahl' | 'dach' | 'sperre' | 'modulPlus' | 'modulMinus'
 
 const WERKZEUGE: Array<{ id: Werkzeug; icon: typeof Search; text: string; hilfe: string }> = [
-  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Karte ziehen · Fläche verschieben · Ecken anfassen · Doppelklick auf eine Kante richtet die Module daran aus' },
+  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Modul ziehen · Umrandung ziehen verschiebt die Fläche · Ecken anfassen · Doppelklick auf eine Kante richtet die Module aus' },
   { id: 'dach', icon: Pencil, text: 'Dachfläche', hilfe: 'Ecken anklicken, Klick auf den ersten Punkt schliesst die Fläche' },
   { id: 'sperre', icon: Ban, text: 'Sperrfläche', hilfe: 'Kamin, Dachfenster oder Verschattung umranden – dort bleibt frei' },
   { id: 'modulPlus', icon: Plus, text: 'Modul setzen', hilfe: 'Modul einzeln setzen, es rastet am Raster ein' },
@@ -620,6 +620,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
     const r = (ev.currentTarget as HTMLElement).getBoundingClientRect()
     const m = pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top)
 
+    // Sperrflächen lassen sich innen anfassen – auf ihnen liegen keine Module
     if (aktiv) {
       const sperre = aktiv.sperrflaechen.find((s) => imPolygon(m, s.punkte))
       if (sperre) {
@@ -627,18 +628,58 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
         return
       }
     }
-    const feld = felder.find((f) => imPolygon(m, f.polygon))
-    if (feld) {
-      setAktivId(feld.id)
-      schieben.current = { feldId: feld.id, art: 'dach', start: m, original: feld.polygon }
-      return
-    }
 
+    // Innerhalb der Dachfläche liegen die Module. Die Fläche selbst wird
+    // deshalb an ihrer Umrandung angefasst, nicht in der Mitte.
     zieh.current = { x: ev.clientX, y: ev.clientY, lon: zentrum.lon, lat: zentrum.lat }
+  }
+
+  /** Ein Modul mit der Maus auf eine andere Rasterzelle ziehen. */
+  const modulZug = useRef<{ feldId: string; vonId: string } | null>(null)
+  const [modulVorschau, setModulVorschau] = useState<{
+    feldId: string
+    vonId: string
+    reihe: number
+    spalte: number
+  } | null>(null)
+
+  function modulAnfassen(ev: React.MouseEvent, feldId: string, modulId: string) {
+    if (werkzeug !== 'auswahl') return
+    ev.stopPropagation()
+    gezogen.current = false
+    setAktivId(feldId)
+    modulZug.current = { feldId, vonId: modulId }
+  }
+
+  function flaecheAnfassen(ev: React.MouseEvent, feldId: string) {
+    if (werkzeug !== 'auswahl') return
+    ev.stopPropagation()
+    const feld = felder.find((f) => f.id === feldId)
+    if (!feld) return
+    const r = (ev.currentTarget as SVGElement).ownerSVGElement!.getBoundingClientRect()
+    gezogen.current = false
+    setAktivId(feldId)
+    schieben.current = {
+      feldId,
+      art: 'dach',
+      start: pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top),
+      original: feld.polygon,
+    }
   }
 
   function ziehen(ev: React.MouseEvent) {
     const r = (ev.currentTarget as HTMLElement).getBoundingClientRect()
+
+    // Modul auf eine andere Rasterzelle ziehen
+    if (modulZug.current) {
+      gezogen.current = true
+      const feld = felderMitModulen.find((f) => f.id === modulZug.current!.feldId)
+      const ras = feld ? rasterFuer(feld.polygon, modulMasse, feld.opt) : null
+      if (!ras) return
+      const zelle = zelleAnPunkt(pixelZuMeter(ev.clientX - r.left, ev.clientY - r.top), ras)
+      setModulVorschau({ ...modulZug.current, reihe: zelle.reihe, spalte: zelle.spalte })
+      return
+    }
 
     if (griff.current) {
       gezogen.current = true
@@ -700,6 +741,23 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
   }
 
   function ziehEnde() {
+    // Modulverschiebung übernehmen: alte Zelle frei, neue belegt
+    if (modulZug.current && modulVorschau) {
+      const zuId = zellenSchluessel(modulVorschau.reihe, modulVorschau.spalte)
+      const feld = felder.find((f) => f.id === modulVorschau.feldId)
+      const belegt = felderMitModulen
+        .find((f) => f.id === modulVorschau.feldId)
+        ?.module.some((m) => m.id === zuId)
+      if (feld && zuId !== modulVorschau.vonId && !belegt) {
+        feldAendern(feld.id, {
+          entfernt: [...feld.entfernt.filter((x) => x !== zuId), modulVorschau.vonId],
+          zusaetzlich: [...feld.zusaetzlich.filter((x) => x !== modulVorschau.vonId), zuId],
+        })
+      }
+    }
+    modulZug.current = null
+    setModulVorschau(null)
+
     // Die Belegung ist ein abgeleiteter Wert und folgt der Fläche von selbst
     zieh.current = null
     griff.current = null
@@ -1419,10 +1477,32 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
                       strokeWidth={an ? 2.5 : 1.5}
                       strokeOpacity={an ? 1 : 0.6}
                     />
-                    {/* Module */}
-                    {f.module.map((m) => (
-                      <ModulZeichnung key={m.id} modul={m} nachPixel={meterZuPixel} zellenZeigen={pixelProModul > 26} />
-                    ))}
+                    {/* Module – im Bewegen-Werkzeug einzeln verschiebbar */}
+                    {f.module.map((m) => {
+                      const wirdGezogen =
+                        modulVorschau?.feldId === f.id && modulVorschau.vonId === m.id
+                      return (
+                        <g
+                          key={m.id}
+                          opacity={wirdGezogen ? 0.25 : 1}
+                          style={werkzeug === 'auswahl' ? { pointerEvents: 'auto', cursor: 'move' } : undefined}
+                          onMouseDown={(e) => modulAnfassen(e, f.id, m.id)}
+                        >
+                          <ModulZeichnung modul={m} nachPixel={meterZuPixel} zellenZeigen={pixelProModul > 26} />
+                        </g>
+                      )
+                    })}
+                    {/* Vorschau des gezogenen Moduls an der Zielzelle */}
+                    {modulVorschau?.feldId === f.id && (() => {
+                      const ras = rasterFuer(f.polygon, modulMasse, f.opt)
+                      if (!ras) return null
+                      const vorschau = modulAusZelle(ras, modulVorschau.reihe, modulVorschau.spalte, f.opt.ostWest, true)
+                      return (
+                        <g opacity={0.85}>
+                          <ModulZeichnung modul={vorschau} nachPixel={meterZuPixel} zellenZeigen={pixelProModul > 26} />
+                        </g>
+                      )
+                    })()}
                     {/* Sperrflächen */}
                     {f.sperrflaechen.map((s) => (
                       <g key={s.id}>
@@ -1443,10 +1523,13 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
                     {/* Kanten: Doppelklick richtet die Modulreihen daran aus */}
                     {kanten(f.polygon).map((k) => (
                       <g key={k.key}>
+                        {/* Umrandung anfassen verschiebt die ganze Fläche,
+                            Doppelklick richtet die Modulreihen daran aus */}
                         <line
                           x1={k.ax} y1={k.ay} x2={k.bx} y2={k.by}
                           stroke="transparent" strokeWidth={14}
-                          style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                          style={{ pointerEvents: 'auto', cursor: 'move' }}
+                          onMouseDown={(e) => flaecheAnfassen(e, f.id)}
                           onDoubleClick={(e) => {
                             e.stopPropagation()
                             kanteAusrichten(f.id, k.winkel)
