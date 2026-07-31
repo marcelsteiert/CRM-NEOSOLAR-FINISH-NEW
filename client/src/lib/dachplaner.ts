@@ -277,12 +277,20 @@ export interface PlatziertesModul {
   /** Eckpunkte im Uhrzeigersinn, in lokalen Metern */
   ecken: MeterPunkt[]
   mitte: MeterPunkt
+  /** Rasterzelle, aus der das Modul stammt */
+  reihe: number
+  spalte: number
   /** Vom Benutzer abgewaehlt – zaehlt nicht zur Anlage */
   aus?: boolean
   /** Von Hand gesetzt statt aus dem Raster erzeugt */
   manuell?: boolean
   /** Bei Ost-West-Aufstaenderung: wohin diese Reihe kippt */
   richtung?: 'OST' | 'WEST'
+}
+
+/** Schluessel einer Rasterzelle, fuer Merklisten. */
+export function zellenSchluessel(reihe: number, spalte: number): string {
+  return `${reihe}:${spalte}`
 }
 
 /**
@@ -338,57 +346,56 @@ export function beruehrtSperrflaeche(
   return false
 }
 
-/**
- * Erzeugt ein einzelnes Modul an der angeklickten Stelle.
- *
- * Ist ein Raster vorhanden, rastet das Modul in die naechste Rasterzelle ein.
- * Nur so liegen von Hand gesetzte Module bündig an den uebrigen – frei
- * platzierte Module sehen auf dem Dach immer schief aus.
- */
-export function moduleAnPunkt(
-  klick: MeterPunkt,
-  modul: ModulMasse,
-  opt: Pick<BelegungsOptionen, 'hochformat' | 'drehungGrad'>,
-  id: string,
-  raster?: Raster | null
-): PlatziertesModul {
-  const winkel = (opt.drehungGrad * Math.PI) / 180
-  const lokal = drehe(klick, -winkel)
-
-  let x0: number
-  let y0: number
-  let breiteX: number
-  let hoeheY: number
-
-  if (raster) {
-    breiteX = raster.breiteX
-    hoeheY = raster.hoeheY
-    // Zellenindex bestimmen – auch ausserhalb des urspruenglichen Rasters,
-    // damit sich die Belegung ueber die Rasterkante hinaus erweitern laesst
-    const spalte = Math.round((lokal.x - raster.startX - breiteX / 2) / raster.schrittX)
-    const reihe = Math.round((lokal.y - raster.startY - hoeheY / 2) / raster.schrittY)
-    x0 = raster.startX + spalte * raster.schrittX
-    y0 = raster.startY + reihe * raster.schrittY
-  } else {
-    breiteX = opt.hochformat ? modul.breite : modul.laenge
-    hoeheY = opt.hochformat ? modul.laenge : modul.breite
-    x0 = lokal.x - breiteX / 2
-    y0 = lokal.y - hoeheY / 2
+/** Welche Rasterzelle liegt unter diesem Punkt? */
+export function zelleAnPunkt(klick: MeterPunkt, raster: Raster): { reihe: number; spalte: number } {
+  const lokal = drehe(klick, -raster.winkel)
+  return {
+    spalte: Math.round((lokal.x - raster.startX - raster.breiteX / 2) / raster.schrittX),
+    reihe: Math.round((lokal.y - raster.startY - raster.hoeheY / 2) / raster.schrittY),
   }
+}
 
+/**
+ * Erzeugt das Modul einer bestimmten Rasterzelle.
+ *
+ * Indizes ausserhalb des urspruenglichen Rasters sind erlaubt – so laesst
+ * sich die Belegung von Hand ueber die Rasterkante hinaus erweitern.
+ */
+export function modulAusZelle(
+  raster: Raster,
+  reihe: number,
+  spalte: number,
+  ostWest = false,
+  manuell = false
+): PlatziertesModul {
+  const x0 = raster.startX + spalte * raster.schrittX
+  const y0 = raster.startY + reihe * raster.schrittY
   const ecken = [
     { x: x0, y: y0 },
-    { x: x0 + breiteX, y: y0 },
-    { x: x0 + breiteX, y: y0 + hoeheY },
-    { x: x0, y: y0 + hoeheY },
-  ].map((p) => drehe(p, winkel))
+    { x: x0 + raster.breiteX, y: y0 },
+    { x: x0 + raster.breiteX, y: y0 + raster.hoeheY },
+    { x: x0, y: y0 + raster.hoeheY },
+  ].map((p) => drehe(p, raster.winkel))
 
   return {
-    id,
+    id: zellenSchluessel(reihe, spalte),
     ecken,
-    mitte: drehe({ x: x0 + breiteX / 2, y: y0 + hoeheY / 2 }, winkel),
-    manuell: true,
+    mitte: drehe({ x: x0 + raster.breiteX / 2, y: y0 + raster.hoeheY / 2 }, raster.winkel),
+    reihe,
+    spalte,
+    manuell,
+    ...(ostWest ? { richtung: reihe % 2 === 0 ? ('OST' as const) : ('WEST' as const) } : {}),
   }
+}
+
+/**
+ * Winkel einer Dachkante in Grad – als Rasterdrehung verwendbar.
+ * Ein Doppelklick auf die Traufe richtet die Modulreihen daran aus.
+ */
+export function kantenwinkel(a: MeterPunkt, b: MeterPunkt): number {
+  const grad = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI
+  // Auf -180..180 normieren; parallele Gegenrichtung ergibt dasselbe Raster
+  return Math.round(((grad + 180) % 180) * 10) / 10
 }
 
 /**
@@ -499,9 +506,11 @@ export function belegeDach(
       if (sperrflaechen.some((s) => beruehrtSperrflaeche(ecken, mitte, s))) continue
 
       module.push({
-        id: `m${reihe}-${spalte}`,
+        id: zellenSchluessel(reihe, spalte),
         ecken,
         mitte,
+        reihe,
+        spalte,
         ...(opt.ostWest ? { richtung: reihe % 2 === 0 ? ('OST' as const) : ('WEST' as const) } : {}),
       })
     }

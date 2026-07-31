@@ -6,8 +6,9 @@ import {
 import {
   KACHEL_GROESSE, MAX_ZOOM, MIN_ZOOM, MAX_KACHEL_ZOOM, kachelUrl,
   lonLatZuWelt, weltZuLonLat, meterProPixel, zuMeter, zuLonLat,
-  flaecheM2, imPolygon, belegeDach, moduleAnPunkt, beruehrtSperrflaeche,
-  rasterFuer, sucheAdresse, ladeDachflaechen, azimutZuAusrichtung, azimutText,
+  flaecheM2, imPolygon, belegeDach, beruehrtSperrflaeche, rasterFuer,
+  modulAusZelle, zelleAnPunkt, zellenSchluessel, kantenwinkel,
+  sucheAdresse, ladeDachflaechen, azimutZuAusrichtung, azimutText,
   firstwinkelAusAzimut, waehleWechselrichter, MONTAGESYSTEME, reihenabstandFuer,
 } from '../../../lib/dachplaner'
 import type {
@@ -28,7 +29,14 @@ interface Dachfeld {
   system: Montagesystem
   opt: BelegungsOptionen
   sperrflaechen: Sperrflaeche[]
-  module: PlatziertesModul[]
+  /**
+   * Von Hand abgewaehlte Rasterzellen. Bleibt beim Aendern von Abstand oder
+   * Drehung erhalten – die Auswahl des Planers soll nicht verloren gehen,
+   * nur weil er den Reihenabstand nachjustiert.
+   */
+  entfernt: string[]
+  /** Von Hand zusaetzlich gesetzte Rasterzellen */
+  zusaetzlich: string[]
 }
 
 /** Was der Planer an die Präsentation und die Offerte weitergibt. */
@@ -77,7 +85,7 @@ interface Props {
 type Werkzeug = 'auswahl' | 'dach' | 'sperre' | 'modulPlus' | 'modulMinus'
 
 const WERKZEUGE: Array<{ id: Werkzeug; icon: typeof Search; text: string; hilfe: string }> = [
-  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Karte ziehen · Fläche verschieben · Ecken an den Punkten anfassen · Klick auf ein Dach übernimmt es aus dem Kataster' },
+  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Karte ziehen · Fläche verschieben · Ecken anfassen · Doppelklick auf eine Kante richtet die Module daran aus' },
   { id: 'dach', icon: Pencil, text: 'Dachfläche', hilfe: 'Ecken anklicken, Klick auf den ersten Punkt schliesst die Fläche' },
   { id: 'sperre', icon: Ban, text: 'Sperrfläche', hilfe: 'Kamin, Dachfenster oder Verschattung umranden – dort bleibt frei' },
   { id: 'modulPlus', icon: Plus, text: 'Modul setzen', hilfe: 'Modul einzeln setzen, es rastet am Raster ein' },
@@ -157,6 +165,15 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
   const [groesse, setGroesse] = useState({ b: 800, h: 560 })
 
   const [zentrum, setZentrum] = useState<LonLat>({ lon: 8.2275, lat: 46.8182 })
+  /**
+   * Fester Bezugspunkt der Meterkoordinaten.
+   *
+   * Alle Flaechen werden in Metern relativ zu diesem Punkt gespeichert. Er
+   * darf sich nie aendern – sonst wandern die eingezeichneten Flaechen mit,
+   * sobald man die Karte verschiebt. Er wird einmal gesetzt, wenn die erste
+   * Adresse gefunden ist, und bleibt dann stehen.
+   */
+  const [ursprung, setUrsprung] = useState<LonLat | null>(null)
   const [zoom, setZoom] = useState(20)
   const [suche, setSuche] = useState(startAdresse ?? '')
   const [treffer, setTreffer] = useState<AdressTreffer[]>([])
@@ -181,21 +198,66 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
     []
   )
 
-  const aktiv = felder.find((f) => f.id === aktivId) ?? null
+  /**
+   * Die Module eines Feldes ergeben sich immer neu aus Polygon, Optionen und
+   * der Auswahl des Planers. Aendert er einen Abstand, verschieben sich die
+   * vorhandenen Module – die Belegung wird nicht von vorn aufgebaut.
+   */
+  const modulenVon = useCallback(
+    (feld: Dachfeld): PlatziertesModul[] => {
+      const raster = rasterFuer(feld.polygon, modulMasse, feld.opt)
+      if (!raster) return []
+
+      const raus = new Set(feld.entfernt)
+      const automatisch = belegeDach(feld.polygon, modulMasse, feld.opt, feld.sperrflaechen).filter(
+        (m) => !raus.has(m.id)
+      )
+      const schon = new Set(automatisch.map((m) => m.id))
+
+      const dazu = feld.zusaetzlich
+        .filter((s) => !schon.has(s) && !raus.has(s))
+        .map((s) => {
+          const [reihe, spalte] = s.split(':').map(Number)
+          return modulAusZelle(raster, reihe, spalte, feld.opt.ostWest, true)
+        })
+        // Auch von Hand gesetzte Module weichen einer Sperrflaeche
+        .filter((m) => !feld.sperrflaechen.some((sp) => beruehrtSperrflaeche(m.ecken, m.mitte, sp)))
+
+      return [...automatisch, ...dazu]
+    },
+    [modulMasse]
+  )
+
+  /**
+   * Felder samt berechneter Belegung. Die Module sind ein abgeleiteter Wert,
+   * kein gespeicherter – dadurch wirkt jede Aenderung an den Einstellungen
+   * sofort auf die vorhandenen Module.
+   */
+  const felderMitModulen = useMemo(
+    () => felder.map((f) => ({ ...f, module: modulenVon(f) })),
+    [felder, modulenVon]
+  )
+  const aktiv = felderMitModulen.find((f) => f.id === aktivId) ?? null
 
   // ── Umrechnung Bildschirm <-> Meter ────────────────────────────────
   const mpp = meterProPixel(zentrum.lat, zoom)
+  const bezug = ursprung ?? zentrum
+  /** Wie weit das Kartenzentrum vom festen Bezugspunkt entfernt liegt. */
+  const versatz = useMemo(() => zuMeter(zentrum, bezug), [zentrum, bezug])
 
   const meterZuPixel = useCallback(
-    (p: MeterPunkt) => ({ x: groesse.b / 2 + p.x / mpp, y: groesse.h / 2 - p.y / mpp }),
-    [groesse, mpp]
+    (p: MeterPunkt) => ({
+      x: groesse.b / 2 + (p.x - versatz.x) / mpp,
+      y: groesse.h / 2 - (p.y - versatz.y) / mpp,
+    }),
+    [groesse, mpp, versatz]
   )
   const pixelZuMeter = useCallback(
     (px: number, py: number): MeterPunkt => ({
-      x: (px - groesse.b / 2) * mpp,
-      y: (groesse.h / 2 - py) * mpp,
+      x: (px - groesse.b / 2) * mpp + versatz.x,
+      y: (groesse.h / 2 - py) * mpp + versatz.y,
     }),
-    [groesse, mpp]
+    [groesse, mpp, versatz]
   )
 
   useEffect(() => {
@@ -258,19 +320,6 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
     setFelder((alle) => alle.map((f) => (f.id === id ? { ...f, ...patch } : f)))
   }, [])
 
-  /** Belegt ein Feld neu und behält die von Hand gesetzten Module. */
-  const neuBelegen = useCallback(
-    (feld: Dachfeld, handBehalten = true): PlatziertesModul[] => {
-      const manuelle = handBehalten
-        ? feld.module
-            .filter((m) => m.manuell)
-            .filter((m) => !feld.sperrflaechen.some((s) => beruehrtSperrflaeche(m.ecken, m.mitte, s)))
-        : []
-      return [...belegeDach(feld.polygon, modulMasse, feld.opt, feld.sperrflaechen), ...manuelle]
-    },
-    [modulMasse]
-  )
-
   function feldAusKataster(f: Dachflaeche, bezug: LonLat): Dachfeld {
     const flach = f.neigungGrad <= 7
     const system = flach ? MONTAGESYSTEME.find((m) => m.id === 'k2-dome-ow')! : MONTAGESYSTEME[0]
@@ -292,7 +341,8 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
       system,
       opt,
       sperrflaechen: [],
-      module: belegeDach(polygon, modulMasse, opt, []),
+      entfernt: [],
+      zusaetzlich: [],
     }
   }
 
@@ -316,6 +366,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
           if (t.length) {
             const ziel = { lon: t[0].lon, lat: t[0].lat }
             setZentrum(ziel)
+            setUrsprung(ziel)
             setZoom(20)
             setSuche(t[0].label)
             await dachAnPunkt(ziel, ziel, t[0].label)
@@ -357,16 +408,19 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
   }
 
   // ── Dachfläche vom Bund holen ──────────────────────────────────────
-  async function dachAnPunkt(p: LonLat, bezug?: LonLat, adressText?: string) {
-    const ursprung = bezug ?? zentrum
+  async function dachAnPunkt(p: LonLat, neuerUrsprung?: LonLat, adressText?: string) {
+    // Beim ersten Aufruf legen wir den Bezugspunkt fest und behalten ihn
+    const fest = ursprung ?? neuerUrsprung ?? p
+    if (!ursprung) setUrsprung(fest)
+
     setLaedt(true)
     setMeldung(null)
     try {
       const flaechen = await ladeDachflaechen(p)
       setGefundene(flaechen)
-      const klick = zuMeter(p, ursprung)
+      const klick = zuMeter(p, fest)
       const treff =
-        flaechen.find((f) => imPolygon(klick, f.ring.map((r) => zuMeter(r, ursprung)))) ?? flaechen[0]
+        flaechen.find((f) => imPolygon(klick, f.ring.map((r) => zuMeter(r, fest)))) ?? flaechen[0]
       if (!treff) {
         setMeldung(
           adressText
@@ -375,7 +429,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
         )
         return
       }
-      feldHinzufuegen(treff, ursprung)
+      feldHinzufuegen(treff, fest)
     } catch {
       setMeldung('Die Dachdaten des Bundes sind nicht erreichbar. Zeichnen Sie die Fläche ein.')
     } finally {
@@ -383,8 +437,8 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
     }
   }
 
-  function feldHinzufuegen(f: Dachflaeche, bezug?: LonLat) {
-    const neu = feldAusKataster(f, bezug ?? zentrum)
+  function feldHinzufuegen(f: Dachflaeche, festerBezug?: LonLat) {
+    const neu = feldAusKataster(f, festerBezug ?? ursprung ?? zentrum)
     setFelder((alle) => {
       if (alle.some((x) => x.id === neu.id)) return alle
       return [...alle, neu]
@@ -402,26 +456,29 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
 
   function systemWaehlen(m: Montagesystem) {
     if (!aktiv) return
-    const opt: BelegungsOptionen = {
-      ...aktiv.opt,
-      hochformat: m.hochformat,
-      reihenabstand: reihenabstandFuer(m, m.hochformat ? modulMasse.laenge : modulMasse.breite),
-      ostWest: m.ostWest,
-      drehungGrad: m.dachart === 'FLACH' ? 0 : aktiv.opt.drehungGrad,
-    }
-    const feld: Dachfeld = {
-      ...aktiv,
+    feldAendern(aktiv.id, {
       system: m,
-      opt,
       neigung: m.aufstaenderung > 0 ? m.aufstaenderung : aktiv.neigung,
-    }
-    feldAendern(aktiv.id, { ...feld, module: neuBelegen(feld) })
+      opt: {
+        ...aktiv.opt,
+        hochformat: m.hochformat,
+        reihenabstand: reihenabstandFuer(m, m.hochformat ? modulMasse.laenge : modulMasse.breite),
+        ostWest: m.ostWest,
+        drehungGrad: m.dachart === 'FLACH' ? 0 : aktiv.opt.drehungGrad,
+      },
+      // Format- und Systemwechsel aendern das Raster grundlegend,
+      // die alte Zellauswahl passt dann nicht mehr
+      ...(m.hochformat !== aktiv.opt.hochformat ? { entfernt: [], zusaetzlich: [] } : {}),
+    })
   }
 
   function optAendern(patch: Partial<BelegungsOptionen>) {
     if (!aktiv) return
-    const feld: Dachfeld = { ...aktiv, opt: { ...aktiv.opt, ...patch } }
-    feldAendern(aktiv.id, { opt: feld.opt, module: neuBelegen(feld) })
+    const formatWechsel = patch.hochformat !== undefined && patch.hochformat !== aktiv.opt.hochformat
+    feldAendern(aktiv.id, {
+      opt: { ...aktiv.opt, ...patch },
+      ...(formatWechsel ? { entfernt: [], zusaetzlich: [] } : {}),
+    })
   }
 
   // ── Raster des aktiven Feldes ──────────────────────────────────────
@@ -450,11 +507,14 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
         setAktivId(getroffen.id)
         return
       }
-      void dachAnPunkt(zuLonLat(m, zentrum))
+      void dachAnPunkt(zuLonLat(m, bezug))
       return
     }
 
     if (werkzeug === 'dach' || werkzeug === 'sperre') {
+      // Spaetestens jetzt den Bezugspunkt festnageln, sonst wandert die
+      // gezeichnete Flaeche beim naechsten Verschieben der Karte mit
+      if (!ursprung) setUrsprung(zentrum)
       if (zeichnung.length >= 3) {
         const erst = meterZuPixel(zeichnung[0])
         if (Math.hypot(erst.x - px, erst.y - py) < 14) {
@@ -471,16 +531,28 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
       return
     }
 
+    if (!raster) return
+
     if (werkzeug === 'modulPlus') {
-      const neu = moduleAnPunkt(m, modulMasse, aktiv.opt, `hand${Date.now()}`, raster)
-      if (aktiv.module.some((x) => Math.hypot(x.mitte.x - neu.mitte.x, x.mitte.y - neu.mitte.y) < 0.2)) return
-      feldAendern(aktiv.id, { module: [...aktiv.module, neu] })
+      const zelle = zelleAnPunkt(m, raster)
+      const s = zellenSchluessel(zelle.reihe, zelle.spalte)
+      if (aktiv.module.some((x) => x.id === s)) return
+      feldAendern(aktiv.id, {
+        entfernt: aktiv.entfernt.filter((x) => x !== s),
+        zusaetzlich: aktiv.zusaetzlich.includes(s) ? aktiv.zusaetzlich : [...aktiv.zusaetzlich, s],
+      })
       return
     }
 
     if (werkzeug === 'modulMinus') {
       const getroffen = aktiv.module.find((mod) => imPolygon(m, mod.ecken))
-      if (getroffen) feldAendern(aktiv.id, { module: aktiv.module.filter((x) => x.id !== getroffen.id) })
+      if (!getroffen) return
+      feldAendern(aktiv.id, {
+        zusaetzlich: aktiv.zusaetzlich.filter((x) => x !== getroffen.id),
+        entfernt: aktiv.entfernt.includes(getroffen.id)
+          ? aktiv.entfernt
+          : [...aktiv.entfernt, getroffen.id],
+      })
     }
   }
 
@@ -501,7 +573,8 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
         system: MONTAGESYSTEME[0],
         opt,
         sperrflaechen: [],
-        module: belegeDach(zeichnung, modulMasse, opt, []),
+        entfernt: [],
+        zusaetzlich: [],
       }
       setFelder((alle) => [...alle, feld])
       setAktivId(feld.id)
@@ -517,8 +590,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
         bezeichnung: `Sperrfläche ${aktiv.sperrflaechen.length + 1}`,
         punkte: zeichnung,
       }
-      const feld: Dachfeld = { ...aktiv, sperrflaechen: [...aktiv.sperrflaechen, neu] }
-      feldAendern(aktiv.id, { sperrflaechen: feld.sperrflaechen, module: neuBelegen(feld) })
+      feldAendern(aktiv.id, { sperrflaechen: [...aktiv.sperrflaechen, neu] })
       setMeldung(`Sperrfläche gesetzt · ${Math.round(flaecheM2(zeichnung))} m² bleiben frei`)
     }
     setZeichnung([])
@@ -606,11 +678,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
                 ...sp,
                 punkte: sp.punkte.map((p) => ({ x: p.x + dx, y: p.y + dy })),
               })),
-              module: f.module.map((mo) => ({
-                ...mo,
-                ecken: mo.ecken.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-                mitte: { x: mo.mitte.x + dx, y: mo.mitte.y + dy },
-              })),
+
             }
           }
           return {
@@ -632,19 +700,10 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
   }
 
   function ziehEnde() {
-    // Erst beim Loslassen neu belegen – während des Ziehens wäre es zäh.
-    // Beim reinen Verschieben einer Dachfläche wandert die Belegung mit,
-    // nur beim Ändern der Form muss neu gerechnet werden.
-    const feldId = griff.current?.feldId ?? null
+    // Die Belegung ist ein abgeleiteter Wert und folgt der Fläche von selbst
     zieh.current = null
     griff.current = null
     schieben.current = null
-
-    if (feldId) {
-      setFelder((alle) =>
-        alle.map((f) => (f.id === feldId ? { ...f, module: neuBelegen(f) } : f))
-      )
-    }
     setTimeout(() => {
       gezogen.current = false
     }, 0)
@@ -678,17 +737,17 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
 
   // ── Kennzahlen über alle Felder ────────────────────────────────────
   const zusammen = useMemo(() => {
-    const alleModule = felder.flatMap((f) => f.module.filter((m) => !m.aus))
+    const alleModule = felderMitModulen.flatMap((f) => f.module.filter((m) => !m.aus))
     const kwp = Math.round((alleModule.length * modulMasse.wattPeak) / 10) / 100
     const belegt = alleModule.length * modulMasse.laenge * modulMasse.breite
-    const dachReal = felder.reduce(
+    const dachReal = felderMitModulen.reduce(
       (s, f) => s + (f.daten?.flaecheM2 ?? flaecheM2(f.polygon) / Math.cos((f.neigung * Math.PI) / 180)),
       0
     )
-    const sperren = felder.reduce((s, f) => s + f.sperrflaechen.length, 0)
+    const sperren = felderMitModulen.reduce((s, f) => s + f.sperrflaechen.length, 0)
 
     // Ausrichtung und Neigung nach Modulzahl gewichten
-    const belegteFelder = felder.filter((f) => f.module.length > 0)
+    const belegteFelder = felderMitModulen.filter((f) => f.module.length > 0)
     const gewicht = belegteFelder.reduce((s, f) => s + f.module.length, 0) || 1
     const azimut = Math.round(
       belegteFelder.reduce((s, f) => s + f.azimut * f.module.length, 0) / gewicht
@@ -714,9 +773,9 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
       azimut,
       neigung,
       ostWest,
-      ertragBfe: felder.reduce((s, f) => s + (f.daten?.stromertragKwh ?? 0), 0),
+      ertragBfe: felderMitModulen.reduce((s, f) => s + (f.daten?.stromertragKwh ?? 0), 0),
     }
-  }, [felder, modulMasse])
+  }, [felderMitModulen, modulMasse])
 
   const wr = waehleWechselrichter(zusammen.kwp, false)
   const wrHybrid = waehleWechselrichter(zusammen.kwp, true)
@@ -758,7 +817,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
       ctx.closePath()
     }
 
-    felder.forEach((f, i) => {
+    felderMitModulen.forEach((f, i) => {
       const farbe = FELD_FARBEN[i % FELD_FARBEN.length]
       pfad(f.polygon)
       ctx.fillStyle = 'rgba(245,158,11,0.10)'
@@ -845,7 +904,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
     setBild(neuesBild)
     setLaedt(false)
 
-    const groesstes = [...felder].sort((a, b) => b.module.length - a.module.length)[0]
+    const groesstes = [...felderMitModulen].sort((a, b) => b.module.length - a.module.length)[0]
     onUebernehmen({
       modulAnzahl: zusammen.module,
       kwp: zusammen.kwp,
@@ -859,8 +918,8 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
       ertragBfeKwh: zusammen.ertragBfe,
       einstrahlung: groesstes?.daten?.einstrahlung ?? 0,
       sperrflaechen: zusammen.sperren,
-      felder: felder.filter((f) => f.module.length > 0).length,
-      felderDetail: felder
+      felder: felderMitModulen.filter((f) => f.module.length > 0).length,
+      felderDetail: felderMitModulen
         .filter((f) => f.module.length > 0)
         .map((f) => ({
           name: f.name,
@@ -896,14 +955,57 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
 
   const hilfe = WERKZEUGE.find((w) => w.id === werkzeug)?.hilfe
 
-  /** Kantenlängen zur Bemassung einer Fläche. */
+  /** Kanten einer Fläche mit Länge, Mittelpunkt und Winkel. */
   function kanten(punkte: MeterPunkt[]) {
     return punkte.map((p, i) => {
       const q = punkte[(i + 1) % punkte.length]
-      const laenge = Math.hypot(q.x - p.x, q.y - p.y)
+      const a = meterZuPixel(p)
+      const b = meterZuPixel(q)
       const mitte = meterZuPixel({ x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 })
-      return { laenge, x: mitte.x, y: mitte.y, key: `${i}` }
+      return {
+        laenge: Math.hypot(q.x - p.x, q.y - p.y),
+        winkel: kantenwinkel(p, q),
+        x: mitte.x,
+        y: mitte.y,
+        ax: a.x,
+        ay: a.y,
+        bx: b.x,
+        by: b.y,
+        key: `${i}`,
+      }
     })
+  }
+
+  /**
+   * Doppelklick auf eine Dachkante richtet die Modulreihen daran aus.
+   *
+   * Traufe oder First anklicken statt am Drehregler zu suchen. Ein zweiter
+   * Doppelklick auf dieselbe Kante wechselt zwischen Hoch- und Querformat.
+   */
+  const letzteKante = useRef<{ feldId: string; winkel: number } | null>(null)
+
+  function kanteAusrichten(feldId: string, winkel: number) {
+    const feld = felder.find((f) => f.id === feldId)
+    if (!feld) return
+    setAktivId(feldId)
+
+    const gleich = letzteKante.current?.feldId === feldId && letzteKante.current?.winkel === winkel
+    letzteKante.current = { feldId, winkel }
+
+    if (gleich) {
+      feldAendern(feldId, {
+        opt: { ...feld.opt, hochformat: !feld.opt.hochformat },
+        entfernt: [],
+        zusaetzlich: [],
+      })
+      setMeldung(
+        `Module ${!feld.opt.hochformat ? 'im Hochformat' : 'im Querformat'} an dieser Kante ausgerichtet.`
+      )
+      return
+    }
+
+    feldAendern(feldId, { opt: { ...feld.opt, drehungGrad: winkel } })
+    setMeldung('Modulreihen an dieser Kante ausgerichtet. Nochmals doppelklicken wechselt das Format.')
   }
 
   return (
@@ -990,7 +1092,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
               </p>
             ) : (
               <div className="space-y-1">
-                {felder.map((f, i) => {
+                {felderMitModulen.map((f, i) => {
                   const an = f.id === aktivId
                   const farbe = FELD_FARBEN[i % FELD_FARBEN.length]
                   return (
@@ -1152,17 +1254,18 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
               </div>
 
               <div className="flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => feldAendern(aktiv.id, { module: neuBelegen(aktiv, false) })}
+                <button type="button" onClick={() => feldAendern(aktiv.id, { entfernt: [], zusaetzlich: [] })}
                   className="btn-secondary flex items-center gap-1.5 px-2.5 py-1.5 text-[10px]">
                   <RotateCw size={11} strokeWidth={2} />
                   Neu belegen
                 </button>
                 {aktiv.sperrflaechen.map((s) => (
                   <button key={s.id} type="button"
-                    onClick={() => {
-                      const feld = { ...aktiv, sperrflaechen: aktiv.sperrflaechen.filter((x) => x.id !== s.id) }
-                      feldAendern(aktiv.id, { sperrflaechen: feld.sperrflaechen, module: neuBelegen(feld) })
-                    }}
+                    onClick={() =>
+                      feldAendern(aktiv.id, {
+                        sperrflaechen: aktiv.sperrflaechen.filter((x) => x.id !== s.id),
+                      })
+                    }
                     className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px]"
                     style={{
                       background: 'color-mix(in srgb, #F87171 12%, transparent)',
@@ -1185,7 +1288,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
             </div>
             <p className="text-[11px] text-text-sec mb-3">
               {zusammen.module} Module à {modulMasse.wattPeak} W
-              {felder.length > 1 && ` auf ${felder.filter((f) => f.module.length).length} Flächen`}
+              {felder.length > 1 && ` auf ${felderMitModulen.filter((f) => f.module.length).length} Flächen`}
             </p>
 
             <dl className="space-y-1 text-[10px] mb-3">
@@ -1304,7 +1407,7 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
             ))}
 
             <svg width={groesse.b} height={groesse.h} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-              {felder.map((f, fi) => {
+              {felderMitModulen.map((f, fi) => {
                 const farbe = FELD_FARBEN[fi % FELD_FARBEN.length]
                 const an = f.id === aktivId
                 return (
@@ -1337,14 +1440,27 @@ export default function Dachplaner({ startAdresse, onUebernehmen, gespeichert }:
                         })}
                       </g>
                     ))}
-                    {/* Bemassung der Kanten */}
-                    {masseZeigen && kanten(f.polygon).map((k) => (
+                    {/* Kanten: Doppelklick richtet die Modulreihen daran aus */}
+                    {kanten(f.polygon).map((k) => (
                       <g key={k.key}>
-                        <rect x={k.x - 15} y={k.y - 6} width={30} height={11} rx={2} fill="rgba(6,8,12,0.72)" />
-                        <text x={k.x} y={k.y + 2.5} textAnchor="middle"
-                          style={{ fontSize: 8, fill: farbe, fontWeight: 600 }}>
-                          {k.laenge.toFixed(1)} m
-                        </text>
+                        <line
+                          x1={k.ax} y1={k.ay} x2={k.bx} y2={k.by}
+                          stroke="transparent" strokeWidth={14}
+                          style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            kanteAusrichten(f.id, k.winkel)
+                          }}
+                        />
+                        {masseZeigen && (
+                          <>
+                            <rect x={k.x - 15} y={k.y - 6} width={30} height={11} rx={2} fill="rgba(6,8,12,0.72)" />
+                            <text x={k.x} y={k.y + 2.5} textAnchor="middle"
+                              style={{ fontSize: 8, fill: farbe, fontWeight: 600 }}>
+                              {k.laenge.toFixed(1)} m
+                            </text>
+                          </>
+                        )}
                       </g>
                     ))}
                     {/* Griffe an den Ecken der aktiven Fläche */}
