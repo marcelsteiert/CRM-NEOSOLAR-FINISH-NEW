@@ -7,6 +7,8 @@ import { berechne } from '../../lib/pvCalculator'
 import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
 import { DEFAULT_CONFIG, DEFAULT_INPUT } from '../../lib/calculatorConfig'
 import RechnerPanel from '../salespitch/components/RechnerPanel'
+import Dachplaner from '../salespitch/components/Dachplaner'
+import type { DachErgebnis } from '../salespitch/components/Dachplaner'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
 import OfferteSenden from '../salespitch/components/OfferteSenden'
@@ -43,6 +45,7 @@ const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 type FolienId =
   | 'titel' | 'ablauf' | 'warum' | 'team' | 'verbrauch' | 'strompreis' | 'kostenOhne'
   | 'modul' | 'wechselrichter' | 'speicher' | 'wallbox' | 'app' | 'dachanalyse'
+  | 'dachplaner'
   | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
   | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
   | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
@@ -99,7 +102,8 @@ const VARIANTEN: Variante[] = [
       { id: 'wallbox', titel: 'Wallbox' },
       { id: 'app', titel: 'Die App' },
       { id: 'dachanalyse', titel: 'Dachanalyse' },
-      // 5. Gemeinsam planen – hier bewegt der Verkäufer die Regler
+      // 5. Gemeinsam planen – erst das Dach belegen, dann die Regler
+      { id: 'dachplaner', titel: 'Ihr Dach belegen' },
       { id: 'rechner', titel: 'Ihre Anlage planen' },
       { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
       { id: 'energiefluss', titel: 'Ihr Energiefluss' },
@@ -140,6 +144,7 @@ const VARIANTEN: Variante[] = [
       { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
       { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
       { id: 'warum', titel: 'Warum NEOSOLAR' },
+      { id: 'dachplaner', titel: 'Ihr Dach belegen' },
       { id: 'rechner', titel: 'Ihre Anlage planen' },
       { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
       { id: 'energiefluss', titel: 'Ihr Energiefluss' },
@@ -185,6 +190,8 @@ export default function PraesentationPage() {
   const [kontakt, setKontakt] = useState<{ id: string; firstName: string; lastName: string; address: string; email: string; phone: string; company?: string | null } | null>(null)
   const [offerteLaeuft, setOfferteLaeuft] = useState(false)
   const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
+  /** Ergebnis der Dachbelegung – speist Rechner, Bericht und Offerte */
+  const [dach, setDach] = useState<DachErgebnis | null>(null)
 
   // Kundendaten laden – funktioniert nur mit angemeldetem Verkaeufer.
   // Ohne Login bleibt die Praesentation als reine Anschauung nutzbar.
@@ -243,6 +250,25 @@ export default function PraesentationPage() {
     setInput((v) => ({ ...v, ...p }))
     setBasisInput((v) => ({ ...v, ...p }))
   }, [])
+
+  /**
+   * Die geplante Dachbelegung wird zur Grundlage der Anlage: Leistung,
+   * Ausrichtung und Neigung kommen ab jetzt vom echten Dach und nicht mehr
+   * aus den Standardwerten. Die Variantenwahl wird geloest, damit die
+   * Folgefolien nicht wieder auf einen Vorschlag zurueckspringen.
+   */
+  const dachUebernehmen = useCallback(
+    (e: DachErgebnis) => {
+      setDach(e)
+      patchInput({
+        kwp: e.kwp,
+        ausrichtung: e.ausrichtung,
+        neigung: e.neigungGrad,
+      })
+      setGewaehlteVariante(null)
+    },
+    [patchInput]
+  )
   const anzahl = variante?.folien.length ?? 0
   const weiter = useCallback(() => setSchritt((s) => Math.min(s + 1, anzahl - 1)), [anzahl])
   const zurueck = useCallback(() => setSchritt((s) => Math.max(s - 1, 0)), [])
@@ -277,6 +303,19 @@ export default function PraesentationPage() {
         `Anlage: ${input.kwp} kWp (${module} Module ${KOMPONENTEN.modul.name})`,
         input.speicherKwh > 0 ? `Speicher: ${input.speicherKwh} kWh` : 'Ohne Speicher',
         input.wallbox ? 'Wallbox inklusive' : null,
+        ...(dach
+          ? [
+              '',
+              '— Dachbelegung —',
+              `Dachflaeche: ${dach.dachflaecheM2} m2, davon belegt ${dach.belegteFlaecheM2} m2`,
+              `Ausrichtung: ${dach.azimut} Grad, Neigung ${dach.neigungGrad} Grad`,
+              dach.eignungText ? `Eignung laut Bund: ${dach.eignungText}` : null,
+              dach.sperrflaechen ? `Sperrflaechen beruecksichtigt: ${dach.sperrflaechen}` : null,
+              dach.wechselrichter
+                ? `Wechselrichter: ${dach.wechselrichter} (${dach.wechselrichterAc} kW AC)`
+                : null,
+            ].filter((z): z is string => z !== null)
+          : []),
         '',
         `Produktion: ${ergebnis.jahresertragKwh.toLocaleString('de-CH')} kWh/Jahr`,
         `Autarkie: ${Math.round(ergebnis.autarkiegrad * 100)} %`,
@@ -431,6 +470,14 @@ export default function PraesentationPage() {
         return <ProduktFolien.montage />
       case 'workflow':
         return <ProduktFolien.workflow />
+      case 'dachplaner':
+        return (
+          <Dachplaner
+            startAdresse={kontakt?.address ?? null}
+            gespeichert={dach}
+            onUebernehmen={dachUebernehmen}
+          />
+        )
       case 'rechner':
         return (
           <div className="h-full overflow-y-auto px-4 sm:px-6 py-6">
@@ -523,7 +570,7 @@ export default function PraesentationPage() {
             input={input}
             ergebnis={ergebnis}
             config={config}
-            variantenName={aktiveAnlage.name}
+            variantenName={dach ? `Dachbelegung ${dach.modulAnzahl} Module` : aktiveAnlage.name}
             kunde={kundeAusLink}
           />
         )
@@ -716,7 +763,7 @@ export default function PraesentationPage() {
           input={input}
           ergebnis={ergebnis}
           config={config}
-          variantenName={aktiveAnlage.name}
+          variantenName={dach ? `Dachbelegung ${dach.modulAnzahl} Module` : aktiveAnlage.name}
           onClose={() => setSendenOffen(false)}
         />
       )}
@@ -738,11 +785,12 @@ export default function PraesentationPage() {
                 }
               : null)
           }
-          variantenName={aktiveAnlage.name}
+          variantenName={dach ? `Dachbelegung ${dach.modulAnzahl} Module` : aktiveAnlage.name}
           input={input}
           ergebnis={ergebnis}
           config={config}
           beduerfnisse={LEERE_BEDUERFNISSE}
+          dach={dach}
           verkaeufer={
             beraterName
               ? {

@@ -107,6 +107,9 @@ export const KOMPONENTEN = {
     // Technische Daten aus dem Datenblatt der bestehenden NEOSOLAR-Offerte
     zellen: '108 Halbzellen',
     masse: '1800 × 1134 × 30 mm',
+    /** Masse in Metern – Grundlage fuer die Dachbelegung */
+    laengeM: 1.8,
+    breiteM: 1.134,
     gewichtKg: 21.6,
     wirkungsgrad: 24.0,
     degradationErstesJahr: 1.0,

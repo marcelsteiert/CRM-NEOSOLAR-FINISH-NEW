@@ -3,6 +3,7 @@ import { X, Printer, PenLine } from 'lucide-react'
 import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
 import { AUSRICHTUNG_LABELS, DACHTYP_LABELS, KOMPONENTEN } from '../../../lib/calculatorConfig'
 import type { Beduerfnisse } from './BeduerfnisSchritt'
+import type { DachErgebnis } from './Dachplaner'
 
 const chf = (n: number) => "CHF " + Math.round(n).toLocaleString('de-CH')
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
@@ -43,6 +44,8 @@ interface Props {
   config: CalculatorConfig
   beduerfnisse: Beduerfnisse
   verkaeufer?: Verkaeufer | null
+  /** Ergebnis der Dachbelegung – erzeugt den Projektbericht in der Offerte */
+  dach?: DachErgebnis | null
   onClose: () => void
 }
 
@@ -52,7 +55,7 @@ interface Props {
  * Die Druckregeln liegen inline, damit sie unabhaengig vom Dark-Theme greifen.
  */
 export default function OffertenDruck({
-  kunde, variantenName, input, ergebnis, config, beduerfnisse, verkaeufer, onClose,
+  kunde, variantenName, input, ergebnis, config, beduerfnisse, verkaeufer, dach, onClose,
 }: Props) {
   // Beim Druck der Bestellung blenden wir alle uebrigen Blaetter aus,
   // damit der Kunde ein einzelnes Blatt zum Unterschreiben erhaelt.
@@ -766,6 +769,135 @@ export default function OffertenDruck({
             </div>
           ))}
         </div>
+
+        {/* ── Projektbericht: nur wenn das Dach geplant wurde ── */}
+        {dach && (
+          <>
+            <div className="offerte-seitenumbruch" />
+            <h1 className="text-[20px] font-bold mb-1 mt-1" style={{ color: '#111827' }}>
+              Projektbericht Dachbelegung
+            </h1>
+            <p className="text-[11px] mb-5" style={{ color: '#6B7280' }}>
+              Belegungsplan auf Basis des swisstopo-Luftbilds und des Sonnendach-Katasters des
+              Bundesamts für Energie{dach.adresse ? ` · ${dach.adresse}` : ''}
+            </p>
+
+            {dach.bild && (
+              <img
+                src={dach.bild}
+                alt="Belegungsplan des Dachs"
+                className="w-full mb-2"
+                style={{ borderRadius: 10, border: '1px solid #E5E7EB' }}
+              />
+            )}
+            <p className="text-[9px] mb-6" style={{ color: '#9CA3AF' }}>
+              Orange umrandet die belegbare Dachfläche, blau die geplanten Module
+              {dach.sperrflaechen > 0
+                ? `, rot schraffiert ${dach.sperrflaechen} Sperrfläche${dach.sperrflaechen > 1 ? 'n' : ''} für Kamin, Dachfenster oder Verschattung`
+                : ''}
+              .
+            </p>
+
+            <div className="grid grid-cols-4 gap-2.5 mb-6">
+              {[
+                { label: 'Module', wert: `${dach.modulAnzahl}` },
+                { label: 'Leistung', wert: `${dach.kwp.toFixed(2)} kWp` },
+                { label: 'Dachfläche', wert: `${dach.dachflaecheM2} m²` },
+                { label: 'davon belegt', wert: `${dach.belegteFlaecheM2} m²` },
+              ].map((k) => (
+                <div
+                  key={k.label}
+                  className="p-3 text-center"
+                  style={{
+                    background: 'linear-gradient(165deg, #FFFBEB, #FEF3C7)',
+                    borderRadius: 10,
+                    border: '1px solid #FDE68A',
+                  }}
+                >
+                  <div className="text-[8px] uppercase tracking-wider mb-1" style={{ color: '#92400E', fontWeight: 700 }}>
+                    {k.label}
+                  </div>
+                  <div className="text-[15px] font-bold tabular-nums" style={{ color: '#B45309' }}>{k.wert}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>Dachdaten</h2>
+                <table className="w-full text-[10px]" style={{ borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {[
+                      ['Ausrichtung', `${AUSRICHTUNG_LABELS[input.ausrichtung]} (${dach.azimut}°)`],
+                      ['Dachneigung', `${dach.neigungGrad}°`],
+                      ['Dachtyp', DACHTYP_LABELS[input.dachtyp]],
+                      ...(dach.eignungText || dach.eignungKlasse
+                        ? [['Eignung laut Bund', dach.eignungText || `Klasse ${dach.eignungKlasse}`] as [string, string]]
+                        : []),
+                      ...(dach.einstrahlung
+                        ? [['Einstrahlung', `${Math.round(dach.einstrahlung)} kWh/m² und Jahr`] as [string, string]]
+                        : []),
+                      ...(dach.sperrflaechen
+                        ? [['Sperrflächen', `${dach.sperrflaechen} berücksichtigt`] as [string, string]]
+                        : []),
+                    ].map(([k, v], i) => (
+                      <tr key={k} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                        <td className="py-1.5 px-2" style={{ color: '#6B7280' }}>{k}</td>
+                        <td className="py-1.5 px-2 text-right" style={{ color: '#111827', fontWeight: 600 }}>{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>Technische Auslegung</h2>
+                <table className="w-full text-[10px]" style={{ borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {[
+                      ['Module', `${dach.modulAnzahl} × ${KOMPONENTEN.modul.name}`],
+                      ['Modulmass', KOMPONENTEN.modul.masse],
+                      ['Modulleistung', `${KOMPONENTEN.modul.watt} W`],
+                      ...(dach.wechselrichter
+                        ? ([
+                            ['Wechselrichter', dach.wechselrichter],
+                            ['AC-Leistung', `${dach.wechselrichterAc} kW`],
+                            ['DC/AC-Verhältnis', (dach.kwp / Math.max(1, dach.wechselrichterAc)).toFixed(2)],
+                          ] as Array<[string, string]>)
+                        : []),
+                    ].map(([k, v], i) => (
+                      <tr key={k} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
+                        <td className="py-1.5 px-2" style={{ color: '#6B7280' }}>{k}</td>
+                        <td className="py-1.5 px-2 text-right" style={{ color: '#111827', fontWeight: 600 }}>{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {dach.ertragBfeKwh > 0 && (
+              <div className="p-3.5 mb-6" style={{ background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+                <div className="text-[11px] font-bold mb-1" style={{ color: '#166534' }}>
+                  Gegenprobe mit den Daten des Bundes
+                </div>
+                <p className="text-[10px]" style={{ color: '#166534', lineHeight: 1.6 }}>
+                  Das Bundesamt für Energie weist für diese Dachfläche bei voller Belegung
+                  {' '}{dach.ertragBfeKwh.toLocaleString('de-CH')} kWh pro Jahr aus. Unsere Berechnung für die
+                  geplanten {dach.modulAnzahl} Module ergibt {ergebnis.jahresertragKwh.toLocaleString('de-CH')} kWh.
+                  Die Werte unterscheiden sich, weil nicht die ganze Fläche belegt wird und wir mit
+                  {' '}{ergebnis.spezifischerErtrag} kWh je kWp rechnen.
+                </p>
+              </div>
+            )}
+
+            <p className="text-[9px] mb-6" style={{ color: '#9CA3AF', lineHeight: 1.6 }}>
+              Der Belegungsplan beruht auf Luftbild und Kataster und dient der Veranschaulichung. Die
+              endgültige Modulzahl bestätigen wir nach der Drohnenvermessung vor Ort; Kaminhöhen,
+              Dachaufbauten und Verschattung können die Belegung noch verändern.
+              Quellen: swisstopo swissimage, BFE Sonnendach.
+            </p>
+          </>
+        )}
 
         {/* ── Seite 4: Unabhängigkeit und Eigenverbrauch ── */}
         <div className="offerte-seitenumbruch" />
