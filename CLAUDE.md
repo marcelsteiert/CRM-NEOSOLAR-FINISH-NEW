@@ -3,6 +3,10 @@
 ## Projekt
 PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shared, prisma.
 
+Weitere Unterlagen: [PROJEKTSTAND.md](PROJEKTSTAND.md) fuer den aktuellen Arbeitsstand
+und offene Punkte, [CHANGELOG.md](CHANGELOG.md) fuer den Aenderungsverlauf,
+[docs/verlauf/](docs/verlauf/) fuer die Gespraechsprotokolle.
+
 ## Sprache
 - Code-Kommentare und UI: Deutsch (Schweiz)
 - Variablen/Funktionen: Englisch
@@ -83,7 +87,9 @@ PV-CRM/ERP fuer NEOSOLAR AG (Schweizer Markt). Monorepo mit client, server, shar
 - [x] Export-Center (CSV/JSON fuer 8 Entitaeten)
 - [x] Callcenter-Dashboard (Lead/Termin-Stats pro User, Daily-Stats)
 - [x] Globale Suche (TopBar Cmd+K, Volltext ueber Kontakte)
-- [x] **Solarberatung & Verkaufsrechner** (NEU – gefuehrte Praesentation + oeffentlicher Rechner)
+- [x] **Solarberatung & Verkaufsrechner** (gefuehrte Praesentation + oeffentlicher Rechner)
+- [x] **Dachbelegung** (Luftbild swisstopo + Sonnendach-Kataster, Modulplanung)
+- [x] **Offerte** (7 Seiten mit Bestellseite, PDF-Ablage, Beratung fortsetzbar)
 - [ ] Rechnungen
 - [ ] KI-Summary (Modul existiert, aktuell ueber Feature-Flag deaktiviert)
 
@@ -222,35 +228,105 @@ Stromgestehungskosten (LCOE) plus Jahresverlauf ueber den Betrachtungszeitraum.
 - Deutsche Regelungen (EEG-Verguetung, MwSt-Befreiung, Negativpreis-Kuerzung)
   wurden bewusst NICHT uebernommen – sie gelten in der Schweiz nicht.
 
-### Ablauf (16 Schritte)
-Begruessung → Ablauf → Beduerfnisse → Warum NEOSOLAR → Strombedarf steigt →
-Strompreise → **Kosten ohne Anlage** → Komponenten → **Rechner mit Reglern** →
-Anlage-Uebersicht → Energiefluss → Nutzen → **Variantenvergleich** →
-Planungssicherheit → Umsetzung → Fragen
+### Ablauf
+Begruessung → Rueckblick → Strombedarf steigt → Strompreise →
+**Kosten ohne Anlage** → Warum NEOSOLAR → Team → Referenzen → Komponenten →
+Dachanalyse → **Dachbelegung** → **Rechner mit Reglern** → Anlage-Uebersicht →
+Energiefluss → Nutzen → Zusatzrechner → Geld-Sequenz → **Variantenvergleich** →
+Finanzierung → Sicherheiten → Umsetzung → Abschluss
 
-Der Rechner kommt bewusst NACH der Kostenfolie: der Kunde soll den Vergleichswert
-im Kopf haben, bevor er den Preis sieht.
+Zwei bewusste Entscheidungen in der Reihenfolge:
+- Der Rechner kommt NACH der Kostenfolie: der Kunde soll den Vergleichswert
+  im Kopf haben, bevor er den Preis sieht.
+- Die Dachbelegung kommt VOR dem Rechner: sie setzt kWp, Ausrichtung und
+  Neigung, damit der Rechner mit dem echten Dach arbeitet statt mit Annahmen.
+
+Folien-IDs stehen in `FolienId` in PraesentationPage.tsx, die beiden Strecken
+darunter in `VARIANTEN`.
 
 ### Verkaeufer- vs. Kundenansicht
 Umschaltbar per Klick. In der Kundenansicht sind Rendite, IRR und Kapitalwert
 ausgeblendet; Preise erscheinen erst ab der Anlagenplanung.
 
 ### Ausgabe
-- "Offerte drucken": zweiseitige Richtofferte, per Browser-Druck als PDF speicherbar
-  (`components/OffertenDruck.tsx`, kein zusaetzliches PDF-Paket)
+- "Offerte drucken": siebenseitige Richtofferte mit Bestellseite, per Browser-Druck
+  als PDF speicherbar (`components/OffertenDruck.tsx`)
+- "Nur Bestellseite": druckt allein das Blatt zum Unterschreiben
 - "Offerte ins CRM": legt ein Angebot beim Kontakt an, mit dem kompletten
   Rechenstand als Snapshot in der Notiz. Spaetere Preisaenderungen veraendern
-  bestehende Offerten dadurch nicht.
+  bestehende Offerten dadurch nicht. Zusaetzlich werden abgelegt:
+  - die Offerte als **PDF** unter *Dokumente → Verträge* (`lib/offertePdf.ts`,
+    jsPDF + html2canvas, beide erst bei Bedarf nachgeladen)
+  - der **Arbeitsstand** als JSON unter *Dokumente → Termin*, damit die Beratung
+    spaeter fortgesetzt werden kann
+- Fortsetzen: `/praesentation/komplett?contact=<id>&deal=<id>` laedt den Stand.
+  Der Knopf **Präsentation** im Angebots-Modal fuehrt direkt dorthin.
 
 ### Preise pflegen
 Admin → **Rechner-Preise** (`settings.calculator_pricing`).
 Backend: `server/src/routes/admin/calculatorPricing.ts` (GET fuer alle
 authentifizierten User, Schreiben nur ADMIN/GL), `server/src/routes/publicCalculator.ts`.
 
+### Wichtig: Preise und MWST
+Die Engine trennt sauber zwischen den Betraegen. Wer hier etwas aendert, muss
+den Unterschied kennen:
+- `nettoPreis` – Summe der Positionen ohne MWST
+- `bruttoPreis` – `nettoPreis` plus MWST
+- **`werklohn`** – `bruttoPreis` minus Rabatt. Das ist der Rechnungsbetrag und
+  damit die Basis fuer Zahlungsplan, Bestellung, Finanzierung und den Deal-Wert
+- `nettoInvestition` – `werklohn` minus Foerderung und Steuerersparnis. Nur fuer
+  die Wirtschaftlichkeit, **nie** fuer Zahlungen oder Kreditbetraege
+
+### Dokumente ablegen
+`client/src/lib/dokumentAblegen.ts` buendelt den Upload-Weg (Direct-Upload zum
+Storage, danach `/documents/metadata`). Zwei Fallstricke:
+- `entityType` muss aus der Backend-Liste stammen: LEAD, TERMIN, **ANGEBOT**,
+  PROJEKT, KONTAKT, PERSONAL, INTERNAL. Fuer Angebote gilt ANGEBOT, nicht DEAL.
+- `folderPath` muss exakt einem Ordner der DocumentSection entsprechen, samt
+  Umlaut (`Verträge`, `Förderungen`) – sonst landet die Datei unter "Sonstiges".
+
 ### Bewusst nicht umgesetzt
-Geo-/Dachplaner mit Modulplatzierung, 3D-Verschattung, 8760-Stunden-Simulation,
-digitale Signatur mit Online-Offerte, Produktkatalog mit Kompatibilitaetsmatrix,
-Stringplanung. Jeweils eigene Ausbaustufe.
+3D-Ansicht des Gebaeudes (swissBUILDINGS3D gibt es nur als Download, nicht als
+API pro Adresse), 8760-Stunden-Simulation, digitale Signatur mit Online-Offerte,
+Produktkatalog mit Kompatibilitaetsmatrix, Stringplanung.
+
+## Dachbelegung (Dachplaner)
+Folie vor dem Rechner, in beiden Praesentationsstrecken.
+
+### Datenquellen (oeffentlich, ohne Schluessel, CORS offen)
+- Luftbild: `wmts.geo.admin.ch` Layer `ch.swisstopo.swissimage`, WebMercator,
+  Kachelpfad `{z}/{x}/{y}.jpeg`, **bis Zoom 20** – darueber skaliert der Planer hoch
+- Dachflaechen: `api3.geo.admin.ch/rest/services/all/MapServer/identify` mit
+  `ch.bfe.solarenergie-eignung-daecher`. Liefert Polygon, Flaeche, Azimut
+  (0 = Sued, negativ = Ost), Neigung, Eignungsklasse und Ertragsprognose
+- Adresssuche: `api3.geo.admin.ch/rest/services/api/SearchServer`
+
+### Dateien
+- `client/src/lib/dachplaner.ts` – Geometrie, Modulraster, Montagesysteme,
+  Wechselrichter-Auslegung
+- `client/src/features/salespitch/components/Dachplaner.tsx` – Oberflaeche
+
+### Aufbau
+- **Fester Bezugspunkt**: alle Flaechen liegen in Metern relativ zu `ursprung`,
+  nicht zum Kartenzentrum. Sonst wandern sie beim Verschieben der Karte mit.
+- **Belegung ist abgeleitet**: gespeichert werden nur `entfernt`, `zusaetzlich`
+  und `versatz` je Rasterzelle. Aendert der Planer einen Abstand, verschieben
+  sich die vorhandenen Module, statt neu aufgebaut zu werden.
+- **Mehrere Teilflaechen** je Gebaeude, jede mit eigener Ausrichtung, Neigung,
+  Unterkonstruktion und eigenen Sperrflaechen
+- **Zustand liegt in der Praesentation** (`DachPlanung`), weil die Folie beim
+  Blaettern ausgehaengt wird
+
+### Montagesysteme
+Sechs K2-Systeme, getrennt nach Steil- und Flachdach. Das System setzt
+Modulausrichtung, Reihenabstand und Neigung. Der Reihenabstand bei
+Aufstaenderung kommt aus dem Schattenwurf (`reihenabstandFuer`).
+Die Reihenfaktoren sind Auslegungswerte fuers Mittelland, keine K2-Angaben.
+
+### Wechselrichter
+`waehleWechselrichter(kwp, mitSpeicher)` – eine Auslegungsregel, keine KI:
+DC/AC-Ziel 1.15, maximale DC-Leistung des Geraets, Hybridpflicht bei Speicher.
+Ueber 1.35 warnt der Planer vor Abregelung.
 
 ## Rollen & Berechtigungen
 - UserRole: ADMIN, VERTRIEB, PROJEKTLEITUNG, BUCHHALTUNG, GL, SUBUNTERNEHMEN, **CLOSER**, **SETTER**
@@ -376,3 +452,14 @@ dashboard, leads, kaltakquise, appointments, richtofferten, noshow, deals, provi
 - Gewonnen → Projekt: Erweiterte Checkliste + Upload-Pruefung
 - Rechnungen-Modul
 - Virtual Scrolling fuer lange Lead-Listen
+
+## Offene Punkte und Schulden
+Ausfuehrlich in [PROJEKTSTAND.md](PROJEKTSTAND.md). Die wichtigsten:
+- **93 bestehende TypeScript-Fehler** im Client. Der Vite-Build meldet sie nicht,
+  weil esbuild nur transpiliert. Darunter gingen schon echte Abstuerze unter.
+- **RLS in Supabase ist aus**, der Anon-Key hat vollen Datenzugriff.
+- Beim erneuten Speichern aus der Praesentation entsteht ein **neues** Angebot,
+  das bestehende wird nicht aktualisiert.
+- Fachlich zu pruefen: Betraege der Zusatzleistungen, Reihenfaktoren der
+  Aufstaenderung, kWp-Preisstaffel, Steuerersparnis von 15 %.
+- Follow-up-Mails bleiben still, solange kein Verkaeufer Outlook verbunden hat.
