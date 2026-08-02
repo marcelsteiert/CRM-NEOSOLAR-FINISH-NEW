@@ -86,6 +86,9 @@ curl -X POST https://api.netlify.com/build_hooks/<hook-id>
 
 # Gesprächsverlauf aktualisieren
 node tools/chat-export.mjs
+
+# Changelog aus der Git-Historie neu erzeugen
+node tools/changelog.mjs
 ```
 
 ---
