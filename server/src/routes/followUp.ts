@@ -232,30 +232,22 @@ export async function fuehreFollowUpAus(): Promise<FollowUpErgebnis> {
 
     let gesendet = false
     let versandFehler: string | null = null
+    let versandWeg = ''
     try {
-      // Postfach des zugewiesenen Verkaeufers, damit Absender und Verlauf stimmen
-      const { data: conn } = await supabase
-        .from('outlook_connections')
-        .select('id')
-        .eq('user_id', deal.assigned_to ?? '')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle()
-
-      if (conn) {
-        const { graphPost } = await import('../lib/outlookClient.js')
-        await graphPost(conn.id, '/me/sendMail', {
-          message: {
-            subject: faellig.mailBetreff!,
-            body: { contentType: 'HTML', content: html },
-            toRecipients: [{ emailAddress: { address: kontakt.email } }],
-          },
-          saveToSentItems: true,
-        })
-        gesendet = true
-      } else {
-        versandFehler = 'Keine Outlook-Verbindung des zugewiesenen Verkaeufers'
-      }
+      // Nachfassmails laufen ueber das Systempostfach: sie duerfen nicht
+      // davon abhaengen, ob der Verkaeufer sein Outlook verbunden hat.
+      // Antworten gehen trotzdem an ihn, und er bekommt eine Kopie.
+      const { versendeMail } = await import('../lib/mailVersand.js')
+      const erg = await versendeMail({
+        an: kontakt.email,
+        betreff: faellig.mailBetreff!,
+        html,
+        verkaeuferId: deal.assigned_to ?? null,
+        kopieAnVerkaeufer: true,
+      })
+      gesendet = erg.weg !== 'KEINER'
+      versandFehler = erg.fehler
+      versandWeg = erg.weg === 'SYSTEM' ? ' über info@neosolar.ch' : ''
     } catch (err) {
       versandFehler = err instanceof Error ? err.message : String(err)
     }
@@ -266,7 +258,7 @@ export async function fuehreFollowUpAus(): Promise<FollowUpErgebnis> {
         contact_id: deal.contact_id,
         deal_id: deal.id,
         type: 'EMAIL',
-        text: `[${faellig.kuerzel}] Automatische Nachfrage an ${kontakt.email} gesendet`,
+        text: `[${faellig.kuerzel}] Automatische Nachfrage an ${kontakt.email} gesendet${versandWeg}`,
         created_by: deal.assigned_to ?? 'u006',
       })
       ergebnis.details.push(`${faellig.kuerzel}: Mail an ${kundeName}`)

@@ -206,6 +206,191 @@ export async function graphDelete(connectionId: string, path: string): Promise<v
   }
 }
 
+// ── Systempostfach (Client Credentials) ──────────────────────────────
+//
+// Fuer automatische Mails taugt der Delegated-Flow oben nicht: er braucht
+// einen angemeldeten Benutzer, und das Refresh-Token laeuft nach laengerer
+// Inaktivitaet ab. Automatische Nachfassmails wuerden dann irgendwann still
+// aufhoeren.
+//
+// Stattdessen holt sich der Server ein eigenes Token ueber Client
+// Credentials und sendet als festes Postfach (info@neosolar.ch). Das
+// braucht in der Azure-App die *Anwendungsberechtigung* Mail.Send mit
+// Administratorzustimmung – Delegated reicht dafuer nicht.
+//
+// Einschraenken laesst sich das im Tenant mit einer Application Access
+// Policy, damit die App nur fuer dieses eine Postfach senden darf.
+
+const SYSTEM_ABSENDER = () => process.env.MS_SENDER_ADDRESS ?? 'info@neosolar.ch'
+
+/** Zwischengespeichertes App-Token – gilt eine Stunde. */
+let appToken: { wert: string; gueltigBis: number } | null = null
+
+export function systemMailKonfiguriert(): boolean {
+  return Boolean(CLIENT_ID() && CLIENT_SECRET() && TENANT_ID() && TENANT_ID() !== 'common')
+}
+
+export async function getAppToken(): Promise<string> {
+  if (appToken && appToken.gueltigBis - Date.now() > 5 * 60 * 1000) {
+    return appToken.wert
+  }
+  if (!systemMailKonfiguriert()) {
+    throw new Error(
+      'Systempostfach nicht eingerichtet: MS_CLIENT_ID, MS_CLIENT_SECRET und MS_TENANT_ID fehlen'
+    )
+  }
+
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID(),
+    client_secret: CLIENT_SECRET(),
+    scope: 'https://graph.microsoft.com/.default',
+    grant_type: 'client_credentials',
+  })
+
+  const res = await fetch(`${AUTH_BASE}/${TENANT_ID()}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  })
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error_description?: string }
+    throw new Error(`App-Token fehlgeschlagen: ${err.error_description || res.statusText}`)
+  }
+
+  const daten = (await res.json()) as { access_token: string; expires_in: number }
+  appToken = {
+    wert: daten.access_token,
+    gueltigBis: Date.now() + daten.expires_in * 1000,
+  }
+  return daten.access_token
+}
+
+export interface SystemMail {
+  an: string
+  betreff: string
+  html: string
+  /** Kopie an den zustaendigen Verkaeufer, damit er den Verlauf sieht */
+  kopieAn?: string | null
+  /** Antworten sollen beim Verkaeufer landen, nicht im Sammelpostfach */
+  antwortAn?: string | null
+  anhaenge?: Array<{ name: string; mimeType: string; inhaltBase64: string }>
+}
+
+/**
+ * Verschickt eine Mail ueber das Systempostfach.
+ * Wirft, wenn die App-Berechtigung fehlt – der Aufrufer entscheidet dann,
+ * ob er auf das Postfach des Verkaeufers ausweicht.
+ */
+export async function sendeSystemMail(mail: SystemMail): Promise<void> {
+  const token = await getAppToken()
+  const absender = SYSTEM_ABSENDER()
+
+  const nachricht: Record<string, unknown> = {
+    subject: mail.betreff,
+    body: { contentType: 'HTML', content: mail.html },
+    toRecipients: [{ emailAddress: { address: mail.an } }],
+  }
+  if (mail.kopieAn) {
+    nachricht.ccRecipients = [{ emailAddress: { address: mail.kopieAn } }]
+  }
+  if (mail.antwortAn) {
+    nachricht.replyTo = [{ emailAddress: { address: mail.antwortAn } }]
+  }
+  if (mail.anhaenge?.length) {
+    nachricht.attachments = mail.anhaenge.map((a) => ({
+      '@odata.type': '#microsoft.graph.fileAttachment',
+      name: a.name,
+      contentType: a.mimeType,
+      contentBytes: a.inhaltBase64,
+    }))
+  }
+
+  const res = await fetch(
+    `${GRAPH_BASE}/users/${encodeURIComponent(absender)}/sendMail`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: nachricht, saveToSentItems: true }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } }
+    const code = err.error?.code ?? ''
+    const text = err.error?.message ?? res.statusText
+    // Die haeufigste Ursache verstaendlich machen
+    if (code === 'ErrorAccessDenied' || res.status === 403) {
+      throw new Error(
+        `Zugriff verweigert beim Senden als ${absender}. ` +
+          'Vermutlich fehlt in der Azure-App die Anwendungsberechtigung Mail.Send ' +
+          `mit Administratorzustimmung, oder eine Application Access Policy sperrt das Postfach. (${text})`
+      )
+    }
+    throw new Error(`Systemversand fehlgeschlagen (${res.status}): ${text}`)
+  }
+}
+
+/** Prueft die Einrichtung, ohne eine Mail zu verschicken. */
+export async function pruefeSystempostfach(): Promise<{
+  konfiguriert: boolean
+  absender: string
+  tokenOk: boolean
+  postfachOk: boolean
+  meldung: string
+}> {
+  const absender = SYSTEM_ABSENDER()
+  if (!systemMailKonfiguriert()) {
+    return {
+      konfiguriert: false,
+      absender,
+      tokenOk: false,
+      postfachOk: false,
+      meldung:
+        'MS_CLIENT_ID, MS_CLIENT_SECRET oder MS_TENANT_ID fehlen. MS_TENANT_ID muss die echte Tenant-ID sein, nicht "common".',
+    }
+  }
+
+  let token: string
+  try {
+    token = await getAppToken()
+  } catch (err) {
+    return {
+      konfiguriert: true,
+      absender,
+      tokenOk: false,
+      postfachOk: false,
+      meldung: err instanceof Error ? err.message : String(err),
+    }
+  }
+
+  // Postfach lesen – zeigt, ob die Anwendungsberechtigung greift
+  const res = await fetch(`${GRAPH_BASE}/users/${encodeURIComponent(absender)}?$select=mail,displayName`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } }
+    return {
+      konfiguriert: true,
+      absender,
+      tokenOk: true,
+      postfachOk: false,
+      meldung:
+        `Das Postfach ${absender} ist nicht erreichbar: ${err.error?.message ?? res.statusText}. ` +
+        'Prüfen Sie, ob die Adresse existiert und ob die Anwendungsberechtigung User.Read.All bzw. Mail.Send erteilt wurde.',
+    }
+  }
+
+  const profil = (await res.json()) as { displayName?: string; mail?: string }
+  return {
+    konfiguriert: true,
+    absender,
+    tokenOk: true,
+    postfachOk: true,
+    meldung: `Verbunden mit ${profil.displayName ?? absender} (${profil.mail ?? absender}).`,
+  }
+}
+
 // ── User Profile holen ──
 
 export async function getUserProfile(accessToken: string) {

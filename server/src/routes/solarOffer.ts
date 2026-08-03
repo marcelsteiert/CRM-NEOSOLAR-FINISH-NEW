@@ -122,42 +122,42 @@ ${d.bodyHtml}
     let versandStatus: 'SENT' | 'KEINE_VERBINDUNG' | 'FAILED' = 'KEINE_VERBINDUNG'
     let versandFehler: string | null = null
 
+    let versandAbsender: string | null = null
     if (!d.nurAblegen) {
-      const { data: conn } = await supabase
-        .from('outlook_connections')
-        .select('id, email')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle()
-
-      if (conn) {
-        try {
-          const { graphPost } = await import('../lib/outlookClient.js')
-          await graphPost(conn.id, '/me/sendMail', {
-            message: {
-              subject: d.subject,
-              body: { contentType: 'HTML', content: mailHtml },
-              toRecipients: [{ emailAddress: { address: kontakt.email } }],
-            },
-            saveToSentItems: true,
-          })
+      try {
+        // Der Verkaeufer loest den Versand selbst aus, deshalb bevorzugt sein
+        // eigenes Postfach. Ohne Verbindung uebernimmt info@neosolar.ch.
+        const { versendeMail } = await import('../lib/mailVersand.js')
+        const erg = await versendeMail({
+          an: kontakt.email,
+          betreff: d.subject,
+          html: mailHtml,
+          verkaeuferId: userId,
+          bevorzugtVerkaeufer: true,
+        })
+        versandAbsender = erg.absender
+        if (erg.weg === 'KEINER') {
+          versandStatus = erg.fehler ? 'FAILED' : 'KEINE_VERBINDUNG'
+          versandFehler = erg.fehler
+          if (erg.fehler) console.error('[Offertenversand] fehlgeschlagen:', erg.fehler)
+        } else {
           versandStatus = 'SENT'
-        } catch (err) {
-          versandFehler = err instanceof Error ? err.message : String(err)
-          versandStatus = 'FAILED'
-          console.error('[Offertenversand] Graph-Versand fehlgeschlagen:', versandFehler)
         }
+      } catch (err) {
+        versandFehler = err instanceof Error ? err.message : String(err)
+        versandStatus = 'FAILED'
+        console.error('[Offertenversand] fehlgeschlagen:', versandFehler)
       }
     }
 
     // ── Aktivitaet protokollieren ──
     const protokoll =
       versandStatus === 'SENT'
-        ? `Richtofferte per E-Mail an ${kontakt.email} gesendet`
+        ? `Richtofferte per E-Mail an ${kontakt.email} gesendet` +
+          (versandAbsender ? ` (Absender ${versandAbsender})` : '')
         : versandStatus === 'FAILED'
           ? `Versand der Richtofferte an ${kontakt.email} fehlgeschlagen: ${versandFehler}`
-          : `Richtofferte abgelegt, kein Versand (keine Outlook-Verbindung des Verkaeufers)`
+          : `Richtofferte abgelegt, kein Versand (kein Postfach eingerichtet)`
 
     await supabase.from('activities').insert({
       contact_id: d.contactId,

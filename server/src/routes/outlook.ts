@@ -7,6 +7,7 @@ import { AppError } from '../middleware/errorHandler.js'
 import {
   getAuthUrl, exchangeCodeForTokens, getUserProfile,
   graphGet, graphPost, graphPatch, graphDelete,
+  pruefeSystempostfach, sendeSystemMail,
 } from '../lib/outlookClient.js'
 import { syncEmails, syncCalendar, matchEmailsToContacts } from '../lib/outlookSync.js'
 
@@ -19,6 +20,67 @@ function getUser(req: Request): { userId: string; role: string } {
   if (!u?.userId) throw new AppError('Nicht authentifiziert', 401)
   return { userId: u.userId, role: u.role ?? '' }
 }
+
+function nurAdmin(req: Request) {
+  const { role } = getUser(req)
+  if (role !== 'ADMIN' && role !== 'GL') {
+    throw new AppError('Nur fuer Admin und Geschaeftsleitung', 403)
+  }
+}
+
+// ── Systempostfach (info@neosolar.ch) ────────────────────────────────
+
+/**
+ * Zeigt, ob der automatische Mailversand eingerichtet ist.
+ * Verschickt nichts – prueft nur Token und Zugriff auf das Postfach.
+ */
+router.get('/system/status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    nurAdmin(req)
+    const stand = await pruefeSystempostfach()
+
+    // Wie viele Verkaeufer haben zusaetzlich ihr eigenes Postfach verbunden?
+    const { count } = await supabase
+      .from('outlook_connections')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+
+    res.json({
+      data: {
+        ...stand,
+        verkaeuferVerbindungen: count ?? 0,
+        bereitFuerAutomatik: stand.postfachOk,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+/** Verschickt eine Testmail ueber das Systempostfach. */
+router.post('/system/test', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    nurAdmin(req)
+    const ziel = z.object({ an: z.string().email() }).safeParse(req.body)
+    if (!ziel.success) throw new AppError('Bitte eine gueltige Empfaengeradresse angeben', 400)
+
+    const absender = process.env.MS_SENDER_ADDRESS ?? 'info@neosolar.ch'
+    await sendeSystemMail({
+      an: ziel.data.an,
+      betreff: 'Testnachricht aus dem NEOSOLAR CRM',
+      html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">
+<p>Diese Nachricht bestätigt, dass das CRM über <b>${absender}</b> versenden kann.</p>
+<p>Ab jetzt laufen automatische Nachfassmails und Offerten über dieses Postfach,
+auch wenn der zuständige Verkäufer sein eigenes Outlook nicht verbunden hat.</p>
+<p style="color:#6B7280;font-size:12px">Gesendet am ${new Date().toLocaleString('de-CH')}</p>
+</div>`,
+    })
+
+    res.json({ data: { gesendet: true, an: ziel.data.an, absender } })
+  } catch (err) {
+    next(err)
+  }
+})
 
 async function getUserConnection(userId: string) {
   const { data } = await supabase

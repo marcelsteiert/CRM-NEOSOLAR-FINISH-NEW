@@ -4,7 +4,7 @@ Jeder Arbeitstag mit allen Änderungen dieses Tages, neueste zuerst.
 Das Projekt hat keine Versionsnummern – ausgeliefert wird laufend auf
 https://neosolar-crm.com.
 
-**364 Änderungen** vom Dienstag, 3. März 2026 bis Sonntag, 2. August 2026
+**365 Änderungen** vom Dienstag, 3. März 2026 bis Sonntag, 2. August 2026
 an 43 Arbeitstagen.
 
 Erzeugt mit `node tools/changelog.mjs`. Der aktuelle Arbeitsstand steht in
@@ -20,6 +20,7 @@ Erzeugt mit `node tools/changelog.mjs`. Der aktuelle Arbeitsstand steht in
 
 - Projektstand und Gespraechsverlauf im Repository `fe76890`
 - Changelog ergaenzt, CLAUDE.md auf den aktuellen Stand gebracht `2ff8aa3`
+- Changelog tagesgenau aus der Git-Historie erzeugt `d8ccbff`
 
 ### Samstag, 1. August 2026
 
