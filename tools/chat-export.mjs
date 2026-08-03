@@ -36,6 +36,11 @@ const GEHEIM = [
   [/((?:passwort|password|kennwort|pw|token)\s*[=:]\s+)\S{4,}/gi, '$1<entfernt>'],
   // Supabase-Projektschluessel in URL-Form
   [/(apikey\s*[=:]\s*)\S{20,}/gi, '$1<entfernt>'],
+  // Freie Nennung wie "wert: ..." oder "secret: ..." direkt nach einem Label.
+  // Muss vor dem Tilde-Muster stehen, sonst maskieren beide dieselbe Stelle.
+  [/((?:wert|value|secret|geheimnis|schluessel|schlüssel|key)\s*[=:]\s*)\S{16,}/gi, '$1<entfernt>'],
+  // Azure-Clientgeheimnisse: rund 40 Zeichen, enthalten fast immer eine Tilde
+  [/\b[A-Za-z0-9._~-]{2,}~[A-Za-z0-9._~-]{25,}\b/g, '<Azure-Geheimnis entfernt>'],
 ]
 
 function saeubern(text) {
