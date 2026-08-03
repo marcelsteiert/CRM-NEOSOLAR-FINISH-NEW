@@ -37,6 +37,8 @@ import adminProjectTrackingRouter from './routes/admin/projectTracking.js'
 import adminDuplicatesRouter from './routes/admin/duplicates.js'
 import adminCalculatorPricingRouter from './routes/admin/calculatorPricing.js'
 import publicCalculatorRouter from './routes/publicCalculator.js'
+import publicTrackingRouter from './routes/publicTracking.js'
+import adminCampaignsRouter from './routes/admin/campaigns.js'
 import solarOfferRouter from './routes/solarOffer.js'
 import followUpRouter from './routes/followUp.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
@@ -107,6 +109,28 @@ export function createApp() {
   app.use('/api/v1/follow-up', followUpRouter)
   // Solarrechner auf der Homepage: Preise lesen + Richtofferte anfragen
   app.use('/api/v1/public/calculator', publicCalculatorRouter)
+  // Kampagnen: Zaehlpixel, Klickweiterleitung und Abmeldung. Bewusst kurz
+  // gehalten, weil die Adressen in jeder Mail stehen.
+  app.use('/api/v1/t', publicTrackingRouter)
+
+  // Versandlauf fuer Kampagnen, von der Scheduled Function aufgerufen.
+  // Eigener Token-Schutz wie beim Nachfassen.
+  app.post('/api/v1/campaigns-run', async (req, res) => {
+    const token = req.headers['x-sync-token']
+    if (!process.env.SYNC_SECRET_TOKEN || token !== process.env.SYNC_SECRET_TOKEN) {
+      return res.status(401).json({ error: 'Nicht berechtigt' })
+    }
+    try {
+      const { fuehreVersandAus } = await import('./routes/admin/campaigns.js')
+      const ergebnis = await fuehreVersandAus()
+      console.log('[Kampagnen]', JSON.stringify(ergebnis))
+      res.json({ data: ergebnis })
+    } catch (err) {
+      const meldung = err instanceof Error ? err.message : String(err)
+      console.error('[Kampagnen] Lauf fehlgeschlagen:', meldung)
+      res.status(500).json({ error: meldung })
+    }
+  })
   // Geschuetzte Routes (authMiddleware pro Route)
   app.use('/api/v1/contacts', authMiddleware, contactsRouter)
   app.use('/api/v1/leads', authMiddleware, leadsRouter)
@@ -169,6 +193,7 @@ export function createApp() {
   app.use('/api/v1/admin/db-export', ...adminGuard, adminDbExportRouter)
   app.use('/api/v1/admin/appointment-kanban', ...adminGuard, adminAppointmentKanbanRouter)
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
+  app.use('/api/v1/admin/campaigns', ...adminGuard, adminCampaignsRouter)
   app.use('/api/v1/admin/no-show-kanban', ...adminGuard, adminNoShowKanbanRouter)
   app.use('/api/v1/admin/project-kanban', ...adminGuard, adminProjectKanbanRouter)
   // Project-Tracking: authentifiziert; Modul-Check (baustellen/kalkulation) macht der Router selbst

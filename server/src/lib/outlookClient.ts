@@ -275,6 +275,14 @@ export interface SystemMail {
   /** Antworten sollen beim Verkaeufer landen, nicht im Sammelpostfach */
   antwortAn?: string | null
   anhaenge?: Array<{ name: string; mimeType: string; inhaltBase64: string }>
+  /**
+   * Abmelde-URL fuer den List-Unsubscribe-Kopf.
+   *
+   * Damit bieten Outlook, Gmail und Apple Mail einen eigenen
+   * Abmeldeknopf an. Wer den benutzt, markiert die Mail nicht als Spam –
+   * das schont die Reputation der Absenderdomain deutlich.
+   */
+  listUnsubscribe?: string | null
 }
 
 /**
@@ -304,6 +312,15 @@ export async function sendeSystemMail(mail: SystemMail): Promise<void> {
       contentType: a.mimeType,
       contentBytes: a.inhaltBase64,
     }))
+  }
+  if (mail.listUnsubscribe) {
+    // Graph laesst nur wenige Kopfzeilen zu; diese beiden gehoeren dazu.
+    // One-Click sorgt dafuer, dass ein Klick genuegt und der Empfaenger
+    // nicht auf einer Webseite landet, die er wegklickt.
+    nachricht.internetMessageHeaders = [
+      { name: 'x-list-unsubscribe', value: `<${mail.listUnsubscribe}>` },
+      { name: 'x-list-unsubscribe-post', value: 'List-Unsubscribe=One-Click' },
+    ]
   }
 
   const res = await fetch(

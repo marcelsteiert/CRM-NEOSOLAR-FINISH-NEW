@@ -1,4 +1,6 @@
 import {
+  Repeat,
+  Megaphone,
   Users,
   MapPin,
   GitBranch,
@@ -39,6 +41,8 @@ export type AdminSection =
   | 'notifications'
   | 'branding'
   | 'rechnerPreise'
+  | 'mailAutomatik'
+  | 'kampagnen'
   | 'ai'
   | 'audit'
   | 'database'
@@ -92,6 +96,13 @@ const navGroups: AdminNavGroup[] = [
       { id: 'notifications', icon: Bell, label: 'Benachrichtigungen', color: '#F87171' },
       { id: 'branding', icon: Palette, label: 'Firmen-Branding', color: '#F59E0B' },
       { id: 'rechnerPreise', icon: Calculator, label: 'Rechner-Preise', color: '#FBBF24' },
+    ],
+  },
+  {
+    label: 'E-Mail',
+    items: [
+      { id: 'mailAutomatik', icon: Repeat, label: 'Automatisches Nachfassen', color: '#34D399' },
+      { id: 'kampagnen', icon: Megaphone, label: 'Kampagnen', color: '#60A5FA' },
     ],
   },
   {

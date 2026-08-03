@@ -60,3 +60,6 @@
 # Deklarativ hier, damit der Zeitplan auch bei manuellen Deploys greift.
 [functions."followup"]
   schedule = "15 7 * * 1-5"
+
+[functions."kampagnen"]
+  schedule = "5 6-16 * * 1-5"

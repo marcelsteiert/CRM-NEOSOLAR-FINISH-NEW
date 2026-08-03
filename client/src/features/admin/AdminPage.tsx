@@ -22,6 +22,8 @@ import AppointmentKanbanSection from './components/AppointmentKanbanSection'
 import DealKanbanSection from './components/DealKanbanSection'
 import NoShowKanbanSection from './components/NoShowKanbanSection'
 import ProjectKanbanSection from './components/ProjectKanbanSection'
+import MailAutomatikSection from './components/MailAutomatikSection'
+import KampagnenSection from './components/KampagnenSection'
 
 const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   users: { title: 'Benutzer & Rollen', desc: 'Benutzer verwalten, Rollen und Modul-Berechtigungen zuweisen' },
@@ -44,6 +46,9 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   audit: { title: 'Audit-Log', desc: 'Systemweites Protokoll aller Änderungen' },
   database: { title: 'Datenbank & Export', desc: 'Backup, Massenexport und API-Zugriff' },
   passwords: { title: 'Geteilte Passwörter', desc: 'Team-Passwörter verwalten und Rollen-Berechtigungen setzen' },
+  rechnerPreise: { title: 'Rechner-Preise', desc: 'Preise und Annahmen des Verkaufsrechners pflegen' },
+  mailAutomatik: { title: 'Automatisches Nachfassen', desc: 'Ablauf, Texte und Freigabe für Mails an Kunden mit offenem Angebot' },
+  kampagnen: { title: 'Kampagnen', desc: 'Massenversand an Leads mit Tagesbudget, Abmeldelink und Auswertung' },
 }
 
 const sectionComponents: Record<AdminSection, React.ComponentType> = {
@@ -68,6 +73,8 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   audit: AuditLogSection,
   database: DatabaseExportSection,
   passwords: SharedPasswordsSection,
+  mailAutomatik: MailAutomatikSection,
+  kampagnen: KampagnenSection,
 }
 
 export default function AdminPage() {
