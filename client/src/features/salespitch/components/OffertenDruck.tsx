@@ -172,6 +172,16 @@ export default function OffertenDruck({
   return (
     <div id="offerte-huelle" className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <style>{`
+        /* Am Bildschirm die Seitengrenzen zeigen – so sieht man vor dem
+           Drucken, was auf welchem Blatt landet. */
+        @media screen {
+          #offerte-druck .offerte-seite + .offerte-seite {
+            margin-top: 34px;
+            padding-top: 34px;
+            border-top: 2px dashed #D1D5DB;
+          }
+        }
+
         @media print {
           /*
            * Der Bildschirm zeigt die Offerte in einer festen Huelle mit
@@ -203,17 +213,25 @@ export default function OffertenDruck({
             box-shadow: none !important; border-radius: 0 !important;
           }
           .offerte-keindruck { display: none !important; }
-          .offerte-seitenumbruch {
-            page-break-before: always;
+
+          /*
+           * Jeder Abschnitt ist eine eigene Seite. Der Umbruch haengt am
+           * Container, nicht an einem leeren Trenner-Div – so kann kein
+           * Inhalt versehentlich ueber die Kante rutschen.
+           */
+          .offerte-seite {
             break-before: page;
+            page-break-before: always;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .offerte-seite:first-of-type {
+            break-before: auto;
+            page-break-before: auto;
           }
           /* Ueberschriften bleiben bei ihrem Abschnitt */
           h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
-          /* Einzelne Zeilen und Bloecke nie mittendurch trennen. Auf die
-             ganze Tabelle bezogen waere es zu streng – eine lange Liste
-             muss umbrechen duerfen, nur eben zwischen den Zeilen. */
           tr, img, dl > div { break-inside: avoid; page-break-inside: avoid; }
-          #bestellseite { break-inside: avoid; page-break-inside: avoid; }
 
           /* Nur-Bestellung-Modus: alle Geschwister der Bestellseite raus */
           #offerte-druck.nur-bestellung > *:not(#bestellseite) { display: none !important; }
@@ -267,6 +285,7 @@ export default function OffertenDruck({
         className={`mx-auto my-6 p-10${nurBestellung ? ' nur-bestellung' : ''}`}
         style={{ maxWidth: 820, background: '#FFFFFF', color: '#111827', fontFamily: 'Outfit, system-ui, sans-serif' }}
       >
+        <section className="offerte-seite">
         {/* Kopf mit Logo */}
         <div className="flex justify-between items-start mb-7 pb-5" style={{ borderBottom: '3px solid #F59E0B' }}>
           <div>
@@ -474,7 +493,8 @@ export default function OffertenDruck({
         {/* ── Seite 2: Leistungsumfang ──
             Eigene Seite, weil die Liste bei grossen Anlagen laenger wird
             und sonst auf die erste Seite drueckt. */}
-        <div className="offerte-seitenumbruch" />
+        </section>
+        <section className="offerte-seite">
 
         {/* Leistungsumfang */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Leistungsumfang</h2>
@@ -490,7 +510,8 @@ export default function OffertenDruck({
         </table>
 
         {/* ── Seite 2: Ihre Investition ── */}
-        <div className="offerte-seitenumbruch" />
+        </section>
+        <section className="offerte-seite">
         <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihre Investition</h1>
 
         {/* Preis */}
@@ -685,7 +706,8 @@ export default function OffertenDruck({
         </p>
 
         {/* ── Seite 3: Ihr PV-System ── */}
-        <div className="offerte-seitenumbruch" />
+        </section>
+        <section className="offerte-seite">
         <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihr PV-System</h1>
 
         {/* Kennzahlen-Ringe und Objektdaten – Aufbau wie in der bisherigen Offerte */}
@@ -859,10 +881,11 @@ export default function OffertenDruck({
           ))}
         </div>
 
+        </section>
+
         {/* ── Projektbericht: nur wenn das Dach geplant wurde ── */}
         {dach && (
-          <>
-            <div className="offerte-seitenumbruch" />
+          <section className="offerte-seite">
             <h1 className="text-[20px] font-bold mb-1 mt-1" style={{ color: '#111827' }}>
               Projektbericht Dachbelegung
             </h1>
@@ -1048,11 +1071,11 @@ export default function OffertenDruck({
               Dachaufbauten und Verschattung können die Belegung noch verändern.
               Quellen: swisstopo swissimage, BFE Sonnendach.
             </p>
-          </>
+          </section>
         )}
 
-        {/* ── Seite 4: Unabhängigkeit und Eigenverbrauch ── */}
-        <div className="offerte-seitenumbruch" />
+        {/* ── Unabhängigkeit und Eigenverbrauch ── */}
+        <section className="offerte-seite">
         <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Unabhängigkeit und Eigenverbrauch</h1>
 
         <h2 className="text-[14px] font-bold mb-3 mt-2" style={{ color: '#111827' }}>
@@ -1130,7 +1153,8 @@ export default function OffertenDruck({
         </div>
 
         {/* ── Seite 5: Wirtschaftlichkeit Ihrer Anlage ── */}
-        <div className="offerte-seitenumbruch" />
+        </section>
+        <section className="offerte-seite">
         <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Wirtschaftlichkeit Ihrer Anlage</h1>
 
         {/* Amortisation als Verlauf */}
@@ -1334,7 +1358,8 @@ export default function OffertenDruck({
         </table>
 
         {/* ── Seite 6: Ihre Sicherheiten ── */}
-        <div className="offerte-seitenumbruch" />
+        </section>
+        <section className="offerte-seite">
         <h1 className="text-[20px] font-bold mb-5 mt-1" style={{ color: '#111827' }}>Ihre Sicherheiten</h1>
 
         {/* Vertragliche Sicherheiten – Formulierungen aus dem NEOSOLAR-Werkvertrag */}
@@ -1429,12 +1454,13 @@ export default function OffertenDruck({
         <div className="pt-6 text-[10px]" style={{ borderTop: '1px solid #E5E7EB', color: '#9CA3AF' }}>
           NEOSOLAR AG · Richtofferte vom {heute} · Die Bestellung finden Sie auf der letzten Seite.
         </div>
+        </section>
 
         {/* ══════════════ Bestellseite ══════════════
             Eigenes Blatt, damit der Kunde nur diese Seite unterschrieben
             zurueckschicken muss. Alle Betraege stammen aus derselben
             Berechnung wie die Offerte. */}
-        <div id="bestellseite" className="offerte-seitenumbruch">
+        <section id="bestellseite" className="offerte-seite">
           <div className="flex justify-between items-start mb-6 pb-4" style={{ borderBottom: '3px solid #F59E0B' }}>
             <img src="/praesentation/logo.png" alt="NEOSOLAR" style={{ height: 38, objectFit: 'contain' }} />
             <div className="text-right text-[9px]" style={{ color: '#6B7280', lineHeight: 1.7 }}>
@@ -1645,7 +1671,7 @@ export default function OffertenDruck({
             Bitte senden Sie die unterzeichnete Bestellung an info@neosolar.ch oder geben Sie sie Ihrem
             Berater mit. Es gilt Schweizer Recht, Gerichtsstand Herisau.
           </div>
-        </div>
+        </section>
       </div>
     </div>
   )
