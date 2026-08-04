@@ -14,7 +14,12 @@
 
 const A4_BREITE_MM = 210
 const A4_HOEHE_MM = 297
-const RAND_MM = 12
+/**
+ * Kein zusaetzlicher Rand: Die Seiten bringen ihren Innenabstand selbst
+ * mit, er ist im gerenderten Bild schon enthalten. Ein Rand hier oben
+ * wuerde ihn verdoppeln.
+ */
+const RAND_MM = 0
 
 export interface PdfErgebnis {
   blob: Blob
@@ -50,21 +55,24 @@ export async function offerteAlsPdf(
   const huelle = element.parentElement
   const vorherigerScroll = huelle?.scrollTop ?? 0
   if (huelle) huelle.scrollTop = 0
+  // Schatten und Abstaende der Bildschirmansicht abschalten
+  element.classList.add('pdf-lauf')
 
   let seiten = 0
   try {
     for (const abschnitt of abschnitte) {
+      /*
+       * Keine Groessenangaben mitgeben: html2canvas misst das Element
+       * selbst und erfasst dabei Innenabstand und Rahmen korrekt. Eigene
+       * Werte fuer width und height haben zuvor die letzte Zeile
+       * abgeschnitten, weil scrollHeight den Innenabstand unten nicht
+       * immer enthaelt.
+       */
       const canvas = await html2canvas(abschnitt, {
         scale: 2,
         backgroundColor: '#FFFFFF',
         useCORS: true,
         logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        width: abschnitt.scrollWidth,
-        height: abschnitt.scrollHeight,
-        windowWidth: abschnitt.scrollWidth,
-        windowHeight: abschnitt.scrollHeight,
       })
       if (canvas.height < 10) continue
 
@@ -82,9 +90,12 @@ export async function offerteAlsPdf(
         hoehe = nutzHoehe
         breite = hoehe / seitenverhaeltnis
       }
-      // Waagrecht mittig, sobald verkleinert wurde
+      // Waagrecht mittig, sobald verkleinert wurde; senkrecht oben bündig
       const x = RAND_MM + (nutzBreite - breite) / 2
 
+      // Weisser Grund, damit bei verkleinerten Seiten kein Grau durchscheint
+      pdf.setFillColor(255, 255, 255)
+      pdf.rect(0, 0, A4_BREITE_MM, A4_HOEHE_MM, 'F')
       pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', x, RAND_MM, breite, hoehe)
       seiten++
     }
@@ -92,6 +103,7 @@ export async function offerteAlsPdf(
     versteckt.forEach((el) => {
       el.style.display = ''
     })
+    element.classList.remove('pdf-lauf')
     if (huelle) huelle.scrollTop = vorherigerScroll
   }
 

@@ -172,14 +172,34 @@ export default function OffertenDruck({
   return (
     <div id="offerte-huelle" className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <style>{`
-        /* Am Bildschirm die Seitengrenzen zeigen – so sieht man vor dem
-           Drucken, was auf welchem Blatt landet. */
+        /*
+         * Am Bildschirm erscheint jede Seite als eigenes Blatt. Das zeigt
+         * ohne Erklaerung, was auf welchem Papier landet – deutlich besser
+         * als eine Trennlinie quer durch ein durchgehendes Dokument.
+         */
         @media screen {
-          #offerte-druck .offerte-seite + .offerte-seite {
-            margin-top: 34px;
-            padding-top: 34px;
-            border-top: 2px dashed #D1D5DB;
+          #offerte-druck {
+            background: transparent !important;
+            padding: 0 !important;
           }
+          #offerte-druck .offerte-seite {
+            background: #FFFFFF;
+            padding: 42px 44px;
+            margin-bottom: 22px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+          }
+        }
+
+        /*
+         * Waehrend das PDF entsteht, rendert html2canvas die
+         * Bildschirmansicht. Schatten und Rundungen gehoeren dort nicht
+         * hin – der Innenabstand dagegen schon, er wird zum Seitenrand.
+         */
+        #offerte-druck.pdf-lauf .offerte-seite {
+          box-shadow: none;
+          border-radius: 0;
+          margin-bottom: 0;
         }
 
         @media print {
@@ -224,6 +244,11 @@ export default function OffertenDruck({
             page-break-before: always;
             break-inside: avoid;
             page-break-inside: avoid;
+            /* Am Bildschirm sind es Blaetter mit Abstand, im Druck nicht */
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            margin-bottom: 0 !important;
+            padding: 0 !important;
           }
           .offerte-seite:first-of-type {
             break-before: auto;
