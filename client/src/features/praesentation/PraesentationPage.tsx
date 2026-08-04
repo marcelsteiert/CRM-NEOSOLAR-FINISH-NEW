@@ -8,6 +8,7 @@ import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
 import { DEFAULT_CONFIG, DEFAULT_INPUT } from '../../lib/calculatorConfig'
 import RechnerPanel from '../salespitch/components/RechnerPanel'
 import Dachplaner from '../salespitch/components/Dachplaner'
+import FolienKundenkontakt from '../salespitch/components/FolienKundenkontakt'
 import type { DachErgebnis, DachPlanung } from '../salespitch/components/Dachplaner'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
@@ -55,6 +56,7 @@ type FolienId =
   | 'speicherUpgrade' | 'betreuung' | 'empfehlung' | 'paket' | 'aktion'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
+  | 'kundenkontakt'
 
 interface Variante {
   id: string
@@ -134,6 +136,65 @@ const VARIANTEN: Variante[] = [
       { id: 'entscheidung', titel: 'Ihre Entscheidung' },
       { id: 'empfehlung', titel: 'Weiterempfehlung' },
       { id: 'kontakt', titel: 'Fragen offen?' },
+    ],
+  },
+  {
+    /**
+     * Dieselbe Strecke wie die komplette Beratung, nur ohne Verkaeufer.
+     *
+     * Zwei Unterschiede, mehr nicht: Die Folien, die Kundendaten brauchen,
+     * fallen weg – wir haben sie ja noch nicht. Und am Schluss traegt der
+     * Kunde sie selbst ein, statt dass der Berater das Angebot anlegt.
+     */
+    id: 'kunde',
+    name: 'Für Sie zum Durchgehen',
+    beschreibung:
+      'Dieselbe Beratung wie im Termin, zum Selberdurchgehen. Am Schluss tragen Sie Ihre Daten ein und erhalten Ihre Offerte.',
+    // Bewusst dieselbe Liste wie oben, nur mit der Kontaktfolie am Schluss
+    // statt der Verkaeufer-Entscheidungsfolie.
+    folien: [
+      { id: 'titel', titel: 'Willkommen' },
+      { id: 'ablauf', titel: 'Ablauf' },
+      { id: 'rueckblick', titel: 'Was bisher passiert ist' },
+      { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
+      { id: 'strompreis', titel: 'Strompreis-Entwicklung' },
+      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
+      { id: 'warum', titel: 'Warum NEOSOLAR' },
+      { id: 'team', titel: 'Das Team' },
+      { id: 'referenzen', titel: 'Referenzen' },
+      { id: 'modul', titel: 'Solarmodule' },
+      { id: 'wechselrichter', titel: 'Wechselrichter' },
+      { id: 'speicher', titel: 'Speicher' },
+      { id: 'wallbox', titel: 'Wallbox' },
+      { id: 'app', titel: 'Die App' },
+      { id: 'dachanalyse', titel: 'Dachanalyse' },
+      { id: 'dachplaner', titel: 'Ihr Dach belegen' },
+      { id: 'rechner', titel: 'Ihre Anlage planen' },
+      { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
+      { id: 'energiefluss', titel: 'Ihr Energiefluss' },
+      { id: 'motive', titel: 'Ihr Nutzen' },
+      { id: 'zusatzrechner', titel: 'Rechnen wir es durch' },
+      { id: 'bausteine', titel: 'Woher das Geld kommt' },
+      { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
+      { id: 'monatsvergleich', titel: 'Pro Monat' },
+      { id: 'amortisation', titel: 'Der Wendepunkt' },
+      { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
+      { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
+      { id: 'aktion', titel: 'Aktion' },
+      { id: 'speicherUpgrade', titel: 'Speicher-Ausbau' },
+      { id: 'paket', titel: 'Zufriedenheitspaket' },
+      { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
+      { id: 'planung', titel: 'Planungssicherheit' },
+      { id: 'betreuung', titel: 'Ihre Betreuung' },
+      { id: 'unterschied', titel: 'Offerten vergleichen' },
+      { id: 'fragen', titel: 'Häufige Fragen' },
+      { id: 'montage', titel: 'Die Montage' },
+      { id: 'workflow', titel: 'Unser Ablauf' },
+      { id: 'zeitplan', titel: 'Umsetzung' },
+      { id: 'empfehlung', titel: 'Weiterempfehlung' },
+      // Statt der Verkaeufer-Entscheidungsfolie: der Kunde traegt seine
+      // Daten ein. Danach stehen sie in der Offerte, die er drucken kann.
+      { id: 'kundenkontakt', titel: 'Ihre Offerte anfordern' },
     ],
   },
   {
@@ -657,6 +718,17 @@ export default function PraesentationPage() {
         return <ProduktFolien.montage />
       case 'workflow':
         return <ProduktFolien.workflow />
+      case 'kundenkontakt':
+        return (
+          <FolienKundenkontakt
+            input={input}
+            ergebnis={ergebnis}
+            dach={dach}
+            adresse={dach?.adresse ?? kontakt?.address}
+            rid={suchparameter.get('rid')}
+            onKontakt={setKontakt}
+          />
+        )
       case 'dachplaner':
         return (
           <Dachplaner

@@ -112,8 +112,10 @@ export default function App() {
 
           {/* Solarrechner fuer die Homepage – oeffentlich, ohne Login */}
           <Route path="/rechner" element={<PublicCalculatorPage />} />
-          {/* Selbstplaner: der Kunde belegt sein Dach und rechnet selbst */}
-          <Route path="/planer" element={<KundenPlanerPage />} />
+          {/* Selbstplaner: dieselbe Beratung wie im Termin, nur ohne
+              Verkaeufer. Der kurze Weg bleibt unter /schnellrechner. */}
+          <Route path="/planer" element={<Navigate to="/praesentation/kunde" replace />} />
+          <Route path="/schnellrechner" element={<KundenPlanerPage />} />
 
           {/* Praesentationen – per Link teilbar, ohne Login praesentierbar */}
           <Route path="/praesentation" element={<PraesentationPage />} />
