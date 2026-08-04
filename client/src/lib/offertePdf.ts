@@ -40,6 +40,12 @@ export async function offerteAlsPdf(
     el.style.display = 'none'
   })
 
+  // Das Dokument liegt in einem scrollbaren Fenster. Ohne die volle Hoehe
+  // erfasst html2canvas nur den sichtbaren Ausschnitt – das PDF haette dann
+  // genau eine Seite.
+  const vorherigerScroll = element.parentElement?.scrollTop ?? 0
+  if (element.parentElement) element.parentElement.scrollTop = 0
+
   let canvas: HTMLCanvasElement
   try {
     canvas = await html2canvas(element, {
@@ -47,21 +53,42 @@ export async function offerteAlsPdf(
       backgroundColor: '#FFFFFF',
       useCORS: true,
       logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
       windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
     })
   } finally {
     versteckt.forEach((el) => {
       el.style.display = ''
     })
+    if (element.parentElement) element.parentElement.scrollTop = vorherigerScroll
   }
 
-  // Schnittkanten aus den Seitenumbruechen ableiten
-  const oben = element.getBoundingClientRect().top
+  /*
+   * Schnittkanten aus den Seitenumbruechen ableiten.
+   *
+   * offsetTop statt getBoundingClientRect: es zaehlt der Abstand im
+   * Dokument, nicht die Lage im Fenster. Sonst haengen die Schnitte davon
+   * ab, wie weit der Betrachter gerade gescrollt hat.
+   */
   const skala = canvas.height / element.scrollHeight
+  const abstandVonOben = (el: HTMLElement): number => {
+    let y = 0
+    let k: HTMLElement | null = el
+    while (k && k !== element) {
+      y += k.offsetTop
+      k = k.offsetParent as HTMLElement | null
+    }
+    return y
+  }
+
   const schnitte = [0]
   element.querySelectorAll<HTMLElement>('.offerte-seitenumbruch').forEach((um) => {
-    const y = Math.round((um.getBoundingClientRect().top - oben) * skala)
-    if (y > schnitte[schnitte.length - 1] + 40) schnitte.push(y)
+    const y = Math.round(abstandVonOben(um) * skala)
+    if (y > schnitte[schnitte.length - 1] + 40 && y < canvas.height - 40) schnitte.push(y)
   })
   schnitte.push(canvas.height)
 

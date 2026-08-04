@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Printer, PenLine } from 'lucide-react'
+import { X, Printer, PenLine, Download, Loader2 } from 'lucide-react'
 import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
 import { AUSRICHTUNG_LABELS, DACHTYP_LABELS, KOMPONENTEN } from '../../../lib/calculatorConfig'
 import type { Beduerfnisse } from './BeduerfnisSchritt'
@@ -67,6 +67,39 @@ export default function OffertenDruck({
       window.print()
       setNurBestellung(false)
     }, 80)
+  }
+
+  /**
+   * PDF ohne Umweg ueber den Druckdialog.
+   *
+   * Der Browser-Druck erzeugt zwar auch ein PDF, aber der Kunde muss dafuer
+   * im Dialog das Ziel umstellen und die Kopfzeilen abwaehlen. Ein Klick,
+   * eine fertige Datei ist verlaesslicher.
+   */
+  const [pdfLaeuft, setPdfLaeuft] = useState(false)
+  async function pdfHerunterladen() {
+    const el = document.getElementById('offerte-druck')
+    if (!el) return
+    setPdfLaeuft(true)
+    try {
+      const { offerteAlsPdf } = await import('../../../lib/offertePdf')
+      const name =
+        `Richtofferte_${kunde?.lastName || 'NEOSOLAR'}_${input.kwp}kWp_` +
+        new Date().toISOString().slice(0, 10)
+      const pdf = await offerteAlsPdf(el, name)
+      const url = URL.createObjectURL(pdf.blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = pdf.dateiName
+      a.click()
+      // Der Browser braucht den Verweis noch einen Moment
+      setTimeout(() => URL.revokeObjectURL(url), 4000)
+    } catch (err) {
+      console.error('[Offerte] PDF fehlgeschlagen:', err)
+      alert('Das PDF konnte nicht erstellt werden. Bitte den Knopf «Drucken» verwenden.')
+    } finally {
+      setPdfLaeuft(false)
+    }
   }
 
   const zusatz = input.zusatzPositionen ?? []
@@ -137,22 +170,57 @@ export default function OffertenDruck({
   ]
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
+    <div id="offerte-huelle" className="fixed inset-0 z-[100] overflow-y-auto" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <style>{`
         @media print {
+          /*
+           * Der Bildschirm zeigt die Offerte in einer festen Huelle mit
+           * eigenem Scrollbereich. Beim Drucken muss die weg, sonst endet
+           * das Dokument nach der ersten Seite – der Drucker sieht nur den
+           * sichtbaren Ausschnitt.
+           */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            background: #FFFFFF !important;
+          }
+          #offerte-huelle {
+            position: static !important;
+            overflow: visible !important;
+            height: auto !important;
+            background: #FFFFFF !important;
+          }
+
           body * { visibility: hidden !important; }
           #offerte-druck, #offerte-druck * { visibility: visible !important; }
           #offerte-druck {
             position: absolute !important; left: 0 !important; top: 0 !important;
-            width: 100% !important; max-width: none !important; margin: 0 !important;
+            width: 100% !important; max-width: none !important;
+            margin: 0 !important;
+            /* Innenabstand statt Seitenrand, damit die Kopfzeilen des
+               Browsers verschwinden – siehe @page unten */
+            padding: 14mm 12mm !important;
             box-shadow: none !important; border-radius: 0 !important;
           }
           .offerte-keindruck { display: none !important; }
-          .offerte-seitenumbruch { page-break-before: always; }
+          .offerte-seitenumbruch {
+            page-break-before: always;
+            break-before: page;
+          }
+          /* Ueberschriften und Tabellen nicht mitten durchschneiden */
+          h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
+          table, img { break-inside: avoid; page-break-inside: avoid; }
+
           /* Nur-Bestellung-Modus: alle Geschwister der Bestellseite raus */
           #offerte-druck.nur-bestellung > *:not(#bestellseite) { display: none !important; }
           #offerte-druck.nur-bestellung #bestellseite { page-break-before: auto !important; }
-          @page { size: A4; margin: 16mm 14mm; }
+
+          /*
+           * Rand auf null: nur so laesst Chrome die eigenen Kopf- und
+           * Fusszeilen mit Datum, Titel und URL weg. Der Abstand kommt
+           * oben ueber das Padding.
+           */
+          @page { size: A4; margin: 0; }
         }
       `}</style>
 
@@ -160,11 +228,20 @@ export default function OffertenDruck({
       <div className="offerte-keindruck sticky top-0 flex items-center justify-end gap-2 p-3" style={{ background: 'rgba(6,8,12,0.9)' }}>
         <button
           type="button"
+          onClick={pdfHerunterladen}
+          disabled={pdfLaeuft}
+          className="btn-primary flex items-center gap-2 px-4 py-2 text-[12px] disabled:opacity-50"
+        >
+          {pdfLaeuft ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} strokeWidth={2} />}
+          {pdfLaeuft ? 'PDF wird erstellt …' : 'Als PDF herunterladen'}
+        </button>
+        <button
+          type="button"
           onClick={() => window.print()}
-          className="btn-primary flex items-center gap-2 px-4 py-2 text-[12px]"
+          className="btn-secondary flex items-center gap-2 px-4 py-2 text-[12px]"
         >
           <Printer size={14} strokeWidth={2} />
-          Drucken / als PDF speichern
+          Drucken
         </button>
         <button
           type="button"
