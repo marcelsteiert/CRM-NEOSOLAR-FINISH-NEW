@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import {
   KACHEL_GROESSE, MAX_KACHEL_ZOOM, kachelUrl, lonLatZuWelt,
-  meterProPixel, zuMeter, imPolygon, belegeDach, rasterFuer,
+  meterProPixel, zuMeter, belegeDach, rasterFuer,
   zelleAnPunkt, zellenSchluessel, sucheAdresse, ladeDachflaechen,
   azimutZuAusrichtung, azimutText, firstwinkelAusAzimut, waehleWechselrichter,
 } from '../../lib/dachplaner'
@@ -16,20 +16,57 @@ import type {
 import { berechne } from '../../lib/pvCalculator'
 import type { CalculatorConfig, CalculatorInput } from '../../lib/pvCalculator'
 import { DEFAULT_CONFIG, DEFAULT_INPUT, KOMPONENTEN } from '../../lib/calculatorConfig'
+import {
+  FolienWarumJetztVerbrauch, FolienStrompreis, FolienWarumNeosolar,
+  FolienKomponenten, FolienZeitplan,
+} from '../salespitch/components/Folien'
+import {
+  FolienStromkostenOhne, FolienEnergiefluss, FolienDreiMotive, FolienAnlageUebersicht,
+} from '../salespitch/components/Folien2'
+import { FolienTeam } from '../salespitch/components/FolienBilder'
+import { FolienReferenzen } from '../salespitch/components/FolienReferenzen'
+import { FolienDreiBausteine, FolienAmortisation } from '../salespitch/components/FolienBeweis'
+import { FolienMonatsvergleich } from '../salespitch/components/FolienGeld'
+import { FolienSicherheiten, FolienHaeufigeFragen } from '../salespitch/components/FolienAbschluss'
+import { FolienZufriedenheitspaket } from '../salespitch/components/FolienPaket'
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
 
-type Schritt = 'adresse' | 'dach' | 'verbrauch' | 'ergebnis' | 'kontakt' | 'fertig'
+type Schritt =
+  | 'adresse'
+  | 'warumJetzt' | 'strompreis' | 'kostenOhne'
+  | 'warumWir' | 'team' | 'referenzen' | 'technik'
+  | 'dach' | 'verbrauch' | 'anlage'
+  | 'ergebnis' | 'energiefluss' | 'motive' | 'bausteine' | 'amortisation' | 'monatsvergleich'
+  | 'paket' | 'sicherheiten' | 'ablauf' | 'fragen'
+  | 'kontakt' | 'fertig'
 
-const SCHRITTE: Array<{ id: Schritt; titel: string }> = [
-  { id: 'adresse', titel: 'Ihr Haus' },
-  { id: 'dach', titel: 'Ihr Dach' },
-  { id: 'verbrauch', titel: 'Ihr Verbrauch' },
-  { id: 'ergebnis', titel: 'Ihr Ergebnis' },
-  { id: 'kontakt', titel: 'Kontakt' },
+/**
+ * Der Ablauf ist derselbe wie im Verkaufsgespraech, nur ohne Verkaeufer.
+ *
+ * Erst das Problem (steigende Preise, steigender Verbrauch), dann das
+ * Vertrauen (wer sind wir), dann die Loesung, und erst danach der Preis.
+ * Wer mit dem Preis anfaengt, verliert den Kunden vor dem Argument.
+ */
+interface Kapitel {
+  titel: string
+  schritte: Schritt[]
+}
+
+const KAPITEL: Kapitel[] = [
+  { titel: 'Ihr Haus', schritte: ['adresse'] },
+  { titel: 'Warum jetzt', schritte: ['warumJetzt', 'strompreis', 'kostenOhne'] },
+  { titel: 'Wer wir sind', schritte: ['warumWir', 'team', 'referenzen', 'technik'] },
+  { titel: 'Ihre Anlage', schritte: ['dach', 'verbrauch', 'anlage'] },
+  { titel: 'Was es bringt', schritte: ['ergebnis', 'energiefluss', 'motive', 'bausteine', 'amortisation', 'monatsvergleich'] },
+  { titel: 'Ihre Sicherheit', schritte: ['paket', 'sicherheiten', 'ablauf', 'fragen'] },
+  { titel: 'Kontakt', schritte: ['kontakt'] },
 ]
+
+/** Alle Schritte in der Reihenfolge, in der sie durchlaufen werden. */
+const ALLE_SCHRITTE: Schritt[] = KAPITEL.flatMap((k) => k.schritte)
 
 /**
  * Selbstplaner fuer den Kunden.
@@ -206,14 +243,26 @@ export default function KundenPlanerPage() {
     try {
       const flaechen = await ladeDachflaechen(p)
       setGefundene(flaechen)
-      const klick = zuMeter(p, fest)
-      const treff =
-        flaechen.find((f) => imPolygon(klick, f.ring.map((r) => zuMeter(r, fest)))) ?? flaechen[0]
-      if (!treff) {
+      if (!flaechen.length) {
         setMeldung('Für dieses Haus liegen uns keine Dachdaten vor. Wir schauen es uns gerne persönlich an.')
         return
       }
-      dachWaehlen(treff, fest)
+
+      /**
+       * Die beste Flaeche vorschlagen, nicht die erstbeste.
+       *
+       * Vorher wurde die Flaeche unter dem Adresspunkt genommen – bei einem
+       * Satteldach traf das genauso oft die Nordseite wie die Sued. Der Bund
+       * liefert je Teilflaeche eine Ertragsprognose; die hoechste ist die
+       * richtige Wahl. Nordlagen fallen dabei von selbst heraus.
+       */
+      const beste = [...flaechen].sort((a, b) => {
+        const wert = (f: typeof a) =>
+          f.stromertragKwh > 0 ? f.stromertragKwh : f.flaecheM2 * Math.max(f.einstrahlung, 1)
+        return wert(b) - wert(a)
+      })[0]
+
+      dachWaehlen(beste, fest)
     } catch {
       setMeldung('Die Dachdaten sind gerade nicht abrufbar. Bitte später nochmals versuchen.')
     } finally {
@@ -342,8 +391,56 @@ export default function KundenPlanerPage() {
     }
   }
 
+  // ── Navigation ─────────────────────────────────────────────────────
+  const index = ALLE_SCHRITTE.indexOf(schritt)
+  const aktuellesKapitel = KAPITEL.findIndex((k) => k.schritte.includes(schritt))
+
+  /** Schritte, die ohne Dachdaten keinen Sinn ergeben. */
+  const brauchtDach = (s: Schritt) =>
+    ['anlage', 'ergebnis', 'energiefluss', 'motive', 'bausteine', 'amortisation', 'monatsvergleich'].includes(s)
+
+  function weiter() {
+    const naechster = ALLE_SCHRITTE[index + 1]
+    if (!naechster) return
+    if (brauchtDach(naechster) && !module.length) {
+      setMeldung('Bitte wählen Sie zuerst eine Dachfläche aus.')
+      setSchritt('dach')
+      return
+    }
+    setSchritt(naechster)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function zurueck() {
+    const vorheriger = ALLE_SCHRITTE[index - 1]
+    if (vorheriger) {
+      setSchritt(vorheriger)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  /** Folien der Präsentation – für den Kunden ohne Verkäufer-Werkzeuge. */
+  const FOLIEN: Partial<Record<Schritt, () => React.ReactNode>> = {
+    warumJetzt: () => <FolienWarumJetztVerbrauch />,
+    strompreis: () => <FolienStrompreis />,
+    kostenOhne: () => <FolienStromkostenOhne ergebnis={ergebnis} input={input} />,
+    warumWir: () => <FolienWarumNeosolar />,
+    team: () => <FolienTeam />,
+    referenzen: () => <FolienReferenzen />,
+    technik: () => <FolienKomponenten />,
+    anlage: () => <FolienAnlageUebersicht ergebnis={ergebnis} input={input} />,
+    energiefluss: () => <FolienEnergiefluss ergebnis={ergebnis} />,
+    motive: () => <FolienDreiMotive ergebnis={ergebnis} />,
+    bausteine: () => <FolienDreiBausteine ergebnis={ergebnis} config={config} />,
+    amortisation: () => <FolienAmortisation ergebnis={ergebnis} config={config} />,
+    monatsvergleich: () => <FolienMonatsvergleich ergebnis={ergebnis} config={config} />,
+    paket: () => <FolienZufriedenheitspaket />,
+    sicherheiten: () => <FolienSicherheiten />,
+    ablauf: () => <FolienZeitplan />,
+    fragen: () => <FolienHaeufigeFragen />,
+  }
+
   // ── Darstellung ────────────────────────────────────────────────────
-  const aktuellerIndex = SCHRITTE.findIndex((s) => s.id === schritt)
 
   const Kachel = ({ wert, label, farbe = '#F59E0B' }: { wert: string; label: string; farbe?: string }) => (
     <div className="p-4 rounded-2xl text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -379,22 +476,40 @@ export default function KundenPlanerPage() {
           <img src="/praesentation/logo-hell.png" alt="NEOSOLAR" className="h-7 object-contain" />
           {schritt !== 'fertig' && (
             <div className="flex-1 flex items-center gap-1.5 overflow-x-auto">
-              {SCHRITTE.map((s, i) => (
-                <div key={s.id} className="flex items-center gap-1.5 shrink-0">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                    style={{
-                      background: i <= aktuellerIndex ? 'color-mix(in srgb, #F59E0B 16%, transparent)' : 'rgba(255,255,255,0.04)',
-                      color: i <= aktuellerIndex ? '#F59E0B' : '#6B7280',
-                    }}>
-                    {i < aktuellerIndex ? <Check size={11} strokeWidth={2.5} /> : <span className="tabular-nums">{i + 1}</span>}
-                    <span className="hidden sm:inline">{s.titel}</span>
+              {KAPITEL.map((k, i) => {
+                const erreicht = i <= aktuellesKapitel
+                // Kapitel, die keine Dachdaten brauchen, sind frei anwaehlbar
+                const springbar = i <= aktuellesKapitel || (module.length > 0 && i > 0)
+                return (
+                  <div key={k.titel} className="flex items-center gap-1.5 shrink-0">
+                    <button type="button" disabled={!springbar}
+                      onClick={() => springbar && setSchritt(k.schritte[0])}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold disabled:cursor-default"
+                      style={{
+                        background: erreicht ? 'color-mix(in srgb, #F59E0B 16%, transparent)' : 'rgba(255,255,255,0.04)',
+                        color: erreicht ? '#F59E0B' : '#6B7280',
+                      }}>
+                      {i < aktuellesKapitel ? <Check size={11} strokeWidth={2.5} /> : <span className="tabular-nums">{i + 1}</span>}
+                      <span className="hidden md:inline">{k.titel}</span>
+                    </button>
+                    {i < KAPITEL.length - 1 && <div style={{ width: 10, height: 1, background: 'rgba(255,255,255,0.10)' }} />}
                   </div>
-                  {i < SCHRITTE.length - 1 && <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.10)' }} />}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
+        {/* Fortschritt über die ganze Strecke */}
+        {schritt !== 'fertig' && (
+          <div style={{ height: 2, background: 'rgba(255,255,255,0.06)' }}>
+            <div style={{
+              height: '100%',
+              width: `${((index + 1) / ALLE_SCHRITTE.length) * 100}%`,
+              background: '#F59E0B',
+              transition: 'width 240ms ease',
+            }} />
+          </div>
+        )}
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -540,11 +655,27 @@ export default function KundenPlanerPage() {
             )}
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setSchritt('adresse')} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
+              <button type="button" onClick={zurueck} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
                 <ArrowLeft size={15} strokeWidth={2} /> Zurück
               </button>
-              <button type="button" onClick={() => setSchritt('verbrauch')} disabled={!module.length}
+              <button type="button" onClick={weiter} disabled={!module.length}
                 className="btn-primary flex-1 flex items-center justify-center gap-2 px-6 py-3 text-[14px] font-semibold disabled:opacity-40">
+                Weiter <ArrowRight size={15} strokeWidth={2} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Folien der Präsentation ── */}
+        {FOLIEN[schritt] && (
+          <div>
+            <div className="-mx-4 sm:-mx-6">{FOLIEN[schritt]!()}</div>
+            <div className="flex gap-3 mt-8">
+              <button type="button" onClick={zurueck} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
+                <ArrowLeft size={15} strokeWidth={2} /> Zurück
+              </button>
+              <button type="button" onClick={weiter}
+                className="btn-primary flex-1 flex items-center justify-center gap-2 px-6 py-3 text-[14px] font-semibold">
                 Weiter <ArrowRight size={15} strokeWidth={2} />
               </button>
             </div>
@@ -561,6 +692,25 @@ export default function KundenPlanerPage() {
             </p>
 
             <div className="glass-card p-6 mb-5" style={{ borderRadius: 'var(--radius-lg)' }}>
+              {/* Anlagengroesse frei waehlbar – wer nicht das ganze Dach
+                  belegen will, stellt hier einfach die kWp ein. */}
+              {alleModule.length > 0 && (
+                <div className="mb-5 pb-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Regler label="Anlagengrösse" wert={kwp} min={Math.round((modulMasse.wattPeak / 1000) * 100) / 100}
+                    max={Math.round((alleModule.length * modulMasse.wattPeak) / 10) / 100}
+                    schrittweite={Math.round((modulMasse.wattPeak / 1000) * 100) / 100}
+                    einheit="kWp"
+                    onChange={(v) => {
+                      // Ueber die Modulzahl steuern, damit Dach und Rechner
+                      // dieselbe Wahrheit haben
+                      const gewuenscht = Math.max(1, Math.round((v * 1000) / modulMasse.wattPeak))
+                      setBelegungsgrad(Math.min(100, Math.round((gewuenscht / alleModule.length) * 100)))
+                      setEntfernt([])
+                    }}
+                    hinweis={`${module.length} von ${alleModule.length} möglichen Modulen · auf Ihr Dach passen bis ${((alleModule.length * modulMasse.wattPeak) / 1000).toFixed(1)} kWp`} />
+                </div>
+              )}
+
               <Regler label="Jahresverbrauch" wert={input.verbrauchKwh} min={1500} max={25000} schrittweite={500}
                 einheit="kWh" onChange={(v) => setInput({ ...input, verbrauchKwh: v })}
                 hinweis="Ein Haushalt mit vier Personen liegt bei etwa 4500 kWh" />
@@ -599,12 +749,12 @@ export default function KundenPlanerPage() {
             </div>
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setSchritt('dach')} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
+              <button type="button" onClick={zurueck} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
                 <ArrowLeft size={15} strokeWidth={2} /> Zurück
               </button>
-              <button type="button" onClick={() => setSchritt('ergebnis')}
+              <button type="button" onClick={weiter}
                 className="btn-primary flex-1 flex items-center justify-center gap-2 px-6 py-3 text-[14px] font-semibold">
-                Ergebnis anzeigen <ArrowRight size={15} strokeWidth={2} />
+                Meine Anlage ansehen <ArrowRight size={15} strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -709,14 +859,18 @@ export default function KundenPlanerPage() {
             </div>
 
             <div className="flex gap-3">
-              <button type="button" onClick={() => setSchritt('verbrauch')} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
+              <button type="button" onClick={zurueck} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
                 <ArrowLeft size={15} strokeWidth={2} /> Anpassen
               </button>
-              <button type="button" onClick={() => setSchritt('kontakt')}
+              <button type="button" onClick={weiter}
                 className="btn-primary flex-1 flex items-center justify-center gap-2 px-6 py-3.5 text-[14px] font-semibold">
-                Unverbindliches Angebot anfordern <ArrowRight size={15} strokeWidth={2} />
+                Weiter <ArrowRight size={15} strokeWidth={2} />
               </button>
             </div>
+            <button type="button" onClick={() => setSchritt('kontakt')}
+              className="w-full text-center text-[12px] text-text-dim hover:text-amber mt-3 py-2">
+              Direkt zum unverbindlichen Angebot
+            </button>
           </div>
         )}
 
@@ -760,7 +914,7 @@ export default function KundenPlanerPage() {
               {fehler && <p className="text-[13px]" style={{ color: '#F87171' }}>{fehler}</p>}
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setSchritt('ergebnis')} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
+                <button type="button" onClick={zurueck} className="btn-secondary flex items-center gap-2 px-5 py-3 text-[13px]">
                   <ArrowLeft size={15} strokeWidth={2} /> Zurück
                 </button>
                 <button type="submit" disabled={sendet}

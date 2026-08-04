@@ -4,7 +4,7 @@ Jeder Arbeitstag mit allen Änderungen dieses Tages, neueste zuerst.
 Das Projekt hat keine Versionsnummern – ausgeliefert wird laufend auf
 https://neosolar-crm.com.
 
-**368 Änderungen** vom Dienstag, 3. März 2026 bis Montag, 3. August 2026
+**369 Änderungen** vom Dienstag, 3. März 2026 bis Montag, 3. August 2026
 an 44 Arbeitstagen.
 
 Erzeugt mit `node tools/changelog.mjs`. Der aktuelle Arbeitsstand steht in
@@ -20,6 +20,7 @@ Erzeugt mit `node tools/changelog.mjs`. Der aktuelle Arbeitsstand steht in
 
 - automatische Mails laufen ueber info@neosolar.ch `43b7128`
 - Nachfassen mit Freigabeschalter, Trockenlauf und Stufen im Admin `31e082e`
+- Selbstplaner fuer Kunden und Kampagnenversand an Leads `fa16ef8`
 
 **Behoben**
 
