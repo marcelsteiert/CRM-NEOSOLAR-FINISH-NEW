@@ -207,9 +207,13 @@ export default function OffertenDruck({
             page-break-before: always;
             break-before: page;
           }
-          /* Ueberschriften und Tabellen nicht mitten durchschneiden */
+          /* Ueberschriften bleiben bei ihrem Abschnitt */
           h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
-          table, img { break-inside: avoid; page-break-inside: avoid; }
+          /* Einzelne Zeilen und Bloecke nie mittendurch trennen. Auf die
+             ganze Tabelle bezogen waere es zu streng – eine lange Liste
+             muss umbrechen duerfen, nur eben zwischen den Zeilen. */
+          tr, img, dl > div { break-inside: avoid; page-break-inside: avoid; }
+          #bestellseite { break-inside: avoid; page-break-inside: avoid; }
 
           /* Nur-Bestellung-Modus: alle Geschwister der Bestellseite raus */
           #offerte-druck.nur-bestellung > *:not(#bestellseite) { display: none !important; }
@@ -466,6 +470,11 @@ export default function OffertenDruck({
             ))}
           </div>
         </div>
+
+        {/* ── Seite 2: Leistungsumfang ──
+            Eigene Seite, weil die Liste bei grossen Anlagen laenger wird
+            und sonst auf die erste Seite drueckt. */}
+        <div className="offerte-seitenumbruch" />
 
         {/* Leistungsumfang */}
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>Leistungsumfang</h2>
@@ -1484,18 +1493,37 @@ export default function OffertenDruck({
             </div>
           </div>
 
-          {/* Bestellte Leistung */}
+          {/* Bestellte Leistung – bewusst als Kurzfassung.
+              Die vollstaendige Liste steht im Leistungsumfang der Offerte;
+              hier zaehlt, dass das Blatt auf eine Seite passt und
+              unterschrieben zurueckkommt. */}
           <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>Bestellte Leistung</h2>
-          <table className="w-full text-[11px] mb-5" style={{ borderCollapse: 'collapse' }}>
+          <table className="w-full text-[11px] mb-4" style={{ borderCollapse: 'collapse' }}>
             <tbody>
-              {positionen.map(([pos, detail], i) => (
+              {([
+                [`Solaranlage ${input.kwp} kWp schlüsselfertig`, `${module} Module ${KOMPONENTEN.modul.name}, Wechselrichter, Unterkonstruktion, Montage`],
+                ...(speicherModule > 0
+                  ? ([[`Batteriespeicher ${input.speicherKwh} kWh`, `${KOMPONENTEN.speicher.name}, ${speicherModule} Module`]] as Array<[string, string]>)
+                  : []),
+                ...(input.wallbox
+                  ? ([['Wallbox', KOMPONENTEN.wallbox.name]] as Array<[string, string]>)
+                  : []),
+                ...(zusatz.length
+                  ? ([['Zusätzliche Leistungen', zusatz.map((z) => z.bezeichnung).join(', ')]] as Array<[string, string]>)
+                  : []),
+                ['Planung, Bewilligung, Netzanmeldung', 'Baugesuch, TAG und IA, Pronovo – durch NEOSOLAR'],
+                ['NEOSOLAR Zufriedenheitspaket', '5 Jahre Wartung, Thermografie, Reinigung, 24/7 Service'],
+              ] as Array<[string, string]>).map(([pos, detail], i) => (
                 <tr key={pos} style={{ background: i % 2 === 0 ? '#F9FAFB' : 'transparent' }}>
-                  <td className="py-1.5 px-3" style={{ color: '#111827', width: '55%' }}>{pos}</td>
-                  <td className="py-1.5 px-3" style={{ color: '#6B7280' }}>{detail}</td>
+                  <td className="py-1.5 px-3" style={{ color: '#111827', fontWeight: 600, width: '42%' }}>{pos}</td>
+                  <td className="py-1.5 px-3 text-[10px]" style={{ color: '#6B7280' }}>{detail}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <p className="text-[9px] mb-4" style={{ color: '#9CA3AF' }}>
+            Der vollständige Leistungsumfang steht in der beiliegenden Richtofferte vom {heute}.
+          </p>
 
           {/* Preis und Zahlung */}
           <div className="grid grid-cols-2 gap-3 mb-5">
@@ -1550,39 +1578,38 @@ export default function OffertenDruck({
             </div>
           </div>
 
-          {/* Erklaerungen des Bestellers */}
+          {/* Erklaerungen des Bestellers – zweispaltig, damit das Blatt
+              auch bei grossen Anlagen eine Seite bleibt */}
           <h2 className="text-[13px] font-bold mb-2" style={{ color: '#111827' }}>Ich bestätige</h2>
-          <div className="mb-5">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-4">
             {[
-              'Ich bestelle die oben aufgeführte Photovoltaikanlage verbindlich zum genannten Werklohn.',
-              'Die Allgemeinen Geschäftsbedingungen und den Werkvertrag der NEOSOLAR AG habe ich erhalten und akzeptiert.',
-              'Mir ist bekannt, dass der finale Preis nach der technischen Aufnahme vor Ort bestätigt wird und um maximal CHF 2\'000 abweichen kann.',
+              'Ich bestelle die aufgeführte Photovoltaikanlage verbindlich zum genannten Werklohn.',
+              'AGB und Werkvertrag der NEOSOLAR AG habe ich erhalten und akzeptiert.',
+              'Der finale Preis wird nach der Aufnahme vor Ort bestätigt und kann um maximal CHF 2\'000 abweichen.',
               'Ich stelle einen Internetanschluss im Technikraum für das Monitoring bereit.',
               'NEOSOLAR darf den Förderantrag bei Pronovo in meinem Namen einreichen.',
             ].map((z) => (
-              <div key={z} className="flex items-start gap-2 mb-1.5">
+              <div key={z} className="flex items-start gap-2">
                 <span
                   style={{
-                    width: 13, height: 13, marginTop: 1, flexShrink: 0,
+                    width: 12, height: 12, marginTop: 1, flexShrink: 0,
                     border: '1.5px solid #9CA3AF', borderRadius: 3, background: '#FFFFFF',
                   }}
                 />
-                <span className="text-[10px]" style={{ color: '#374151', lineHeight: 1.5 }}>{z}</span>
+                <span className="text-[9px]" style={{ color: '#374151', lineHeight: 1.5 }}>{z}</span>
               </div>
             ))}
           </div>
 
           {/* Ruecktrittsrecht – gehoert direkt ueber die Unterschrift */}
-          <div className="p-3 mb-5" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
-            <div className="text-[11px] font-bold mb-1" style={{ color: '#92400E' }}>
-              Ihr Rücktrittsrecht
-            </div>
-            <p className="text-[9px]" style={{ color: '#78350F', lineHeight: 1.6 }}>
-              Sie können innert 7 Tagen ab Unterzeichnung ohne Begründung und ohne Kostenfolge von dieser
-              Bestellung zurücktreten. Die Mitteilung genügt schriftlich an NEOSOLAR AG, Industriestrasse 28,
-              9100 Herisau oder per E-Mail an info@neosolar.ch. Wird die Baubewilligung nicht erteilt, treten
-              Sie ebenfalls kostenlos zurück.
-            </p>
+          <div className="p-2.5 mb-4" style={{ background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
+            <span className="text-[10px] font-bold" style={{ color: '#92400E' }}>Ihr Rücktrittsrecht: </span>
+            <span className="text-[9px]" style={{ color: '#78350F', lineHeight: 1.6 }}>
+              Sie können innert 7 Tagen ab Unterzeichnung ohne Begründung und ohne Kostenfolge
+              zurücktreten – schriftlich an NEOSOLAR AG, Industriestrasse 28, 9100 Herisau oder an
+              info@neosolar.ch. Wird die Baubewilligung nicht erteilt, treten Sie ebenfalls
+              kostenlos zurück.
+            </span>
           </div>
 
           {/* Unterschriften beider Parteien */}

@@ -95,19 +95,66 @@ export async function offerteAlsPdf(
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const nutzBreite = A4_BREITE_MM - 2 * RAND_MM
   const nutzHoehe = A4_HOEHE_MM - 2 * RAND_MM
+  const maxCanvasHoehe = Math.floor((canvas.width / nutzBreite) * nutzHoehe)
+
+  /**
+   * Sucht eine Zeile, durch die geschnitten werden darf.
+   *
+   * Ein Abschnitt, der laenger als eine A4-Seite ist, muss irgendwo
+   * getrennt werden. Blind an der Seitenkante zu schneiden zerlegt
+   * Tabellenzeilen und halbiert Text. Deshalb wird vom Wunschpunkt aus
+   * rueckwaerts nach einer durchgehend hellen Bildzeile gesucht – dort
+   * liegt kein Inhalt, und der Schnitt faellt nicht auf.
+   */
+  const bild = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height)
+
+  function istFreieZeile(y: number): boolean {
+    if (!bild) return true
+    const breite = canvas.width
+    // Raender ueberspringen, dort steht ohnehin nichts
+    const vonX = Math.floor(breite * 0.04)
+    const bisX = Math.floor(breite * 0.96)
+    for (let x = vonX; x < bisX; x += 3) {
+      const i = (y * breite + x) * 4
+      // Alles deutlich Dunklere als Weiss zaehlt als Inhalt
+      if (bild.data[i] < 246 || bild.data[i + 1] < 246 || bild.data[i + 2] < 246) return false
+    }
+    return true
+  }
+
+  /** Beste Trennstelle bis maximal `wunsch`, sonst der Wunschpunkt selbst. */
+  function findeTrennstelle(von: number, wunsch: number, grenze: number): number {
+    const ziel = Math.min(wunsch, grenze)
+    if (ziel >= grenze) return grenze
+    // Bis zu einem Fuenftel der Seite zurueckgehen, laenger lohnt nicht
+    const minimum = Math.max(von + Math.floor(maxCanvasHoehe * 0.35), ziel - Math.floor(maxCanvasHoehe * 0.2))
+    let frei = 0
+    for (let y = ziel; y > minimum; y--) {
+      if (istFreieZeile(y)) {
+        frei++
+        // Ein paar freie Zeilen hintereinander sind ein echter Zwischenraum,
+        // nicht nur der Spalt zwischen zwei Textzeilen
+        if (frei >= 6) return y + frei
+      } else {
+        frei = 0
+      }
+    }
+    return ziel
+  }
 
   let seiten = 0
   for (let i = 0; i < schnitte.length - 1; i++) {
     const von = schnitte[i]
     const bis = schnitte[i + 1]
-    const hoehe = bis - von
-    if (hoehe < 20) continue
+    if (bis - von < 20) continue
 
-    // Ein Abschnitt kann laenger als eine A4-Seite sein und wird umbrochen
-    const maxCanvasHoehe = (canvas.width / nutzBreite) * nutzHoehe
-    let versatz = 0
-    while (versatz < hoehe) {
-      const stueck = Math.min(maxCanvasHoehe, hoehe - versatz)
+    let start = von
+    while (start < bis) {
+      const rest = bis - start
+      const ende =
+        rest <= maxCanvasHoehe ? bis : findeTrennstelle(start, start + maxCanvasHoehe, bis)
+      const stueck = Math.max(1, ende - start)
+
       const teil = document.createElement('canvas')
       teil.width = canvas.width
       teil.height = Math.round(stueck)
@@ -115,20 +162,19 @@ export async function offerteAlsPdf(
       if (!ctx) break
       ctx.fillStyle = '#FFFFFF'
       ctx.fillRect(0, 0, teil.width, teil.height)
-      ctx.drawImage(canvas, 0, von + versatz, canvas.width, stueck, 0, 0, canvas.width, stueck)
+      ctx.drawImage(canvas, 0, start, canvas.width, stueck, 0, 0, canvas.width, stueck)
 
       if (seiten > 0) pdf.addPage()
-      const bildHoehe = (teil.height / teil.width) * nutzBreite
       pdf.addImage(
-        teil.toDataURL('image/jpeg', 0.9),
+        teil.toDataURL('image/jpeg', 0.92),
         'JPEG',
         RAND_MM,
         RAND_MM,
         nutzBreite,
-        Math.min(bildHoehe, nutzHoehe)
+        (teil.height / teil.width) * nutzBreite
       )
       seiten++
-      versatz += stueck
+      start = ende
     }
   }
 
