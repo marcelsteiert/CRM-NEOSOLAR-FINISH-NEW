@@ -14,6 +14,8 @@ import type { Ziele } from '../salespitch/components/FolienZiele'
 import { FolienVorteile } from '../salespitch/components/FolienVorteile'
 import { FolienAusgangslage } from '../salespitch/components/FolienAusgangslage'
 import { FolienStart } from '../salespitch/components/FolienStart'
+import { FolienUmsetzung } from '../salespitch/components/FolienUmsetzung'
+import { FolienModulwahl } from '../salespitch/components/FolienModulwahl'
 import type { DachErgebnis, DachPlanung } from '../salespitch/components/Dachplaner'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
@@ -298,6 +300,8 @@ export default function PraesentationPage() {
         // Ost-West-Aufstaenderung rechnet der Rechner mit dem eigenen Faktor
         ausrichtung: e.ostWest ? 'OST_WEST' : e.ausrichtung,
         neigung: e.aufstaenderung > 0 ? e.aufstaenderung : e.neigungGrad,
+        // Echte Modulzahl statt Schaetzung – der Modulaufpreis rechnet je Stueck
+        modulAnzahl: e.modulAnzahl,
         ...(e.dachart === 'FLACH' ? { dachtyp: 'FLACHDACH' as const } : {}),
       })
       setGewaehlteVariante(null)
@@ -575,7 +579,7 @@ export default function PraesentationPage() {
       case 'team':
         return <FolienTeam />
       case 'verbrauch':
-        return <FolienWarumJetztVerbrauch />
+        return <FolienWarumJetztVerbrauch input={input} config={config} />
       case 'strompreis':
         return <FolienStrompreis />
       case 'kostenOhne':
@@ -585,7 +589,7 @@ export default function PraesentationPage() {
           </div>
         )
       case 'modul':
-        return <ProduktFolien.modul />
+        return <FolienModulwahl input={input} onChange={patchInput} />
       case 'wechselrichter':
         return <ProduktFolien.wechselrichter />
       case 'speicher':
@@ -749,6 +753,8 @@ export default function PraesentationPage() {
         return <FolienAblaufUmsetzung />
       case 'zeitplan':
         return <FolienZeitplan />
+      case 'umsetzung':
+        return <FolienUmsetzung />
       case 'kontakt':
         return <BildKontaktFolie />
       default:

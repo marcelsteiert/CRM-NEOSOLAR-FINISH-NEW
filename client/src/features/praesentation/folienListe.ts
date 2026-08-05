@@ -13,7 +13,7 @@ export type FolienId =
   | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
   | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
   | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
-  | 'referenzen' | 'zusatzrechner' | 'montage'
+  | 'referenzen' | 'zusatzrechner' | 'montage' | 'umsetzung'
   | 'speicherUpgrade' | 'betreuung' | 'empfehlung' | 'paket' | 'aktion'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
@@ -94,9 +94,7 @@ export const VARIANTEN: Variante[] = [
       { id: 'unterschied', titel: 'Offerten vergleichen' },
       { id: 'fragen', titel: 'Häufige Fragen' },
       // 9. Umsetzung in einer Folie statt in dreien
-      { id: 'zeitplan', titel: 'So geht es weiter' },
-      { id: 'montage', titel: 'Die Montage' },
-      { id: 'workflow', titel: 'Unser Ablauf' },
+      { id: 'umsetzung', titel: 'So geht es weiter' },
       // 10. Abschluss
       { id: 'entscheidung', titel: 'Ihre Entscheidung' },
       { id: 'empfehlung', titel: 'Weiterempfehlung' },
@@ -153,9 +151,7 @@ export const VARIANTEN: Variante[] = [
       { id: 'betreuung', titel: 'Ihre Betreuung' },
       { id: 'unterschied', titel: 'Offerten vergleichen' },
       { id: 'fragen', titel: 'Häufige Fragen' },
-      { id: 'montage', titel: 'Die Montage' },
-      { id: 'workflow', titel: 'Unser Ablauf' },
-      { id: 'zeitplan', titel: 'Umsetzung' },
+      { id: 'umsetzung', titel: 'So geht es weiter' },
       { id: 'empfehlung', titel: 'Weiterempfehlung' },
       // Statt der Verkaeufer-Entscheidungsfolie: der Kunde traegt seine
       // Daten ein. Danach stehen sie in der Offerte, die er drucken kann.
@@ -183,7 +179,7 @@ export const VARIANTEN: Variante[] = [
       { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
       { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
       { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
-      { id: 'zeitplan', titel: 'Umsetzung' },
+      { id: 'umsetzung', titel: 'Umsetzung' },
       { id: 'entscheidung', titel: 'Ihre Entscheidung' },
       { id: 'kontakt', titel: 'Fragen offen?' },
     ],

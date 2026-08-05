@@ -1,8 +1,9 @@
 import {
-  Award, ShieldCheck, Clock, Wrench, Zap, Car, Flame, Waves, Thermometer,
+  Award, ShieldCheck, Clock, Wrench, Zap, Waves, Thermometer,
   TrendingUp, Sun, Battery, Plug, CheckCircle2, Users,
 } from 'lucide-react'
 import { KOMPONENTEN } from '../../../lib/calculatorConfig'
+import type { CalculatorConfig, CalculatorInput } from '../../../lib/pvCalculator'
 
 /**
  * Folien der NEOSOLAR-Verkaufspraesentation, nachgebaut fuer den
@@ -113,50 +114,134 @@ export function FolienWarumNeosolar() {
   )
 }
 
-export function FolienWarumJetztVerbrauch() {
+export function FolienWarumJetztVerbrauch({
+  input,
+  config,
+}: {
+  input?: CalculatorInput
+  config?: CalculatorConfig
+}) {
   const verbraucher = [
-    { icon: Car, label: 'Elektroauto' },
-    { icon: Flame, label: 'Wärmepumpe' },
     { icon: Thermometer, label: 'Klimaanlage' },
     { icon: Waves, label: 'Pool / Sauna' },
     { icon: Zap, label: 'Warmwasser / Boiler' },
     { icon: Plug, label: 'Heizstab' },
   ]
+
+  /*
+   * Die Folie rechnet mit dem Verbrauch des Kunden, sobald er erfasst ist.
+   * Ein abstraktes "dreimal so viel" ueberzeugt niemanden – die eigene
+   * Zahl in Kilowattstunden schon. Ohne Eingabe gilt ein typisches
+   * Schweizer Einfamilienhaus.
+   */
+  const heute = input?.verbrauchKwh && input.verbrauchKwh > 0 ? input.verbrauchKwh : 4500
+  const eAuto = config?.mehrverbrauchEAuto ?? 3000
+  const waermepumpe = config?.mehrverbrauchWaermepumpe ?? 4500
+
+  const stufen = [
+    { titel: 'Heute', teile: [{ label: 'Haushalt', kwh: heute, farbe: '#94A3B8' }] },
+    {
+      titel: 'Mit Elektroauto',
+      teile: [
+        { label: 'Haushalt', kwh: heute, farbe: '#94A3B8' },
+        { label: 'Elektroauto', kwh: eAuto, farbe: '#60A5FA' },
+      ],
+    },
+    {
+      titel: 'Plus Wärmepumpe',
+      teile: [
+        { label: 'Haushalt', kwh: heute, farbe: '#94A3B8' },
+        { label: 'Elektroauto', kwh: eAuto, farbe: '#60A5FA' },
+        { label: 'Wärmepumpe', kwh: waermepumpe, farbe: '#F59E0B' },
+      ],
+    },
+  ]
+  const summe = (s: (typeof stufen)[number]) => s.teile.reduce((a, t) => a + t.kwh, 0)
+  const max = Math.max(...stufen.map(summe))
+  const faktor = (summe(stufen[2]) / heute).toFixed(1)
+
   return (
-    <div className="h-full flex flex-col justify-center px-8 max-w-4xl mx-auto w-full">
-      <p className="text-[12px] uppercase tracking-[0.2em] text-amber mb-2">Warum jetzt?</p>
-      <h2 className="text-[32px] font-bold text-text mb-4">
+    <div className="h-full flex flex-col justify-center px-6 sm:px-10 max-w-5xl mx-auto w-full">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-amber mb-2">Warum jetzt?</p>
+      <h2 className="text-[28px] sm:text-[33px] font-bold text-text mb-2 leading-tight">
         Ihr Strombedarf bleibt nicht, wie er heute ist.
       </h2>
-      <p className="text-[15px] text-text-sec mb-8 max-w-2xl">
-        E-Mobilität und Wärmepumpe können den Verbrauch eines Haushalts in den kommenden Jahren deutlich
-        erhöhen. Deshalb planen wir nicht nur für den Verbrauch von heute – sondern für das Leben von morgen.
+      <p className="text-[13.5px] text-text-sec mb-7 max-w-2xl">
+        Wer heute plant, plant für die nächsten dreissig Jahre. Elektroauto und Wärmepumpe
+        kommen in vielen Haushalten – und beide brauchen Strom.
       </p>
 
-      <div
-        className="p-6 rounded-2xl mb-7 flex items-center gap-6"
-        style={{ background: 'color-mix(in srgb, #F59E0B 12%, transparent)', border: '1px solid color-mix(in srgb, #F59E0B 32%, transparent)' }}
-      >
-        <div className="text-[52px] font-bold text-amber leading-none">≈ 3×</div>
-        <div className="text-[14px] text-text-sec">
-          mehr Strombedarf ist in einem elektrifizierten Haushalt möglich.
+      {/* Gestapelte Balken: der eigene Verbrauch, Schritt für Schritt */}
+      <div className="flex items-end gap-4 sm:gap-8 h-56 mb-2">
+        {stufen.map((s) => {
+          const gesamt = summe(s)
+          return (
+            <div key={s.titel} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+              <span className="text-[13px] font-bold text-text tabular-nums">
+                {gesamt.toLocaleString('de-CH')} kWh
+              </span>
+              <div
+                className="w-full flex flex-col justify-end rounded-t-xl overflow-hidden"
+                style={{ height: `${(gesamt / max) * 100}%` }}
+              >
+                {[...s.teile].reverse().map((t) => (
+                  <div
+                    key={t.label}
+                    className="w-full flex items-center justify-center"
+                    style={{
+                      height: `${(t.kwh / gesamt) * 100}%`,
+                      background: `color-mix(in srgb, ${t.farbe} 42%, transparent)`,
+                      borderTop: `1px solid color-mix(in srgb, ${t.farbe} 65%, transparent)`,
+                    }}
+                  >
+                    <span className="text-[10px] font-semibold" style={{ color: t.farbe }}>
+                      {t.kwh >= 2500 ? t.label : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <span className="text-[11px] text-text-dim text-center leading-tight">{s.titel}</span>
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-[10px] text-text-dim text-center mb-6">
+        Jahresstromverbrauch in Kilowattstunden
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-4 items-center">
+        <div
+          className="px-5 py-3 rounded-2xl flex items-center gap-4"
+          style={{
+            background: 'color-mix(in srgb, #F59E0B 12%, transparent)',
+            border: '1px solid color-mix(in srgb, #F59E0B 32%, transparent)',
+          }}
+        >
+          <div className="text-[34px] font-bold text-amber leading-none">{faktor}×</div>
+          <div className="text-[12px] text-text-sec leading-snug">
+            so viel Strom wie heute –<br />
+            und das zum künftigen Netzpreis.
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {verbraucher.map((v) => (
+            <div
+              key={v.label}
+              className="flex items-center gap-2 px-2.5 py-2 rounded-xl"
+              style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <v.icon size={13} strokeWidth={1.8} className="text-text-dim shrink-0" />
+              <span className="text-[10.5px] text-text-sec truncate">{v.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-3">
-        Weitere mögliche Stromverbraucher
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-        {verbraucher.map((v) => (
-          <div key={v.label} className="flex items-center gap-2.5 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <v.icon size={15} strokeWidth={1.8} className="text-text-dim" />
-            <span className="text-[12px] text-text-sec">{v.label}</span>
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] text-text-dim mt-5">
-        Illustratives Verbrauchsbeispiel. Der tatsächliche Bedarf hängt von Gebäude, Fahrleistung, Technik und
-        Nutzerverhalten ab.
+      <p className="text-[10px] text-text-dim mt-4">
+        Mehrverbrauch nach den Annahmen im Rechner: Elektroauto {eAuto.toLocaleString('de-CH')} kWh,
+        Wärmepumpe {waermepumpe.toLocaleString('de-CH')} kWh pro Jahr. Der tatsächliche Bedarf hängt
+        von Gebäude, Fahrleistung und Nutzung ab.
       </p>
     </div>
   )

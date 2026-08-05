@@ -123,13 +123,24 @@ export default function OffertenDruck({
    * Steueramt zurueck, die Tranchen duerfen daher nicht darauf rechnen.
    */
   const werklohn = ergebnis.werklohn
-  const module = Math.round((input.kwp * 1000) / KOMPONENTEN.modul.watt)
+  /**
+   * Das tatsaechlich gewaehlte Modul. Ohne Auswahl gilt der Standard –
+   * so steht in der Offerte immer das, was der Kunde in der Beratung
+   * gesehen hat, und nicht ein anderes Produkt.
+   */
+  const modulTyp =
+    KOMPONENTEN.modulTypen.find((m) => m.id === (input.modulTypId ?? 'longi')) ??
+    KOMPONENTEN.modulTypen[0]
+  const module =
+    input.modulAnzahl && input.modulAnzahl > 0
+      ? input.modulAnzahl
+      : Math.round((input.kwp * 1000) / modulTyp.watt)
   const speicherModule = input.speicherKwh > 0 ? Math.round(input.speicherKwh / KOMPONENTEN.speicher.modulKwh) : 0
   const heute = new Date().toLocaleDateString('de-CH', { day: '2-digit', month: 'long', year: 'numeric' })
   const gueltigBis = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('de-CH')
 
   const positionen: Array<[string, string]> = [
-    [`Solarmodule ${KOMPONENTEN.modul.name} (${KOMPONENTEN.modul.typ})`, `${module} Stück à ${KOMPONENTEN.modul.watt} W`],
+    [`Solarmodule ${modulTyp.name} (${modulTyp.typ})`, `${module} Stück à ${modulTyp.watt} W`],
     [`Wechselrichter ${KOMPONENTEN.wechselrichter.name}`, '1 Stück, hybrid und Battery-Ready'],
     ...(speicherModule > 0
       ? ([[`Batteriespeicher ${KOMPONENTEN.speicher.name}`, `${speicherModule} Module, ${input.speicherKwh} kWh`]] as Array<[string, string]>)
@@ -991,9 +1002,9 @@ export default function OffertenDruck({
                 <table className="w-full text-[10px]" style={{ borderCollapse: 'collapse' }}>
                   <tbody>
                     {[
-                      ['Module', `${dach.modulAnzahl} × ${KOMPONENTEN.modul.name}`],
+                      ['Module', `${dach.modulAnzahl} × ${modulTyp.name}`],
                       ['Modulmass', KOMPONENTEN.modul.masse],
-                      ['Modulleistung', `${KOMPONENTEN.modul.watt} W`],
+                      ['Modulleistung', `${modulTyp.watt} W`],
                       ...(dach.montagesystem
                         ? ([
                             ['Unterkonstruktion', dach.montagesystem],
@@ -1552,7 +1563,7 @@ export default function OffertenDruck({
           <table className="w-full text-[11px] mb-4" style={{ borderCollapse: 'collapse' }}>
             <tbody>
               {([
-                [`Solaranlage ${input.kwp} kWp schlüsselfertig`, `${module} Module ${KOMPONENTEN.modul.name}, Wechselrichter, Unterkonstruktion, Montage`],
+                [`Solaranlage ${input.kwp} kWp schlüsselfertig`, `${module} Module ${modulTyp.name}, Wechselrichter, Unterkonstruktion, Montage`],
                 ...(speicherModule > 0
                   ? ([[`Batteriespeicher ${input.speicherKwh} kWh`, `${KOMPONENTEN.speicher.name}, ${speicherModule} Module`]] as Array<[string, string]>)
                   : []),

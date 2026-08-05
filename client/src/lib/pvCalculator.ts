@@ -44,6 +44,18 @@ export interface CalculatorInput {
   rabattProzent?: number
   /** Bezeichnung der Aktion, erscheint in der Offerte */
   rabattTitel?: string
+  /**
+   * Gewaehlter Modultyp aus KOMPONENTEN.modulTypen.
+   * Leer heisst Standard – die Aiko-Module kosten einen Aufpreis je Modul.
+   */
+  modulTypId?: string
+  /** Aufpreis je Modul in CHF, kommt aus dem gewaehlten Modultyp */
+  modulAufpreisProModul?: number
+  /**
+   * Anzahl Module aus der Dachbelegung. Ohne Planung wird sie aus der
+   * kWp-Leistung geschaetzt, damit der Aufpreis trotzdem stimmt.
+   */
+  modulAnzahl?: number
 }
 
 export interface ZusatzPosition {
@@ -164,6 +176,8 @@ export interface CalculatorResult {
   werklohn: number
   /** Anlage ohne Speicher, Wallbox und Geruest, ohne MwSt */
   anlagePreisNetto: number
+  /** Aufpreis fuer den gewaehlten Modultyp, bereits in anlagePreisNetto enthalten */
+  modulAufpreisNetto: number
   /** Speicher ohne MwSt – Position in der Offerte */
   speicherPreisNetto: number
   /** Wallbox ohne MwSt, 0 wenn nicht gewaehlt */
@@ -348,7 +362,17 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
   // einzeln ausweisen kann statt alles in einer Summe zu verstecken.
   // Jeder Posten wird auf ganze Franken gerundet und die Zwischensumme
   // ist deren Summe – sonst geht die Tabelle in der Offerte nicht auf.
-  const anlagePreisNetto = rundeAuf(config.grundpreis + kwpPreis + dachZuschlag, 10)
+  /**
+   * Aufpreis fuer einen anderen Modultyp – etwa die vollschwarzen
+   * Aiko-Module. Er haengt an der Modulzahl, nicht an der Leistung:
+   * bezahlt wird pro Stueck. Liegt keine Dachbelegung vor, schaetzen wir
+   * die Zahl aus der Leistung, damit die Offerte nicht zu billig wird.
+   */
+  const geschaetzteModule = Math.max(1, Math.round((kwp * 1000) / 490))
+  const modulZahl = input.modulAnzahl && input.modulAnzahl > 0 ? input.modulAnzahl : geschaetzteModule
+  const modulAufpreis = Math.max(0, Math.round((input.modulAufpreisProModul ?? 0) * modulZahl))
+
+  const anlagePreisNetto = rundeAuf(config.grundpreis + kwpPreis + dachZuschlag, 10) + modulAufpreis
   const wallboxPreisNetto = input.wallbox ? Math.round(config.wallboxPreis) : 0
   const geruestPreisNetto = input.geruest ? Math.round(config.geruestPreis) : 0
   const speicherPreisNetto = Math.round(speicherPreis)
@@ -478,6 +502,7 @@ export function berechne(input: CalculatorInput, config: CalculatorConfig): Calc
     mwst,
     werklohn,
     anlagePreisNetto,
+    modulAufpreisNetto: modulAufpreis,
     speicherPreisNetto,
     wallboxPreisNetto,
     geruestPreisNetto,

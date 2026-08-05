@@ -288,6 +288,61 @@ export default function RechnerPanel({ input, ergebnis, config, onChange, preise
           onChange={(v) => onChange({ neigung: v })}
         />
 
+        {/* ── Modultyp ──
+            Steht bewusst hier und nicht bei den Zusatzleistungen: die
+            Optik des Dachs ist fuer viele Kunden ein eigenes Thema, kein
+            Zubehoer. Der Aufpreis rechnet je Modul, deshalb bewegt er
+            sich mit der Anlagengroesse. */}
+        <div className="pt-1">
+          <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-2">
+            Modultyp
+          </div>
+          <div className="space-y-1.5">
+            {KOMPONENTEN.modulTypen.map((m) => {
+              const gewaehlt = (input.modulTypId ?? 'longi') === m.id
+              const module = input.modulAnzahl && input.modulAnzahl > 0
+                ? input.modulAnzahl
+                : Math.max(1, Math.round((input.kwp * 1000) / 490))
+              const aufpreis = Math.round(m.aufpreisProModul * module)
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() =>
+                    onChange({ modulTypId: m.id, modulAufpreisProModul: m.aufpreisProModul })
+                  }
+                  className="w-full text-left px-3 py-2 rounded-xl transition-all"
+                  style={{
+                    background: gewaehlt
+                      ? 'color-mix(in srgb, #F59E0B 12%, transparent)'
+                      : 'rgba(255,255,255,0.035)',
+                    border: `1px solid ${
+                      gewaehlt
+                        ? 'color-mix(in srgb, #F59E0B 42%, transparent)'
+                        : 'rgba(255,255,255,0.06)'
+                    }`,
+                  }}
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span
+                      className="text-[12px] font-semibold truncate"
+                      style={{ color: gewaehlt ? '#F59E0B' : undefined }}
+                    >
+                      {m.name}
+                    </span>
+                    <span className="text-[11px] tabular-nums shrink-0 text-text-dim">
+                      {aufpreis > 0 ? `+ CHF ${aufpreis.toLocaleString('de-CH')}` : 'im Preis'}
+                    </span>
+                  </div>
+                  <div className="text-[10.5px] text-text-dim leading-snug mt-0.5">
+                    {m.watt} W · {m.optik}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* ── Zusatzleistungen ── */}
         <div className="pt-1">
           <div className="text-[11px] uppercase tracking-wider text-text-dim font-semibold mb-2">
