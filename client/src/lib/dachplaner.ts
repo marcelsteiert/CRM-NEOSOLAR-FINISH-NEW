@@ -186,7 +186,7 @@ export interface Montagesystem {
 export const MONTAGESYSTEME: Montagesystem[] = [
   {
     id: 'k2-singlerail',
-    name: 'K2 SingleRail mit CrossHook 3S',
+    name: 'K2 SingleRail mit SolidHook 3S Alpine',
     hersteller: 'K2 Systems',
     dachart: 'STEIL',
     untergrund: 'Ziegel- und Betonsteindach',
@@ -194,7 +194,7 @@ export const MONTAGESYSTEME: Montagesystem[] = [
     ostWest: false,
     reihenfaktor: 1.02,
     hochformat: true,
-    hinweis: 'Kreuzverbund für hohe Lasten, Rastmontage ohne Verschraubung an der Grundplatte',
+    hinweis: 'Alpin-Haken für hohe Schnee- und Windlasten, Rastmontage ohne Verschraubung an der Grundplatte',
   },
   {
     id: 'k2-solidrail',

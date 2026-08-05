@@ -151,10 +151,13 @@ export const KOMPONENTEN = {
   /**
    * Waehlbare Modultypen.
    *
-   * Das LONGi ist der Standard. Die Aiko-Module sind komplett schwarz –
-   * das zaehlt bei Kunden, denen die Optik wichtig ist. Leistungswerte
-   * aus den Datenblaettern, Aufpreise sind Richtwerte und noch zu
-   * bestaetigen.
+   * Das LONGi ist der Standard, die beiden AIKO sind Optionen. Jedes Modul
+   * loest ein anderes Problem – deshalb steht bei jedem, wofuer es gedacht
+   * ist, statt einer Aufzaehlung technischer Werte.
+   *
+   * ACHTUNG – noch zu bestaetigen: die Wattzahlen der beiden AIKO und alle
+   * Aufpreise sind Richtwerte. Vor dem ersten Verkauf mit den aktuellen
+   * Datenblaettern und Einkaufspreisen abgleichen.
    */
   modulTypen: [
     {
@@ -162,25 +165,30 @@ export const KOMPONENTEN = {
       name: 'LONGi Hi-MO X10 Explorer',
       typ: 'LR7-54HVH',
       watt: 490,
-      optik: 'Silberner Rahmen, dunkle Zellen',
+      beschreibung:
+        'Für maximale Erträge, begrenzte Flächen und anspruchsvolle Schattenumgebungen.',
+      bild: 'modul.png',
       aufpreisProModul: 0,
       standard: true,
     },
     {
-      id: 'aiko-allblack',
-      name: 'Aiko Neostar All Black',
-      typ: 'AIKO-A-MAH54Mb',
+      id: 'aiko-3s-fullblack',
+      name: 'AIKO Neostar 3S Full Black',
+      typ: 'Neostar 3S',
       watt: 480,
-      optik: 'Vollständig schwarz, ohne sichtbare Zellstruktur',
+      beschreibung: 'Für maximale Leistung und Ästhetik – vollständig schwarz.',
+      bild: 'modul-aiko-3s.png',
       aufpreisProModul: 28,
       standard: false,
     },
     {
-      id: 'aiko-kw5-allblack',
-      name: 'Aiko Neostar 2S+ KW5 All Black',
-      typ: 'AIKO-A-MAH54Db',
+      id: 'aiko-3s-plus',
+      name: 'AIKO Neostar 3S+',
+      typ: 'Neostar 3S+',
       watt: 505,
-      optik: 'Vollständig schwarz, höchste Leistung je Fläche',
+      beschreibung:
+        'Für anspruchsvolle Standorte – alpine Lagen und Hagelregionen.',
+      bild: 'modul-aiko-3s-plus.png',
       aufpreisProModul: 42,
       standard: false,
     },
@@ -189,13 +197,15 @@ export const KOMPONENTEN = {
     name: string
     typ: string
     watt: number
-    optik: string
+    beschreibung: string
+    /** Datei in client/public/praesentation/ – faellt auf modul.png zurueck */
+    bild: string
     aufpreisProModul: number
     standard: boolean
   }>,
   montage: {
-    name: 'K2 SingleRail mit CrossHook 3S',
-    hinweis: 'Kreuzverbund für hohe Lasten, Rastmontage ohne Verschraubung an der Grundplatte',
+    name: 'K2 SingleRail mit SolidHook 3S Alpine',
+    hinweis: 'Alpin-Haken für hohe Schnee- und Windlasten, Rastmontage ohne Verschraubung an der Grundplatte',
   },
   wallbox: {
     name: 'Huawei sCharger',

@@ -335,7 +335,7 @@ export default function RechnerPanel({ input, ergebnis, config, onChange, preise
                     </span>
                   </div>
                   <div className="text-[10.5px] text-text-dim leading-snug mt-0.5">
-                    {m.watt} W · {m.optik}
+                    {m.watt} W · {m.beschreibung}
                   </div>
                 </button>
               )
