@@ -1,4 +1,5 @@
 import {
+  Presentation,
   Repeat,
   Megaphone,
   Users,
@@ -41,6 +42,7 @@ export type AdminSection =
   | 'notifications'
   | 'branding'
   | 'rechnerPreise'
+  | 'praesentation'
   | 'mailAutomatik'
   | 'kampagnen'
   | 'ai'
@@ -96,6 +98,7 @@ const navGroups: AdminNavGroup[] = [
       { id: 'notifications', icon: Bell, label: 'Benachrichtigungen', color: '#F87171' },
       { id: 'branding', icon: Palette, label: 'Firmen-Branding', color: '#F59E0B' },
       { id: 'rechnerPreise', icon: Calculator, label: 'Rechner-Preise', color: '#FBBF24' },
+      { id: 'praesentation', icon: Presentation, label: 'Präsentation / Folien', color: '#F59E0B' },
     ],
   },
   {

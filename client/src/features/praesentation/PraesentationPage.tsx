@@ -50,196 +50,67 @@ import { FolienZufriedenheitspaket, FolienAktion } from '../salespitch/component
 
 const API = import.meta.env.VITE_API_URL ?? '/api/v1'
 
-type FolienId =
-  | 'titel' | 'ablauf' | 'warum' | 'team' | 'verbrauch' | 'strompreis' | 'kostenOhne'
-  | 'modul' | 'wechselrichter' | 'speicher' | 'wallbox' | 'app' | 'dachanalyse'
-  | 'dachplaner'
-  | 'rechner' | 'anlage' | 'energiefluss' | 'motive' | 'varianten'
-  | 'gesamtvergleich' | 'monatsvergleich' | 'finanzierung'
-  | 'persoenlich' | 'rueckblick' | 'bausteine' | 'amortisation' | 'unterschied'
-  | 'referenzen' | 'zusatzrechner' | 'montage'
-  | 'speicherUpgrade' | 'betreuung' | 'empfehlung' | 'paket' | 'aktion'
-  | 'sicherheiten' | 'fragen' | 'entscheidung'
-  | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
-  | 'kundenkontakt' | 'ziele' | 'vorteile' | 'start' | 'kundendaten'
+import { VARIANTEN, GELD_FOLIEN } from './folienListe'
+import type { Variante } from './folienListe'
 
-interface Variante {
-  id: string
-  name: string
-  beschreibung: string
-  folien: Array<{ id: FolienId; titel: string }>
-}
-
-/** Folien, deren Zahlen sich auf die gewaehlte Anlagenvariante beziehen. */
-const GELD_FOLIEN = new Set<FolienId>([
-  'anlage', 'energiefluss', 'motive', 'bausteine', 'gesamtvergleich',
-  'monatsvergleich', 'amortisation', 'varianten', 'finanzierung', 'entscheidung', 'zusatzrechner', 'speicherUpgrade', 'aktion',
-])
+/** Im Admin gespeicherte Reihenfolge und Sichtbarkeit je Strecke. */
+type FolienStand = Record<string, Array<{ id: string; aktiv: boolean }>>
 
 /**
- * Zwei Praesentations-Strecken, beide mit demselben Live-Rechner:
+ * Legt die im Admin gespeicherte Reihenfolge ueber die Liste aus dem Code.
  *
- * "verkauf" folgt der NEOSOLAR-Verkaufspraesentation inklusive der
- *   Originalbilder (Produkte, Team, App).
- * "premium" ist die kompaktere, zahlengetriebene Strecke: erst die
- *   Stromkosten ohne Anlage, dann Rechner, Energiefluss und Varianten.
+ * Folien, die im Code neu dazugekommen sind, haengen hinten an – sonst
+ * verschwaende eine neue Folie stillschweigend, weil sie im gespeicherten
+ * Stand noch fehlt.
  */
-const VARIANTEN: Variante[] = [
-  {
-    id: 'komplett',
-    name: 'Komplette Beratung',
-    beschreibung:
-      'Der volle Ablauf: Bedarf, Produkte, Rechner, Geld-Vergleich, Sicherheiten und Abschluss. Für den regulären Beratungstermin.',
-    folien: [
-      // 1. Ankommen: begruessen, Rahmen setzen, Ziele des Kunden aufnehmen
-      { id: 'titel', titel: 'Begrüssung' },
-      { id: 'ziele', titel: 'Ihre Ziele' },
-      { id: 'ablauf', titel: 'Ablauf des Termins' },
-      { id: 'persoenlich', titel: 'Ihre Ausgangslage' },
-      // 2. Problem aufbauen – erst belegte Vergangenheit, dann Prognose
-      { id: 'rueckblick', titel: 'Was bisher passiert ist' },
-      { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
-      { id: 'strompreis', titel: 'Strompreis-Entwicklung' },
-      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
-      // 3. Loesung zeigen: erst die Technik, dann das eigene Dach
-      { id: 'modul', titel: 'Solarmodule' },
-      { id: 'wechselrichter', titel: 'Wechselrichter' },
-      { id: 'speicher', titel: 'Speicher' },
-      { id: 'wallbox', titel: 'Wallbox' },
-      { id: 'app', titel: 'Die App' },
-      { id: 'dachanalyse', titel: 'Dachanalyse' },
-      // 4. Gemeinsam planen – erst das Dach belegen, dann die Regler
-      { id: 'dachplaner', titel: 'Ihr Dach belegen' },
-      { id: 'rechner', titel: 'Ihre Anlage planen' },
-      { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
-      { id: 'energiefluss', titel: 'Ihr Energiefluss' },
-      { id: 'motive', titel: 'Ihr Nutzen' },
-      { id: 'zusatzrechner', titel: 'Rechnen wir es durch' },
-      // 5. Das Geld – die Kernsequenz
-      { id: 'bausteine', titel: 'Woher das Geld kommt' },
-      { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
-      { id: 'monatsvergleich', titel: 'Pro Monat' },
-      { id: 'amortisation', titel: 'Der Wendepunkt' },
-      { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
-      { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
-      { id: 'aktion', titel: 'Aktion' },
-      { id: 'speicherUpgrade', titel: 'Speicher-Ausbau' },
-      // 6. Wofuer sich das lohnt – jenseits der Zahlen
-      { id: 'vorteile', titel: 'Was Sie davon haben' },
-      // 7. Vertrauen: erst jetzt, wenn die Zahlen ueberzeugt haben
-      { id: 'warum', titel: 'Warum NEOSOLAR' },
-      { id: 'team', titel: 'Das Team' },
-      { id: 'referenzen', titel: 'Referenzen' },
-      // 8. Sicherheit geben
-      { id: 'paket', titel: 'Zufriedenheitspaket' },
-      { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
-      { id: 'planung', titel: 'Planungssicherheit' },
-      { id: 'betreuung', titel: 'Ihre Betreuung' },
-      { id: 'unterschied', titel: 'Offerten vergleichen' },
-      { id: 'fragen', titel: 'Häufige Fragen' },
-      // 9. Umsetzung in einer Folie statt in dreien
-      { id: 'zeitplan', titel: 'So geht es weiter' },
-      { id: 'montage', titel: 'Die Montage' },
-      { id: 'workflow', titel: 'Unser Ablauf' },
-      // 10. Abschluss
-      { id: 'entscheidung', titel: 'Ihre Entscheidung' },
-      { id: 'empfehlung', titel: 'Weiterempfehlung' },
-      { id: 'start', titel: 'Auf die Zusammenarbeit' },
-    ],
-  },
-  {
-    /**
-     * Dieselbe Strecke wie die komplette Beratung, nur ohne Verkaeufer.
-     *
-     * Zwei Unterschiede, mehr nicht: Die Folien, die Kundendaten brauchen,
-     * fallen weg – wir haben sie ja noch nicht. Und am Schluss traegt der
-     * Kunde sie selbst ein, statt dass der Berater das Angebot anlegt.
-     */
-    id: 'kunde',
-    name: 'Für Sie zum Durchgehen',
-    beschreibung:
-      'Dieselbe Beratung wie im Termin, zum Selberdurchgehen. Am Schluss tragen Sie Ihre Daten ein und erhalten Ihre Offerte.',
-    // Bewusst dieselbe Liste wie oben, nur mit der Kontaktfolie am Schluss
-    // statt der Verkaeufer-Entscheidungsfolie.
-    folien: [
-      { id: 'titel', titel: 'Willkommen' },
-      { id: 'ablauf', titel: 'Ablauf' },
-      { id: 'rueckblick', titel: 'Was bisher passiert ist' },
-      { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
-      { id: 'strompreis', titel: 'Strompreis-Entwicklung' },
-      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
-      { id: 'warum', titel: 'Warum NEOSOLAR' },
-      { id: 'team', titel: 'Das Team' },
-      { id: 'referenzen', titel: 'Referenzen' },
-      { id: 'modul', titel: 'Solarmodule' },
-      { id: 'wechselrichter', titel: 'Wechselrichter' },
-      { id: 'speicher', titel: 'Speicher' },
-      { id: 'wallbox', titel: 'Wallbox' },
-      { id: 'app', titel: 'Die App' },
-      { id: 'dachanalyse', titel: 'Dachanalyse' },
-      { id: 'dachplaner', titel: 'Ihr Dach belegen' },
-      { id: 'rechner', titel: 'Ihre Anlage planen' },
-      { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
-      { id: 'energiefluss', titel: 'Ihr Energiefluss' },
-      { id: 'motive', titel: 'Ihr Nutzen' },
-      { id: 'zusatzrechner', titel: 'Rechnen wir es durch' },
-      { id: 'bausteine', titel: 'Woher das Geld kommt' },
-      { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
-      { id: 'monatsvergleich', titel: 'Pro Monat' },
-      { id: 'amortisation', titel: 'Der Wendepunkt' },
-      { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
-      { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
-      { id: 'aktion', titel: 'Aktion' },
-      { id: 'speicherUpgrade', titel: 'Speicher-Ausbau' },
-      { id: 'paket', titel: 'Zufriedenheitspaket' },
-      { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
-      { id: 'planung', titel: 'Planungssicherheit' },
-      { id: 'betreuung', titel: 'Ihre Betreuung' },
-      { id: 'unterschied', titel: 'Offerten vergleichen' },
-      { id: 'fragen', titel: 'Häufige Fragen' },
-      { id: 'montage', titel: 'Die Montage' },
-      { id: 'workflow', titel: 'Unser Ablauf' },
-      { id: 'zeitplan', titel: 'Umsetzung' },
-      { id: 'empfehlung', titel: 'Weiterempfehlung' },
-      // Statt der Verkaeufer-Entscheidungsfolie: der Kunde traegt seine
-      // Daten ein. Danach stehen sie in der Offerte, die er drucken kann.
-      { id: 'kundenkontakt', titel: 'Ihre Offerte anfordern' },
-    ],
-  },
-  {
-    id: 'kurz',
-    name: 'Kurzfassung',
-    beschreibung:
-      'Zahlengetrieben in 14 Folien – für den Online-Termin mit wenig Zeit oder den zweiten Kontakt.',
-    folien: [
-      { id: 'titel', titel: 'Begrüssung' },
-      { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
-      { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
-      { id: 'warum', titel: 'Warum NEOSOLAR' },
-      { id: 'dachplaner', titel: 'Ihr Dach belegen' },
-      { id: 'rechner', titel: 'Ihre Anlage planen' },
-      { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
-      { id: 'energiefluss', titel: 'Ihr Energiefluss' },
-      { id: 'bausteine', titel: 'Woher das Geld kommt' },
-      { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
-      { id: 'monatsvergleich', titel: 'Pro Monat' },
-      { id: 'amortisation', titel: 'Der Wendepunkt' },
-      { id: 'varianten', titel: 'Ihre drei Möglichkeiten' },
-      { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
-      { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
-      { id: 'zeitplan', titel: 'Umsetzung' },
-      { id: 'entscheidung', titel: 'Ihre Entscheidung' },
-      { id: 'kontakt', titel: 'Fragen offen?' },
-    ],
-  },
-]
+function wendeStandAn(v: Variante, stand: FolienStand | null): Variante {
+  const gespeichert = stand?.[v.id]
+  if (!gespeichert?.length) return v
+
+  const nachId = new Map(v.folien.map((f) => [f.id, f]))
+  const sortiert = gespeichert
+    .filter((s) => s.aktiv)
+    .map((s) => nachId.get(s.id as Variante['folien'][number]['id']))
+    .filter((f): f is Variante['folien'][number] => Boolean(f))
+
+  const bekannt = new Set(gespeichert.map((s) => s.id))
+  const neue = v.folien.filter((f) => !bekannt.has(f.id))
+  const folien = [...sortiert, ...neue]
+
+  return folien.length ? { ...v, folien } : v
+}
+
 
 export default function PraesentationPage() {
   const { varianteId } = useParams<{ varianteId?: string }>()
   const [suchparameter] = useSearchParams()
   const navigate = useNavigate()
 
-  const variante = VARIANTEN.find((v) => v.id === varianteId) ?? null
+  /**
+   * Folienstand aus dem Admin. Bewusst ueber den oeffentlichen Endpunkt:
+   * die Praesentation laeuft auch beim Kunden ohne Login.
+   */
+  const [folienStand, setFolienStand] = useState<FolienStand | null>(null)
+  useEffect(() => {
+    let abgebrochen = false
+    fetch(`${API}/public/calculator/folien`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!abgebrochen && r?.data) setFolienStand(r.data as FolienStand)
+      })
+      .catch(() => {
+        /* Ohne Einstellung gilt die Reihenfolge aus dem Code */
+      })
+    return () => {
+      abgebrochen = true
+    }
+  }, [])
+
+  const basisVariante = VARIANTEN.find((v) => v.id === varianteId) ?? null
+  const variante = useMemo(
+    () => (basisVariante ? wendeStandAn(basisVariante, folienStand) : null),
+    [basisVariante, folienStand]
+  )
   const kundeAusLinkRoh = suchparameter.get('kunde') ?? undefined
   const contactId = suchparameter.get('contact') ?? undefined
   const terminId = suchparameter.get('termin') ?? undefined
@@ -668,7 +539,7 @@ export default function PraesentationPage() {
                 <div className="text-[13px] text-text-sec leading-snug mb-4">{v.beschreibung}</div>
                 <div className="flex items-center gap-1.5 text-[11px] text-text-dim">
                   <LayoutList size={12} strokeWidth={2} />
-                  {v.folien.length} Folien
+                  {wendeStandAn(v, folienStand).folien.length} Folien
                 </div>
               </button>
             ))}

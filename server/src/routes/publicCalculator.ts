@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { loadPricing } from './admin/calculatorPricing.js'
 import { loadBranding } from './admin/branding.js'
+import { ladeFolienEinstellungen } from './admin/praesentation.js'
 
 /**
  * Oeffentliche Endpunkte fuer den Solarrechner auf der Homepage.
@@ -12,6 +13,19 @@ import { loadBranding } from './admin/branding.js'
  * eine Richtofferten-Anfrage als Lead anlegen.
  */
 const router = Router()
+
+/**
+ * Folienreihenfolge lesen. Bewusst ohne Auth: die Praesentation laeuft
+ * auch beim Kunden ohne Login, und die Reihenfolge der Folien ist kein
+ * schuetzenswertes Wissen. Geschrieben wird weiterhin nur im Admin.
+ */
+router.get('/folien', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json({ data: await ladeFolienEinstellungen() })
+  } catch (err) {
+    next(err)
+  }
+})
 
 router.get('/config', async (_req: Request, res: Response, next: NextFunction) => {
   try {

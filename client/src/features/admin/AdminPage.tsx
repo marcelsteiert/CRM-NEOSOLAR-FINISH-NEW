@@ -15,6 +15,7 @@ import AiSettingsSection from './components/AiSettingsSection'
 import AuditLogSection from './components/AuditLogSection'
 import CompanyBrandingSection from './components/CompanyBrandingSection'
 import CalculatorPricingSection from './components/CalculatorPricingSection'
+import PraesentationSection from './components/PraesentationSection'
 import DatabaseExportSection from './components/DatabaseExportSection'
 import ProjectPhasesSection from './components/ProjectPhasesSection'
 import SharedPasswordsSection from './components/SharedPasswordsSection'
@@ -47,6 +48,7 @@ const sectionTitles: Record<AdminSection, { title: string; desc: string }> = {
   database: { title: 'Datenbank & Export', desc: 'Backup, Massenexport und API-Zugriff' },
   passwords: { title: 'Geteilte Passwörter', desc: 'Team-Passwörter verwalten und Rollen-Berechtigungen setzen' },
   rechnerPreise: { title: 'Rechner-Preise', desc: 'Preise und Annahmen des Verkaufsrechners pflegen' },
+  praesentation: { title: 'Präsentation / Folien', desc: 'Reihenfolge und Sichtbarkeit der Beratungsfolien' },
   mailAutomatik: { title: 'Automatisches Nachfassen', desc: 'Ablauf, Texte und Freigabe für Mails an Kunden mit offenem Angebot' },
   kampagnen: { title: 'Kampagnen', desc: 'Massenversand an Leads mit Tagesbudget, Abmeldelink und Auswertung' },
 }
@@ -69,6 +71,7 @@ const sectionComponents: Record<AdminSection, React.ComponentType> = {
   notifications: NotificationSettingsSection,
   branding: CompanyBrandingSection,
   rechnerPreise: CalculatorPricingSection,
+  praesentation: PraesentationSection,
   ai: AiSettingsSection,
   audit: AuditLogSection,
   database: DatabaseExportSection,
