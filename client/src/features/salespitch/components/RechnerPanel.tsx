@@ -581,8 +581,9 @@ export default function RechnerPanel({ input, ergebnis, config, onChange, preise
                 </div>
               </dl>
               <p className="text-[10px] text-text-dim mt-3">
-                Festpreis, keine versteckten Kosten. Richtofferte auf Basis von Geoportal-Daten – nach der
-                Drohnenvermessung bestätigen wir den finalen Preis (Abweichung max. CHF 1–2K).
+                Keine versteckten Kosten, kein Nachtragsgeschäft. Diese Richtofferte beruht auf
+                Luftbild und Kataster – nach der Drohnenvermessung erhalten Sie Ihren Festpreis,
+                und der gilt bis zur Schlussrechnung.
               </p>
             </div>
           ) : (

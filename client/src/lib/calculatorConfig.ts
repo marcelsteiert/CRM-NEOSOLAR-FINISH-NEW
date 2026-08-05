@@ -138,7 +138,61 @@ export const KOMPONENTEN = {
     { id: 's21', name: 'Speicher LUNA2000-21 (S21)', kwh: 20.7, preis: 10889.6 },
     { id: 'backup', name: 'Huawei Backup Box (Notstrom)', kwh: 0, preis: 1109.6 },
     { id: 'charger', name: 'Huawei Smart Charger SCharger-22KT-S0', kwh: 0, preis: 1400.0 },
+    /*
+     * Die folgenden Preise sind Richtwerte und noch nicht aus einer
+     * echten Kalkulation belegt – vor dem ersten Verkauf pruefen.
+     */
+    { id: 'solarmanager', name: 'Solarmanager (Energiesteuerung)', kwh: 0, preis: 1290.0 },
+    { id: 'zev', name: 'ZEV-Messkonzept (Eigenverbrauchsgemeinschaft)', kwh: 0, preis: 2400.0 },
+    { id: 'optimierer', name: 'Leistungsoptimierer je Modul (bei Verschattung)', kwh: 0, preis: 85.0 },
+    { id: 'sicherungshaken', name: 'Sicherungshaken für Wartung und Reinigung', kwh: 0, preis: 240.0 },
   ] as Array<{ id: string; name: string; kwh: number; preis: number }>,
+
+  /**
+   * Waehlbare Modultypen.
+   *
+   * Das LONGi ist der Standard. Die Aiko-Module sind komplett schwarz –
+   * das zaehlt bei Kunden, denen die Optik wichtig ist. Leistungswerte
+   * aus den Datenblaettern, Aufpreise sind Richtwerte und noch zu
+   * bestaetigen.
+   */
+  modulTypen: [
+    {
+      id: 'longi',
+      name: 'LONGi Hi-MO X10 Explorer',
+      typ: 'LR7-54HVH',
+      watt: 490,
+      optik: 'Silberner Rahmen, dunkle Zellen',
+      aufpreisProModul: 0,
+      standard: true,
+    },
+    {
+      id: 'aiko-allblack',
+      name: 'Aiko Neostar All Black',
+      typ: 'AIKO-A-MAH54Mb',
+      watt: 480,
+      optik: 'Vollständig schwarz, ohne sichtbare Zellstruktur',
+      aufpreisProModul: 28,
+      standard: false,
+    },
+    {
+      id: 'aiko-kw5-allblack',
+      name: 'Aiko Neostar 2S+ KW5 All Black',
+      typ: 'AIKO-A-MAH54Db',
+      watt: 505,
+      optik: 'Vollständig schwarz, höchste Leistung je Fläche',
+      aufpreisProModul: 42,
+      standard: false,
+    },
+  ] as Array<{
+    id: string
+    name: string
+    typ: string
+    watt: number
+    optik: string
+    aufpreisProModul: number
+    standard: boolean
+  }>,
   montage: {
     name: 'K2 SingleRail mit CrossHook 3S',
     hinweis: 'Kreuzverbund für hohe Lasten, Rastmontage ohne Verschraubung an der Grundplatte',

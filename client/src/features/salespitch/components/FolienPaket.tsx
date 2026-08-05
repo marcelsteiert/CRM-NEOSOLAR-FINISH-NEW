@@ -48,8 +48,21 @@ export function FolienZufriedenheitspaket() {
       <h2 className="text-[28px] sm:text-[32px] font-bold text-text mb-2">
         Zufriedenheitspaket – bei jeder neuen Anlage dabei
       </h2>
+
+      {/* Der Wert soll sichtbar sein. Was nichts kostet, wirkt schnell,
+          als wäre es nichts wert – deshalb der durchgestrichene Preis. */}
+      <div className="flex flex-wrap items-baseline gap-3 mb-3">
+        <span
+          className="text-[26px] font-bold tabular-nums"
+          style={{ color: '#6B7280', textDecoration: 'line-through', textDecorationThickness: 2 }}
+        >
+          CHF 2'400
+        </span>
+        <span className="text-[26px] font-bold text-emerald">für Sie kostenlos</span>
+      </div>
       <p className="text-[14px] text-text-sec mb-7">
-        Sicherheit, Transparenz und Rundum-Service – ohne versteckte Kosten.
+        Fünf Jahre Wartung, Überwachung und Service. Bei anderen ein Abonnement, bei uns
+        Bestandteil jeder Anlage – <b className="text-text">Ihre Sicherheit hat keinen Preis.</b>
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">

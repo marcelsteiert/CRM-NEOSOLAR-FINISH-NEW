@@ -94,7 +94,7 @@ verbindliches Festpreisangebot. Ertrag, Eigenverbrauch und Autarkie sind rechner
 stundengenaues Lastprofil. Die Strompreisannahme (${input.strompreisRp} Rp./kWh mit
 ${(config.strompreisSteigerung * 100).toFixed(1)} % Steigerung pro Jahr) ist keine Garantie. Der Förderbeitrag
 richtet sich nach dem bei Anmeldung gültigen Pronovo-Tarif. Das verbindliche Angebot erhalten Sie nach der
-Drohnenvermessung, die Abweichung beträgt maximal CHF 1–2K.
+Drohnenvermessung – danach gilt Ihr Festpreis.
 </p>`
 }
 
@@ -131,7 +131,7 @@ const VORLAGEN: Array<{ id: string; name: string; betreff: string; text: string 
       'hier Ihre Richtofferte – genau die Konfiguration, die wir gemeinsam am Bildschirm durchgerechnet haben.\n\n' +
       '{kwp} kWp, {speicher}, Festpreis {festpreis}.\n\n' +
       'Die Offerte basiert auf Geoportal-Daten. Sobald Sie grünes Licht geben, vermessen wir Ihr Dach mit der ' +
-      'Drohne und bestätigen den finalen Preis – die Abweichung liegt bei maximal CHF 1–2K.',
+      'Drohne. Daraus entsteht Ihr Festpreis, der bis zur Schlussrechnung gilt.',
   },
   {
     id: 'vorort',

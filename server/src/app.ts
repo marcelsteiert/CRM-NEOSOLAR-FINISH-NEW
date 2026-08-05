@@ -39,6 +39,7 @@ import adminCalculatorPricingRouter from './routes/admin/calculatorPricing.js'
 import publicCalculatorRouter from './routes/publicCalculator.js'
 import publicTrackingRouter from './routes/publicTracking.js'
 import adminCampaignsRouter from './routes/admin/campaigns.js'
+import adminPraesentationRouter from './routes/admin/praesentation.js'
 import solarOfferRouter from './routes/solarOffer.js'
 import followUpRouter from './routes/followUp.js'
 import callcenterRouter from './routes/dashboard/callcenter.js'
@@ -194,6 +195,7 @@ export function createApp() {
   app.use('/api/v1/admin/appointment-kanban', ...adminGuard, adminAppointmentKanbanRouter)
   app.use('/api/v1/admin/deal-kanban', ...adminGuard, adminDealKanbanRouter)
   app.use('/api/v1/admin/campaigns', ...adminGuard, adminCampaignsRouter)
+  app.use('/api/v1/admin/praesentation', ...adminGuard, adminPraesentationRouter)
   app.use('/api/v1/admin/no-show-kanban', ...adminGuard, adminNoShowKanbanRouter)
   app.use('/api/v1/admin/project-kanban', ...adminGuard, adminProjectKanbanRouter)
   // Project-Tracking: authentifiziert; Modul-Check (baustellen/kalkulation) macht der Router selbst

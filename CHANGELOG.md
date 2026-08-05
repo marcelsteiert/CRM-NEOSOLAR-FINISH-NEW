@@ -4,7 +4,7 @@ Jeder Arbeitstag mit allen Änderungen dieses Tages, neueste zuerst.
 Das Projekt hat keine Versionsnummern – ausgeliefert wird laufend auf
 https://neosolar-crm.com.
 
-**374 Änderungen** vom Dienstag, 3. März 2026 bis Dienstag, 4. August 2026
+**375 Änderungen** vom Dienstag, 3. März 2026 bis Dienstag, 4. August 2026
 an 45 Arbeitstagen.
 
 Erzeugt mit `node tools/changelog.mjs`. Der aktuelle Arbeitsstand steht in
@@ -26,6 +26,7 @@ Erzeugt mit `node tools/changelog.mjs`. Der aktuelle Arbeitsstand steht in
 - Offerte druckt alle sieben Seiten und laesst sich herunterladen `52fbf52`
 - Offerte bricht sauber um, Bestellseite passt auf ein Blatt `3ee62c8`
 - Offerte als echte Seiten statt zerschnittenem Bild `b715e58`
+- Seiten werden vollstaendig gerendert, Bildschirmansicht als Blaetter `863a6d0`
 
 ### Montag, 3. August 2026
 

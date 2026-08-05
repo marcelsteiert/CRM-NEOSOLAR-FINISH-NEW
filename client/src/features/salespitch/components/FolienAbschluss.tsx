@@ -12,9 +12,15 @@ const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
  * die Entscheidungsfolie.
  *
  * Alle Zusagen stammen aus der NEOSOLAR-Verkaufspraesentation
- * (Festpreis, Zeitgarantie, 30 Jahre Modulgarantie, max. CHF 1-2K Abweichung
- * nach der Drohnenvermessung). Bewusst KEINE erfundenen Zahlungs- oder
- * Widerrufskonditionen und keine fremden Bewertungsergebnisse.
+ * (Festpreis, Zeitgarantie, 30 Jahre Modulgarantie). Bewusst KEINE
+ * erfundenen Zahlungs- oder Widerrufskonditionen und keine fremden
+ * Bewertungsergebnisse.
+ *
+ * Zur Preissprache: Wir sagen Festpreis und meinen Festpreis. Der frueher
+ * genannte Zusatz "Abweichung bis CHF 2000" hat die Zusage aufgehoben,
+ * kaum war sie ausgesprochen. Die Richtofferte beruht auf Katasterdaten,
+ * der Festpreis entsteht nach der Vermessung – das ist die eine Aussage,
+ * die ueberall gleich lauten muss.
  */
 
 export function FolienSicherheiten() {
@@ -47,7 +53,7 @@ export function FolienSicherheiten() {
       icon: FileCheck2,
       farbe: '#34D399',
       titel: 'Verbindlich nach Vermessung',
-      text: 'Nach Ihrer Zusage vermessen wir das Dach mit der Drohne. Die Abweichung zur Richtofferte beträgt maximal CHF 1–2K.',
+      text: 'Nach Ihrer Zusage vermessen wir das Dach mit der Drohne. Daraus entsteht Ihr Festpreis – ohne Nachträge.',
     },
     {
       icon: Wallet,
@@ -115,7 +121,7 @@ export function FolienHaeufigeFragen() {
     {
       frage: 'Was passiert, wenn mein Dach doch nicht so ist wie geplant?',
       antwort:
-        'Nach Ihrer Zusage vermessen wir das Dach mit der Drohne. Erst danach entsteht das verbindliche Angebot. Die Abweichung zur Richtofferte liegt bei maximal CHF 1–2K – und Sie entscheiden dann erneut.',
+        'Nach Ihrer Zusage vermessen wir das Dach mit der Drohne. Erst danach entsteht Ihr verbindlicher Festpreis. Sie sehen ihn, bevor Sie sich endgültig festlegen – und entscheiden dann erneut.',
     },
     {
       frage: 'Was ist mit Hagel und Sturm?',

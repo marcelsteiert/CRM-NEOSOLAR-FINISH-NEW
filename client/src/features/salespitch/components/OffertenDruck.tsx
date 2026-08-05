@@ -1445,7 +1445,7 @@ export default function OffertenDruck({
         <h2 className="text-[14px] font-bold mb-3" style={{ color: '#111827' }}>So geht es weiter</h2>
         <ol className="text-[11px] mb-6" style={{ color: '#374151', lineHeight: 1.9, paddingLeft: 18 }}>
           <li>Sie prüfen diese Richtofferte in Ruhe.</li>
-          <li>Bei Zusage vermessen wir Ihr Dach mit der Drohne und bestätigen den finalen Preis (Abweichung max. CHF 1–2K).</li>
+          <li>Bei Zusage vermessen wir Ihr Dach mit der Drohne. Daraus entsteht Ihr Festpreis.</li>
           <li>Sie unterzeichnen das verbindliche Angebot.</li>
           <li>Wir übernehmen Baugesuch, Netzanmeldung und Förderantrag.</li>
           <li>Ab Baubewilligung bis zur fertigen Montage maximal zwei Monate.</li>

@@ -352,7 +352,15 @@ export default function Dachplaner({
       const py = ev.clientY - r.top
 
       setZoom((alterZoom) => {
-        const stufe = ev.deltaY < 0 ? 1 : -1
+        /*
+         * Halbe Stufen statt ganzer.
+         *
+         * Eine ganze Zoomstufe verdoppelt die Darstellung – beim Setzen
+         * einzelner Module springt das Bild dabei so weit, dass man die
+         * Stelle wiederfinden muss. Halbe Schritte fuehlen sich beim
+         * Mausrad deutlich ruhiger an.
+         */
+        const stufe = ev.deltaY < 0 ? 0.5 : -0.5
         const neuerZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, alterZoom + stufe))
         if (neuerZoom === alterZoom) return alterZoom
 
@@ -966,7 +974,9 @@ export default function Dachplaner({
 
   // ── Kacheln ────────────────────────────────────────────────────────
   const kacheln = useMemo(() => {
-    const kachelZoom = Math.min(zoom, MAX_KACHEL_ZOOM)
+    // Kacheln gibt es nur in ganzen Stufen; halbe Zoomschritte werden
+    // ueber die Skalierung aufgefangen
+    const kachelZoom = Math.min(Math.floor(zoom), MAX_KACHEL_ZOOM)
     const skala = Math.pow(2, zoom - kachelZoom)
     const kachelPx = KACHEL_GROESSE * skala
 
@@ -1895,7 +1905,7 @@ export default function Dachplaner({
             )}
 
             <div className="absolute bottom-2 left-2 px-2 py-1 rounded text-[9px] text-white" style={{ background: 'rgba(6,8,12,0.7)' }}>
-              Zoom {zoom}{zoom > MAX_KACHEL_ZOOM ? ' (vergrössert)' : ''} · 1 Modul ≈ {Math.round(pixelProModul)} px
+              Zoom {zoom.toFixed(1)}{zoom > MAX_KACHEL_ZOOM ? ' (vergrössert)' : ''} · 1 Modul ≈ {Math.round(pixelProModul)} px
             </div>
             <div className="absolute bottom-2 right-2 px-2 py-1 rounded text-[8px]" style={{ background: 'rgba(6,8,12,0.7)', color: '#9CA3AF' }}>
               swisstopo · BFE

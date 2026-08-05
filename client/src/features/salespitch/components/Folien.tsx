@@ -365,9 +365,9 @@ export function FolienAblaufUmsetzung() {
 export function FolienZeitplan() {
   const stationen = [
     { titel: 'Heutiger Termin', text: 'Gemeinsam planen wir Ihre Anlage und erstellen Ihre individuelle Richtofferte.' },
-    { titel: 'Geoportal-Basis', text: 'Die Offerte basiert auf Geoportal-Daten. Dadurch sind kleine Abweichungen möglich.' },
+    { titel: 'Geoportal-Basis', text: 'Die Richtofferte beruht auf Luftbild und Kataster. Ihren Festpreis erhalten Sie nach der Vermessung.' },
     { titel: 'Finales Angebot', text: 'Sie unterzeichnen das finale Angebot.' },
-    { titel: 'Drohnenvermessung', text: 'Wir vermessen Ihr Dach präzise und bestätigen den finalen Preis. Abweichung max. CHF 1–2K.' },
+    { titel: 'Drohnenvermessung', text: 'Wir vermessen Ihr Dach mit der Drohne. Daraus entsteht Ihr Festpreis – und der gilt.' },
     { titel: 'Installation', text: 'Ab Baubewilligung bis zur fertigen Anlage maximal zwei Monate.' },
   ]
   return (

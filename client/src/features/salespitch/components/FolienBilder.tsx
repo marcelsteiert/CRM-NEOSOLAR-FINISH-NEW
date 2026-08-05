@@ -320,7 +320,7 @@ export const ProduktFolien = {
         'Sie sehen sofort, wie viele Module Platz haben',
         'Nach Ihrer Zusage vermessen wir das Dach mit der Drohne',
       ]}
-      hinweis="Kleine Abweichungen zwischen Geoportal und Vermessung sind möglich – der finale Preis weicht maximal CHF 1–2K ab."
+      hinweis="Aus der Vermessung entsteht Ihr Festpreis. Was dort steht, gilt bis zur Schlussrechnung."
     />
   ),
   montage: () => (

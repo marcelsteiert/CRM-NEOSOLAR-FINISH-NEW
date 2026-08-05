@@ -9,6 +9,11 @@ import { DEFAULT_CONFIG, DEFAULT_INPUT } from '../../lib/calculatorConfig'
 import RechnerPanel from '../salespitch/components/RechnerPanel'
 import Dachplaner from '../salespitch/components/Dachplaner'
 import FolienKundenkontakt from '../salespitch/components/FolienKundenkontakt'
+import { FolienZiele, LEERE_ZIELE } from '../salespitch/components/FolienZiele'
+import type { Ziele } from '../salespitch/components/FolienZiele'
+import { FolienVorteile } from '../salespitch/components/FolienVorteile'
+import { FolienAusgangslage } from '../salespitch/components/FolienAusgangslage'
+import { FolienStart } from '../salespitch/components/FolienStart'
 import type { DachErgebnis, DachPlanung } from '../salespitch/components/Dachplaner'
 import VariantenVergleich, { bildeVarianten } from '../salespitch/components/VariantenVergleich'
 import OffertenDruck from '../salespitch/components/OffertenDruck'
@@ -56,7 +61,7 @@ type FolienId =
   | 'speicherUpgrade' | 'betreuung' | 'empfehlung' | 'paket' | 'aktion'
   | 'sicherheiten' | 'fragen' | 'entscheidung'
   | 'planung' | 'workflow' | 'zeitplan' | 'kontakt'
-  | 'kundenkontakt'
+  | 'kundenkontakt' | 'ziele' | 'vorteile' | 'start' | 'kundendaten'
 
 interface Variante {
   id: string
@@ -86,8 +91,9 @@ const VARIANTEN: Variante[] = [
     beschreibung:
       'Der volle Ablauf: Bedarf, Produkte, Rechner, Geld-Vergleich, Sicherheiten und Abschluss. Für den regulären Beratungstermin.',
     folien: [
-      // 1. Ankommen und Rahmen setzen
+      // 1. Ankommen: begruessen, Rahmen setzen, Ziele des Kunden aufnehmen
       { id: 'titel', titel: 'Begrüssung' },
+      { id: 'ziele', titel: 'Ihre Ziele' },
       { id: 'ablauf', titel: 'Ablauf des Termins' },
       { id: 'persoenlich', titel: 'Ihre Ausgangslage' },
       // 2. Problem aufbauen – erst belegte Vergangenheit, dann Prognose
@@ -95,25 +101,21 @@ const VARIANTEN: Variante[] = [
       { id: 'verbrauch', titel: 'Ihr Strombedarf steigt' },
       { id: 'strompreis', titel: 'Strompreis-Entwicklung' },
       { id: 'kostenOhne', titel: 'Kosten ohne Anlage' },
-      // 3. Vertrauen aufbauen
-      { id: 'warum', titel: 'Warum NEOSOLAR' },
-      { id: 'team', titel: 'Das Team' },
-      { id: 'referenzen', titel: 'Referenzen' },
-      // 4. Lösung zeigen
+      // 3. Loesung zeigen: erst die Technik, dann das eigene Dach
       { id: 'modul', titel: 'Solarmodule' },
       { id: 'wechselrichter', titel: 'Wechselrichter' },
       { id: 'speicher', titel: 'Speicher' },
       { id: 'wallbox', titel: 'Wallbox' },
       { id: 'app', titel: 'Die App' },
       { id: 'dachanalyse', titel: 'Dachanalyse' },
-      // 5. Gemeinsam planen – erst das Dach belegen, dann die Regler
+      // 4. Gemeinsam planen – erst das Dach belegen, dann die Regler
       { id: 'dachplaner', titel: 'Ihr Dach belegen' },
       { id: 'rechner', titel: 'Ihre Anlage planen' },
       { id: 'anlage', titel: 'Das kommt auf Ihr Dach' },
       { id: 'energiefluss', titel: 'Ihr Energiefluss' },
       { id: 'motive', titel: 'Ihr Nutzen' },
       { id: 'zusatzrechner', titel: 'Rechnen wir es durch' },
-      // 6. Das Geld – die Kernsequenz
+      // 5. Das Geld – die Kernsequenz
       { id: 'bausteine', titel: 'Woher das Geld kommt' },
       { id: 'gesamtvergleich', titel: 'Vollkosten-Vergleich' },
       { id: 'monatsvergleich', titel: 'Pro Monat' },
@@ -122,20 +124,27 @@ const VARIANTEN: Variante[] = [
       { id: 'finanzierung', titel: 'Kauf oder Finanzierung' },
       { id: 'aktion', titel: 'Aktion' },
       { id: 'speicherUpgrade', titel: 'Speicher-Ausbau' },
-      // 7. Sicherheit geben
+      // 6. Wofuer sich das lohnt – jenseits der Zahlen
+      { id: 'vorteile', titel: 'Was Sie davon haben' },
+      // 7. Vertrauen: erst jetzt, wenn die Zahlen ueberzeugt haben
+      { id: 'warum', titel: 'Warum NEOSOLAR' },
+      { id: 'team', titel: 'Das Team' },
+      { id: 'referenzen', titel: 'Referenzen' },
+      // 8. Sicherheit geben
       { id: 'paket', titel: 'Zufriedenheitspaket' },
       { id: 'sicherheiten', titel: 'Ihre Sicherheiten' },
       { id: 'planung', titel: 'Planungssicherheit' },
       { id: 'betreuung', titel: 'Ihre Betreuung' },
       { id: 'unterschied', titel: 'Offerten vergleichen' },
       { id: 'fragen', titel: 'Häufige Fragen' },
+      // 9. Umsetzung in einer Folie statt in dreien
+      { id: 'zeitplan', titel: 'So geht es weiter' },
       { id: 'montage', titel: 'Die Montage' },
       { id: 'workflow', titel: 'Unser Ablauf' },
-      { id: 'zeitplan', titel: 'Umsetzung' },
-      // 8. Abschluss
+      // 10. Abschluss
       { id: 'entscheidung', titel: 'Ihre Entscheidung' },
       { id: 'empfehlung', titel: 'Weiterempfehlung' },
-      { id: 'kontakt', titel: 'Fragen offen?' },
+      { id: 'start', titel: 'Auf die Zusammenarbeit' },
     ],
   },
   {
@@ -255,6 +264,8 @@ export default function PraesentationPage() {
   const [offerteMeldung, setOfferteMeldung] = useState<{ art: 'ok' | 'fehler'; text: string } | null>(null)
   /** Ergebnis der Dachbelegung – speist Rechner, Bericht und Offerte */
   const [dach, setDach] = useState<DachErgebnis | null>(null)
+  /** Was dem Kunden wichtig ist – steuert das Gespräch, nicht die Rechnung */
+  const [ziele, setZiele] = useState<Ziele>(LEERE_ZIELE)
   /**
    * Arbeitsstand des Dachplaners. Die Folie wird beim Blaettern
    * ausgehaengt, deshalb liegt der Zustand hier und nicht in ihr.
@@ -718,6 +729,23 @@ export default function PraesentationPage() {
         return <ProduktFolien.montage />
       case 'workflow':
         return <ProduktFolien.workflow />
+      case 'ziele':
+        return <FolienZiele ziele={ziele} onChange={setZiele} />
+      case 'vorteile':
+        return (
+          <div className="h-full overflow-y-auto py-6">
+            <FolienVorteile ergebnis={ergebnis} config={config} />
+          </div>
+        )
+      case 'start':
+        return (
+          <FolienStart
+            kunde={kundeAusLink}
+            berater={beraterName}
+            beraterMail={suchparameter.get('beraterMail') ?? undefined}
+            beraterTel={suchparameter.get('beraterTel') ?? undefined}
+          />
+        )
       case 'kundenkontakt':
         return (
           <FolienKundenkontakt
@@ -792,6 +820,17 @@ export default function PraesentationPage() {
       case 'zusatzrechner':
         return <FolienZusatzrechner input={input} ergebnis={ergebnis} config={config} />
       case 'persoenlich':
+        // Verbrauch, Preis und geplanter Mehrverbrauch werden hier gesetzt.
+        // Ab dieser Folie rechnet die gesamte Beratung damit.
+        return (
+          <FolienAusgangslage
+            kunde={kundeAusLink}
+            input={input}
+            config={config}
+            onChange={patchInput}
+          />
+        )
+      case 'kundendaten':
         return contactId ? (
           <KundendatenPruefen
             kontakt={kontakt}
