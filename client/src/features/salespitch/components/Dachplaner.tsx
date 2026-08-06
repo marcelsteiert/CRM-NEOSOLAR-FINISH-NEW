@@ -113,7 +113,7 @@ type Werkzeug = 'auswahl' | 'markieren' | 'dach' | 'sperre' | 'modulPlus' | 'mod
 
 const WERKZEUGE: Array<{ id: Werkzeug; icon: typeof Search; text: string; hilfe: string }> = [
   { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Modul stufenlos ziehen · Umrandung ziehen verschiebt die Fläche · Ecke anklicken und Entf löscht sie · Plus auf einer Kante setzt eine neue Ecke · Doppelklick auf eine Kante richtet die Module aus' },
-  { id: 'markieren', icon: SquareDashedMousePointer, text: 'Markieren', hilfe: 'Module anklicken oder ein Rechteck aufziehen · markierte gemeinsam und stufenlos verschieben' },
+  { id: 'markieren', icon: SquareDashedMousePointer, text: 'Markieren', hilfe: 'Module anklicken oder ein Rechteck aufziehen · markierte gemeinsam verschieben · Entf löscht sie · Strg+Z macht rückgängig' },
   { id: 'dach', icon: Pencil, text: 'Dachfläche', hilfe: 'Ecken anklicken, Klick auf den ersten Punkt schliesst die Fläche' },
   { id: 'sperre', icon: Ban, text: 'Sperrfläche', hilfe: 'Kamin, Dachfenster oder Verschattung umranden – dort bleibt frei' },
   { id: 'modulPlus', icon: Plus, text: 'Modul setzen', hilfe: 'Modul einzeln setzen, es rastet am Raster ein' },
@@ -226,6 +226,24 @@ export default function Dachplaner({
   const [gefundene, setGefundene] = useState<Dachflaeche[]>(planung?.gefundene ?? [])
   /** Markierte Module des aktiven Feldes, als Zellschlüssel */
   const [markiert, setMarkiert] = useState<string[]>([])
+  /**
+   * Verlauf der letzten Arbeitsstände.
+   *
+   * Wer im Kundentermin eine Fläche verschiebt oder Module löscht, will
+   * das rückgängig machen können, ohne die Belegung neu aufzubauen.
+   * Gespeichert werden nur die Flächen – Karte, Zoom und Auswahl gehören
+   * zur Ansicht, nicht zur Planung.
+   */
+  const [verlauf, setVerlauf] = useState<Dachfeld[][]>([])
+  const felderRef = useRef<Dachfeld[]>(felder)
+  felderRef.current = felder
+
+  /** Sichert den Stand vor einer Änderung. Vor der Änderung aufrufen. */
+  const merkeSchritt = useCallback(() => {
+    // Dreissig Schritte reichen für einen Termin und halten den Speicher klein
+    setVerlauf((v) => [...v.slice(-29), felderRef.current])
+  }, [])
+
   /**
    * Angewählte Ecke einer Fläche. Der Dachumriss aus dem Kataster hat oft
    * mehr Punkte als das echte Dach – wer eine Ecke wegnehmen will, wählt
@@ -533,6 +551,7 @@ export default function Dachplaner({
   }
 
   function feldEntfernen(id: string) {
+    merkeSchritt()
     setFelder((alle) => alle.filter((f) => f.id !== id))
     if (aktivId === id) setAktivId(null)
   }
@@ -629,6 +648,7 @@ export default function Dachplaner({
       const zelle = zelleAnPunkt(m, raster)
       const s = zellenSchluessel(zelle.reihe, zelle.spalte)
       if (aktiv.module.some((x) => x.id === s)) return
+      merkeSchritt()
       feldAendern(aktiv.id, {
         entfernt: aktiv.entfernt.filter((x) => x !== s),
         zusaetzlich: aktiv.zusaetzlich.includes(s) ? aktiv.zusaetzlich : [...aktiv.zusaetzlich, s],
@@ -639,6 +659,7 @@ export default function Dachplaner({
     if (werkzeug === 'modulMinus') {
       const getroffen = aktiv.module.find((mod) => imPolygon(m, mod.ecken))
       if (!getroffen) return
+      merkeSchritt()
       feldAendern(aktiv.id, {
         zusaetzlich: aktiv.zusaetzlich.filter((x) => x !== getroffen.id),
         entfernt: aktiv.entfernt.includes(getroffen.id)
@@ -653,6 +674,7 @@ export default function Dachplaner({
       setZeichnung([])
       return
     }
+    merkeSchritt()
     if (werkzeug === 'dach') {
       const opt = { ...STANDARD_OPT }
       const feld: Dachfeld = {
@@ -703,6 +725,7 @@ export default function Dachplaner({
 
   function griffAnfassen(ev: React.MouseEvent, feldId: string, art: 'dach' | 'sperre', index: number, sperreId?: string) {
     ev.stopPropagation()
+    merkeSchritt()
     gezogen.current = false
     griff.current = { feldId, art, index, sperreId }
     // Anfassen waehlt die Ecke gleich aus – dann geht Loeschen ohne
@@ -717,37 +740,60 @@ export default function Dachplaner({
    * bliebe eine Linie zurueck, mit der weder Belegung noch Flaeche etwas
    * anfangen koennen.
    */
+  /** Setzt den letzten Arbeitsschritt zurück. */
+  function rueckgaengig() {
+    if (!verlauf.length) return
+    setFelder(verlauf[verlauf.length - 1])
+    setVerlauf(verlauf.slice(0, -1))
+    setMarkiert([])
+    setGewaehlteEcke(null)
+  }
+
+  /** Entfernt alle markierten Module aus der Belegung. */
+  function markierteEntfernen() {
+    if (!aktiv || !markiert.length) return
+    merkeSchritt()
+    feldAendern(aktiv.id, {
+      zusaetzlich: aktiv.zusaetzlich.filter((x) => !markiert.includes(x)),
+      entfernt: [...new Set([...aktiv.entfernt, ...markiert])],
+    })
+    setMarkiert([])
+  }
+
   function eckeLoeschen() {
     const g = gewaehlteEcke
     if (!g) return
-    let zuKlein = false
+
+    // Erst pruefen, dann aendern. Ein Seiteneffekt im Updater von setFelder
+    // liefe im StrictMode doppelt und meldete Unsinn.
+    const feld = felder.find((f) => f.id === g.feldId)
+    if (!feld) return
+    const punkte =
+      g.art === 'dach'
+        ? feld.polygon
+        : (feld.sperrflaechen.find((s) => s.id === g.sperreId)?.punkte ?? [])
+    if (punkte.length <= 3) {
+      setMeldung('Eine Fläche braucht mindestens drei Ecken.')
+      return
+    }
+
+    merkeSchritt()
     setFelder((alle) =>
       alle.map((f) => {
         if (f.id !== g.feldId) return f
         if (g.art === 'dach') {
-          if (f.polygon.length <= 3) {
-            zuKlein = true
-            return f
-          }
           return { ...f, polygon: f.polygon.filter((_, i) => i !== g.index) }
         }
         return {
           ...f,
-          sperrflaechen: f.sperrflaechen.map((s) => {
-            if (s.id !== g.sperreId) return s
-            if (s.punkte.length <= 3) {
-              zuKlein = true
-              return s
-            }
-            return { ...s, punkte: s.punkte.filter((_, i) => i !== g.index) }
-          }),
+          sperrflaechen: f.sperrflaechen.map((s) =>
+            s.id === g.sperreId
+              ? { ...s, punkte: s.punkte.filter((_, i) => i !== g.index) }
+              : s
+          ),
         }
       })
     )
-    if (zuKlein) {
-      setMeldung('Eine Fläche braucht mindestens drei Ecken.')
-      return
-    }
     setGewaehlteEcke(null)
   }
 
@@ -760,6 +806,7 @@ export default function Dachplaner({
     sperreId?: string
   ) {
     ev.stopPropagation()
+    merkeSchritt()
     gezogen.current = true
     const einsetzen = (punkte: MeterPunkt[]) => {
       const naechster = punkte[(index + 1) % punkte.length]
@@ -828,6 +875,7 @@ export default function Dachplaner({
   const [box, setBox] = useState<{ von: MeterPunkt; bis: MeterPunkt } | null>(null)
 
   function modulAnfassen(ev: React.MouseEvent, feldId: string, modulId: string) {
+    merkeSchritt()
     if (werkzeug !== 'auswahl' && werkzeug !== 'markieren') return
     ev.stopPropagation()
     gezogen.current = false
@@ -882,6 +930,7 @@ export default function Dachplaner({
   }
 
   function flaecheAnfassen(ev: React.MouseEvent, feldId: string) {
+    merkeSchritt()
     if (werkzeug !== 'auswahl') return
     ev.stopPropagation()
     const feld = felder.find((f) => f.id === feldId)
@@ -1068,22 +1117,37 @@ export default function Dachplaner({
    * Adresssuche eine Ecke löschen statt ein Zeichen.
    */
   useEffect(() => {
-    if (!gewaehlteEcke) return
     const handler = (e: KeyboardEvent) => {
       const ziel = e.target as HTMLElement | null
       if (ziel && ['INPUT', 'SELECT', 'TEXTAREA'].includes(ziel.tagName)) return
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+
+      // Strg+Z – der Griff, den jeder kennt
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault()
-        eckeLoeschen()
-      } else if (e.key === 'Escape') {
+        rueckgaengig()
+        return
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Erst die angewählte Ecke, sonst die markierten Module
+        if (gewaehlteEcke) {
+          e.preventDefault()
+          eckeLoeschen()
+        } else if (markiert.length) {
+          e.preventDefault()
+          markierteEntfernen()
+        }
+        return
+      }
+      if (e.key === 'Escape') {
         setGewaehlteEcke(null)
+        setMarkiert([])
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-    // eckeLoeschen liest den Zustand über gewaehlteEcke – neu binden genügt
+    // Die Handler lesen den Zustand über die Abhängigkeiten – neu binden genügt
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gewaehlteEcke])
+  }, [gewaehlteEcke, markiert, verlauf, aktiv])
 
   // ── Kacheln ────────────────────────────────────────────────────────
   const kacheln = useMemo(() => {
@@ -1666,13 +1730,7 @@ export default function Dachplaner({
                     {markiert.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => {
-                          feldAendern(aktiv.id, {
-                            zusaetzlich: aktiv.zusaetzlich.filter((x) => !markiert.includes(x)),
-                            entfernt: [...new Set([...aktiv.entfernt, ...markiert])],
-                          })
-                          setMarkiert([])
-                        }}
+                        onClick={markierteEntfernen}
                         className="flex items-center gap-1 px-2 py-1 rounded-md text-[9px]"
                         style={{
                           background: 'color-mix(in srgb, #F87171 12%, transparent)',
@@ -1694,18 +1752,19 @@ export default function Dachplaner({
               )}
 
               <div className="flex flex-wrap gap-1.5">
-                <button type="button" onClick={() => { feldAendern(aktiv.id, { entfernt: [], zusaetzlich: [], versatz: {} }); setMarkiert([]) }}
+                <button type="button" onClick={() => { merkeSchritt(); feldAendern(aktiv.id, { entfernt: [], zusaetzlich: [], versatz: {} }); setMarkiert([]) }}
                   className="btn-secondary flex items-center gap-1.5 px-2.5 py-1.5 text-[10px]">
                   <RotateCw size={11} strokeWidth={2} />
                   Neu belegen
                 </button>
                 {aktiv.sperrflaechen.map((s) => (
                   <button key={s.id} type="button"
-                    onClick={() =>
+                    onClick={() => {
+                      merkeSchritt()
                       feldAendern(aktiv.id, {
                         sperrflaechen: aktiv.sperrflaechen.filter((x) => x.id !== s.id),
                       })
-                    }
+                    }}
                     className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[9px]"
                     style={{
                       background: 'color-mix(in srgb, #F87171 12%, transparent)',
@@ -1808,6 +1867,40 @@ export default function Dachplaner({
                 className="btn-secondary flex items-center gap-1 px-2.5 py-1.5 text-[10px]">
                 <Undo2 size={11} strokeWidth={2} />
                 Zurück
+              </button>
+            )}
+            {/* Rückgängig – Schritt für Schritt, bis der Verlauf leer ist */}
+            <button
+              type="button"
+              onClick={rueckgaengig}
+              disabled={!verlauf.length}
+              title={
+                verlauf.length
+                  ? `Letzten Schritt rückgängig (Strg+Z) · ${verlauf.length} gespeichert`
+                  : 'Nichts rückgängig zu machen'
+              }
+              className="btn-secondary flex items-center gap-1 px-2.5 py-1.5 text-[10px] disabled:opacity-30"
+            >
+              <Undo2 size={11} strokeWidth={2} />
+              Rückgängig
+              {verlauf.length > 0 && (
+                <span className="tabular-nums text-amber">{verlauf.length}</span>
+              )}
+            </button>
+            {markiert.length > 0 && (
+              <button
+                type="button"
+                onClick={markierteEntfernen}
+                title="Markierte Module entfernen (Entf)"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold"
+                style={{
+                  background: 'color-mix(in srgb, #F87171 14%, transparent)',
+                  border: '1px solid color-mix(in srgb, #F87171 34%, transparent)',
+                  color: '#F87171',
+                }}
+              >
+                <Trash2 size={11} strokeWidth={2} />
+                {markiert.length} löschen
               </button>
             )}
             <button type="button" onClick={() => setEinrasten((e) => !e)}
@@ -1969,7 +2062,9 @@ export default function Dachplaner({
                       const q = meterZuPixel({ x: (p.x + naechster.x) / 2, y: (p.y + naechster.y) / 2 })
                       return (
                         <g key={`plus-${i}`} style={{ pointerEvents: 'auto', cursor: 'copy' }}
-                          onMouseDown={(e) => eckeEinfuegen(e, f.id, 'dach', i)}>
+                          onMouseDown={(e) => eckeEinfuegen(e, f.id, 'dach', i)}
+                          onClick={(e) => e.stopPropagation()}>
+                          <title>Hier eine neue Ecke einsetzen</title>
                           <circle cx={q.x} cy={q.y} r={5} fill="#0D1117" fillOpacity={0.55}
                             stroke={farbe} strokeWidth={1.2} strokeDasharray="2 1.5" />
                           <path d={`M ${q.x - 2.4} ${q.y} H ${q.x + 2.4} M ${q.x} ${q.y - 2.4} V ${q.y + 2.4}`}
@@ -1985,15 +2080,34 @@ export default function Dachplaner({
                         gewaehlteEcke.art === 'dach' &&
                         gewaehlteEcke.index === i
                       return (
-                        <g key={i} style={{ pointerEvents: 'auto', cursor: 'move' }}
-                          onMouseDown={(e) => griffAnfassen(e, f.id, 'dach', i)}>
-                          {gewaehlt && (
-                            <circle cx={q.x} cy={q.y} r={10} fill="none" stroke="#F87171"
-                              strokeWidth={1.6} strokeDasharray="3 2" />
+                        <g key={i}>
+                          <g style={{ pointerEvents: 'auto', cursor: 'move' }}
+                            onMouseDown={(e) => griffAnfassen(e, f.id, 'dach', i)}
+                            onClick={(e) => e.stopPropagation()}>
+                            {gewaehlt && (
+                              <circle cx={q.x} cy={q.y} r={10} fill="none" stroke="#F87171"
+                                strokeWidth={1.6} strokeDasharray="3 2" />
+                            )}
+                            <circle cx={q.x} cy={q.y} r={gewaehlt ? 6 : 5}
+                              fill={gewaehlt ? '#F87171' : '#FFFFFF'}
+                              stroke={gewaehlt ? '#FFFFFF' : farbe} strokeWidth={2} />
+                          </g>
+                          {/* Loeschknopf an der gewaehlten Ecke.
+                              Die Entf-Taste allein reicht nicht: im Kundentermin
+                              hat die Karte nicht immer den Fokus, und niemand
+                              raet eine Tastenkombination. */}
+                          {gewaehlt && f.polygon.length > 3 && (
+                            <g style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                              onMouseDown={(e) => { e.stopPropagation(); eckeLoeschen() }}
+                              onClick={(e) => e.stopPropagation()}>
+                              <title>Diese Ecke löschen</title>
+                              <circle cx={q.x + 15} cy={q.y - 15} r={9} fill="#F87171"
+                                stroke="#FFFFFF" strokeWidth={1.6} />
+                              <path
+                                d={`M ${q.x + 11.5} ${q.y - 18.5} L ${q.x + 18.5} ${q.y - 11.5} M ${q.x + 18.5} ${q.y - 18.5} L ${q.x + 11.5} ${q.y - 11.5}`}
+                                stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" />
+                            </g>
                           )}
-                          <circle cx={q.x} cy={q.y} r={gewaehlt ? 6 : 5}
-                            fill={gewaehlt ? '#F87171' : '#FFFFFF'}
-                            stroke={gewaehlt ? '#FFFFFF' : farbe} strokeWidth={2} />
                         </g>
                       )
                     })}

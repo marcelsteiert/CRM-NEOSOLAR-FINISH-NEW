@@ -94,6 +94,38 @@ async function ueberVerkaeufer(a: VersandAuftrag): Promise<VersandErgebnis | nul
   }
 }
 
+/**
+ * Aus dem Postfach des Mitarbeiters, ohne dass er sich verbunden hat.
+ *
+ * Die Anwendungsberechtigung Mail.Send gilt fuer den ganzen Tenant. Damit
+ * kann das CRM im Namen jedes Mitarbeiters senden – der Kunde sieht den
+ * Menschen, mit dem er spricht, und antwortet direkt an ihn. Ohne diesen
+ * Weg musste jeder Verkaeufer erst sein Outlook verbinden, und wer das
+ * nicht tat, verschickte alles aus der Sammeladresse.
+ */
+async function ueberMitarbeiterPostfach(a: VersandAuftrag): Promise<VersandErgebnis | null> {
+  if (!systemMailKonfiguriert()) return null
+  const adresse = await verkaeuferMail(a.verkaeuferId)
+  if (!adresse) return null
+  try {
+    await sendeSystemMail({
+      an: a.an,
+      betreff: a.betreff,
+      html: a.html,
+      absender: adresse,
+      anhaenge: a.anhaenge,
+    })
+    return { weg: 'VERKAEUFER', absender: adresse, fehler: null, hinweis: null }
+  } catch (err) {
+    return {
+      weg: 'KEINER',
+      absender: null,
+      fehler: err instanceof Error ? err.message : String(err),
+      hinweis: null,
+    }
+  }
+}
+
 async function ueberSystem(a: VersandAuftrag): Promise<VersandErgebnis | null> {
   if (!systemMailKonfiguriert()) return null
   const antwortAn = await verkaeuferMail(a.verkaeuferId)
@@ -128,9 +160,12 @@ async function ueberSystem(a: VersandAuftrag): Promise<VersandErgebnis | null> {
  * protokolliert.
  */
 export async function versendeMail(a: VersandAuftrag): Promise<VersandErgebnis> {
+  // Loest der Verkaeufer selbst aus, soll die Mail von ihm kommen: erst
+  // seine eigene Outlook-Verbindung, sonst sein Postfach ueber die
+  // Anwendungsberechtigung, und erst zuletzt die Sammeladresse.
   const reihenfolge = a.bevorzugtVerkaeufer
-    ? [ueberVerkaeufer, ueberSystem]
-    : [ueberSystem, ueberVerkaeufer]
+    ? [ueberVerkaeufer, ueberMitarbeiterPostfach, ueberSystem]
+    : [ueberSystem, ueberMitarbeiterPostfach, ueberVerkaeufer]
 
   let ersterFehler: string | null = null
 

@@ -283,6 +283,15 @@ export interface SystemMail {
    * das schont die Reputation der Absenderdomain deutlich.
    */
   listUnsubscribe?: string | null
+  /**
+   * Postfach, aus dem gesendet wird. Ohne Angabe das Sammelpostfach.
+   *
+   * Die Anwendungsberechtigung Mail.Send gilt tenantweit – damit kann das
+   * CRM aus dem Postfach jedes Mitarbeiters senden, ohne dass dieser sich
+   * vorher mit Outlook verbinden muss. Der Kunde sieht dann den Menschen,
+   * mit dem er spricht, statt einer Sammeladresse.
+   */
+  absender?: string | null
 }
 
 /**
@@ -292,7 +301,7 @@ export interface SystemMail {
  */
 export async function sendeSystemMail(mail: SystemMail): Promise<void> {
   const token = await getAppToken()
-  const absender = SYSTEM_ABSENDER()
+  const absender = mail.absender?.trim() || SYSTEM_ABSENDER()
 
   const nachricht: Record<string, unknown> = {
     subject: mail.betreff,
