@@ -2,6 +2,7 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
+import { signaturFuerUser, mitSignatur } from '../lib/mailSignatur.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { loadBranding } from './admin/branding.js'
 
@@ -409,16 +410,9 @@ export async function fuehreFollowUpAus(opt: LaufOptionen = {}): Promise<FollowU
       continue
     }
 
-    const signatur = [
-      'Freundliche Grüsse',
-      branding.companyName,
-      [branding.companyAddress, `${branding.companyZip} ${branding.companyCity}`].filter(Boolean).join(', '),
-      `T ${branding.companyPhone}`,
-      branding.companyEmail,
-      branding.companyWebsite,
-    ]
-      .filter(Boolean)
-      .join('<br>')
+    // Die Mail kommt vom zustaendigen Verkaeufer – dann soll auch seine
+    // Signatur darunter stehen und nicht eine anonyme Firmenzeile.
+    const signatur = await signaturFuerUser(deal.assigned_to)
 
     // Namen des Verkaeufers fuer den Platzhalter
     let verkaeuferName = branding.companyName
@@ -441,11 +435,11 @@ export async function fuehreFollowUpAus(opt: LaufOptionen = {}): Promise<FollowU
     }
     const betreff = fuellePlatzhalter(faellig.mailBetreff ?? '', werte)
 
-    const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">
-<p>${fuellePlatzhalter(faellig.mailText ?? '', werte)}</p>
-<hr style="border:none;border-top:1px solid #E5E7EB;margin:22px 0">
-<p style="font-size:13px;color:#374151">${signatur}</p>
-</div>`
+    const html = mitSignatur(
+      `<p>${fuellePlatzhalter(faellig.mailText ?? '', werte)}</p>
+<p>Freundliche Grüsse</p>`,
+      signatur
+    )
 
     // In der Erprobung an den Testempfaenger statt an den Kunden
     const empfaenger = einstellungen.testEmpfaenger || kontakt.email

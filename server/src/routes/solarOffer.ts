@@ -2,6 +2,7 @@ import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
 import { z } from 'zod'
 import { supabase } from '../lib/supabase.js'
+import { signaturFuerUser } from '../lib/mailSignatur.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { loadBranding } from './admin/branding.js'
 
@@ -53,34 +54,23 @@ router.post('/send', async (req: Request, res: Response, next: NextFunction) => 
 
     const branding = await loadBranding()
 
-    // Signatur: eigene des Verkaeufers, sonst aus dem Branding aufgebaut
-    const signatur =
-      verkaeufer?.signature?.trim() ||
-      [
-        'Freundliche Grüsse',
-        `${verkaeufer?.first_name ?? ''} ${verkaeufer?.last_name ?? ''}`.trim(),
-        branding.companyName,
-        [branding.companyAddress, `${branding.companyZip} ${branding.companyCity}`].filter(Boolean).join(', '),
-        verkaeufer?.phone ? `T ${verkaeufer.phone}` : `T ${branding.companyPhone}`,
-        verkaeufer?.email ?? branding.companyEmail,
-        branding.companyWebsite,
-      ]
-        .filter(Boolean)
-        .join('<br>')
+    // Eine Signatur fuer alle Mailstrecken – siehe lib/mailSignatur.ts
+    const signatur = await signaturFuerUser(userId)
 
     const einleitung = d.nachricht?.trim()
       ? d.nachricht.trim().replace(/\n/g, '<br>')
       : `Guten Tag ${kontakt.first_name} ${kontakt.last_name}<br><br>` +
         'vielen Dank für das Gespräch. Anbei erhalten Sie wie besprochen Ihre persönliche Richtofferte ' +
         'mit allen Zahlen zum Nachlesen.<br><br>' +
-        'Bei Fragen erreichen Sie mich direkt – ich melde mich in den nächsten Tagen ohnehin bei Ihnen.'
+        'Bei Fragen erreichen Sie mich direkt – ich melde mich in den nächsten Tagen ohnehin bei Ihnen.<br><br>' +
+        'Freundliche Grüsse'
 
     const mailHtml = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">
 <p>${einleitung}</p>
 <hr style="border:none;border-top:1px solid #E5E7EB;margin:24px 0">
 ${d.bodyHtml}
-<hr style="border:none;border-top:1px solid #E5E7EB;margin:24px 0">
-<p style="font-size:13px;color:#374151">${signatur}</p>
+<div style="border-top:1px solid #E5E7EB;margin:24px 0 16px"></div>
+${signatur}
 </div>`
 
     // ── Offerte im Dokumentenarchiv ablegen ──

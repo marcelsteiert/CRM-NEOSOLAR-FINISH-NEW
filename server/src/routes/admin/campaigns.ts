@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { supabase } from '../../lib/supabase.js'
 import { AppError } from '../../middleware/errorHandler.js'
 import { loadBranding } from './branding.js'
+import { baueSignatur } from '../../lib/mailSignatur.js'
 
 /**
  * Kampagnen: Massenversand an Leads mit Tagesbudget.
@@ -466,8 +467,8 @@ export function baueMail(
 
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;line-height:1.7;max-width:600px">
 ${ersetze(vorlage.inhalt)}
-<hr style="border:none;border-top:1px solid #E5E7EB;margin:26px 0">
-<p style="font-size:13px;color:#374151">${signatur}</p>
+<div style="border-top:1px solid #E5E7EB;margin:26px 0 16px"></div>
+${signatur}
 <img src="${basis}/api/v1/t/p/${e.id}.gif" width="1" height="1" alt="" style="display:block">
 </div>`
 
@@ -499,15 +500,8 @@ export async function fuehreVersandAus(opt: { trockenlauf?: boolean } = {}): Pro
   if (!laufende?.length) return ergebnis
 
   const basis = process.env.CLIENT_URL || 'https://neosolar-crm.com'
-  const branding = await loadBranding()
-  const signatur = [
-    branding.companyName,
-    [branding.companyAddress, `${branding.companyZip} ${branding.companyCity}`].filter(Boolean).join(', '),
-    `T ${branding.companyPhone}`,
-    branding.companyEmail,
-  ]
-    .filter(Boolean)
-    .join('<br>')
+  // Kampagnen laufen aus dem Sammelpostfach – deshalb die Firmensignatur
+  const signatur = await baueSignatur(null)
 
   const stunde = new Date().getHours()
 
@@ -652,8 +646,7 @@ router.post('/:id/testmail', async (req: Request, res: Response, next: NextFunct
     if (!k) throw new AppError('Kampagne nicht gefunden', 404)
 
     const basis = process.env.CLIENT_URL || 'https://neosolar-crm.com'
-    const branding = await loadBranding()
-    const signatur = [branding.companyName, branding.companyEmail].filter(Boolean).join('<br>')
+    const signatur = await baueSignatur(null)
     const { betreff, html } = baueMail(
       k,
       { id: 'test', vorname: 'Max', nachname: 'Muster', ort: 'Herisau' },

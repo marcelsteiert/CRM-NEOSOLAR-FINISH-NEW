@@ -112,7 +112,7 @@ interface Props {
 type Werkzeug = 'auswahl' | 'markieren' | 'dach' | 'sperre' | 'modulPlus' | 'modulMinus'
 
 const WERKZEUGE: Array<{ id: Werkzeug; icon: typeof Search; text: string; hilfe: string }> = [
-  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Modul stufenlos ziehen · Umrandung ziehen verschiebt die Fläche · Ecken anfassen · Doppelklick auf eine Kante richtet die Module aus' },
+  { id: 'auswahl', icon: MousePointer2, text: 'Bewegen', hilfe: 'Modul stufenlos ziehen · Umrandung ziehen verschiebt die Fläche · Ecke anklicken und Entf löscht sie · Plus auf einer Kante setzt eine neue Ecke · Doppelklick auf eine Kante richtet die Module aus' },
   { id: 'markieren', icon: SquareDashedMousePointer, text: 'Markieren', hilfe: 'Module anklicken oder ein Rechteck aufziehen · markierte gemeinsam und stufenlos verschieben' },
   { id: 'dach', icon: Pencil, text: 'Dachfläche', hilfe: 'Ecken anklicken, Klick auf den ersten Punkt schliesst die Fläche' },
   { id: 'sperre', icon: Ban, text: 'Sperrfläche', hilfe: 'Kamin, Dachfenster oder Verschattung umranden – dort bleibt frei' },
@@ -226,6 +226,17 @@ export default function Dachplaner({
   const [gefundene, setGefundene] = useState<Dachflaeche[]>(planung?.gefundene ?? [])
   /** Markierte Module des aktiven Feldes, als Zellschlüssel */
   const [markiert, setMarkiert] = useState<string[]>([])
+  /**
+   * Angewählte Ecke einer Fläche. Der Dachumriss aus dem Kataster hat oft
+   * mehr Punkte als das echte Dach – wer eine Ecke wegnehmen will, wählt
+   * sie an und drückt Entf.
+   */
+  const [gewaehlteEcke, setGewaehlteEcke] = useState<{
+    feldId: string
+    art: 'dach' | 'sperre'
+    sperreId?: string
+    index: number
+  } | null>(null)
   /** Beim Verschieben aufs Raster einrasten statt frei zu positionieren */
   const [einrasten, setEinrasten] = useState(false)
   const [bild, setBild] = useState<string | null>(gespeichert?.bild ?? null)
@@ -694,6 +705,83 @@ export default function Dachplaner({
     ev.stopPropagation()
     gezogen.current = false
     griff.current = { feldId, art, index, sperreId }
+    // Anfassen waehlt die Ecke gleich aus – dann geht Loeschen ohne
+    // zweiten Klick, und ein reiner Klick markiert sie ebenfalls.
+    setGewaehlteEcke({ feldId, art, index, sperreId })
+  }
+
+  /**
+   * Loescht die gewaehlte Ecke.
+   *
+   * Ein Dreieck ist die kleinste Flaeche, die noch eine ist – darunter
+   * bliebe eine Linie zurueck, mit der weder Belegung noch Flaeche etwas
+   * anfangen koennen.
+   */
+  function eckeLoeschen() {
+    const g = gewaehlteEcke
+    if (!g) return
+    let zuKlein = false
+    setFelder((alle) =>
+      alle.map((f) => {
+        if (f.id !== g.feldId) return f
+        if (g.art === 'dach') {
+          if (f.polygon.length <= 3) {
+            zuKlein = true
+            return f
+          }
+          return { ...f, polygon: f.polygon.filter((_, i) => i !== g.index) }
+        }
+        return {
+          ...f,
+          sperrflaechen: f.sperrflaechen.map((s) => {
+            if (s.id !== g.sperreId) return s
+            if (s.punkte.length <= 3) {
+              zuKlein = true
+              return s
+            }
+            return { ...s, punkte: s.punkte.filter((_, i) => i !== g.index) }
+          }),
+        }
+      })
+    )
+    if (zuKlein) {
+      setMeldung('Eine Fläche braucht mindestens drei Ecken.')
+      return
+    }
+    setGewaehlteEcke(null)
+  }
+
+  /** Setzt einen neuen Punkt in die Mitte einer Kante. */
+  function eckeEinfuegen(
+    ev: React.MouseEvent,
+    feldId: string,
+    art: 'dach' | 'sperre',
+    index: number,
+    sperreId?: string
+  ) {
+    ev.stopPropagation()
+    gezogen.current = true
+    const einsetzen = (punkte: MeterPunkt[]) => {
+      const naechster = punkte[(index + 1) % punkte.length]
+      const mitte = {
+        x: (punkte[index].x + naechster.x) / 2,
+        y: (punkte[index].y + naechster.y) / 2,
+      }
+      return [...punkte.slice(0, index + 1), mitte, ...punkte.slice(index + 1)]
+    }
+    setFelder((alle) =>
+      alle.map((f) => {
+        if (f.id !== feldId) return f
+        if (art === 'dach') return { ...f, polygon: einsetzen(f.polygon) }
+        return {
+          ...f,
+          sperrflaechen: f.sperrflaechen.map((s) =>
+            s.id === sperreId ? { ...s, punkte: einsetzen(s.punkte) } : s
+          ),
+        }
+      })
+    )
+    setGewaehlteEcke({ feldId, art, index: index + 1, sperreId })
   }
 
   function ziehStart(ev: React.MouseEvent) {
@@ -971,6 +1059,31 @@ export default function Dachplaner({
       gezogen.current = false
     }, 0)
   }
+
+  /**
+   * Entf löscht die angewählte Ecke, Escape hebt die Auswahl auf.
+   *
+   * Der Handler hängt am Fenster, damit er greift, ohne dass die Karte den
+   * Fokus hat. Eingabefelder sind ausgenommen – sonst würde Entf in der
+   * Adresssuche eine Ecke löschen statt ein Zeichen.
+   */
+  useEffect(() => {
+    if (!gewaehlteEcke) return
+    const handler = (e: KeyboardEvent) => {
+      const ziel = e.target as HTMLElement | null
+      if (ziel && ['INPUT', 'SELECT', 'TEXTAREA'].includes(ziel.tagName)) return
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
+        eckeLoeschen()
+      } else if (e.key === 'Escape') {
+        setGewaehlteEcke(null)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+    // eckeLoeschen liest den Zustand über gewaehlteEcke – neu binden genügt
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gewaehlteEcke])
 
   // ── Kacheln ────────────────────────────────────────────────────────
   const kacheln = useMemo(() => {
@@ -1805,10 +1918,21 @@ export default function Dachplaner({
                         />
                         {an && werkzeug === 'auswahl' && s.punkte.map((p, i) => {
                           const q = meterZuPixel(p)
+                          const gewaehlt =
+                            gewaehlteEcke?.feldId === f.id &&
+                            gewaehlteEcke.art === 'sperre' &&
+                            gewaehlteEcke.sperreId === s.id &&
+                            gewaehlteEcke.index === i
                           return (
-                            <circle key={i} cx={q.x} cy={q.y} r={4.5} fill="#F87171" stroke="#0D1117" strokeWidth={1.5}
-                              style={{ pointerEvents: 'auto', cursor: 'move' }}
-                              onMouseDown={(e) => griffAnfassen(e, f.id, 'sperre', i, s.id)} />
+                            <g key={i} style={{ pointerEvents: 'auto', cursor: 'move' }}
+                              onMouseDown={(e) => griffAnfassen(e, f.id, 'sperre', i, s.id)}>
+                              {gewaehlt && (
+                                <circle cx={q.x} cy={q.y} r={9} fill="none" stroke="#FFFFFF"
+                                  strokeWidth={1.5} strokeDasharray="3 2" />
+                              )}
+                              <circle cx={q.x} cy={q.y} r={gewaehlt ? 5.5 : 4.5} fill="#F87171"
+                                stroke={gewaehlt ? '#FFFFFF' : '#0D1117'} strokeWidth={1.5} />
+                            </g>
                           )
                         })}
                       </g>
@@ -1839,13 +1963,38 @@ export default function Dachplaner({
                         )}
                       </g>
                     ))}
+                    {/* Neue Ecke einsetzen: kleines Plus auf jeder Kantenmitte */}
+                    {an && werkzeug === 'auswahl' && f.polygon.map((p, i) => {
+                      const naechster = f.polygon[(i + 1) % f.polygon.length]
+                      const q = meterZuPixel({ x: (p.x + naechster.x) / 2, y: (p.y + naechster.y) / 2 })
+                      return (
+                        <g key={`plus-${i}`} style={{ pointerEvents: 'auto', cursor: 'copy' }}
+                          onMouseDown={(e) => eckeEinfuegen(e, f.id, 'dach', i)}>
+                          <circle cx={q.x} cy={q.y} r={5} fill="#0D1117" fillOpacity={0.55}
+                            stroke={farbe} strokeWidth={1.2} strokeDasharray="2 1.5" />
+                          <path d={`M ${q.x - 2.4} ${q.y} H ${q.x + 2.4} M ${q.x} ${q.y - 2.4} V ${q.y + 2.4}`}
+                            stroke={farbe} strokeWidth={1.4} strokeLinecap="round" />
+                        </g>
+                      )
+                    })}
                     {/* Griffe an den Ecken der aktiven Fläche */}
                     {an && werkzeug === 'auswahl' && f.polygon.map((p, i) => {
                       const q = meterZuPixel(p)
+                      const gewaehlt =
+                        gewaehlteEcke?.feldId === f.id &&
+                        gewaehlteEcke.art === 'dach' &&
+                        gewaehlteEcke.index === i
                       return (
-                        <circle key={i} cx={q.x} cy={q.y} r={5} fill="#FFFFFF" stroke={farbe} strokeWidth={2}
-                          style={{ pointerEvents: 'auto', cursor: 'move' }}
-                          onMouseDown={(e) => griffAnfassen(e, f.id, 'dach', i)} />
+                        <g key={i} style={{ pointerEvents: 'auto', cursor: 'move' }}
+                          onMouseDown={(e) => griffAnfassen(e, f.id, 'dach', i)}>
+                          {gewaehlt && (
+                            <circle cx={q.x} cy={q.y} r={10} fill="none" stroke="#F87171"
+                              strokeWidth={1.6} strokeDasharray="3 2" />
+                          )}
+                          <circle cx={q.x} cy={q.y} r={gewaehlt ? 6 : 5}
+                            fill={gewaehlt ? '#F87171' : '#FFFFFF'}
+                            stroke={gewaehlt ? '#FFFFFF' : farbe} strokeWidth={2} />
+                        </g>
                       )
                     })}
                   </g>

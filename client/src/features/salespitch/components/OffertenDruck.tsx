@@ -725,10 +725,25 @@ export default function OffertenDruck({
           effektiven Kosten auf {chf(ergebnis.nettoInvestition)}.
         </p>
 
-        {/* Zufriedenheitspaket */}
-        <h2 className="text-[14px] font-bold mb-2" style={{ color: '#111827' }}>
-          Im Preis enthalten: NEOSOLAR Zufriedenheitspaket
-        </h2>
+        {/* Zufriedenheitspaket – mit dem Wert davor.
+            Was nichts kostet, wirkt schnell, als waere es nichts wert.
+            Der durchgestrichene Preis steht so auch in der Praesentation. */}
+        <div className="flex items-baseline justify-between gap-3 mb-2 flex-wrap">
+          <h2 className="text-[14px] font-bold" style={{ color: '#111827' }}>
+            Im Preis enthalten: NEOSOLAR Zufriedenheitspaket
+          </h2>
+          <div className="flex items-baseline gap-2">
+            <span
+              className="text-[12px] font-semibold tabular-nums"
+              style={{ color: '#9CA3AF', textDecoration: 'line-through' }}
+            >
+              CHF 2'400
+            </span>
+            <span className="text-[13px] font-bold" style={{ color: '#047857' }}>
+              für Sie kostenlos
+            </span>
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-x-5 gap-y-1 mb-3">
           {paket.map((p) => (
             <div key={p} className="flex items-start gap-1.5 text-[11px]" style={{ color: '#374151' }}>
