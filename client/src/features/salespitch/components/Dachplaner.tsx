@@ -2056,19 +2056,47 @@ export default function Dachplaner({
                         )}
                       </g>
                     ))}
-                    {/* Neue Ecke einsetzen: kleines Plus auf jeder Kantenmitte */}
+                    {/* Neue Ecke einsetzen.
+                        Das Plus sitzt nicht auf der Kantenmitte, sondern
+                        senkrecht daneben nach aussen versetzt – auf der
+                        Mitte lag es unter der Massangabe und war weder
+                        lesbar noch treffbar. */}
                     {an && werkzeug === 'auswahl' && f.polygon.map((p, i) => {
                       const naechster = f.polygon[(i + 1) % f.polygon.length]
-                      const q = meterZuPixel({ x: (p.x + naechster.x) / 2, y: (p.y + naechster.y) / 2 })
+                      const a = meterZuPixel(p)
+                      const b = meterZuPixel(naechster)
+                      const mx = (a.x + b.x) / 2
+                      const my = (a.y + b.y) / 2
+
+                      // Senkrechte zur Kante, nach aussen gedreht
+                      const laenge = Math.hypot(b.x - a.x, b.y - a.y) || 1
+                      let nx = -(b.y - a.y) / laenge
+                      let ny = (b.x - a.x) / laenge
+                      const mitteFeld = f.polygon.reduce(
+                        (s, punkt) => {
+                          const z = meterZuPixel(punkt)
+                          return { x: s.x + z.x / f.polygon.length, y: s.y + z.y / f.polygon.length }
+                        },
+                        { x: 0, y: 0 }
+                      )
+                      if ((mx - mitteFeld.x) * nx + (my - mitteFeld.y) * ny < 0) {
+                        nx = -nx
+                        ny = -ny
+                      }
+                      const q = { x: mx + nx * 17, y: my + ny * 17 }
+
                       return (
                         <g key={`plus-${i}`} style={{ pointerEvents: 'auto', cursor: 'copy' }}
                           onMouseDown={(e) => eckeEinfuegen(e, f.id, 'dach', i)}
                           onClick={(e) => e.stopPropagation()}>
                           <title>Hier eine neue Ecke einsetzen</title>
-                          <circle cx={q.x} cy={q.y} r={5} fill="#0D1117" fillOpacity={0.55}
-                            stroke={farbe} strokeWidth={1.2} strokeDasharray="2 1.5" />
-                          <path d={`M ${q.x - 2.4} ${q.y} H ${q.x + 2.4} M ${q.x} ${q.y - 2.4} V ${q.y + 2.4}`}
-                            stroke={farbe} strokeWidth={1.4} strokeLinecap="round" />
+                          {/* Dünner Steg zur Kante, damit die Zuordnung klar ist */}
+                          <line x1={mx} y1={my} x2={q.x} y2={q.y}
+                            stroke={farbe} strokeWidth={1} strokeOpacity={0.45} />
+                          <circle cx={q.x} cy={q.y} r={7} fill="#0D1117" fillOpacity={0.85}
+                            stroke={farbe} strokeWidth={1.4} />
+                          <path d={`M ${q.x - 3.2} ${q.y} H ${q.x + 3.2} M ${q.x} ${q.y - 3.2} V ${q.y + 3.2}`}
+                            stroke={farbe} strokeWidth={1.6} strokeLinecap="round" />
                         </g>
                       )
                     })}
