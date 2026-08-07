@@ -134,7 +134,7 @@ export const KOMPONENTEN = {
    */
   optionen: [
     { id: 's7', name: 'Speicher LUNA2000-7 (S7)', kwh: 6.9, preis: 5046.8 },
-    { id: 's14', name: 'Speicher LUNA2000-14 (S14)', kwh: 13.8, preis: 9071.2 },
+    { id: 's14', name: 'Speicher LUNA2000-14 (S14)', kwh: 13.8, preis: 10471.2 },
     { id: 's21', name: 'Speicher LUNA2000-21 (S21)', kwh: 20.7, preis: 10889.6 },
     { id: 'backup', name: 'Huawei Backup Box (Notstrom)', kwh: 0, preis: 1109.6 },
     { id: 'charger', name: 'Huawei Smart Charger SCharger-22KT-S0', kwh: 0, preis: 1400.0 },
