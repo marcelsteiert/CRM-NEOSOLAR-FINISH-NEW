@@ -1,8 +1,12 @@
-import { useState } from 'react'
-import { X, Send, Loader2, Check, AlertTriangle, Archive, Mail } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { X, Send, Loader2, Check, AlertTriangle, Archive, Mail, FileText } from 'lucide-react'
 import { api } from '../../../lib/api'
 import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
 import { KOMPONENTEN } from '../../../lib/calculatorConfig'
+import OffertenDruck from './OffertenDruck'
+import { LEERE_BEDUERFNISSE } from './BeduerfnisSchritt'
+import type { DachErgebnis } from './Dachplaner'
+import { dokumentAblegen } from '../../../lib/dokumentAblegen'
 
 const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
@@ -21,6 +25,8 @@ interface Antwort {
   ablageFehler: string | null
   empfaenger: string
   dateiName: string | null
+  /** Seiten des angehaengten PDFs, null wenn keins dabei war */
+  pdfSeiten?: number | null
 }
 
 /**
@@ -187,11 +193,15 @@ interface Props {
   ergebnis: CalculatorResult
   config: CalculatorConfig
   variantenName: string
+  /** Dachbelegung – erzeugt den Projektbericht im PDF */
+  dach?: DachErgebnis | null
+  /** Verkaeufer für Kopf und Signatur der Druckofferte */
+  verkaeufer?: { name?: string; email?: string; telefon?: string } | null
   onClose: () => void
 }
 
 export default function OfferteSenden({
-  kontakt, dealId, input, ergebnis, config, variantenName, onClose,
+  kontakt, dealId, input, ergebnis, config, variantenName, dach, verkaeufer, onClose,
 }: Props) {
   /** Setzt die Platzhalter einer Vorlage mit den echten Werten. */
   const fuelle = (text: string) =>
@@ -230,10 +240,69 @@ export default function OfferteSenden({
     setNachricht(fuelle(v.text))
   }
 
+  /**
+   * Die vollstaendige Offerte als PDF, gerendert aus derselben
+   * Druckansicht wie beim Ausdrucken.
+   *
+   * Sie haengt off-screen im DOM statt auf `display:none`: html2canvas
+   * braucht ein echtes Layout, ein ausgeblendetes Element hat keins.
+   */
+  const [pdfAn, setPdfAn] = useState(true)
+  const [schritt, setSchritt] = useState<string | null>(null)
+  const druckRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * Erzeugt das PDF und laedt es direkt in den Storage.
+   *
+   * Bewusst nicht als Base64 durch die Function: die vertraegt nur wenige
+   * Megabyte im Rumpf, und ein Offerten-PDF mit Karten und Diagrammen
+   * liegt schnell darueber. Der Server holt es dann von dort und haengt es
+   * an - so ist es in einem Zug abgelegt und versendet.
+   */
+  async function pdfBauen(): Promise<{ name: string; pfad: string; seiten: number } | null> {
+    const el = druckRef.current?.querySelector<HTMLElement>('#offerte-druck')
+    if (!el) return null
+    // Zwei Frames plus kurze Pause, damit Bilder und Diagramme stehen
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    await new Promise((r) => setTimeout(r, 400))
+
+    const { offerteAlsPdf } = await import('../../../lib/offertePdf')
+    const name =
+      `Richtofferte_${kontakt.lastName || 'Kunde'}_${input.kwp}kWp_` +
+      new Date().toISOString().slice(0, 10)
+    const pdf = await offerteAlsPdf(el, name)
+
+    setSchritt('PDF wird abgelegt …')
+    const { storagePath } = await dokumentAblegen({
+      contactId: kontakt.id,
+      datei: pdf.blob,
+      dateiName: pdf.dateiName,
+      // Muss exakt einem Ordner der DocumentSection entsprechen
+      ordner: 'Verträge',
+      mimeType: 'application/pdf',
+      entityType: 'ANGEBOT',
+      ...(dealId ? { entityId: dealId } : {}),
+      notes: `Richtofferte ${input.kwp} kWp, ${Math.round(ergebnis.werklohn).toLocaleString('de-CH')} CHF inkl. MWST`,
+    })
+    return { name: pdf.dateiName, pfad: storagePath, seiten: pdf.seiten }
+  }
+
   const senden = async (nurAblegen: boolean) => {
     setLaeuft(true)
     setFehler(null)
     try {
+      let pdf: { name: string; pfad: string; seiten: number } | null = null
+      if (pdfAn) {
+        setSchritt('Offerte wird als PDF aufbereitet …')
+        try {
+          pdf = await pdfBauen()
+        } catch (err) {
+          // Ohne PDF trotzdem senden – die Zahlen stehen auch im Mailtext
+          console.error('[Offertenversand] PDF fehlgeschlagen:', err)
+        }
+      }
+
+      setSchritt(nurAblegen ? 'Wird abgelegt …' : 'Wird versendet …')
       const r = await api.post<{ data: Antwort }>('/solar-offer/send', {
         contactId: kontakt.id,
         dealId: dealId ?? null,
@@ -241,11 +310,13 @@ export default function OfferteSenden({
         bodyHtml: offerteHtml(input, ergebnis, config, variantenName),
         nachricht: nachricht.trim() || null,
         nurAblegen,
+        ...(pdf ? { pdfPfad: pdf.pfad, pdfName: pdf.name } : {}),
       })
-      setAntwort(r.data)
+      setAntwort({ ...r.data, pdfSeiten: pdf?.seiten ?? null })
     } catch (err) {
       setFehler(err instanceof Error ? err.message : 'Unbekannter Fehler')
     } finally {
+      setSchritt(null)
       setLaeuft(false)
     }
   }
@@ -333,8 +404,12 @@ export default function OfferteSenden({
               <div className="text-[12px] text-text-sec">
                 {antwort.abgelegt ? (
                   <>
-                    Im Dokumentenarchiv des Kunden abgelegt, Ordner «Angebot»:{' '}
+                    Im Dokumentenarchiv des Kunden abgelegt, Ordner{' '}
+                    «{antwort.pdfSeiten ? 'Verträge' : 'Angebot'}»:{' '}
                     <b className="text-text">{antwort.dateiName}</b>
+                    {antwort.pdfSeiten ? (
+                      <> · {antwort.pdfSeiten} Seiten, als Anhang mitgeschickt</>
+                    ) : null}
                   </>
                 ) : (
                   <>
@@ -408,15 +483,41 @@ export default function OfferteSenden({
                 />
               </div>
 
-              <div
-                className="p-3.5 rounded-xl text-[11px] text-text-dim"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+              {/* Die vollstaendige Offerte gehoert als PDF in den Anhang.
+                  Im Mailtext steht nur die Zusammenfassung - eine Offerte,
+                  die man weiterleiten und ausdrucken kann, ist eine Datei. */}
+              <button
+                type="button"
+                onClick={() => setPdfAn((v) => !v)}
+                className="w-full flex items-start gap-2.5 p-3.5 rounded-xl text-left transition-all"
+                style={{
+                  background: pdfAn
+                    ? 'color-mix(in srgb, #F59E0B 10%, transparent)'
+                    : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${pdfAn ? 'color-mix(in srgb, #F59E0B 34%, transparent)' : 'rgba(255,255,255,0.06)'}`,
+                }}
               >
-                Die E-Mail enthält Anlage, Ertrag, Ersparnis, Amortisation, den Rechnungsbetrag von{' '}
-                <b className="text-text-sec">{chf(ergebnis.werklohn)}</b> inkl. MWST und die effektiven Kosten
-                von <b className="text-text-sec">{chf(ergebnis.nettoInvestition)}</b> – plus den Hinweis, dass
-                es eine Richtofferte ist. Sie wird zusätzlich im Dokumentenarchiv des Kunden abgelegt.
-              </div>
+                <div
+                  className="w-4 h-4 rounded flex items-center justify-center shrink-0 mt-0.5"
+                  style={{
+                    background: pdfAn ? '#F59E0B' : 'rgba(255,255,255,0.06)',
+                    border: pdfAn ? 'none' : '1px solid rgba(255,255,255,0.14)',
+                  }}
+                >
+                  {pdfAn && <Check size={11} strokeWidth={3} className="text-[#06080C]" />}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[12px] font-semibold text-text flex items-center gap-1.5">
+                    <FileText size={12} strokeWidth={2} className="text-amber" />
+                    Vollständige Offerte als PDF anhängen
+                  </div>
+                  <div className="text-[11px] text-text-dim leading-snug mt-0.5">
+                    Alle Seiten inklusive Bestellblatt – dieselbe Datei wie beim Drucken.
+                    Das Aufbereiten dauert einen Moment. Im Mailtext steht die
+                    Zusammenfassung mit {chf(ergebnis.werklohn)} inkl. MWST.
+                  </div>
+                </div>
+              </button>
 
               {fehler && (
                 <div
@@ -440,7 +541,7 @@ export default function OfferteSenden({
                 className="btn-primary flex-1 flex items-center justify-center gap-2 py-2.5 text-[12px] disabled:opacity-50"
               >
                 {laeuft ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} strokeWidth={2} />}
-                Senden und ablegen
+                {schritt ?? 'Senden und ablegen'}
               </button>
               <button
                 type="button"
@@ -456,6 +557,35 @@ export default function OfferteSenden({
           </>
         )}
       </div>
+
+      {/*
+        Druckansicht fuer das PDF – liegt ausserhalb des Bildes statt auf
+        display:none. html2canvas braucht ein echtes Layout; ein
+        ausgeblendetes Element hat keins und liefert eine leere Seite.
+      */}
+      {pdfAn && !antwort && (
+        <div
+          ref={druckRef}
+          aria-hidden
+          style={{ position: 'fixed', left: -20000, top: 0, width: 900, pointerEvents: 'none' }}
+        >
+          <OffertenDruck
+            kunde={{
+              firstName: kontakt.firstName,
+              lastName: kontakt.lastName,
+              email: kontakt.email,
+            } as never}
+            variantenName={variantenName}
+            input={input}
+            ergebnis={ergebnis}
+            config={config}
+            beduerfnisse={LEERE_BEDUERFNISSE}
+            verkaeufer={verkaeufer as never}
+            dach={dach ?? null}
+            onClose={() => {}}
+          />
+        </div>
+      )}
     </div>
   )
 }
