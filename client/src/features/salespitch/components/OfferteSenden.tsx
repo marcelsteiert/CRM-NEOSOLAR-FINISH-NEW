@@ -249,6 +249,12 @@ export default function OfferteSenden({
    */
   const [pdfAn, setPdfAn] = useState(true)
   const [schritt, setSchritt] = useState<string | null>(null)
+  /**
+   * Die Druckansicht haengt nur waehrend des PDF-Baus im DOM.
+   * Dauerhaft gemountet kostet sie beim Oeffnen des Dialogs spuerbar Zeit,
+   * und ihr Overlay legt sich ueber den Bildschirm.
+   */
+  const [pdfRendern, setPdfRendern] = useState(false)
   const druckRef = useRef<HTMLDivElement>(null)
 
   /**
@@ -260,11 +266,17 @@ export default function OfferteSenden({
    * an - so ist es in einem Zug abgelegt und versendet.
    */
   async function pdfBauen(): Promise<{ name: string; pfad: string; seiten: number } | null> {
-    const el = druckRef.current?.querySelector<HTMLElement>('#offerte-druck')
-    if (!el) return null
-    // Zwei Frames plus kurze Pause, damit Bilder und Diagramme stehen
+    setPdfRendern(true)
+    // Zwei Frames plus kurze Pause, damit React eingehaengt hat und
+    // Bilder und Diagramme stehen
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
-    await new Promise((r) => setTimeout(r, 400))
+    await new Promise((r) => setTimeout(r, 600))
+
+    const el = druckRef.current?.querySelector<HTMLElement>('#offerte-druck')
+    if (!el) {
+      setPdfRendern(false)
+      return null
+    }
 
     const { offerteAlsPdf } = await import('../../../lib/offertePdf')
     const name =
@@ -284,6 +296,7 @@ export default function OfferteSenden({
       ...(dealId ? { entityId: dealId } : {}),
       notes: `Richtofferte ${input.kwp} kWp, ${Math.round(ergebnis.werklohn).toLocaleString('de-CH')} CHF inkl. MWST`,
     })
+    setPdfRendern(false)
     return { name: pdf.dateiName, pfad: storagePath, seiten: pdf.seiten }
   }
 
@@ -299,6 +312,8 @@ export default function OfferteSenden({
         } catch (err) {
           // Ohne PDF trotzdem senden – die Zahlen stehen auch im Mailtext
           console.error('[Offertenversand] PDF fehlgeschlagen:', err)
+        } finally {
+          setPdfRendern(false)
         }
       }
 
@@ -563,11 +578,26 @@ export default function OfferteSenden({
         display:none. html2canvas braucht ein echtes Layout; ein
         ausgeblendetes Element hat keins und liefert eine leere Seite.
       */}
-      {pdfAn && !antwort && (
+      {pdfRendern && (
         <div
           ref={druckRef}
           aria-hidden
-          style={{ position: 'fixed', left: -20000, top: 0, width: 900, pointerEvents: 'none' }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: 960,
+            // Echte Hoehe noetig: die Huelle der Druckansicht ist
+            // inset-0 und scrollt intern – bei 1px Hoehe misst
+            // html2canvas eine leere Seite.
+            height: 1200,
+            overflow: 'visible',
+            pointerEvents: 'none',
+            // Der Transform macht diesen Kasten zum Bezugsrahmen fuer die
+            // position:fixed-Huelle der Druckansicht. Ohne ihn spannt sie
+            // sich ueber den ganzen Bildschirm und verdeckt den Dialog.
+            transform: 'translateX(-20000px)',
+          }}
         >
           <OffertenDruck
             kunde={{
