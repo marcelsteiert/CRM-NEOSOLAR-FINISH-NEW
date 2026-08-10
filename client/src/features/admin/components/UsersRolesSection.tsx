@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useUsers, useRoleDefaults, useUpdateRoleDefaults, useCreateUser, useUpdateUser, useHardDeleteUser, type User, type UserRole } from '@/hooks/useLeads'
-import { Shield, Pencil, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck, Trash2 } from 'lucide-react'
+import { Shield, Pencil, Check, X, UserPlus, ChevronDown, RotateCcw, Save, UserX, UserCheck, Trash2, Eye } from 'lucide-react'
+import { api } from '@/lib/api'
 
 const ROLES: UserRole[] = ['ADMIN', 'VERTRIEB', 'PROJEKTLEITUNG', 'BUCHHALTUNG', 'GL', 'SUBUNTERNEHMEN', 'CLOSER', 'SETTER']
 const roleLabels: Record<UserRole, string> = {
@@ -283,6 +284,7 @@ export default function UsersRolesSection() {
                   onCancel={() => setEditingUser(null)}
                   isPending={updateUser.isPending}
                   getDefaults={getDefaults}
+                  userId={editingUser.id}
                 />
               </div>
             )
@@ -800,7 +802,7 @@ export default function UsersRolesSection() {
 
 // ── UserForm als eigene Komponente (verhindert Re-Mount/Fokus-Verlust) ──
 
-function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, showPassword }: {
+function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, showPassword, userId }: {
   form: FormData
   setForm: (f: FormData) => void
   onSave: () => void
@@ -808,8 +810,36 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
   isPending: boolean
   getDefaults: (role: UserRole) => string[]
   showPassword?: boolean
+  /** Bestehender Benutzer – nur dann lässt sich die Signatur vorschauen */
+  userId?: string
 }) {
   const color = roleColors[form.role]
+
+  /**
+   * Vorschau der Mailsignatur.
+   *
+   * Ohne sie muss man eine Testmail verschicken, um zu sehen, was das
+   * Feld darunter bewirkt – und traut sich deshalb nicht, es anzufassen.
+   */
+  const [vorschau, setVorschau] = useState<string | null>(null)
+  const [vorschauLaeuft, setVorschauLaeuft] = useState(false)
+  async function signaturZeigen() {
+    setVorschauLaeuft(true)
+    try {
+      const r = await api.get<{ data: { html: string } }>(
+        `/outlook/signatur-vorschau${userId ? `?userId=${userId}` : ''}`
+      )
+      setVorschau(r.data.html)
+    } catch (err) {
+      setVorschau(
+        `<p style="color:#F87171">Vorschau nicht möglich: ${
+          err instanceof Error ? err.message : 'unbekannter Fehler'
+        }</p>`
+      )
+    } finally {
+      setVorschauLaeuft(false)
+    }
+  }
 
   const handleRoleChange = (role: UserRole) => {
     setForm({ ...form, role, allowedModules: getDefaults(role) })
@@ -911,18 +941,45 @@ function UserForm({ form, setForm, onSave, onCancel, isPending, getDefaults, sho
         </div>
       )}
 
-      {/* Signatur (fuer Kundenportal + Mails) */}
+      {/* Signatur für Kundenmails und Kundenportal */}
       <div>
-        <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider mb-1">
-          Signatur · wird im Kundenportal als Ansprechpartner-Notiz angezeigt
-        </label>
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <label className="block text-[10px] font-semibold text-text-dim uppercase tracking-wider">
+            E-Mail-Signatur
+          </label>
+          <button
+            type="button"
+            onClick={signaturZeigen}
+            disabled={vorschauLaeuft}
+            className="flex items-center gap-1 text-[10px] font-semibold text-amber disabled:opacity-40"
+          >
+            <Eye size={11} strokeWidth={2} />
+            {vorschauLaeuft ? 'lädt …' : 'Vorschau'}
+          </button>
+        </div>
+        <p className="text-[10px] text-text-dim mb-1.5 leading-snug">
+          Leer lassen: Die Signatur wird automatisch aus Name, Rolle, Telefon und dem
+          Firmen-Branding gebaut – dann bleibt sie für alle einheitlich. Nur ausfüllen,
+          wenn diese Person eine abweichende Signatur braucht; der Inhalt darf HTML sein
+          und ersetzt die automatische vollständig.
+        </p>
         <textarea
           value={form.signature}
           onChange={(e) => setForm({ ...form, signature: e.target.value })}
           className="w-full px-3 py-2 text-[12px] rounded-lg bg-surface-hover border border-border text-text placeholder:text-text-dim focus:outline-none focus:border-amber/50 resize-none"
           rows={3}
-          placeholder="z.B. Mit freundlichen Grüssen&#10;Eileen Müller · Solar-Beraterin&#10;Tel direkt: +41 71 ..."
+          placeholder="Leer = automatische Signatur aus Branding und Benutzerdaten"
         />
+        {vorschau && (
+          <div className="mt-2">
+            <div className="text-[10px] text-text-dim mb-1">So kommt sie beim Kunden an:</div>
+            <div
+              className="p-4 rounded-lg overflow-x-auto"
+              style={{ background: '#FFFFFF' }}
+              dangerouslySetInnerHTML={{ __html: vorschau }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Rolle */}

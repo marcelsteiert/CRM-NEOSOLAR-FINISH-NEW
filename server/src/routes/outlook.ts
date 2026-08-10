@@ -28,6 +28,27 @@ function nurAdmin(req: Request) {
   }
 }
 
+/**
+ * Zeigt die fertige Signatur, so wie sie beim Kunden ankommt.
+ *
+ * Ohne Vorschau muss man eine Testmail verschicken, um zu sehen, was das
+ * Feld bewirkt – und traut sich deshalb nicht, es anzufassen.
+ */
+router.get('/signatur-vorschau', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId, role } = getUser(req)
+    const ziel = typeof req.query.userId === 'string' ? req.query.userId : userId
+    // Fremde Signaturen darf nur die Leitung ansehen
+    if (ziel !== userId && role !== 'ADMIN' && role !== 'GL') {
+      throw new AppError('Nur fuer Admin und Geschaeftsleitung', 403)
+    }
+    const { signaturFuerUser } = await import('../lib/mailSignatur.js')
+    res.json({ data: { html: await signaturFuerUser(ziel) } })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // ── Systempostfach (info@neosolar.ch) ────────────────────────────────
 
 /**
