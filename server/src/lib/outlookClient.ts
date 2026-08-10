@@ -230,7 +230,18 @@ export function systemMailKonfiguriert(): boolean {
   return Boolean(CLIENT_ID() && CLIENT_SECRET() && TENANT_ID() && TENANT_ID() !== 'common')
 }
 
-export async function getAppToken(): Promise<string> {
+/**
+ * App-Token holen.
+ *
+ * `erzwingeNeu` verwirft den Zwischenspeicher. Das braucht es, wenn Graph
+ * den Zugriff verweigert: ein Token, der geholt wurde, bevor die
+ * Administratorzustimmung in Azure durchgereicht war, traegt keine Rollen
+ * und bleibt danach eine Stunde lang nutzlos im Speicher der Function
+ * liegen. Genau dieser Fall hat den Versand blockiert, obwohl in Azure
+ * laengst alles stimmte.
+ */
+export async function getAppToken(erzwingeNeu = false): Promise<string> {
+  if (erzwingeNeu) appToken = null
   if (appToken && appToken.gueltigBis - Date.now() > 5 * 60 * 1000) {
     return appToken.wert
   }
@@ -300,7 +311,6 @@ export interface SystemMail {
  * ob er auf das Postfach des Verkaeufers ausweicht.
  */
 export async function sendeSystemMail(mail: SystemMail): Promise<void> {
-  const token = await getAppToken()
   const absender = mail.absender?.trim() || SYSTEM_ABSENDER()
 
   const nachricht: Record<string, unknown> = {
@@ -332,28 +342,64 @@ export async function sendeSystemMail(mail: SystemMail): Promise<void> {
     ]
   }
 
-  const res = await fetch(
-    `${GRAPH_BASE}/users/${encodeURIComponent(absender)}/sendMail`,
-    {
+  const absenden = async (frischerToken: boolean) => {
+    const token = await getAppToken(frischerToken)
+    return fetch(`${GRAPH_BASE}/users/${encodeURIComponent(absender)}/sendMail`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: nachricht, saveToSentItems: true }),
-    }
-  )
+    })
+  }
+
+  let res = await absenden(false)
+
+  // Bei verweigertem Zugriff einmal mit frischem Token wiederholen.
+  // Ein Token, der vor der Administratorzustimmung geholt wurde, traegt
+  // keine Rollen und liegt danach eine Stunde nutzlos im Speicher.
+  if (res.status === 401 || res.status === 403) {
+    res = await absenden(true)
+  }
 
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } }
     const code = err.error?.code ?? ''
     const text = err.error?.message ?? res.statusText
-    // Die haeufigste Ursache verstaendlich machen
     if (code === 'ErrorAccessDenied' || res.status === 403) {
       throw new Error(
-        `Zugriff verweigert beim Senden als ${absender}. ` +
-          'Vermutlich fehlt in der Azure-App die Anwendungsberechtigung Mail.Send ' +
-          `mit Administratorzustimmung, oder eine Application Access Policy sperrt das Postfach. (${text})`
+        `Zugriff verweigert beim Senden als ${absender}. ${await rollenHinweis()} (${text})`
       )
     }
     throw new Error(`Systemversand fehlgeschlagen (${res.status}): ${text}`)
+  }
+}
+
+/**
+ * Sagt in der Fehlermeldung, woran es wirklich liegt.
+ *
+ * Ohne die Rollen im Token raet man zwischen fehlender Berechtigung,
+ * fehlender Zustimmung und gesperrtem Postfach – drei Ursachen, die man
+ * an ganz verschiedenen Stellen sucht.
+ */
+async function rollenHinweis(): Promise<string> {
+  try {
+    const token = await getAppToken()
+    const nutzlast = JSON.parse(
+      Buffer.from(token.split('.')[1], 'base64').toString('utf8')
+    ) as { roles?: string[] }
+    const rollen = nutzlast.roles ?? []
+    if (!rollen.includes('Mail.Send')) {
+      return (
+        'Der Zugriffstoken enthält Mail.Send nicht' +
+        (rollen.length ? ` (nur: ${rollen.join(', ')}).` : ' – gar keine Rollen.') +
+        ' In Azure die Anwendungsberechtigung Mail.Send hinzufügen und die Administratorzustimmung erteilen.'
+      )
+    }
+    return (
+      'Mail.Send ist im Token vorhanden – dann sperrt vermutlich eine ' +
+      'Application Access Policy in Exchange dieses Postfach, oder ihm fehlt eine Lizenz.'
+    )
+  } catch {
+    return 'Berechtigungen in Azure prüfen: Anwendungsberechtigung Mail.Send mit Administratorzustimmung.'
   }
 }
 
