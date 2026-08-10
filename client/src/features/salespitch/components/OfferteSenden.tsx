@@ -7,6 +7,7 @@ import OffertenDruck from './OffertenDruck'
 import { LEERE_BEDUERFNISSE } from './BeduerfnisSchritt'
 import type { DachErgebnis } from './Dachplaner'
 import { dokumentAblegen } from '../../../lib/dokumentAblegen'
+import { naechsterOffertenName } from '../../../lib/offerteName'
 
 const chf = (n: number) => 'CHF ' + Math.round(n).toLocaleString('de-CH')
 const kwh = (n: number) => Math.round(n).toLocaleString('de-CH') + ' kWh'
@@ -279,9 +280,11 @@ export default function OfferteSenden({
     }
 
     const { offerteAlsPdf } = await import('../../../lib/offertePdf')
-    const name =
-      `Richtofferte_${kontakt.lastName || 'Kunde'}_${input.kwp}kWp_` +
-      new Date().toISOString().slice(0, 10)
+    const name = await naechsterOffertenName(
+      kontakt.id,
+      kontakt.lastName || kontakt.firstName || 'Kunde',
+      input.kwp
+    )
     const pdf = await offerteAlsPdf(el, name)
 
     setSchritt('PDF wird abgelegt …')
@@ -601,6 +604,7 @@ export default function OfferteSenden({
         >
           <OffertenDruck
             kunde={{
+              id: kontakt.id,
               firstName: kontakt.firstName,
               lastName: kontakt.lastName,
               email: kontakt.email,

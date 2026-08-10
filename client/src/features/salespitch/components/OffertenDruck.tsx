@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, Printer, PenLine, Download, Loader2 } from 'lucide-react'
 import type { CalculatorInput, CalculatorResult, CalculatorConfig } from '../../../lib/pvCalculator'
 import { AUSRICHTUNG_LABELS, DACHTYP_LABELS, KOMPONENTEN } from '../../../lib/calculatorConfig'
+import { naechsterOffertenName, offertenDateiName } from '../../../lib/offerteName'
 import type { Beduerfnisse } from './BeduerfnisSchritt'
 import type { DachErgebnis } from './Dachplaner'
 
@@ -20,6 +21,8 @@ const MONATSANTEILE: Array<[string, number]> = [
 ]
 
 interface Kunde {
+  /** Kontakt-ID – ohne sie laesst sich die Version nicht zaehlen */
+  id?: string
   firstName: string
   lastName: string
   address: string
@@ -83,9 +86,10 @@ export default function OffertenDruck({
     setPdfLaeuft(true)
     try {
       const { offerteAlsPdf } = await import('../../../lib/offertePdf')
-      const name =
-        `Richtofferte_${kunde?.lastName || 'NEOSOLAR'}_${input.kwp}kWp_` +
-        new Date().toISOString().slice(0, 10)
+      // Ohne Kontakt-ID keine Versionszaehlung – dann bleibt es beim Datum
+      const name = kunde?.id
+        ? await naechsterOffertenName(kunde.id, kunde.lastName || 'Kunde', input.kwp)
+        : offertenDateiName(kunde?.lastName || 'NEOSOLAR', input.kwp, 1)
       const pdf = await offerteAlsPdf(el, name)
       const url = URL.createObjectURL(pdf.blob)
       const a = document.createElement('a')

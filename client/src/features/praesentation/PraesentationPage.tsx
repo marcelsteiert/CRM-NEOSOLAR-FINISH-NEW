@@ -24,6 +24,7 @@ import { LEERE_BEDUERFNISSE } from '../salespitch/components/BeduerfnisSchritt'
 import { api } from '../../lib/api'
 import { offerteAlsPdf } from '../../lib/offertePdf'
 import { dokumentAblegen } from '../../lib/dokumentAblegen'
+import { naechsterOffertenName } from '../../lib/offerteName'
 import { KOMPONENTEN } from '../../lib/calculatorConfig'
 import {
   FolienAblauf, FolienWarumNeosolar, FolienWarumJetztVerbrauch, FolienStrompreis,
@@ -471,9 +472,11 @@ export default function PraesentationPage() {
       const el = document.getElementById('offerte-druck')
       if (!el) return
       try {
-        const name =
-          `Richtofferte_${kontakt.lastName || 'Kunde'}_${input.kwp}kWp_` +
-          new Date().toISOString().slice(0, 10)
+        const name = await naechsterOffertenName(
+          contactId,
+          kontakt.lastName || kontakt.firstName || 'Kunde',
+          input.kwp
+        )
         const pdf = await offerteAlsPdf(el, name)
         await dokumentAblegen({
           contactId,
