@@ -9,6 +9,19 @@ const CLIENT_SECRET = () => process.env.MS_CLIENT_SECRET ?? ''
 const TENANT_ID = () => process.env.MS_TENANT_ID ?? 'common'
 const REDIRECT_URI = () => process.env.MS_REDIRECT_URI ?? `${process.env.CLIENT_URL ?? 'https://neosolar-crm.com'}/api/v1/outlook/callback`
 
+/**
+ * Zugangsdaten fuer den Versand ohne angemeldeten Benutzer.
+ *
+ * Bewusst eigene Variablen mit Rueckfall auf die bestehenden: der
+ * delegierte Outlook-Login und der Systemversand koennen dieselbe
+ * App-Registrierung nutzen, muessen es aber nicht. Wer den Systemversand
+ * auf eine App mit Anwendungsberechtigungen umstellt, soll dafuer nicht
+ * die funktionierende Outlook-Anbindung der Verkaeufer anfassen muessen.
+ */
+const APP_CLIENT_ID = () => process.env.MS_APP_CLIENT_ID || CLIENT_ID()
+const APP_CLIENT_SECRET = () => process.env.MS_APP_CLIENT_SECRET || CLIENT_SECRET()
+const APP_TENANT_ID = () => process.env.MS_APP_TENANT_ID || TENANT_ID()
+
 const SCOPES = [
   'offline_access',
   'Mail.Read',
@@ -227,7 +240,9 @@ const SYSTEM_ABSENDER = () => process.env.MS_SENDER_ADDRESS ?? 'info@neosolar.ch
 let appToken: { wert: string; gueltigBis: number } | null = null
 
 export function systemMailKonfiguriert(): boolean {
-  return Boolean(CLIENT_ID() && CLIENT_SECRET() && TENANT_ID() && TENANT_ID() !== 'common')
+  return Boolean(
+    APP_CLIENT_ID() && APP_CLIENT_SECRET() && APP_TENANT_ID() && APP_TENANT_ID() !== 'common'
+  )
 }
 
 /**
@@ -252,13 +267,13 @@ export async function getAppToken(erzwingeNeu = false): Promise<string> {
   }
 
   const body = new URLSearchParams({
-    client_id: CLIENT_ID(),
-    client_secret: CLIENT_SECRET(),
+    client_id: APP_CLIENT_ID(),
+    client_secret: APP_CLIENT_SECRET(),
     scope: 'https://graph.microsoft.com/.default',
     grant_type: 'client_credentials',
   })
 
-  const res = await fetch(`${AUTH_BASE}/${TENANT_ID()}/oauth2/v2.0/token`, {
+  const res = await fetch(`${AUTH_BASE}/${APP_TENANT_ID()}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
@@ -410,12 +425,22 @@ export async function pruefeSystempostfach(): Promise<{
   tokenOk: boolean
   postfachOk: boolean
   meldung: string
+  /** App-Registrierung, die der Server benutzt – kein Geheimnis */
+  appId?: string
+  tenantId?: string
+  /** Anwendungsberechtigungen im Token */
+  rollen?: string[]
 }> {
   const absender = SYSTEM_ABSENDER()
+  const appId = APP_CLIENT_ID()
+  const tenantId = APP_TENANT_ID()
+
   if (!systemMailKonfiguriert()) {
     return {
       konfiguriert: false,
       absender,
+      appId,
+      tenantId,
       tokenOk: false,
       postfachOk: false,
       meldung:
@@ -425,14 +450,47 @@ export async function pruefeSystempostfach(): Promise<{
 
   let token: string
   try {
-    token = await getAppToken()
+    // Immer frisch: eine Pruefung, die einen alten Token aus dem Speicher
+    // beurteilt, sagt nichts ueber den aktuellen Stand in Azure aus.
+    token = await getAppToken(true)
   } catch (err) {
     return {
       konfiguriert: true,
       absender,
+      appId,
+      tenantId,
       tokenOk: false,
       postfachOk: false,
       meldung: err instanceof Error ? err.message : String(err),
+    }
+  }
+
+  // Rollen aus dem Token lesen – das ist die eigentliche Antwort auf die
+  // Frage, warum der Versand scheitert
+  let rollen: string[] = []
+  try {
+    rollen =
+      (JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8')) as {
+        roles?: string[]
+      }).roles ?? []
+  } catch {
+    /* Token nicht lesbar – dann sagt die Postfachpruefung darunter genug */
+  }
+
+  if (!rollen.includes('Mail.Send')) {
+    return {
+      konfiguriert: true,
+      absender,
+      appId,
+      tenantId,
+      rollen,
+      tokenOk: true,
+      postfachOk: false,
+      meldung:
+        `Die App ${appId} hat keine Anwendungsberechtigung Mail.Send` +
+        (rollen.length ? ` (nur: ${rollen.join(', ')}).` : ' – gar keine Rollen im Token.') +
+        ' In Azure bei genau dieser App-ID die Anwendungsberechtigung Mail.Send hinzufügen' +
+        ' und die Administratorzustimmung erteilen – oder MS_APP_CLIENT_ID auf die richtige App setzen.',
     }
   }
 
@@ -445,11 +503,14 @@ export async function pruefeSystempostfach(): Promise<{
     return {
       konfiguriert: true,
       absender,
+      appId,
+      tenantId,
+      rollen,
       tokenOk: true,
       postfachOk: false,
       meldung:
         `Das Postfach ${absender} ist nicht erreichbar: ${err.error?.message ?? res.statusText}. ` +
-        'Prüfen Sie, ob die Adresse existiert und ob die Anwendungsberechtigung User.Read.All bzw. Mail.Send erteilt wurde.',
+        'Prüfen Sie, ob die Adresse existiert und ob sie eine Exchange-Lizenz hat.',
     }
   }
 
@@ -457,9 +518,12 @@ export async function pruefeSystempostfach(): Promise<{
   return {
     konfiguriert: true,
     absender,
+    appId,
+    tenantId,
+    rollen,
     tokenOk: true,
     postfachOk: true,
-    meldung: `Verbunden mit ${profil.displayName ?? absender} (${profil.mail ?? absender}).`,
+    meldung: `Verbunden mit ${profil.displayName ?? absender} (${profil.mail ?? absender}). Rollen: ${rollen.join(', ')}.`,
   }
 }
 
